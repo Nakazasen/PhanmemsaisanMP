@@ -6,7 +6,6 @@ import sqlite3
 import os
 import pandas as pd
 from src.db.schema import get_connection, create_schema, init_sys_params
-from src.utils.excel_helpers import read_exchange_rate_from_form
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
@@ -53,12 +52,12 @@ def load_cost_centers(conn: sqlite3.Connection, form_path: str = None) -> int:
         # Fall back to known index from extract_samples.py (index 5)
         if len(xl.sheet_names) > 5:
             cc_sheet = xl.sheet_names[5]
-            print(f"Info: Using sheet by index: {cc_sheet}")
+            print(f"ℹ️ Using sheet by index: {cc_sheet}")
         else:
-            print("Warning: Cost center sheet not found")
+            print("⚠️ Cost center sheet not found")
             return 0
 
-    print(f"Reading cost centers from sheet: {cc_sheet}")
+    print(f"📖 Reading cost centers from sheet: {cc_sheet}")
     df = pd.read_excel(path, sheet_name=cc_sheet, engine='openpyxl')
 
     cursor = conn.cursor()
@@ -88,7 +87,7 @@ def load_cost_centers(conn: sqlite3.Connection, form_path: str = None) -> int:
         count += 1
 
     conn.commit()
-    print(f"Loaded {count} cost centers.")
+    print(f"✅ Loaded {count} cost centers.")
     return count
 
 
@@ -109,12 +108,12 @@ def load_accounts(conn: sqlite3.Connection, form_path: str = None) -> int:
     if not acc_sheet:
         if len(xl.sheet_names) > 4:
             acc_sheet = xl.sheet_names[4]
-            print(f" Using sheet by index: {acc_sheet}")
+            print(f"ℹ️ Using sheet by index: {acc_sheet}")
         else:
-            print("Warning: Account sheet not found")
+            print("⚠️ Account sheet not found")
             return 0
 
-    print(f" Reading accounts from sheet: {acc_sheet}")
+    print(f"📖 Reading accounts from sheet: {acc_sheet}")
     df = pd.read_excel(path, sheet_name=acc_sheet, engine='openpyxl')
 
     cursor = conn.cursor()
@@ -166,7 +165,7 @@ def load_accounts(conn: sqlite3.Connection, form_path: str = None) -> int:
         count += 1
 
     conn.commit()
-    print(f"Loaded {count} accounts.")
+    print(f"✅ Loaded {count} accounts.")
     return count
 
 
@@ -174,10 +173,10 @@ def load_allocation_rules(conn: sqlite3.Connection, alloc_path: str = None) -> i
     """Load allocation rules from FY2027配賦額一覧."""
     path = alloc_path or ALLOC_PATH
     if not os.path.exists(path):
-        print(f"Warning: Allocation rules file not found at {path}")
+        print(f"⚠️ Allocation rules file not found at {path}")
         return 0
 
-    print(f"Reading allocation rules from: {os.path.basename(path)}")
+    print(f"📖 Reading allocation rules from: {os.path.basename(path)}")
     xl = pd.ExcelFile(path, engine='openpyxl')
     df = pd.read_excel(path, sheet_name=xl.sheet_names[0], engine='openpyxl')
 
@@ -253,7 +252,7 @@ def load_allocation_rules(conn: sqlite3.Connection, alloc_path: str = None) -> i
         count += 1
 
     conn.commit()
-    print(f"Loaded {count} allocation rules.")
+    print(f"✅ Loaded {count} allocation rules.")
     return count
 
 
@@ -261,26 +260,10 @@ def load_all(db_path: str = None, template_path: str = None,
              rules_path: str = None, fiscal_year: int = 2027,
              exchange_rate: float = 25450.0) -> dict:
     """Load all master data into the database with dynamic configuration."""
-    # Determine actual paths
-    t_path = template_path or FORM_PATH
-    r_path = rules_path or ALLOC_PATH
-
-    # SSOT: Always try to read exchange rate from FORM.xlsx B2 as per Spec V4
-    if os.path.exists(t_path):
-        try:
-            excel_rate = read_exchange_rate_from_form(t_path)
-            if excel_rate > 0:
-                print(f"SSOT: Using Exchange Rate from {os.path.basename(t_path)} [B2]: {excel_rate:,.0f}")
-                exchange_rate = excel_rate
-        except Exception as e:
-            print(f"Warning: Could not read rate from B2, falling back to {exchange_rate:,.0f}. Error: {e}")
-
     conn = get_connection(db_path)
-    # Ensure Row factory for Row-based access in loaders if needed (schema.py usually sets this)
-    conn.row_factory = sqlite3.Row 
     create_schema(conn)
     
-    # Initialize system params with SSOT rate
+    # Initialize system params with specific fiscal year and exchange rate
     init_sys_params(conn, exchange_rate=exchange_rate, fiscal_year=fiscal_year)
     
     # Determine actual paths
@@ -307,4 +290,4 @@ def load_all(db_path: str = None, template_path: str = None,
 
 if __name__ == '__main__':
     results = load_all()
-    print(f"\nSummary: {results}")
+    print(f"\n📊 Summary: {results}")

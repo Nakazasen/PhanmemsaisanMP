@@ -31,7 +31,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
     - target_cc: if None, exports all 62 CCs.
     """
     try:
-        log_callback(f"🚀 Khởi động Pipeline FY{fiscal_year} (Tỷ giá: {exchange_rate:,.0f})")
+        log_callback(f"Pipeline FY{fiscal_year} (ExRate: {exchange_rate:,.0f})")
         
         # 1. Setup Environment
         db_path = os.path.join(BASE_DIR, 'data', 'mp2027.db')
@@ -54,7 +54,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         cursor.execute("DELETE FROM fact_allocation_log")
         conn.commit()
         
-        log_callback("📥 Đang nạp danh mục và dữ liệu nguồn...")
+        log_callback("Loading master data...")
         load_all(db_path=db_path, template_path=template_path, fiscal_year=fiscal_year, exchange_rate=exchange_rate)
         
         # 3. Parsers
@@ -64,7 +64,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         parse_fixed_assets(conn, source_dir=source_dir)
         
         # 4. Allocation Engine
-        log_callback("⚙️ Đang thực hiện phân bổ chi phí...")
+        log_callback("Running allocation...")
         engine = AllocationEngine(conn)
         engine.run_allocation()
         
@@ -73,13 +73,13 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         
         if target_cc:
             # Single Export
-            log_callback(f"📤 Xuất báo cáo cho riêng Cost Center: {target_cc}")
+            log_callback(f"Exporting Single CC: {target_cc}")
             out_path = os.path.join(output_dir, f"MP_CC_{target_cc}.xlsx")
             builder.export_to_template(template_path, out_path, cc_code=target_cc)
-            log_callback(f"✅ Hoàn thành 1 file tại: {output_dir}")
+            log_callback(f"Done: {output_dir}")
         else:
             # Batch Export
-            log_callback("📦 Đang xuất hàng loạt cho tất cả Cost Centers...")
+            log_callback("Exporting Batch...")
             cursor.execute("SELECT DISTINCT cc_code FROM fact_input_data WHERE account_code > 0")
             all_ccs = [row[0] for row in cursor.fetchall()]
             
@@ -89,13 +89,13 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 if builder.export_to_template(template_path, out_path, cc_code=cc):
                     count += 1
             
-            log_callback(f"✅ Đã xuất thành công {count} file vào thư mục: {output_dir}")
+            log_callback(f"Successfully exported {count} files to: {output_dir}")
         
         conn.close()
         return True, output_dir
 
     except Exception as e:
-        log_callback(f"❌ LỖI: {str(e)}")
+        log_callback(f"ERROR: {str(e)}")
         log_callback(traceback.format_exc())
         return False, str(e)
 

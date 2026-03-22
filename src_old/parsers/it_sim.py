@@ -16,7 +16,7 @@ def parse_it_sim_file(path: str, target_months: list) -> list:
         # Use xlrd for .xls files
         df = pd.read_excel(path, sheet_name='部門別サマリー(VND)', header=None, engine='xlrd')
     except Exception as e:
-        print(f"Warning: Cannot open {os.path.basename(path)}: {e}")
+        print(f"⚠️ Cannot open {os.path.basename(path)}: {e}")
         return records
 
     if len(df) <= 2:
@@ -87,7 +87,7 @@ def parse_it_simulation(conn: sqlite3.Connection, source_dir: str = None) -> dic
                         found = True
                         break
         if not found:
-             print(f"Info: Could not find IT Sim file for {keywords}")
+             print(f"ℹ️ Could not find IT Sim file for {keywords}")
 
     cursor = conn.cursor()
     total = 0
@@ -106,5 +106,5 @@ def parse_it_simulation(conn: sqlite3.Connection, source_dir: str = None) -> dic
 
     conn.commit()
     results['total'] = total
-    print(f"IT Simulation total: {total} records.")
+    print(f"✅ IT Simulation total: {total} records.")
     return results

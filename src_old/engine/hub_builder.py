@@ -62,7 +62,7 @@ class HubBuilder:
         # Calculate Total Column
         pivot_df['Total'] = pivot_df[self.fy_months].sum(axis=1)
         
-        # Round everything to integers
+        # FIX: Round everything to integers to satisfy Excel Row 3 CHECK
         cols_to_round = self.fy_months + ['Total']
         for col in cols_to_round:
             pivot_df[col] = pivot_df[col].round(0).astype(int)
@@ -74,11 +74,13 @@ class HubBuilder:
 
     def export_to_template(self, template_path: str, output_path: str, cc_code: Optional[int] = None, 
                            sheet_name: str = '内訳ﾘｽﾄ(4～3月)', start_row: int = 29):
-        """Copies template and writes data to target sheet."""
+        """Copies template and writes data for a specific CC (or all) to the target sheet."""
         df = self.get_structured_data(cc_code=cc_code)
         if df.empty:
+            print(f"⚠️ No data for CC {cc_code if cc_code else 'All'}, skipping export.")
             return False
             
+        # Always overwrite output with a fresh copy of the template
         if os.path.exists(output_path):
             os.remove(output_path)
         shutil.copy2(template_path, output_path)
@@ -86,22 +88,23 @@ class HubBuilder:
         wb = openpyxl.load_workbook(output_path)
         ws_hub = wb[sheet_name] if sheet_name in wb.sheetnames else wb.worksheets[0]
         
-        # 1. Update Labels Row 4
+        # 1. Update Labels Row 4 (Month labels F-Q, Total R)
         month_labels = get_fy_month_labels(self.fiscal_year)
         for i, label in enumerate(month_labels):
-            ws_hub.cell(row=4, column=6 + i, value=label)
-        ws_hub.cell(row=4, column=18, value="\u5408\u8a08") # 合計
+            ws_hub.cell(row=4, column=6 + i, value=label) # Col F is 6
+        ws_hub.cell(row=4, column=18, value="合計") # Col R is 18
 
         # 2. Update Working Days (稼働日) sheet
-        # \u7a3c\u50cd\u65e5 = 稼働日
-        if "\u7a3c\u50cd\u65e5" in wb.sheetnames:
-            ws_k = wb["\u7a3c\u50cd\u65e5"]
+        if '稼働日' in wb.sheetnames:
+            ws_k = wb['稼働日']
             labels = get_fy_month_labels(self.fiscal_year)
             for i, label in enumerate(labels):
                 ws_k.cell(row=3 + i, column=1, value=label) 
 
         # 3. Write Data Records
+        # Clear existing data manually via delete_rows or just overwrite
         if ws_hub.max_row >= start_row:
+             # Targeted clear to preserve formatting if possible, but delete_rows is safer for formula integrity
              ws_hub.delete_rows(start_row, ws_hub.max_row - start_row + 1)
 
         current_row = start_row
@@ -113,4 +116,5 @@ class HubBuilder:
             current_row += 1
             
         wb.save(output_path)
+        # print(f"✅ Exported {len(df)} rows to {output_path}")
         return True

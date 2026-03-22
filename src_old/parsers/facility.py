@@ -132,12 +132,12 @@ def parse_facility(conn: sqlite3.Connection, source_dir: str = None) -> dict:
     # Use source_dir if provided
     search_dir = source_dir or BASE_DIR
     path = os.path.join(search_dir, f'施設課　MP{fy_str}.xlsx')
-    print(f"Opening Facility: {path}")
+    
     if not os.path.exists(path):
         # Try local folder
         path = f'施設課　MP{fy_str}.xlsx'
         if not os.path.exists(path):
-            print(f"Warning: Facility file not found: {path} in {search_dir}")
+            print(f"⚠️ Facility file not found: {path} in {search_dir}")
             return {'total': 0}
 
     results = {}
@@ -183,5 +183,5 @@ def parse_facility(conn: sqlite3.Connection, source_dir: str = None) -> dict:
 
     conn.commit()
     results['total'] = total
-    print(f"Facility total: {total} records inserted.")
+    print(f"✅ Facility total: {total} records inserted.")
     return results

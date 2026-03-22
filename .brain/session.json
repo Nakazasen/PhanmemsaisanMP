@@ -1,40 +1,45 @@
 {
-  "updated_at": "2026-03-22T04:58:00Z",
+  "updated_at": "2026-03-23T01:30:00Z",
   "working_on": {
-    "feature": "Project Handover and Knowledge Sync",
-    "task": "Executing /save-brain for final persistent context",
-    "status": "completed",
+    "feature": "GA Headcount Logic Hotfix (P1)",
+    "task": "Restoring driver monthly variance from Total Company data",
+    "status": "debugging",
     "files": [
-      ".brain/brain.json",
-      "CHANGELOG.md",
-      "docs/architecture/system_overview.md"
+      "src/parsers/ga.py",
+      "src/engine/allocator.py",
+      "parse_xml.py"
     ],
-    "blockers": [],
-    "notes": "System is transitioned to a professional standalone application."
+    "blockers": ["GA Excel file lacks per-CC headcount"],
+    "notes": "Verified via parse_xml.py that '振替計算' sheet is a Global Summary. Engine must be adjusted to apply global variance to static CC counts."
   },
   "pending_tasks": [
     {
-      "task": "Package as EXE",
-      "priority": "medium",
-      "notes": "User to run PyInstaller command as provided in walkthrough."
+      "task": "Adjust Allocator to handle 0-CC (Total Company) headcount as a global multiplier",
+      "priority": "high",
+      "notes": "Required if monthly variance is only available at the company level."
+    },
+    {
+      "task": "Final Visual Check of OUTPUT_FY2027 Excel files",
+      "priority": "high",
+      "notes": "Ensure month columns and CC lookups are correctly populated."
     }
   ],
   "recent_changes": [
     {
-      "timestamp": "2026-03-22T04:50:00Z",
-      "type": "feature",
-      "description": "Implemented Universal Standalone GUI and Refactored Pipeline for logic-agnostic fiscal years.",
-      "files": ["src/universal_app.py", "scripts/run_e2e.py", "src/parsers/"]
+      "timestamp": "2026-03-23T01:50:00Z",
+      "type": "fix",
+      "description": "Restored ga.py syntax, fixed Japanese literals, and implemented Zip-XML inspection for GA file verification.",
+      "files": ["src/parsers/ga.py", "parse_xml.py"]
     }
   ],
   "decisions_made": [
     {
-      "decision": "Transition to Functional Programming style for Pipeline",
-      "reason": "Allows GUI to inject parameters (FY, Paths) easily without static global state."
+      "decision": "Confirmed GA `\u7dcf\u52d9\u8ab2` source does NOT have CC-level headcount",
+      "reason": "Direct XML inspection of `xl/sharedStrings.xml` showed no CC codes or Dept names in data sheets."
     },
     {
-      "decision": "Use ScrolledText for real-time GUI logging",
-      "reason": "Provides professional feedback to non-tech users during long-running tasks."
+      "decision": "Aggressive removal of emojis from source code",
+      "reason": "Technical limitation of CP932 terminal on user's Japanese environment."
     }
   ]
 }

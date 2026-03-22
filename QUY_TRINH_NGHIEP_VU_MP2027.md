@@ -13,7 +13,7 @@ Hãy tưởng tượng công ty chúng ta là một **Tòa nhà chung cư khổn
 *   **Ông Quản lý Kỹ thuật (Facility):** Giữ hóa đơn điện, nước, khấu hao tòa nhà.
 *   **Bà Quản lý Hành chính (GA):** Giữ hợp đồng xe bus, hóa đơn Gas, hợp đồng vệ sinh.
 *   **Đội IT:** Giữ chi phí bản quyền phần mềm SAP, PLM phức tạp với đủ loại tỷ giá USD/VND.
-*   **Phòng Kế toán (Fixed Assets):** Giữ sổ cái tài sản cố định khổng lồ với hơn **119,361 dòng dữ liệu**.
+*   **Phòng Kế toán (Fixed Assets):** Giữ sổ cái tài sản cố định khổng lồ với hơn **1,270 dòng dữ liệu** mỗi tháng (tổng cộng hơn 15,000 dòng/năm).
 
 ### 1.2. Bài toán Phân bổ Đa tầng (The Allocation Challenge)
 Nhiệm vụ của bạn không chỉ là nhặt số, mà là phải **chia tiền** sao cho công bằng và đúng luật kế toán:
@@ -68,7 +68,7 @@ Hệ thống tự động tra cứu Database để lấy số lượng Staff/Wor
 Dự án đã biến một khối lượng công việc "khổng lồ" thành một quy trình tinh gọn:
 *   **Xử lý 62 Cost Centers** một cách hoàn hảo.
 *   **Mapping 239 mã tài khoản** không sai một ly.
-*   **Xử lý 119,361 dòng dữ liệu** trong vài giây.
+*   **Xử lý hơn 1,270 dòng dữ liệu/tháng** trong vài giây.
 *   **Lợi ích:** Tiết kiệm 99% thời gian làm việc, loại bỏ 100% lỗi do con người, cung cấp báo cáo chính xác tuyệt đối để lãnh đạo ra quyết định.
 
 **MP2027 Manager không chỉ là một chương trình máy tính, nó là sự kết tinh của tư duy quản trị hiện đại và sức mạnh công nghệ.**

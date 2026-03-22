@@ -1,99 +1,98 @@
 """
-MP2027 Manager - Excel Helper Utilities
-Common functions for reading Excel files with merged cells, date parsing, etc.
+MP2027 Manager - Excel Helper Utilities (Refactored V4.5.0)
+Universal helper functions for reading financial workbooks.
 """
 import pandas as pd
+import openpyxl
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
+from pathlib import Path
 
-
+# Constants for Hub Sheet Identification
+HUB_SHEET_CANDIDATES = ('内訳ﾘｽﾄ(4～3月)', '内訳リスト(4～3月)')
 
 def get_month_mapping(fiscal_year: int = 2027) -> dict:
-    """
-    Returns a mapping of month Index (0-11) to Period String (YYYYMM).
-    FY starts in April of (fiscal_year - 1) and ends in March of fiscal_year.
-    Example for FY2027: Index 0 (Apr) -> '202604', ..., Index 11 (Mar) -> '202703'
-    """
+    """Returns a mapping of month Index (0-11) to Period String (YYYYMM)."""
     start_year = fiscal_year - 1
     mapping = {}
-    
-    # Apr (0) to Dec (8)
     for i in range(4, 13):
         month_idx = i - 4
         mapping[month_idx] = f"{start_year}{i:02d}"
-        
-    # Jan (9) to Mar (11)
     for i in range(1, 4):
         month_idx = i + 8
         mapping[month_idx] = f"{fiscal_year}{i:02d}"
-        
     return mapping
-
 
 def get_fy_months(fiscal_year: int = 2027) -> list:
     """Returns a list of 12 YYYYMM strings for the given fiscal year."""
     mapping = get_month_mapping(fiscal_year)
     return [mapping[i] for i in range(12)]
 
-
 def get_fy_month_labels(fiscal_year: int = 2027) -> list:
     """Returns a list of 12 numeric month labels (4, 5, ..., 12, 1, 2, 3)."""
-    # Fiscal year start month is usually April (4)
     months = []
-    for i in range(4, 13):
-        months.append(i)
-    for i in range(1, 4):
-        months.append(i)
+    for i in range(4, 13): months.append(i)
+    for i in range(1, 4): months.append(i)
     return months
 
-
-def date_col_to_period(val) -> Optional[str]:
-    """Convert a column header date value to YYYYMM period string."""
-    if pd.isna(val) or val == '':
-        return None
-    if isinstance(val, datetime):
-        return val.strftime('%Y%m')
-    s = str(val).strip()
-    # Try to parse "2026-04-01 00:00:00" format
-    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%Y/%m/%d'):
-        try:
-            dt = datetime.strptime(s, fmt)
-            return dt.strftime('%Y%m')
-        except ValueError:
-            continue
+def normalize_period(value: Any) -> Optional[str]:
+    """Universal period normalizer to YYYYMM format."""
+    if pd.isna(value) or value in ('', None): return None
+    if isinstance(value, datetime): return value.strftime('%Y%m')
+    if hasattr(value, 'year') and hasattr(value, 'month'):
+        return f"{int(value.year)}{int(value.month):02d}"
+    s = str(value).strip()
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%Y/%m/%d', '%m/%Y', '%m-%Y', '%Y%m'):
+        try: return datetime.strptime(s, fmt).strftime('%Y%m')
+        except ValueError: continue
     return None
 
+def find_hub_sheet_name(workbook: openpyxl.Workbook) -> str:
+    """Find the hub sheet name in FORM.xlsx dynamically."""
+    for candidate in HUB_SHEET_CANDIDATES:
+        if candidate in workbook.sheetnames: return candidate
+    for sheet_name in workbook.sheetnames:
+        if '内訳' in sheet_name and '4' in sheet_name and '3' in sheet_name: return sheet_name
+    raise ValueError('Hub sheet 内訳ﾘｽﾄ(4～3月) not found in FORM.xlsx')
 
-def find_data_start_row(df: pd.DataFrame, cc_col: int = 0) -> int:
-    """Find the first data row by looking for a cost center code (numeric)."""
-    for i in range(len(df)):
-        val = df.iloc[i, cc_col]
-        if pd.isna(val):
-            continue
-        try:
-            code = int(float(val))
-            if code > 1000000:  # CC codes are 10-digit numbers
-                return i
-        except (ValueError, TypeError):
-            continue
-    return 0
-
-
-def extract_cc_code(val) -> Optional[int]:
-    """Extract cost center code from a cell value."""
-    if pd.isna(val):
-        return None
+def read_exchange_rate_from_form(form_path: str) -> float:
+    """SSOT: Read official exchange rate from FORM.xlsx hub sheet B2."""
+    path = Path(form_path)
+    if not path.exists(): raise FileNotFoundError(f'FORM.xlsx not found at {path}')
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     try:
-        return int(float(val))
-    except (ValueError, TypeError):
-        return None
+        sheet_name = find_hub_sheet_name(wb)
+        rate = safe_float(wb[sheet_name]['B2'].value)
+        return rate if rate > 0 else 25450.0
+    finally: wb.close()
 
+import re
 
-def safe_float(val) -> float:
+def extract_cc_code(val: Any) -> Optional[int]:
+    """Extract 4-digit cost center code (1000-9999) from a cell value."""
+    if pd.isna(val) or val is None: return None
+    s = str(val).strip()
+    # Try direct numeric
+    try:
+        n = int(float(s))
+        if 1000 <= n <= 9999: return n
+    except: pass
+    # Try regex search for first 4-digit sequence
+    match = re.search(r'\b(1\d{3}|2\d{3}|3\d{3}|4\d{3}|5\d{3}|6\d{3}|7\d{3}|8\d{3}|9\d{3})\b', s)
+    if match: return int(match.group(1))
+    return None
+
+def safe_float(val: Any) -> float:
     """Convert a value to float, returning 0.0 for invalid values."""
-    if pd.isna(val):
-        return 0.0
-    try:
-        return float(val)
-    except (ValueError, TypeError):
-        return 0.0
+    if pd.isna(val) or val is None: return 0.0
+    try: return float(val)
+    except (ValueError, TypeError): return 0.0
+
+def normalize_text(value: str) -> str:
+    """Normalize text for consistent mapping."""
+    text = str(value or '').replace('\n', ' ').replace('\u3000', ' ')
+    return ' '.join(text.split()).strip().lower()
+
+def item_key(value: str) -> str:
+    """Generate a lookup key from item description."""
+    return normalize_text(str(value or '').split('\n')[0].strip())

@@ -1,44 +1,32 @@
 # MP2027 Manager - Task Checklist
 
 ## Phase 0: Environment Setup
-- [x] ~~Install Python 3.12~~ → Found Python 3.13.5 via [py](file:///C:/ProgramData/Sandbox/MP2027/analyze_mp.py)
 - [x] Install dependencies (openpyxl, pandas, xlrd)
 - [x] Create project folder structure
 
 ## Phase 1: Database Schema & Master Data
 - [x] Create SQLite database with 6 tables → [data/mp2027.db](file:///c:/ProgramData/Sandbox/MP2027/data/mp2027.db)
-- [x] Load `dim_cost_centers` → **62 records** (製造, 部内間接, 部外間接)
-- [x] Load `dim_accounts` → **239 records** (with mfg/ga/sales codes)
-- [x] Load `map_allocation_rules` → **50 rules** (34 HC_all, 11 HC_worker, 4 WD, 1 HC_staff)
-- [x] Set [sys_params](file:///C:/ProgramData/Sandbox/MP2027/src/db/schema.py#134-155) → rate=25,450, FY2027 (202604→202703)
+- [x] Load dim_cost_centers → **62 records** (製造, 一般, 販売)
+- [x] Load dim_accounts → **239 records** (with mfg/ga/sales codes)
+- [x] Load map_allocation_rules → **50 rules**
+- [x] Set exchange rate dynamic from FORM.xlsx B2
 
-## Phase 2: Excel Parser (Import)
-- [x] Read BRD file → 5 sheets, confirms Staff/Worker split
-- [ ] Parse Facility data (施設課 MPFY2027.xlsx → B&L, E&W)
-- [ ] Parse GA data (総務課 FY2027 MP 振替予定.xlsx)
-- [ ] Parse IT Simulation data (3 xls files for 3 periods)
-- [ ] Parse Fixed Assets data (固定資産情報)
+## Phase 2: Excel Parser (Refactor)
+- [x] Read BRD file → 5 sheets, confirms Staff/Worker split & Final Month logic
+- [ ] Refactor Fixed Assets Parser: Add 'Last Depreciation Month' support
+- [ ] Refactor GA Parser: Add Unit prices (Gas, VPN) from BRD
+- [ ] Refactor IT Simulation: Handle periods & exchange rates
 
-## Phase 3: Allocation Engine
-- [ ] Implement allocation by Headcount (Staff vs Worker)
-- [ ] Implement allocation by Working Days
-- [ ] Implement allocation by Fixed Ratio
-- [ ] Step-down allocation (2-step)
-- [ ] Account code selection by CC type (製造/間接/販売)
+## Phase 3: Allocation Engine (Refactor Required)
+- [ ] Implement logic: if current_month > last_depreciation_month then amount = 0
+- [ ] Implement dynamic FX rate from Hub ô B2
+- [ ] Implement monthly headcount variance
+- [ ] Account code selection by CC type (製造/一般/販売)
 
 ## Phase 4: Hub Builder (内訳ﾘｽﾄ Generator)
-- [ ] Map database records to 内訳ﾘｽﾄ cell structure
-- [ ] Handle 12-month columns (T4→T3)
-- [ ] Generate hub data for all cost categories
-
-## Phase 5: Report Generator (Export to FORM.xlsx)
 - [ ] Write hub data to 内訳ﾘｽﾄ(4～3月) sheet
 - [ ] Preserve existing formulas and formatting
-- [ ] Verify 採算表(VND) auto-calculates correctly
-- [ ] Verify 採算表(USD) auto-converts correctly
 
-## Phase 6: Validation & Testing
-- [ ] Compare output with original FORM.xlsx values
-- [ ] Validate allocation calculations
-- [ ] Validate USD/VND conversion
-- [ ] End-to-end test with all source files
+## Phase 5: Validation & Testing
+- [ ] Unit Test: 1 asset ending Oct 2026 must be 0 in Nov 2026.
+- [ ] Integration Test: End-to-end with dynamic FX rate.
