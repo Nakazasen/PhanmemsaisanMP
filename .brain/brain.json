@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "schema_version": "1.1.0",
+    "awf_version": "4.0.2",
+    "last_updated": "2026-03-22T05:01:00Z"
+  },
+  "project": {
+    "name": "MP2027 Manager",
+    "type": "Standalone Desktop App / Financial Automation",
+    "status": "Final Handover - Documentation Complete"
+  },
+  "tech_stack": {
+    "language": "Python 3.13.5",
+    "gui": "Tkinter",
+    "packaging": "PyInstaller",
+    "database": "SQLite 3",
+    "libraries": [
+      "pandas",
+      "openpyxl",
+      "xlrd",
+      "sqlite3",
+      "tkinter"
+    ],
+    "environment": "Windows Standalone EXE capability"
+  },
+  "database_schema": {
+    "summary": "Hub-centric model with dimensions, rules, and facts records mapped by Cost Center and Account.",
+    "tables": [
+      {"name": "dim_cost_centers", "description": "Master data for CCs with HC splits."},
+      {"name": "dim_accounts", "description": "Chart of accounts mapping Mfg/GA/Sales."},
+      {"name": "map_allocation_rules", "description": "Rules for HC and WD allocations."},
+      {"name": "fact_input_data", "description": "Central financial hub (Excel Hub equivalent)."},
+      {"name": "fact_allocation_log", "description": "Audit trail for engine calculations."},
+      {"name": "sys_params", "description": "Exchange rates and dynamic FY settings."}
+    ]
+  },
+  "features": [
+    "Professional Tkinter GUI with Log Window",
+    "Universal Fiscal Year Support (Dynamic Year)",
+    "Configurable Template & Source Directory paths",
+    "High-performance 119k+ row FA parsing",
+    "Formula-preserving Excel Export",
+    "Standalone .exe packaging guide",
+    "Scalability: Technical Documentation for new Parsers/Rules"
+  ],
+  "knowledge_items": {
+    "patterns": ["Hub-centric Data Integration", "Step-down Cost Allocation", "Stream-based Excel Ingestion", "Dynamic Orchestration API"],
+    "gotchas": ["Excel formula loss when using non-safe writing mode", "Header shifts in diverse department Excel formats", "Import errors in refactored dependency paths"],
+    "conventions": ["Fiscal period format: YYYYMM (Apr-Mar cycle)", "Universal path handling for Windows compatibility"]
+  }
+}

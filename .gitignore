@@ -1,0 +1,18 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+data/
+*.db
+
+# Excel files (Source data & Generated reports)
+# We exclude them to keep the repo clean and avoid pushing company confidential data
+*.xlsx
+*.xls
+!FORM.xlsx
+
+# System files
+.DS_Store
+Thumbs.db
