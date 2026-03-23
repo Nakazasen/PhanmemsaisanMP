@@ -1,45 +1,73 @@
 {
-  "updated_at": "2026-03-23T01:30:00Z",
+  "updated_at": "2026-03-24T00:00:00Z",
   "working_on": {
-    "feature": "GA Headcount Logic Hotfix (P1)",
-    "task": "Restoring driver monthly variance from Total Company data",
-    "status": "debugging",
+    "feature": "Đợt căn chỉnh quy tắc nghiệp vụ (posting_month / working_days / kết quả phân bổ)",
+    "task": "Chốt logic phân bổ với các bài kiểm tra mục tiêu và đối soát với workbook FY2027",
+    "status": "đang thực hiện",
     "files": [
-      "src/parsers/ga.py",
       "src/engine/allocator.py",
-      "parse_xml.py"
+      "src/parsers/ga.py",
+      "src/parsers/manual_headcount.py",
+      "scripts/run_e2e.py",
+      "tests/test_posting_month_logic.py",
+      "walkthrough.md",
+      "TECHNICAL_DOCUMENTATION.md"
     ],
-    "blockers": ["GA Excel file lacks per-CC headcount"],
-    "notes": "Verified via parse_xml.py that '振替計算' sheet is a Global Summary. Engine must be adjusted to apply global variance to static CC counts."
+    "blockers": [
+      "fact_input_data không có hàng alloc_% sau khi chạy E2E (phân bổ quản lý không được cụ thể hóa)",
+      "Mã cc_code của nhân sự hàng tháng từ GA có thể không khớp với dim_cost_centers nếu không có ánh xạ"
+    ],
+    "notes": "Hướng đi hiện tại: cho phép người dùng nhập nhân sự hàng tháng theo CC qua GUI (ghi vào headcount_manual.csv -> fact_monthly_headcount source=manual), sau đó tập trung vào hành vi của posting_month và working_days và đối soát kết quả theo từng quy tắc."
   },
   "pending_tasks": [
     {
-      "task": "Adjust Allocator to handle 0-CC (Total Company) headcount as a global multiplier",
-      "priority": "high",
-      "notes": "Required if monthly variance is only available at the company level."
+      "task": "Xác minh bộ phân bổ tạo ra các hàng alloc_% và bộ xuất dữ liệu bao gồm chúng",
+      "priority": "cao",
+      "notes": "Sau E2E, truy vấn fact_input_data cho nguồn like 'alloc_%' và tìm dấu vết đường dẫn bị thiếu."
     },
     {
-      "task": "Final Visual Check of OUTPUT_FY2027 Excel files",
-      "priority": "high",
-      "notes": "Ensure month columns and CC lookups are correctly populated."
+      "task": "Triển khai việc phân giải posting_month (tháng gia nhập, tháng tiếp theo, tháng cố định, mọi tháng) + kiểm thử",
+      "priority": "cao",
+      "notes": "Định nghĩa resolve_posting_month() và kiểm tra khả năng áp dụng theo từng giai đoạn; chốt bằng các bài kiểm tra định tính nhỏ."
+    },
+    {
+      "task": "Triển khai tra cứu tham số working_days từ sys_params + kiểm thử",
+      "priority": "cao",
+      "notes": "working_days không được đi qua bước tra cứu nhân sự."
+    },
+    {
+      "task": "Làm cho map_allocation_rules có tính nhất quán qua các lần chạy",
+      "priority": "trung bình",
+      "notes": "Xóa/thay thế các quy tắc trước khi nạp; xác minh chạy E2E hai lần cho ra kết quả DB và đầu ra giống hệt nhau."
+    },
+    {
+      "task": "Đối soát kết quả theo từng quy tắc với workbook phân bổ FY2027",
+      "priority": "trung bình",
+      "notes": "Sử dụng workbook FY2027 làm bảng sự thật cho từng quy tắc và tháng."
     }
   ],
   "recent_changes": [
     {
-      "timestamp": "2026-03-23T01:50:00Z",
-      "type": "fix",
-      "description": "Restored ga.py syntax, fixed Japanese literals, and implemented Zip-XML inspection for GA file verification.",
-      "files": ["src/parsers/ga.py", "parse_xml.py"]
+      "timestamp": "2026-03-23T23:50:00Z",
+      "type": "tính năng",
+      "description": "Thêm luồng nhập nhân sự thủ công (cửa sổ GUI + bộ phân tích CSV) ghi source='manual' vào fact_monthly_headcount.",
+      "files": ["src/universal_app.py", "src/parsers/manual_headcount.py", "docs/MANUAL_HEADCOUNT_INPUT.md"]
+    },
+    {
+      "timestamp": "2026-03-23T23:55:00Z",
+      "type": "tài liệu",
+      "description": "Cập nhật walkthrough và các tài liệu kỹ thuật để tách bạch giữa pipeline đã xác minh và các khoảng cách quy tắc nghiệp vụ còn lại.",
+      "files": ["walkthrough.md", "TECHNICAL_DOCUMENTATION.md", "QUY_TRINH_NGHIEP_VU_MP2027.md"]
     }
   ],
   "decisions_made": [
     {
-      "decision": "Confirmed GA `\u7dcf\u52d9\u8ab2` source does NOT have CC-level headcount",
-      "reason": "Direct XML inspection of `xl/sharedStrings.xml` showed no CC codes or Dept names in data sheets."
+      "decision": "Ưu tiên nhập nhân sự thủ công trong UI khi nguồn nhân sự GA không rõ ràng hoặc không khớp với master CC",
+      "reason": "Sự chính xác nghiệp vụ yêu cầu nhân sự hàng tháng cấp CC; nhập liệu thủ công là nguồn sự thật ổn định do người dùng kiểm soát."
     },
     {
-      "decision": "Aggressive removal of emojis from source code",
-      "reason": "Technical limitation of CP932 terminal on user's Japanese environment."
+      "decision": "Giữ các tài liệu/trạng thái ở mức thận trọng (E2E chạy được != chính xác về nghiệp vụ)",
+      "reason": "Tránh các tuyên bố bàn giao cho đến khi các đầu ra alloc_%, posting_month, working_days và việc đối soát được xác minh."
     }
   ]
 }

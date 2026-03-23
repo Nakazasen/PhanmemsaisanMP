@@ -13,7 +13,7 @@ HUB_SHEET_CANDIDATES = ('内訳ﾘｽﾄ(4～3月)', '内訳リスト(4～3月)'
 
 def get_month_mapping(fiscal_year: int = 2027) -> dict:
     """Returns a mapping of month Index (0-11) to Period String (YYYYMM)."""
-    start_year = fiscal_year - 1
+    start_year = fiscal_year
     mapping = {}
     for i in range(4, 13):
         month_idx = i - 4
@@ -69,16 +69,16 @@ def read_exchange_rate_from_form(form_path: str) -> float:
 import re
 
 def extract_cc_code(val: Any) -> Optional[int]:
-    """Extract 4-digit cost center code (1000-9999) from a cell value."""
+    """Extract 4 to 10-digit cost center code from a cell value."""
     if pd.isna(val) or val is None: return None
     s = str(val).strip()
     # Try direct numeric
     try:
         n = int(float(s))
-        if 1000 <= n <= 9999: return n
+        if 1000 <= n <= 9999999999: return n
     except: pass
-    # Try regex search for first 4-digit sequence
-    match = re.search(r'\b(1\d{3}|2\d{3}|3\d{3}|4\d{3}|5\d{3}|6\d{3}|7\d{3}|8\d{3}|9\d{3})\b', s)
+    # Try regex search for 4-10 digit sequence
+    match = re.search(r'\b(\d{4,10})\b', s)
     if match: return int(match.group(1))
     return None
 

@@ -2,12 +2,12 @@
   "meta": {
     "schema_version": "1.1.0",
     "awf_version": "4.0.2",
-    "last_updated": "2026-03-22T23:45:00Z"
+    "last_updated": "2026-03-24T00:00:00Z"
   },
   "project": {
-    "name": "MP2027 Manager",
-    "type": "Standalone Desktop App / Financial Automation",
-    "status": "Hotfix P1 In-Progress (GA Headcount Logic Restoration)"
+    "name": "Quản lý MP2027",
+    "type": "Ứng dụng Desktop Độc lập / Tự động hóa Tài chính",
+    "status": "E2E có thể chạy; Việc căn chỉnh quy tắc phân bổ nghiệp vụ đang chờ xử lý"
   },
   "tech_stack": {
     "language": "Python 3.13.5",
@@ -15,40 +15,51 @@
     "packaging": "PyInstaller",
     "database": "SQLite 3",
     "libraries": ["pandas", "openpyxl", "xlrd", "sqlite3", "tkinter"],
-    "environment": "Windows CP932 Console (Shift-JIS compatible)"
+    "environment": "Windows CP932 Console (Tương thích Shift-JIS)"
   },
   "database_schema": {
-    "summary": "Hub-centric model with dimensions, rules, and facts records mapped by Cost Center and Account.",
+    "summary": "Mô hình tập trung vào Hub với các chiều, quy tắc và bản ghi thực tế được ánh xạ theo Trung tâm Chi phí và Tài khoản.",
     "tables": [
-      {"name": "dim_cost_centers", "description": "Master data for CCs with HC splits."},
-      {"name": "dim_accounts", "description": "Chart of accounts mapping Mfg/GA/Sales."},
-      {"name": "map_allocation_rules", "description": "Rules for HC and WD allocations."},
-      {"name": "fact_input_data", "description": "Central financial hub (Excel Hub equivalent)."},
-      {"name": "fact_allocation_log", "description": "Audit trail for engine calculations."},
-      {"name": "sys_params", "description": "Exchange rates and dynamic FY settings."},
-      {"name": "fact_monthly_headcount", "description": "Dynamic monthly driver source for GA (Refactor V4.5)."}
+      {"name": "dim_cost_centers", "description": "Dữ liệu master cho các Trung tâm Chi phí (CC)."},
+      {"name": "dim_accounts", "description": "Hệ thống tài khoản ánh xạ MFG/GA/SALES."},
+      {"name": "map_allocation_rules", "description": "Các quy tắc phân bổ (tham số, tháng hạch toán, v.v.)."},
+      {"name": "fact_input_data", "description": "Hub tài chính trung tâm (Tương đương với Excel Hub)."},
+      {"name": "fact_allocation_log", "description": "Nhật ký kiểm tra cho các tính toán của công cụ phân bổ."},
+      {"name": "sys_params", "description": "Tỷ giá hối đoái, năm tài chính, ngày làm việc, v.v."},
+      {
+        "name": "fact_monthly_headcount",
+        "description": "Bảng tham số nhân sự hàng tháng theo CC và giai đoạn (GA/thủ công)."
+      }
     ]
   },
   "features": [
-    "Professional Tkinter GUI with Log Window",
-    "B2 Exchange Rate SSOT (Source of Truth from Hub B2)",
-    "Month-end Depreciation Logic (Auto-zeroing after end month)",
-    "Dynamic GA Headcount Driver (CC x Month resolution)",
-    "Merged-cell CC handling (ffill logic)",
-    "High-performance FA parsing (1,270 rows/month)",
-    "Emoji-free source code (Mandatory for Japanese CP932 safety)",
-    "Resilient Fiscal Year parsing (Handles 'FY2027' and 2027 formats)",
-    "Direct XML Excel Inspection (Zipfile + ElementTree) for corrupted sources"
+    "Cửa sổ GUI Tkinter (src/universal_app.py) có cửa sổ nhật ký",
+    "Tỷ giá hối đoái B2 nguồn chuẩn (SSOT) từ FORM.xlsx!B2",
+    "Logic khấu hao cuối tháng (tự động về không sau tháng kết thúc)",
+    "Nhập nhân sự thủ công (GUI + CSV) cho nhân viên/công nhân hàng tháng theo CC",
+    "Các bộ phân tích chi phí trực tiếp (facility, fixed_assets, it_sim, ga_unit_price) vào fact_input_data",
+    "Xuất hàng loạt vào template FORM.xlsx sheet hub, kết quả theo từng CC",
+    "Nguồn không sử dụng emoji (An toàn cho CP932)",
+    "Kiểm tra trực tiếp XML Excel (Zipfile + ElementTree) cho các nguồn bị hỏng"
   ],
   "knowledge_items": {
-    "patterns": ["Hub-centric Data Integration", "Forward-fill Merged Cells", "Monthly Driver Lookup", "Safe Headcount Splitting (GA)"],
-    "gotchas": [
-      "UnicodeEncodeError: Japanese CP932 terminal rejects emojis and non-standard symbols in print().",
-      "Source vs Hub header mismatches",
-      "Fiscal Year format inconsistency (int vs 'FY' string in sys_params)",
-      "Unterminated strings in Japanese literals (mojibake risk)",
-      "GA Headcount Data Scope: Source file `\u7dcf\u52d9\u8ab2` only contains Total Company Headcount, not per-CC."
+    "patterns": [
+      "Tích hợp dữ liệu tập trung vào Hub",
+      "Điền tiến (Forward-fill) cho các ô bị gộp (Merged Cells)",
+      "Tra cứu tham số hàng tháng (Monthly Driver Lookup)",
+      "ETL nhất quán (xóa/thay thế theo nguồn)"
     ],
-    "conventions": ["Fiscal period format: YYYYMM (Apr-Mar cycle)", "Standard cost types: 製造, 一般, 販売"]
+    "gotchas": [
+      "Console CP932: tránh emoji và các ký tự unicode rủi ro trong đầu ra print/log.",
+      "Sự không khớp tiêu đề giữa nguồn và hub có thể làm lệch các cột tháng một cách âm thầm.",
+      "Phân tích nhân sự GA: mã cc_code trích xuất được có thể không khớp với mã master trong FORM.xlsx nếu không có ánh xạ rõ ràng.",
+      "Kết quả phân bổ phải được cụ thể hóa thành các hàng alloc_% trong fact_input_data; việc E2E vượt qua không phải là bằng chứng cho sự chính xác về nghiệp vụ.",
+      "map_allocation_rules phải được nạp một cách nhất quán (bảng hiện tại đang bị tích lũy qua các lần chạy)."
+    ],
+    "conventions": [
+      "Định dạng giai đoạn tài chính: YYYYMM (Chu kỳ từ tháng 4 đến tháng 3)",
+      "Các cột dim_accounts cho hạch toán mục tiêu: mfg_code / ga_code / sales_code",
+      "Khóa duy nhất cho fact_monthly_headcount: (period, cc_code, source)"
+    ]
   }
 }

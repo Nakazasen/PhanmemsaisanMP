@@ -17,6 +17,7 @@ from src.db.schema import get_connection, create_schema, init_sys_params
 from src.db.loader import load_all
 from src.parsers.facility import parse_facility
 from src.parsers.ga import parse_ga
+from src.parsers.manual_headcount import parse_manual_headcount
 from src.parsers.it_sim import parse_it_simulation
 from src.parsers.fixed_assets import parse_fixed_assets
 from src.engine.allocator import AllocationEngine
@@ -59,7 +60,17 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         
         # 3. Parsers
         parse_facility(conn, source_dir=source_dir)
-        parse_ga(conn, source_dir=source_dir)
+        ga_result = parse_ga(conn, source_dir=source_dir)
+        log_callback(f"GA parser: unit-price={ga_result.get('total', 0)}, headcount={ga_result.get('headcount', 0)}")
+        manual_hc_result = parse_manual_headcount(conn, source_dir=source_dir)
+        log_callback(
+            "Manual headcount: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
+                inserted=manual_hc_result.get("inserted", 0),
+                skipped=manual_hc_result.get("skipped", 0),
+                errors=manual_hc_result.get("errors", 0),
+                path=manual_hc_result.get("template_path", ""),
+            )
+        )
         parse_it_simulation(conn, source_dir=source_dir)
         parse_fixed_assets(conn, source_dir=source_dir)
         

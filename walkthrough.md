@@ -1,32 +1,142 @@
-# Thiết kế và Xây dựng Hệ thống MP2027 Manager (Refactor Mode V4.1.0)
+# MP2027 Manager - Walkthrough and Current Status
 
-Hệ thống tự động hóa lập ngân sách MP2027 đã hoàn thành MVP. Tuy nhiên, qua rà soát thực tế, hệ thống đang được tái cấu trúc để khớp với yêu cầu nghiệp vụ sát sườn hơn.
+Tai lieu nay tom tat trang thai thuc te cua du an sau dot doi chieu workbook nghiep vu, code hien tai, va ket qua chay thu ngay `2026-03-23`.
 
-## Cấu trúc luồng xử lý (End-to-End Workflow)
-1. **Quét dữ liệu danh mục (Master Data)**: Đọc toàn bộ Cost Center và Danh mục tài khoản từ file thiết kế chuẩn ([FORM.xlsx](file:///C:/ProgramData/Sandbox/MP2027/FORM.xlsx)).
-2. **Excel Parsers Đa cấu trúc (Ingestion Layer)**: 
-    *   [fixed_assets.py](file:///C:/ProgramData/Sandbox/MP2027/src/parsers/fixed_assets.py): Lược duyệt **~1,270 dòng** khấu hao mỗi tháng (ví dụ sheet '2025.11') một cách chính xác. **Cần bổ sung logic kiểm tra Tháng khấu hao cuối cùng.**
-    *   [facility.py](file:///C:/ProgramData/Sandbox/MP2027/src/parsers/facility.py): Chuyển đổi chuẩn USD -> VND và bóc tách dữ liệu điện, nước, toà nhà. **Lấy tỷ giá động từ ô B2 của file Hub.**
-    *   [it_sim.py](file:///C:/ProgramData/Sandbox/MP2027/src/parsers/it_sim.py): Tổng hợp chi phí phần mềm theo các giai đoạn giá khác nhau.
-    *   [ga.py](file:///C:/ProgramData/Sandbox/MP2027/src/parsers/ga.py): Đọc các định mức đơn giá (Gas: 39,309, VPN: 3.19...) và số ngày làm việc.
-3. **Allocation Engine (Logic Layer - Đang Refactor)**:
-    *   Mapping dữ liệu vào đúng mã tài khoản kế toán dựa trên phân loại CC: **製造**, **一般**, **販売**.
-    *   Xử lý phân bổ qua các nhánh driver: Staff, Worker, và tổng nhân sự. **Cần hỗ trợ biến động nhân sự hàng tháng.**
-4. **Hub Builder (Export Layer)**: Đổ dữ liệu vào sheet **内訳ﾘｽﾄ(4～3月)** của file [FORM.xlsx](file:///C:/ProgramData/Sandbox/MP2027/FORM.xlsx).
+No khong phai tai lieu marketing. Muc tieu la de nguoi doc nhin thay ro:
 
-## Báo Cáo Đối Chiếu (Validation & Testing)
+- he thong dang lam duoc gi
+- he thong chua lam duoc gi
+- can sua tiep o dau
 
-### 1. Chi phí Khấu hao (Depreciation)
-*   **Logic mới**: Hệ thống phải so sánh tháng hiện tại với Last Depreciation Month. Nếu vượt quá, chi phí phải về 0.
-*   **Dữ liệu thực tế**: ~1,270 dòng/tháng.
+## 1. Ket qua xac minh thuc te
 
-### 2. Chi phí xe Bus & Gas
-*   **Đơn giá**: Phải khớp với file Cải tiến nhập dữ liệu chung vào file MP.xlsx (Ví dụ Gas: 39,309).
-*   **Driver**: Số lượng người (Staff/Worker) phải lấy theo từng tháng để xử lý biến động.
+Da thuc hien cac buoc sau:
 
-### 3. Xác nhận sinh tồn của Công thức (Formula Intactness)
-*   **Kết quả kiểm định**: ✅ PASS
-*   **Sửa lỗi #N/A (Update V3.1.0)**: Đã khắc phục triệt để lỗi #N/A bằng cách đồng bộ hóa Header tháng (4, 5, ..., 3).
+- doc workbook yeu cau tong
+- doc cac workbook nguon thuc te trong thu muc project
+- doi chieu voi code hien tai trong `src/`
+- chay test:
+  - `py -m pytest tests\\test_src_v2_logic.py -q`
+- chay E2E:
+  - `py scripts\\run_e2e.py --fy 2027 --template FORM.xlsx --source .`
 
----
-> **Trạng thái**: Đang trong quá trình Refactor theo đặc tả REFACTORING_SPEC_V4.md.
+Ket qua:
+
+- `3` test hien co pass
+- import smoke cua cac module chinh pass
+- E2E chay het
+- sinh `62` file trong `OUTPUT_FY2027`
+
+## 2. Nhung gi da hoat dong
+
+### Master data
+
+- doc duoc `62` Cost Centers tu `FORM.xlsx`
+- doc duoc `239` accounts tu `FORM.xlsx`
+- doc ty gia USD/VND tu `FORM.xlsx!B2`
+
+### Direct-cost parsers
+
+Sau mot lan chay E2E:
+
+- `facility`: `4584` dong
+- `fixed_assets`: `9846` dong
+- `it_sim`: `1992` dong
+- `ga_unit_price`: `72` dong
+
+### Export
+
+- batch export sinh duoc `62` file MP theo Cost Center
+- file dich la `FORM.xlsx`
+- sheet hub duoc ghi de Excel cong thuc tinh tiep
+
+## 3. Nhung gi chua dung voi yeu cau 100%
+
+### Allocation tu hanh chinh chua di vao output
+
+Sau khi chay full E2E, `fact_input_data` khong co dong nao co `source like 'alloc_%'`.
+
+Y nghia:
+
+- direct-cost da vao
+- nhung chi phi phan bo theo rule hanh chinh chua duoc tao thanh ket qua cuoi
+
+### Monthly headcount GA dang lech khoa Cost Center
+
+Da ghi nhan monthly headcount voi cac ma khong match master, vi du:
+
+- `1136`
+- `40237000`
+
+Trong khi master tai `FORM.xlsx` dung ma 10 chu so nhu `1412000004`.
+
+Y nghia:
+
+- driver nhan su khong join duoc voi master CC
+- allocation theo nhan su co the mat tac dung
+
+### Posting month chua duoc xac minh la duoc ton trong
+
+Workbook rule co cac gia tri `posting_month` nhu:
+
+- moi thang
+- thang vao lam
+- thang phat/cap
+- thang tiep theo sau vao lam
+- thang co dinh `7`, `10`, `11`, `12`, `2`
+
+Neu allocator khong xu ly dung gia tri nay, ket qua nghiep vu van sai du pipeline chay xong.
+
+### Driver `working_days` can duoc xu ly rieng
+
+Trong nghiep vu goc, mot nhom chi phi tinh theo so ngay lam viec.
+Neu phan nay bi truot sang logic headcount, phep tinh se sai ban chat.
+
+### Rule master chua idempotent
+
+Trong log cua mot lan chay:
+
+- `Loaded 50 allocation rules.`
+
+Nhung database hien tai ghi nhan:
+
+- `1350` dong `map_allocation_rules`
+- chi co `50` signature thuc su khac nhau
+
+Y nghia:
+
+- bang rule dang bi tich luy qua nhieu lan chay
+
+## 4. Cach dien giai dung khi ban giao
+
+Khong nen mo ta he thong hien tai la:
+
+- `100% complete`
+- `clean & verified`
+- `ready for production handover`
+
+Nen mo ta dung hon:
+
+- direct-cost ingestion da chay va export duoc
+- E2E pipeline da thong
+- allocation nghiep vu hanh chinh chua duoc xac minh dat yeu cau goc
+- can xu ly tiep khoa CC, posting month, working-days driver, va idempotency cua rule table
+
+## 5. Thu tu sua tiep de dong gap
+
+1. Sua parser GA de khoa Cost Center trung voi `FORM.xlsx`.
+2. Sua allocator de ton trong `posting_month`.
+3. Xu ly `working_days` nhu mot driver rieng.
+4. Lam `map_allocation_rules` idempotent qua nhieu lan chay.
+5. Chay doi chieu theo tung sheet trong workbook huong dan nghiep vu tong.
+
+## 6. Trang thai de xuat hien tai
+
+Trang thai de xuat:
+
+- `E2E runnable`
+- `Direct-cost pipeline verified`
+- `Administrative allocation incomplete`
+- `Business-rule alignment pending`
+
+Day la cach ghi trang thai sat thuc te nhat o thoi diem hien tai.

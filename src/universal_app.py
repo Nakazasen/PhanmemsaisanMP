@@ -1,113 +1,103 @@
 """
-MP2027 Manager - Universal GUI App (V3.6)
-Supports: Dynamic FY, Dynamic Exchange Rate, and Single/Batch CC Export using Combobox.
+MP2027 Manager - Universal GUI App
+Supports:
+- Dynamic FY
+- Dynamic exchange rate
+- Single or batch CC export
+- Manual headcount input from GUI
 """
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, scrolledtext
+
+import csv
 import os
 import sys
 import threading
-import sqlite3
+import tkinter as tk
 from datetime import datetime
+from tkinter import filedialog, messagebox, scrolledtext, ttk
 
-# Add root project to path
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
 
 from scripts.run_e2e import run_universal_pipeline
 from src.db.schema import get_connection
+from src.parsers.manual_headcount import ensure_manual_headcount_template
+from src.utils.excel_helpers import get_fy_months
+
 
 class MPManagerApp:
-    def __init__(self, root):
+    def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("MP2027 Manager - Công cụ lập ngân sách tự động")
-        self.root.geometry("850x700")
-        self.root.configure(bg="#f8f9fa")
-        
-        # State
+        self.root.title("MP2027 Manager")
+        self.root.geometry("980x720")
+
         self.fiscal_year = tk.StringVar(value="2027")
         self.exchange_rate = tk.StringVar(value="25450")
-        self.cc_code_filter = tk.StringVar(value="") # Empty means BATCH
+        self.cc_code_filter = tk.StringVar(value="")
         self.template_path = tk.StringVar(value=os.path.join(BASE_DIR, "FORM.xlsx"))
         self.source_dir = tk.StringVar(value=BASE_DIR)
-        
-        self.setup_ui()
+
         self.setup_styles()
-        
-        # Initial CC List load
-        self.root.after(500, self.load_cc_list)
+        self.setup_ui()
+        self.root.after(300, self.load_cc_list)
 
     def setup_styles(self):
         style = ttk.Style()
-        style.theme_use('clam')
-        style.configure("TFrame", background="#f8f9fa")
-        style.configure("TLabel", background="#f8f9fa", font=("Segoe UI", 10))
-        style.configure("Header.TLabel", font=("Segoe UI", 16, "bold"), foreground="#1a73e8", background="#f8f9fa")
-        style.configure("Primary.TButton", font=("Segoe UI", 11, "bold"), padding=10)
-        style.configure("Browse.TButton", padding=5)
+        style.theme_use("clam")
+        style.configure("Header.TLabel", font=("Segoe UI", 15, "bold"))
+        style.configure("Primary.TButton", font=("Segoe UI", 10, "bold"), padding=10)
 
     def setup_ui(self):
-        container = ttk.Frame(self.root, padding="30")
+        container = ttk.Frame(self.root, padding=20)
         container.pack(fill=tk.BOTH, expand=True)
 
-        # Header
-        ttk.Label(container, text="📊 QUẢN LÝ NGÂN SÁCH MP2027", style="Header.TLabel").grid(row=0, column=0, columnspan=3, pady=(0, 25), sticky="w")
+        ttk.Label(container, text="MP2027 Budget Pipeline", style="Header.TLabel").grid(
+            row=0, column=0, columnspan=3, sticky="w", pady=(0, 16)
+        )
 
-        # Config Row: FY and Exchange Rate
-        ttk.Label(container, text="Năm tài chính:").grid(row=1, column=0, sticky="w", pady=5)
-        ttk.Entry(container, textvariable=self.fiscal_year, width=15).grid(row=1, column=1, sticky="w", padx=10)
-        
-        ttk.Label(container, text="Tỷ giá USD/VND:").grid(row=2, column=0, sticky="w", pady=5)
-        ttk.Entry(container, textvariable=self.exchange_rate, width=15).grid(row=2, column=1, sticky="w", padx=10)
-        ttk.Label(container, text="(VND/USD)", font=("Segoe UI", 9, "italic")).grid(row=2, column=2, sticky="w")
+        ttk.Label(container, text="Fiscal Year").grid(row=1, column=0, sticky="w", pady=4)
+        ttk.Entry(container, textvariable=self.fiscal_year, width=20).grid(row=1, column=1, sticky="w")
 
-        # FILTER CC ROW (Combobox)
-        ttk.Label(container, text="Chọn Cost Center (CC):", font=("Segoe UI", 10, "bold")).grid(row=3, column=0, sticky="w", pady=(15, 5))
-        self.cc_combo = ttk.Combobox(container, textvariable=self.cc_code_filter, width=40)
-        self.cc_combo.grid(row=3, column=1, sticky="w", padx=10, pady=(15, 5))
-        ttk.Label(container, text="(Để trống để xuất 62 phòng)", foreground="#d93025", font=("Segoe UI", 9, "bold")).grid(row=3, column=2, sticky="w", pady=(15, 5))
+        ttk.Label(container, text="Exchange Rate (USD/VND)").grid(row=2, column=0, sticky="w", pady=4)
+        ttk.Entry(container, textvariable=self.exchange_rate, width=20).grid(row=2, column=1, sticky="w")
 
-        # Files Row
-        ttk.Label(container, text="File Template:").grid(row=4, column=0, sticky="w", pady=(20, 5))
-        ttk.Entry(container, textvariable=self.template_path, width=60).grid(row=4, column=1, padx=10, pady=(20, 5))
-        ttk.Button(container, text="Chọn file", style="Browse.TButton", command=self.browse_template).grid(row=4, column=2, pady=(20, 5))
+        ttk.Label(container, text="Cost Center (optional)").grid(row=3, column=0, sticky="w", pady=4)
+        self.cc_combo = ttk.Combobox(container, textvariable=self.cc_code_filter, width=45)
+        self.cc_combo.grid(row=3, column=1, sticky="w")
+        ttk.Label(container, text="Leave empty for batch export").grid(row=3, column=2, sticky="w", padx=8)
 
-        ttk.Label(container, text="Thư mục nguồn:").grid(row=5, column=0, sticky="w", pady=5)
-        ttk.Entry(container, textvariable=self.source_dir, width=60).grid(row=5, column=1, padx=10, pady=5)
-        ttk.Button(container, text="Chọn thư mục", style="Browse.TButton", command=self.browse_source_dir).grid(row=5, column=2, pady=5)
+        ttk.Label(container, text="Template file").grid(row=4, column=0, sticky="w", pady=(14, 4))
+        ttk.Entry(container, textvariable=self.template_path, width=70).grid(row=4, column=1, sticky="w")
+        ttk.Button(container, text="Browse", command=self.browse_template).grid(row=4, column=2, sticky="w")
 
-        # Run Button
-        ttk.Separator(container, orient=tk.HORIZONTAL).grid(row=6, column=0, columnspan=3, pady=25, sticky="ew")
-        self.start_btn = ttk.Button(container, text="🚀 BẮT ĐẦU XỬ LÝ & XUẤT BÁO CÁO", style="Primary.TButton", command=self.start_pipeline)
-        self.start_btn.grid(row=7, column=0, columnspan=3)
+        ttk.Label(container, text="Source folder").grid(row=5, column=0, sticky="w", pady=4)
+        ttk.Entry(container, textvariable=self.source_dir, width=70).grid(row=5, column=1, sticky="w")
+        ttk.Button(container, text="Browse", command=self.browse_source_dir).grid(row=5, column=2, sticky="w")
 
-        # Log
-        ttk.Label(container, text="Nhật ký hoạt động:", font=("Segoe UI", 9, "bold")).grid(row=8, column=0, sticky="w", pady=(20, 0))
-        self.log_widget = scrolledtext.ScrolledText(container, height=12, bg="white", font=("Consolas", 9), state=tk.DISABLED)
-        self.log_widget.grid(row=9, column=0, columnspan=3, sticky="nsew", pady=5)
+        ttk.Button(
+            container,
+            text="Manual Headcount Input",
+            command=self.open_headcount_editor,
+        ).grid(row=6, column=1, sticky="w", pady=(8, 0))
 
-    def load_cc_list(self):
-        """Fetch CC list from DB and update Combobox."""
-        try:
-            db_path = os.path.join(BASE_DIR, 'data', 'mp2027.db')
-            if not os.path.exists(db_path):
-                return
-                
-            conn = get_connection(db_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT code, name_jp FROM dim_cost_centers ORDER BY code")
-            rows = cursor.fetchall()
-            
-            cc_options = [f"{row['code']} - {row['name_jp']}" for row in rows]
-            self.cc_combo['values'] = cc_options
-            if cc_options:
-                self.log(f"✅ Đã nạp {len(cc_options)} Cost Centers vào danh sách.")
-            conn.close()
-        except Exception as e:
-            self.log(f"⚠️ Không thể nạp danh sách CC: {str(e)}")
+        ttk.Separator(container, orient=tk.HORIZONTAL).grid(row=7, column=0, columnspan=3, sticky="ew", pady=16)
 
-    def log(self, message):
+        self.start_btn = ttk.Button(
+            container,
+            text="Run Pipeline",
+            style="Primary.TButton",
+            command=self.start_pipeline,
+        )
+        self.start_btn.grid(row=8, column=0, columnspan=3, sticky="w")
+
+        ttk.Label(container, text="Log").grid(row=9, column=0, sticky="w", pady=(16, 4))
+        self.log_widget = scrolledtext.ScrolledText(container, height=16, state=tk.DISABLED, font=("Consolas", 9))
+        self.log_widget.grid(row=10, column=0, columnspan=3, sticky="nsew")
+
+        container.rowconfigure(10, weight=1)
+        container.columnconfigure(1, weight=1)
+
+    def log(self, message: str):
         self.log_widget.configure(state=tk.NORMAL)
         self.log_widget.insert(tk.END, f"{datetime.now().strftime('[%H:%M:%S]')} {message}\n")
         self.log_widget.see(tk.END)
@@ -115,61 +105,256 @@ class MPManagerApp:
         self.root.update_idletasks()
 
     def browse_template(self):
-        f = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
-        if f: self.template_path.set(f)
+        path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
+        if path:
+            self.template_path.set(path)
 
     def browse_source_dir(self):
-        d = filedialog.askdirectory()
-        if d: self.source_dir.set(d)
+        path = filedialog.askdirectory()
+        if path:
+            self.source_dir.set(path)
+
+    def load_cc_list(self):
+        db_path = os.path.join(BASE_DIR, "data", "mp2027.db")
+        if not os.path.exists(db_path):
+            return
+        try:
+            conn = get_connection(db_path)
+            rows = conn.execute("SELECT code, name_jp FROM dim_cost_centers ORDER BY code").fetchall()
+            self.cc_combo["values"] = [f"{row['code']} - {row['name_jp']}" for row in rows]
+            conn.close()
+        except Exception as exc:
+            self.log(f"Failed to load CC list: {exc}")
+
+    def _get_cc_choices(self):
+        db_path = os.path.join(BASE_DIR, "data", "mp2027.db")
+        if not os.path.exists(db_path):
+            return []
+        conn = get_connection(db_path)
+        try:
+            rows = conn.execute("SELECT code, name_jp FROM dim_cost_centers ORDER BY code").fetchall()
+            return [f"{row['code']} - {row['name_jp']}" for row in rows]
+        finally:
+            conn.close()
+
+    def open_headcount_editor(self):
+        try:
+            fiscal_year = int(self.fiscal_year.get())
+        except Exception:
+            fiscal_year = 2027
+
+        source_dir = self.source_dir.get() or BASE_DIR
+        os.makedirs(source_dir, exist_ok=True)
+        csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)
+
+        editor = tk.Toplevel(self.root)
+        editor.title("Manual Headcount Input")
+        editor.geometry("1020x600")
+
+        frame = ttk.Frame(editor, padding=10)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(frame, text=f"CSV: {csv_path}", font=("Segoe UI", 9, "italic")).grid(
+            row=0, column=0, columnspan=6, sticky="w"
+        )
+
+        cc_var = tk.StringVar()
+        period_var = tk.StringVar()
+        staff_var = tk.StringVar()
+        worker_var = tk.StringVar()
+        desc_var = tk.StringVar()
+
+        cc_choices = self._get_cc_choices()
+        periods = get_fy_months(fiscal_year)
+
+        ttk.Label(frame, text="CC").grid(row=1, column=0, sticky="w", pady=5)
+        cc_combo = ttk.Combobox(frame, textvariable=cc_var, values=cc_choices, width=34)
+        cc_combo.grid(row=1, column=1, sticky="w")
+
+        ttk.Label(frame, text="Period").grid(row=1, column=2, sticky="w", pady=5, padx=(8, 0))
+        period_combo = ttk.Combobox(frame, textvariable=period_var, values=periods, width=12)
+        period_combo.grid(row=1, column=3, sticky="w")
+
+        ttk.Label(frame, text="Staff").grid(row=2, column=0, sticky="w", pady=5)
+        ttk.Entry(frame, textvariable=staff_var, width=14).grid(row=2, column=1, sticky="w")
+        ttk.Label(frame, text="Worker").grid(row=2, column=2, sticky="w", pady=5, padx=(8, 0))
+        ttk.Entry(frame, textvariable=worker_var, width=14).grid(row=2, column=3, sticky="w")
+
+        ttk.Label(frame, text="Description").grid(row=3, column=0, sticky="w", pady=5)
+        ttk.Entry(frame, textvariable=desc_var, width=66).grid(row=3, column=1, columnspan=4, sticky="w")
+
+        columns = ("cc_code", "period", "headcount_staff", "headcount_worker", "description")
+        tree = ttk.Treeview(frame, columns=columns, show="headings", height=18)
+        for col, width in [
+            ("cc_code", 130),
+            ("period", 100),
+            ("headcount_staff", 130),
+            ("headcount_worker", 130),
+            ("description", 470),
+        ]:
+            tree.heading(col, text=col)
+            tree.column(col, width=width, anchor="w")
+        tree.grid(row=5, column=0, columnspan=6, sticky="nsew", pady=(10, 0))
+
+        scroll = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
+        scroll.grid(row=5, column=6, sticky="ns", pady=(10, 0))
+
+        frame.rowconfigure(5, weight=1)
+        frame.columnconfigure(5, weight=1)
+
+        def parse_cc_code(text: str) -> str:
+            raw = (text or "").strip()
+            if " - " in raw:
+                raw = raw.split(" - ")[0].strip()
+            return raw
+
+        def clear_inputs():
+            cc_var.set("")
+            period_var.set("")
+            staff_var.set("")
+            worker_var.set("")
+            desc_var.set("")
+
+        def load_rows():
+            for item in tree.get_children():
+                tree.delete(item)
+            if not os.path.exists(csv_path):
+                return
+            with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    tree.insert(
+                        "",
+                        tk.END,
+                        values=(
+                            str(row.get("cc_code", "")).strip(),
+                            str(row.get("period", "")).strip(),
+                            str(row.get("headcount_staff", "")).strip(),
+                            str(row.get("headcount_worker", "")).strip(),
+                            str(row.get("description", "")).strip(),
+                        ),
+                    )
+
+        def add_or_update():
+            cc_code = parse_cc_code(cc_var.get())
+            period = period_var.get().strip()
+            staff = staff_var.get().strip() or "0"
+            worker = worker_var.get().strip() or "0"
+            desc = desc_var.get().strip()
+            if not cc_code or not period:
+                messagebox.showerror("Error", "CC and period are required.")
+                return
+            try:
+                int(float(cc_code))
+                float(staff)
+                float(worker)
+            except Exception:
+                messagebox.showerror("Error", "Invalid numeric value.")
+                return
+            selected = tree.selection()
+            row_values = (cc_code, period, staff, worker, desc)
+            if selected:
+                tree.item(selected[0], values=row_values)
+            else:
+                tree.insert("", tk.END, values=row_values)
+            clear_inputs()
+
+        def remove_selected():
+            selected = tree.selection()
+            for item in selected:
+                tree.delete(item)
+
+        def on_select(_event):
+            selected = tree.selection()
+            if not selected:
+                return
+            values = tree.item(selected[0], "values")
+            if not values:
+                return
+            cc_var.set(values[0])
+            period_var.set(values[1])
+            staff_var.set(values[2])
+            worker_var.set(values[3])
+            desc_var.set(values[4])
+
+        def save_file():
+            rows = []
+            for item in tree.get_children():
+                val = tree.item(item, "values")
+                rows.append(
+                    {
+                        "cc_code": val[0],
+                        "period": val[1],
+                        "headcount_staff": val[2],
+                        "headcount_worker": val[3],
+                        "description": val[4],
+                    }
+                )
+            with open(csv_path, "w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=["cc_code", "period", "headcount_staff", "headcount_worker", "description"],
+                )
+                writer.writeheader()
+                writer.writerows(rows)
+            self.log(f"Saved manual headcount: {len(rows)} rows -> {csv_path}")
+            messagebox.showinfo("Saved", f"Saved {len(rows)} rows.")
+
+        btn = ttk.Frame(frame)
+        btn.grid(row=4, column=0, columnspan=6, sticky="w", pady=(6, 0))
+        ttk.Button(btn, text="Add/Update", command=add_or_update).grid(row=0, column=0, padx=(0, 6))
+        ttk.Button(btn, text="Delete selected", command=remove_selected).grid(row=0, column=1, padx=(0, 6))
+        ttk.Button(btn, text="Save CSV", command=save_file).grid(row=0, column=2, padx=(0, 6))
+        ttk.Button(btn, text="Close", command=editor.destroy).grid(row=0, column=3, padx=(0, 6))
+
+        tree.bind("<<TreeviewSelect>>", on_select)
+        load_rows()
 
     def start_pipeline(self):
         try:
-            fy = int(self.fiscal_year.get())
-            rate = float(self.exchange_rate.get().replace(",", ""))
-            
-            # Handle CC Filter - extract code from "1412000089 - MECHANICAL SECT"
+            fiscal_year = int(self.fiscal_year.get())
+            exchange_rate = float(self.exchange_rate.get().replace(",", ""))
+
             cc_raw = self.cc_code_filter.get().strip()
             target_cc = None
             if cc_raw:
-                if " - " in cc_raw:
-                    target_cc = int(cc_raw.split(" - ")[0])
-                else:
-                    try:
-                        target_cc = int(cc_raw)
-                    except ValueError:
-                        messagebox.showerror("Lỗi", "Mã Cost Center không hợp lệ!")
-                        return
-            
+                target_cc = int(cc_raw.split(" - ")[0].strip()) if " - " in cc_raw else int(cc_raw)
+
             template = self.template_path.get()
             source = self.source_dir.get()
-
             if not os.path.exists(template) or not os.path.exists(source):
-                messagebox.showerror("Lỗi", "Vui lòng kiểm tra lại đường dẫn!")
+                messagebox.showerror("Error", "Invalid template file or source directory.")
                 return
 
             self.start_btn.configure(state=tk.DISABLED)
-            self.log("--- BẮT ĐẦU TIẾN TRÌNH ---")
-            threading.Thread(target=self.run_process, args=(fy, template, source, rate, target_cc), daemon=True).start()
+            self.log("--- START PIPELINE ---")
+            threading.Thread(
+                target=self.run_process,
+                args=(fiscal_year, template, source, exchange_rate, target_cc),
+                daemon=True,
+            ).start()
+        except Exception as exc:
+            messagebox.showerror("Input error", str(exc))
 
-        except Exception as e:
-            messagebox.showerror("Lỗi dữ liệu", f"Vui lòng kiểm tra các ô nhập liệu!\n{str(e)}")
-
-    def run_process(self, fy, template, source, rate, target_cc):
+    def run_process(self, fiscal_year: int, template: str, source: str, rate: float, target_cc: int | None):
         success, result = run_universal_pipeline(
-            fiscal_year=fy, template_path=template, source_dir=source, 
-            exchange_rate=rate, target_cc=target_cc, log_callback=self.log
+            fiscal_year=fiscal_year,
+            template_path=template,
+            source_dir=source,
+            exchange_rate=rate,
+            target_cc=target_cc,
+            log_callback=self.log,
         )
-        
         if success:
-            self.log(f"✅ THÀNH CÔNG! Kết quả tại: {result}")
-            # Refresh CC list after run in case new ones were loaded
+            self.log(f"SUCCESS. Output: {result}")
             self.root.after(100, self.load_cc_list)
-            messagebox.showinfo("Hoàn thành", f"Báo cáo đã được xuất thành công!\n\nThư mục: {result}")
+            messagebox.showinfo("Done", f"Export completed.\n\nOutput: {result}")
         else:
-            self.log(f"❌ THẤT BẠI: {result}")
-            messagebox.showerror("Lỗi", f"Thất bại:\n{result}")
-            
+            self.log(f"FAILED: {result}")
+            messagebox.showerror("Failed", str(result))
         self.start_btn.configure(state=tk.NORMAL)
+
 
 if __name__ == "__main__":
     root = tk.Tk()

@@ -182,6 +182,7 @@ def load_allocation_rules(conn: sqlite3.Connection, alloc_path: str = None) -> i
     df = pd.read_excel(path, sheet_name=xl.sheet_names[0], engine='openpyxl')
 
     cursor = conn.cursor()
+    cursor.execute("DELETE FROM map_allocation_rules")
     count = 0
     current_dept = None
 
