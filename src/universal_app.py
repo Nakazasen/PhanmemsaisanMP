@@ -28,7 +28,7 @@ from src.utils.excel_helpers import get_fy_months
 class MPManagerApp:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("MP2027 Manager")
+        self.root.title("MP2027 Manager - Quản lý Ngân sách")
         self.root.geometry("980x720")
 
         self.fiscal_year = tk.StringVar(value="2027")
@@ -51,32 +51,32 @@ class MPManagerApp:
         container = ttk.Frame(self.root, padding=20)
         container.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Label(container, text="MP2027 Budget Pipeline", style="Header.TLabel").grid(
+        ttk.Label(container, text="Pipeline Ngân sách MP2027", style="Header.TLabel").grid(
             row=0, column=0, columnspan=3, sticky="w", pady=(0, 16)
         )
 
-        ttk.Label(container, text="Fiscal Year").grid(row=1, column=0, sticky="w", pady=4)
+        ttk.Label(container, text="Năm tài chính").grid(row=1, column=0, sticky="w", pady=4)
         ttk.Entry(container, textvariable=self.fiscal_year, width=20).grid(row=1, column=1, sticky="w")
 
-        ttk.Label(container, text="Exchange Rate (USD/VND)").grid(row=2, column=0, sticky="w", pady=4)
+        ttk.Label(container, text="Tỷ giá (USD/VND)").grid(row=2, column=0, sticky="w", pady=4)
         ttk.Entry(container, textvariable=self.exchange_rate, width=20).grid(row=2, column=1, sticky="w")
 
-        ttk.Label(container, text="Cost Center (optional)").grid(row=3, column=0, sticky="w", pady=4)
+        ttk.Label(container, text="Trung tâm chi phí (Tùy chọn)").grid(row=3, column=0, sticky="w", pady=4)
         self.cc_combo = ttk.Combobox(container, textvariable=self.cc_code_filter, width=45)
         self.cc_combo.grid(row=3, column=1, sticky="w")
-        ttk.Label(container, text="Leave empty for batch export").grid(row=3, column=2, sticky="w", padx=8)
+        ttk.Label(container, text="Để trống để xuất toàn bộ").grid(row=3, column=2, sticky="w", padx=8)
 
-        ttk.Label(container, text="Template file").grid(row=4, column=0, sticky="w", pady=(14, 4))
+        ttk.Label(container, text="Tệp mẫu (Template)").grid(row=4, column=0, sticky="w", pady=(14, 4))
         ttk.Entry(container, textvariable=self.template_path, width=70).grid(row=4, column=1, sticky="w")
-        ttk.Button(container, text="Browse", command=self.browse_template).grid(row=4, column=2, sticky="w")
+        ttk.Button(container, text="Chọn...", command=self.browse_template).grid(row=4, column=2, sticky="w")
 
-        ttk.Label(container, text="Source folder").grid(row=5, column=0, sticky="w", pady=4)
+        ttk.Label(container, text="Thư mục nguồn").grid(row=5, column=0, sticky="w", pady=4)
         ttk.Entry(container, textvariable=self.source_dir, width=70).grid(row=5, column=1, sticky="w")
-        ttk.Button(container, text="Browse", command=self.browse_source_dir).grid(row=5, column=2, sticky="w")
+        ttk.Button(container, text="Chọn...", command=self.browse_source_dir).grid(row=5, column=2, sticky="w")
 
         ttk.Button(
             container,
-            text="Manual Headcount Input",
+            text="Nhập nhân sự thủ công",
             command=self.open_headcount_editor,
         ).grid(row=6, column=1, sticky="w", pady=(8, 0))
 
@@ -84,13 +84,13 @@ class MPManagerApp:
 
         self.start_btn = ttk.Button(
             container,
-            text="Run Pipeline",
+            text="CHẠY PIPELINE",
             style="Primary.TButton",
             command=self.start_pipeline,
         )
         self.start_btn.grid(row=8, column=0, columnspan=3, sticky="w")
 
-        ttk.Label(container, text="Log").grid(row=9, column=0, sticky="w", pady=(16, 4))
+        ttk.Label(container, text="Nhật ký (Log)").grid(row=9, column=0, sticky="w", pady=(16, 4))
         self.log_widget = scrolledtext.ScrolledText(container, height=16, state=tk.DISABLED, font=("Consolas", 9))
         self.log_widget.grid(row=10, column=0, columnspan=3, sticky="nsew")
 
@@ -105,7 +105,7 @@ class MPManagerApp:
         self.root.update_idletasks()
 
     def browse_template(self):
-        path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
+        path = filedialog.askopenfilename(filetypes=[("Tệp Excel", "*.xlsx")])
         if path:
             self.template_path.set(path)
 
@@ -124,7 +124,7 @@ class MPManagerApp:
             self.cc_combo["values"] = [f"{row['code']} - {row['name_jp']}" for row in rows]
             conn.close()
         except Exception as exc:
-            self.log(f"Failed to load CC list: {exc}")
+            self.log(f"Lỗi khi nạp danh sách CC: {exc}")
 
     def _get_cc_choices(self):
         db_path = os.path.join(BASE_DIR, "data", "mp2027.db")
@@ -148,7 +148,7 @@ class MPManagerApp:
         csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)
 
         editor = tk.Toplevel(self.root)
-        editor.title("Manual Headcount Input")
+        editor.title("Nhập liệu nhân sự thủ công")
         editor.geometry("1020x600")
 
         frame = ttk.Frame(editor, padding=10)
@@ -167,33 +167,33 @@ class MPManagerApp:
         cc_choices = self._get_cc_choices()
         periods = get_fy_months(fiscal_year)
 
-        ttk.Label(frame, text="CC").grid(row=1, column=0, sticky="w", pady=5)
+        ttk.Label(frame, text="Mã CC").grid(row=1, column=0, sticky="w", pady=5)
         cc_combo = ttk.Combobox(frame, textvariable=cc_var, values=cc_choices, width=34)
         cc_combo.grid(row=1, column=1, sticky="w")
 
-        ttk.Label(frame, text="Period").grid(row=1, column=2, sticky="w", pady=5, padx=(8, 0))
+        ttk.Label(frame, text="Kỳ (Tháng)").grid(row=1, column=2, sticky="w", pady=5, padx=(8, 0))
         period_combo = ttk.Combobox(frame, textvariable=period_var, values=periods, width=12)
         period_combo.grid(row=1, column=3, sticky="w")
 
-        ttk.Label(frame, text="Staff").grid(row=2, column=0, sticky="w", pady=5)
+        ttk.Label(frame, text="Nhân viên (Staff)").grid(row=2, column=0, sticky="w", pady=5)
         ttk.Entry(frame, textvariable=staff_var, width=14).grid(row=2, column=1, sticky="w")
-        ttk.Label(frame, text="Worker").grid(row=2, column=2, sticky="w", pady=5, padx=(8, 0))
+        ttk.Label(frame, text="Công nhân (Worker)").grid(row=2, column=2, sticky="w", pady=5, padx=(8, 0))
         ttk.Entry(frame, textvariable=worker_var, width=14).grid(row=2, column=3, sticky="w")
 
-        ttk.Label(frame, text="Description").grid(row=3, column=0, sticky="w", pady=5)
+        ttk.Label(frame, text="Mô tả").grid(row=3, column=0, sticky="w", pady=5)
         ttk.Entry(frame, textvariable=desc_var, width=66).grid(row=3, column=1, columnspan=4, sticky="w")
 
         columns = ("cc_code", "period", "headcount_staff", "headcount_worker", "description")
         tree = ttk.Treeview(frame, columns=columns, show="headings", height=18)
-        for col, width in [
-            ("cc_code", 130),
-            ("period", 100),
-            ("headcount_staff", 130),
-            ("headcount_worker", 130),
-            ("description", 470),
+        for col, width, anchor, text in [
+            ("cc_code", 130, "w", "Mã CC"),
+            ("period", 100, "w", "Kỳ"),
+            ("headcount_staff", 130, "w", "Nhân viên"),
+            ("headcount_worker", 130, "w", "Công nhân"),
+            ("description", 470, "w", "Mô tả"),
         ]:
-            tree.heading(col, text=col)
-            tree.column(col, width=width, anchor="w")
+            tree.heading(col, text=text)
+            tree.column(col, width=width, anchor=anchor)
         tree.grid(row=5, column=0, columnspan=6, sticky="nsew", pady=(10, 0))
 
         scroll = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
@@ -243,14 +243,14 @@ class MPManagerApp:
             worker = worker_var.get().strip() or "0"
             desc = desc_var.get().strip()
             if not cc_code or not period:
-                messagebox.showerror("Error", "CC and period are required.")
+                messagebox.showerror("Lỗi", "Yêu cầu mã CC và Kỳ.")
                 return
             try:
                 int(float(cc_code))
                 float(staff)
                 float(worker)
             except Exception:
-                messagebox.showerror("Error", "Invalid numeric value.")
+                messagebox.showerror("Lỗi", "Giá trị số không hợp lệ.")
                 return
             selected = tree.selection()
             row_values = (cc_code, period, staff, worker, desc)
@@ -298,15 +298,15 @@ class MPManagerApp:
                 )
                 writer.writeheader()
                 writer.writerows(rows)
-            self.log(f"Saved manual headcount: {len(rows)} rows -> {csv_path}")
-            messagebox.showinfo("Saved", f"Saved {len(rows)} rows.")
+            self.log(f"Đã lưu nhân sự thủ công: {len(rows)} hàng -> {csv_path}")
+            messagebox.showinfo("Đã lưu", f"Đã lưu {len(rows)} hàng.")
 
         btn = ttk.Frame(frame)
         btn.grid(row=4, column=0, columnspan=6, sticky="w", pady=(6, 0))
-        ttk.Button(btn, text="Add/Update", command=add_or_update).grid(row=0, column=0, padx=(0, 6))
-        ttk.Button(btn, text="Delete selected", command=remove_selected).grid(row=0, column=1, padx=(0, 6))
-        ttk.Button(btn, text="Save CSV", command=save_file).grid(row=0, column=2, padx=(0, 6))
-        ttk.Button(btn, text="Close", command=editor.destroy).grid(row=0, column=3, padx=(0, 6))
+        ttk.Button(btn, text="Thêm/Cập nhật", command=add_or_update).grid(row=0, column=0, padx=(0, 6))
+        ttk.Button(btn, text="Xóa đã chọn", command=remove_selected).grid(row=0, column=1, padx=(0, 6))
+        ttk.Button(btn, text="Lưu CSV", command=save_file).grid(row=0, column=2, padx=(0, 6))
+        ttk.Button(btn, text="Đóng", command=editor.destroy).grid(row=0, column=3, padx=(0, 6))
 
         tree.bind("<<TreeviewSelect>>", on_select)
         load_rows()
@@ -324,18 +324,18 @@ class MPManagerApp:
             template = self.template_path.get()
             source = self.source_dir.get()
             if not os.path.exists(template) or not os.path.exists(source):
-                messagebox.showerror("Error", "Invalid template file or source directory.")
+                messagebox.showerror("Lỗi", "Đường dẫn File mẫu hoặc Thư mục nguồn không hợp lệ.")
                 return
 
             self.start_btn.configure(state=tk.DISABLED)
-            self.log("--- START PIPELINE ---")
+            self.log("--- BẮT ĐẦU PIPELINE ---")
             threading.Thread(
                 target=self.run_process,
                 args=(fiscal_year, template, source, exchange_rate, target_cc),
                 daemon=True,
             ).start()
         except Exception as exc:
-            messagebox.showerror("Input error", str(exc))
+            messagebox.showerror("Lỗi nhập liệu", str(exc))
 
     def run_process(self, fiscal_year: int, template: str, source: str, rate: float, target_cc: int | None):
         success, result = run_universal_pipeline(
@@ -347,12 +347,12 @@ class MPManagerApp:
             log_callback=self.log,
         )
         if success:
-            self.log(f"SUCCESS. Output: {result}")
+            self.log(f"THÀNH CÔNG. Kết quả: {result}")
             self.root.after(100, self.load_cc_list)
-            messagebox.showinfo("Done", f"Export completed.\n\nOutput: {result}")
+            messagebox.showinfo("Hoàn tất", f"Quá trình xuất dữ liệu hoàn tất.\n\nKết quả: {result}")
         else:
-            self.log(f"FAILED: {result}")
-            messagebox.showerror("Failed", str(result))
+            self.log(f"THẤT BẠI: {result}")
+            messagebox.showerror("Thất bại", str(result))
         self.start_btn.configure(state=tk.NORMAL)
 
 
