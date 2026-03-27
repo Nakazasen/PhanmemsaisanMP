@@ -1,9 +1,11 @@
 {
-  "updated_at": "2026-03-24T00:00:00Z",
+  "updated_at": "2026-03-27T15:00:27+07:00",
   "working_on": {
     "feature": "Đợt căn chỉnh quy tắc nghiệp vụ (posting_month / working_days / kết quả phân bổ)",
     "task": "Chốt logic phân bổ với các bài kiểm tra mục tiêu và đối soát với workbook FY2027",
-    "status": "đang thực hiện",
+    "status": "running",
+    "last_run": "2026-03-27T15:00:27+07:00",
+    "last_run_url": "MP2027 Manager GUI",
     "files": [
       "src/engine/allocator.py",
       "src/parsers/ga.py",

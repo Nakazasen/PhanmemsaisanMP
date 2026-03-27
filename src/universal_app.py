@@ -24,6 +24,77 @@ from src.db.schema import get_connection
 from src.parsers.manual_headcount import ensure_manual_headcount_template
 from src.utils.excel_helpers import get_fy_months
 
+USER_GUIDE_TEXT = """
+HƯỚNG DẪN SỬ DỤNG CHI TIẾT - MP2027 MANAGER
+
+1. MỤC ĐÍCH
+- Ứng dụng dùng để nạp dữ liệu nguồn, tính toán pipeline ngân sách MP và xuất file báo cáo theo từng Cost Center.
+- Có thể chạy cho toàn bộ CC hoặc chỉ một CC cụ thể.
+
+2. CÁC TRƯỜNG TRÊN MÀN HÌNH CHÍNH
+- Năm tài chính:
+  Nhập năm fiscal year cần chạy, ví dụ 2027.
+- Tỷ giá (USD/VND):
+  Nhập tỷ giá quy đổi. Có thể sửa trước khi chạy pipeline.
+- Trung tâm chi phí:
+  Để trống nếu muốn xuất toàn bộ.
+  Chọn 1 dòng trong danh sách nếu chỉ muốn chạy cho một CC.
+- Tệp mẫu (Template):
+  Đường dẫn đến file mẫu Excel, mặc định là FORM.xlsx.
+- Thư mục nguồn:
+  Thư mục chứa các file đầu vào và file CSV nhập tay.
+
+3. QUY TRÌNH CHẠY ĐỀ XUẤT
+Bước 1: Kiểm tra file mẫu FORM.xlsx tồn tại và đúng phiên bản.
+Bước 2: Chọn đúng Thư mục nguồn chứa các file nghiệp vụ.
+Bước 3: Nhập Năm tài chính và Tỷ giá.
+Bước 4: Nếu cần, nhập bổ sung nhân sự bằng nút "Nhập nhân sự thủ công".
+Bước 5: Nếu chạy riêng, chọn 1 Trung tâm chi phí. Nếu không, để trống.
+Bước 6: Bấm "CHẠY PIPELINE".
+Bước 7: Theo dõi khu vực Nhật ký để xem tiến độ và lỗi nếu có.
+
+4. HƯỚNG DẪN NHẬP NHÂN SỰ THỦ CÔNG
+- Bấm nút "Nhập nhân sự thủ công".
+- Chọn mã CC trong danh sách.
+- Chọn kỳ tháng trong năm tài chính.
+- Nhập số Staff và Worker.
+- Nếu cần, thêm mô tả để ghi chú nguồn điều chỉnh.
+- Bấm "Thêm/Cập nhật" để đưa dữ liệu vào bảng tạm.
+- Bấm "Lưu CSV" để ghi xuống file.
+
+Lưu ý:
+- Nếu không bấm "Lưu CSV", dữ liệu vừa nhập sẽ không được ghi ra file.
+- Mã CC và Kỳ là bắt buộc.
+- Staff/Worker phải là số hợp lệ.
+
+5. KHI NÀO NÊN CHẠY TOÀN BỘ HOẶC CHẠY RIÊNG
+- Chạy toàn bộ:
+  Dùng khi muốn xuất đầy đủ tất cả Cost Center.
+- Chạy riêng 1 CC:
+  Dùng khi cần kiểm tra nhanh một bộ phận, debug lỗi hoặc xuất lại riêng.
+
+6. KẾT QUẢ SAU KHI CHẠY
+- Thành công:
+  Hệ thống thông báo hoàn tất và hiện đường dẫn kết quả trong Nhật ký.
+- Thất bại:
+  Hệ thống hiện hộp thoại báo lỗi. Kiểm tra lại đường dẫn file, dữ liệu đầu vào và Nhật ký.
+
+7. CÁC LỖI THƯỜNG GẶP
+- Lỗi không tìm thấy Template:
+  Kiểm tra lại đường dẫn file FORM.xlsx.
+- Lỗi không tìm thấy Thư mục nguồn:
+  Kiểm tra lại folder đã chọn.
+- Danh sách CC không hiện:
+  Có thể database chưa được tạo. Hãy chạy pipeline ít nhất 1 lần.
+- Nhập nhân sự xong nhưng không thấy áp dụng:
+  Kiểm tra đã bấm "Lưu CSV" trước khi chạy pipeline.
+
+8. KHUYẾN NGHỊ VẬN HÀNH
+- Chạy thử với 1 CC trước khi xuất hàng loạt.
+- Giữ nguyên 1 bản FORM.xlsx gốc để đối chiếu.
+- Nếu đổi dữ liệu nguồn lớn, nên kiểm tra lại kết quả tại 1 vài CC mẫu.
+""".strip()
+
 
 class MPManagerApp:
     def __init__(self, root: tk.Tk):
@@ -79,6 +150,12 @@ class MPManagerApp:
             text="Nhập nhân sự thủ công",
             command=self.open_headcount_editor,
         ).grid(row=6, column=1, sticky="w", pady=(8, 0))
+
+        ttk.Button(
+            container,
+            text="Hướng dẫn sử dụng chi tiết",
+            command=self.open_user_guide,
+        ).grid(row=6, column=2, sticky="w", pady=(8, 0))
 
         ttk.Separator(container, orient=tk.HORIZONTAL).grid(row=7, column=0, columnspan=3, sticky="ew", pady=16)
 
@@ -136,6 +213,37 @@ class MPManagerApp:
             return [f"{row['code']} - {row['name_jp']}" for row in rows]
         finally:
             conn.close()
+
+    def open_user_guide(self):
+        guide = tk.Toplevel(self.root)
+        guide.title("Hướng dẫn sử dụng chi tiết")
+        guide.geometry("860x640")
+
+        frame = ttk.Frame(guide, padding=12)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(
+            frame,
+            text="Hướng dẫn sử dụng chi tiết",
+            style="Header.TLabel",
+        ).pack(anchor="w", pady=(0, 8))
+
+        ttk.Label(
+            frame,
+            text="Tài liệu này hướng dẫn từng bước thao tác trên giao diện hiện tại.",
+        ).pack(anchor="w", pady=(0, 8))
+
+        guide_text = scrolledtext.ScrolledText(
+            frame,
+            wrap=tk.WORD,
+            font=("Segoe UI", 10),
+            height=28,
+        )
+        guide_text.pack(fill=tk.BOTH, expand=True)
+        guide_text.insert("1.0", USER_GUIDE_TEXT)
+        guide_text.configure(state=tk.DISABLED)
+
+        ttk.Button(frame, text="Đóng", command=guide.destroy).pack(anchor="e", pady=(10, 0))
 
     def open_headcount_editor(self):
         try:
@@ -243,7 +351,7 @@ class MPManagerApp:
             worker = worker_var.get().strip() or "0"
             desc = desc_var.get().strip()
             if not cc_code or not period:
-                messagebox.showerror("Lỗi", "Yêu cầu mã CC và Kỳ.")
+                messagebox.showerror("Lỗi", "Yêu cầu nhập Mã CC và Kỳ.")
                 return
             try:
                 int(float(cc_code))
@@ -324,7 +432,7 @@ class MPManagerApp:
             template = self.template_path.get()
             source = self.source_dir.get()
             if not os.path.exists(template) or not os.path.exists(source):
-                messagebox.showerror("Lỗi", "Đường dẫn File mẫu hoặc Thư mục nguồn không hợp lệ.")
+                messagebox.showerror("Lỗi", "Đường dẫn file mẫu hoặc thư mục nguồn không hợp lệ.")
                 return
 
             self.start_btn.configure(state=tk.DISABLED)
