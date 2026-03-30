@@ -2,17 +2,17 @@
   "meta": {
     "schema_version": "1.1.0",
     "awf_version": "4.0.2",
-    "last_updated": "2026-03-24T00:00:00Z"
+    "last_updated": "2026-03-30T18:20:00Z"
   },
   "project": {
     "name": "Quản lý MP2027",
     "type": "Ứng dụng Desktop Độc lập / Tự động hóa Tài chính",
-    "status": "E2E có thể chạy; Việc căn chỉnh quy tắc phân bổ nghiệp vụ đang chờ xử lý"
+    "status": "V5.3 Stable - Ultimate Sync Integrated"
   },
   "tech_stack": {
     "language": "Python 3.13.5",
     "gui": "Tkinter",
-    "packaging": "PyInstaller",
+    "packaging": "PyInstaller (OneFile mode)",
     "database": "SQLite 3",
     "libraries": ["pandas", "openpyxl", "xlrd", "sqlite3", "tkinter"],
     "environment": "Windows CP932 Console (Tương thích Shift-JIS)"
@@ -20,8 +20,8 @@
   "database_schema": {
     "summary": "Mô hình tập trung vào Hub với các chiều, quy tắc và bản ghi thực tế được ánh xạ theo Trung tâm Chi phí và Tài khoản.",
     "tables": [
-      {"name": "dim_cost_centers", "description": "Dữ liệu master cho các Trung tâm Chi phí (CC)."},
-      {"name": "dim_accounts", "description": "Hệ thống tài khoản ánh xạ MFG/GA/SALES."},
+      {"name": "dim_cost_centers", "description": "Dữ liệu master cho các Trung tâm Chi phí (CC). Tự động dọn dẹp khi đồng bộ."},
+      {"name": "dim_accounts", "description": "Hệ thống tài khoản ánh xạ MFG/GA/SALES. Tự động dọn dẹp khi đồng bộ."},
       {"name": "map_allocation_rules", "description": "Các quy tắc phân bổ (tham số, tháng hạch toán, v.v.)."},
       {"name": "fact_input_data", "description": "Hub tài chính trung tâm (Tương đương với Excel Hub)."},
       {"name": "fact_allocation_log", "description": "Nhật ký kiểm tra cho các tính toán của công cụ phân bổ."},
@@ -33,33 +33,32 @@
     ]
   },
   "features": [
+    "Hệ thống đồng bộ 3 lớp (Ultimate Sync): Startup, Manual Refresh (🔄), và Pre-Pipeline.",
     "Cửa sổ GUI Tkinter (src/universal_app.py) có cửa sổ nhật ký",
+    "Chuẩn hóa đường dẫn bằng sys.frozen (Tương thích hoàn toàn với file .exe)",
     "Tỷ giá hối đoái B2 nguồn chuẩn (SSOT) từ FORM.xlsx!B2",
-    "Logic khấu hao cuối tháng (tự động về không sau tháng kết thúc)",
+    "Logic khấu bao cuối tháng (tự động về không sau tháng kết thúc)",
     "Nhập nhân sự thủ công (GUI + CSV) cho nhân viên/công nhân hàng tháng theo CC",
     "Các bộ phân tích chi phí trực tiếp (facility, fixed_assets, it_sim, ga_unit_price) vào fact_input_data",
     "Xuất hàng loạt vào template FORM.xlsx sheet hub, kết quả theo từng CC",
-    "Nguồn không sử dụng emoji (An toàn cho CP932)",
-    "Kiểm tra trực tiếp XML Excel (Zipfile + ElementTree) cho các nguồn bị hỏng"
+    "Nguồn không sử dụng emoji (An toàn cho CP932)"
   ],
   "knowledge_items": {
     "patterns": [
       "Tích hợp dữ liệu tập trung vào Hub",
-      "Điền tiến (Forward-fill) cho các ô bị gộp (Merged Cells)",
-      "Tra cứu tham số hàng tháng (Monthly Driver Lookup)",
-      "ETL nhất quán (xóa/thay thế theo nguồn)"
+      "Đồng bộ Master Data đa tầng",
+      "Đảm bảo nhất quán dữ liệu bằng DELETE-BEFORE-INSERT",
+      "Tra cứu tham số hàng tháng (Monthly Driver Lookup)"
     ],
     "gotchas": [
       "Console CP932: tránh emoji và các ký tự unicode rủi ro trong đầu ra print/log.",
-      "Sự không khớp tiêu đề giữa nguồn và hub có thể làm lệch các cột tháng một cách âm thầm.",
-      "Phân tích nhân sự GA: mã cc_code trích xuất được có thể không khớp với mã master trong FORM.xlsx nếu không có ánh xạ rõ ràng.",
-      "Kết quả phân bổ phải được cụ thể hóa thành các hàng alloc_% trong fact_input_data; việc E2E vượt qua không phải là bằng chứng cho sự chính xác về nghiệp vụ.",
-      "map_allocation_rules phải được nạp một cách nhất quán (bảng hiện tại đang bị tích lũy qua các lần chạy)."
+      "PyInstaller: Sử dụng sys.frozen để định vị file FORM.xlsx và mp2027.db chính xác.",
+      "Foreign Key: Xóa Master Data (CC) phải cẩn thận nếu Fact data đang tham chiếu (Pipeline đã xử lý bằng cách xóa Fact trước)."
     ],
     "conventions": [
       "Định dạng giai đoạn tài chính: YYYYMM (Chu kỳ từ tháng 4 đến tháng 3)",
-      "Các cột dim_accounts cho hạch toán mục tiêu: mfg_code / ga_code / sales_code",
-      "Khóa duy nhất cho fact_monthly_headcount: (period, cc_code, source)"
+      "Đường dẫn DB mặc định: mp2027.db nằm cùng cấp với file thực thi",
+      "Template nguồn mặc định: FORM.xlsx nằm cùng cấp với file thực thi"
     ]
   }
 }

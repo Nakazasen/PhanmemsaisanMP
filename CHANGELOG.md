@@ -1,5 +1,23 @@
 # Changelog - MP2027 Manager
 
+## [V5.3 - Ultimate Sync] - 2026-03-30
+### Added
+- **Hệ thống đồng bộ 3 lớp (Ultimate Sync)**: Đảm bảo dữ liệu Master (CC, Account) luôn mới nhất.
+  1. **Startup Check**: Tự động so sánh Timestamp của `FORM.xlsx` để nạp lại dữ liệu nếu có thay đổi.
+  2. **Manual Refresh**: Thêm nút 🔄 bên cạnh danh sách CC để người dùng chủ động làm mới.
+  3. **Pre-Pipeline Sync**: Tự động đồng bộ Master Data ngay trước khi bắt đầu tính toán Pipeline.
+- **Tính năng Consistency**: Xóa sạch bảng Master cũ trước khi nạp mới, giúp loại bỏ các mã CC đã bị xóa trong file Excel.
+
+### Changed
+- **Packaging V5.3**: Đóng gói lại thành file thực thi duy nhất `dist/MP2027_Manager.exe`.
+- Cập nhật GUI: Bốc tách Combobox CC và nút Refresh vào Frame riêng để bố cục chuyên nghiệp.
+
+### Fixed
+- Lỗi mã CC bị "rác" (tồn đọng mã cũ) khi đồng bộ nhiều lần từ file Excel khác nhau.
+- Sửa lỗi đường dẫn tương đối khi chạy từ file `.exe` bằng `sys.frozen`.
+
+---
+
 ## [V3.0.0] - 2026-03-22
 ### Added
 - **Giao diện người dùng (GUI)** chuyên nghiệp bằng `tkinter`.

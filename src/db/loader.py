@@ -8,7 +8,12 @@ import pandas as pd
 from src.db.schema import get_connection, create_schema, init_sys_params
 from src.utils.excel_helpers import read_exchange_rate_from_form
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+import sys
+
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Source file paths
 FORM_PATH = os.path.join(BASE_DIR, 'FORM.xlsx')
@@ -62,6 +67,8 @@ def load_cost_centers(conn: sqlite3.Connection, form_path: str = None) -> int:
     df = pd.read_excel(path, sheet_name=cc_sheet, engine='openpyxl')
 
     cursor = conn.cursor()
+    # PRE-SYNC: Clear existing cost centers
+    cursor.execute("DELETE FROM dim_cost_centers")
     count = 0
     for _, row in df.iterrows():
         code = row.iloc[0]  # Unnamed: 0 = code
@@ -118,6 +125,8 @@ def load_accounts(conn: sqlite3.Connection, form_path: str = None) -> int:
     df = pd.read_excel(path, sheet_name=acc_sheet, engine='openpyxl')
 
     cursor = conn.cursor()
+    # PRE-SYNC: Clear existing accounts
+    cursor.execute("DELETE FROM dim_accounts")
     count = 0
     for _, row in df.iterrows():
         code = row.get('Account_Code', row.iloc[0] if len(row) > 0 else None)

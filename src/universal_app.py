@@ -15,11 +15,25 @@ import tkinter as tk
 from datetime import datetime
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
-
 from scripts.run_e2e import run_universal_pipeline
+from src.db.loader import load_all
 from src.db.schema import get_connection
 from src.parsers.manual_headcount import ensure_manual_headcount_template
 from src.utils.excel_helpers import get_fy_months
@@ -107,10 +121,23 @@ class MPManagerApp:
         self.cc_code_filter = tk.StringVar(value="")
         self.template_path = tk.StringVar(value=os.path.join(BASE_DIR, "FORM.xlsx"))
         self.source_dir = tk.StringVar(value=BASE_DIR)
+        self.last_excel_mtime = 0.0
+        self.syncing_master = False
 
         self.setup_styles()
         self.setup_ui()
+        self.set_icon()
         self.root.after(300, self.load_cc_list)
+
+    def set_icon(self):
+        icon_path = resource_path(os.path.join("assets", "app_icon.ico"))
+        if os.path.exists(icon_path):
+            try:
+                # Windows specific icon loading
+                self.root.iconbitmap(icon_path)
+            except Exception as e:
+                print(f"Error loading icon: {e}")
+
 
     def setup_styles(self):
         style = ttk.Style()
@@ -133,8 +160,15 @@ class MPManagerApp:
         ttk.Entry(container, textvariable=self.exchange_rate, width=20).grid(row=2, column=1, sticky="w")
 
         ttk.Label(container, text="Trung tâm chi phí (Tùy chọn)").grid(row=3, column=0, sticky="w", pady=4)
-        self.cc_combo = ttk.Combobox(container, textvariable=self.cc_code_filter, width=45)
-        self.cc_combo.grid(row=3, column=1, sticky="w")
+        cc_frame = ttk.Frame(container)
+        cc_frame.grid(row=3, column=1, sticky="w")
+        
+        self.cc_combo = ttk.Combobox(cc_frame, textvariable=self.cc_code_filter, width=40, state="readonly")
+        self.cc_combo.pack(side="left")
+        
+        self.refresh_btn = ttk.Button(cc_frame, text="🔄", width=3, command=self.auto_init_master_data)
+        self.refresh_btn.pack(side="left", padx=2)
+        
         ttk.Label(container, text="Để trống để xuất toàn bộ").grid(row=3, column=2, sticky="w", padx=8)
 
         ttk.Label(container, text="Tệp mẫu (Template)").grid(row=4, column=0, sticky="w", pady=(14, 4))
@@ -192,19 +226,64 @@ class MPManagerApp:
             self.source_dir.set(path)
 
     def load_cc_list(self):
-        db_path = os.path.join(BASE_DIR, "data", "mp2027.db")
+        db_path = os.path.join(BASE_DIR, "mp2027.db")
+        
+        # Smart Check on Startup
+        template = self.template_path.get()
+        if os.path.exists(template):
+            mtime = os.path.getmtime(template)
+            if mtime > self.last_excel_mtime:
+                self.last_excel_mtime = mtime
+                self.auto_init_master_data()
+                return
+
         if not os.path.exists(db_path):
+            self.auto_init_master_data()
             return
+
         try:
             conn = get_connection(db_path)
             rows = conn.execute("SELECT code, name_jp FROM dim_cost_centers ORDER BY code").fetchall()
+            if not rows:
+                conn.close()
+                self.auto_init_master_data()
+                return
+            
             self.cc_combo["values"] = [f"{row['code']} - {row['name_jp']}" for row in rows]
             conn.close()
         except Exception as exc:
             self.log(f"Lỗi khi nạp danh sách CC: {exc}")
 
+    def auto_init_master_data(self):
+        """Automatically load master data if FORM.xlsx is available in current dir."""
+        if self.syncing_master: return
+        
+        template = self.template_path.get()
+        if not os.path.exists(template):
+            # Try default FORM.xlsx in current dir
+            template = os.path.join(BASE_DIR, "FORM.xlsx")
+            if not os.path.exists(template):
+                return
+
+        self.syncing_master = True
+        self.log("--- TỰ ĐỘNG KHỞI TẠO DỮ LIỆU ---")
+        self.log(f"Đang nạp danh sách CC từ: {os.path.basename(template)}")
+        
+        def run_sync():
+            try:
+                db_path = os.path.join(BASE_DIR, "mp2027.db")
+                load_all(db_path=db_path, template_path=template)
+                self.log("Tự động nạp dữ liệu Master THÀNH CÔNG.")
+                self.root.after(100, self.load_cc_list)
+            except Exception as e:
+                self.log(f"Tự động nạp dữ liệu thất bại: {e}")
+            finally:
+                self.syncing_master = False
+
+        threading.Thread(target=run_sync, daemon=True).start()
+
     def _get_cc_choices(self):
-        db_path = os.path.join(BASE_DIR, "data", "mp2027.db")
+        db_path = os.path.join(BASE_DIR, "mp2027.db")
         if not os.path.exists(db_path):
             return []
         conn = get_connection(db_path)
@@ -420,6 +499,9 @@ class MPManagerApp:
         load_rows()
 
     def start_pipeline(self):
+        # Layer 3: Ensure master data is in sync before running
+        self.auto_init_master_data()
+        
         try:
             fiscal_year = int(self.fiscal_year.get())
             exchange_rate = float(self.exchange_rate.get().replace(",", ""))

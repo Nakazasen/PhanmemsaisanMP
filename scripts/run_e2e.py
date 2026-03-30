@@ -9,7 +9,11 @@ import sys
 import traceback
 
 # Add root project to path
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
 
@@ -35,8 +39,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         log_callback(f"Pipeline FY{fiscal_year} (ExRate: {exchange_rate:,.0f})")
         
         # 1. Setup Environment
-        db_path = os.path.join(BASE_DIR, 'data', 'mp2027.db')
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        db_path = os.path.join(BASE_DIR, 'mp2027.db')
         
         # Output Directory
         output_dir = os.path.join(os.getcwd(), f"OUTPUT_FY{fiscal_year}")

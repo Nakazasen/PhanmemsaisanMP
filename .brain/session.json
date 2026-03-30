@@ -1,75 +1,30 @@
 {
-  "updated_at": "2026-03-27T15:00:27+07:00",
+  "updated_at": "2026-03-30T18:25:00Z",
   "working_on": {
-    "feature": "Đợt căn chỉnh quy tắc nghiệp vụ (posting_month / working_days / kết quả phân bổ)",
-    "task": "Chốt logic phân bổ với các bài kiểm tra mục tiêu và đối soát với workbook FY2027",
-    "status": "running",
-    "last_run": "2026-03-27T15:00:27+07:00",
-    "last_run_url": "MP2027 Manager GUI",
-    "files": [
-      "src/engine/allocator.py",
-      "src/parsers/ga.py",
-      "src/parsers/manual_headcount.py",
-      "scripts/run_e2e.py",
-      "tests/test_posting_month_logic.py",
-      "walkthrough.md",
-      "TECHNICAL_DOCUMENTATION.md"
-    ],
-    "blockers": [
-      "fact_input_data không có hàng alloc_% sau khi chạy E2E (phân bổ quản lý không được cụ thể hóa)",
-      "Mã cc_code của nhân sự hàng tháng từ GA có thể không khớp với dim_cost_centers nếu không có ánh xạ"
-    ],
-    "notes": "Hướng đi hiện tại: cho phép người dùng nhập nhân sự hàng tháng theo CC qua GUI (ghi vào headcount_manual.csv -> fact_monthly_headcount source=manual), sau đó tập trung vào hành vi của posting_month và working_days và đối soát kết quả theo từng quy tắc."
+    "feature": "Ultimate Sync (3-layer)",
+    "status": "COMPLETED",
+    "notes": "Hệ thống đồng bộ dữ liệu Master đã hoạt động ổn định và được đóng gói thành EXE V5.3."
   },
   "pending_tasks": [
-    {
-      "task": "Xác minh bộ phân bổ tạo ra các hàng alloc_% và bộ xuất dữ liệu bao gồm chúng",
-      "priority": "cao",
-      "notes": "Sau E2E, truy vấn fact_input_data cho nguồn like 'alloc_%' và tìm dấu vết đường dẫn bị thiếu."
-    },
-    {
-      "task": "Triển khai việc phân giải posting_month (tháng gia nhập, tháng tiếp theo, tháng cố định, mọi tháng) + kiểm thử",
-      "priority": "cao",
-      "notes": "Định nghĩa resolve_posting_month() và kiểm tra khả năng áp dụng theo từng giai đoạn; chốt bằng các bài kiểm tra định tính nhỏ."
-    },
-    {
-      "task": "Triển khai tra cứu tham số working_days từ sys_params + kiểm thử",
-      "priority": "cao",
-      "notes": "working_days không được đi qua bước tra cứu nhân sự."
-    },
-    {
-      "task": "Làm cho map_allocation_rules có tính nhất quán qua các lần chạy",
-      "priority": "trung bình",
-      "notes": "Xóa/thay thế các quy tắc trước khi nạp; xác minh chạy E2E hai lần cho ra kết quả DB và đầu ra giống hệt nhau."
-    },
-    {
-      "task": "Đối soát kết quả theo từng quy tắc với workbook phân bổ FY2027",
-      "priority": "trung bình",
-      "notes": "Sử dụng workbook FY2027 làm bảng sự thật cho từng quy tắc và tháng."
-    }
+    { "task": "Kiểm tra sự chính xác của các quy tắc phân bổ chuyên sâu", "priority": "high" },
+    { "task": "Đối chiếu kết quả cuối cùng với file Excel FY2027配賦額一覧", "priority": "high" }
   ],
   "recent_changes": [
     {
-      "timestamp": "2026-03-23T23:50:00Z",
-      "type": "tính năng",
-      "description": "Thêm luồng nhập nhân sự thủ công (cửa sổ GUI + bộ phân tích CSV) ghi source='manual' vào fact_monthly_headcount.",
-      "files": ["src/universal_app.py", "src/parsers/manual_headcount.py", "docs/MANUAL_HEADCOUNT_INPUT.md"]
+      "timestamp": "2026-03-30T11:05:00Z",
+      "type": "feature",
+      "description": "Triển khai Smart Initialization và 3-layer Sync Engine.",
+      "files": ["src/universal_app.py", "src/db/loader.py", "scripts/run_e2e.py"]
     },
     {
-      "timestamp": "2026-03-23T23:55:00Z",
-      "type": "tài liệu",
-      "description": "Cập nhật walkthrough và các tài liệu kỹ thuật để tách bạch giữa pipeline đã xác minh và các khoảng cách quy tắc nghiệp vụ còn lại.",
-      "files": ["walkthrough.md", "TECHNICAL_DOCUMENTATION.md", "QUY_TRINH_NGHIEP_VU_MP2027.md"]
+      "timestamp": "2026-03-30T11:11:00Z",
+      "type": "deployment",
+      "description": "Packaging V5.3 với Icon và Icon.",
+      "files": ["dist/MP2027_Manager.exe"]
     }
   ],
   "decisions_made": [
-    {
-      "decision": "Ưu tiên nhập nhân sự thủ công trong UI khi nguồn nhân sự GA không rõ ràng hoặc không khớp với master CC",
-      "reason": "Sự chính xác nghiệp vụ yêu cầu nhân sự hàng tháng cấp CC; nhập liệu thủ công là nguồn sự thật ổn định do người dùng kiểm soát."
-    },
-    {
-      "decision": "Giữ các tài liệu/trạng thái ở mức thận trọng (E2E chạy được != chính xác về nghiệp vụ)",
-      "reason": "Tránh các tuyên bố bàn giao cho đến khi các đầu ra alloc_%, posting_month, working_days và việc đối soát được xác minh."
-    }
+    { "decision": "Chuẩn hóa DB_PATH và TEMPLATE_PATH tại root", "reason": "Tránh lỗi phân quyền file .exe" },
+    { "decision": "Thêm bước DELETE trước khi LOAD", "reason": "Đảm bảo tính nhất quán dữ liệu (Data Consistency)" }
   ]
 }

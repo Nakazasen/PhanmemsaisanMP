@@ -4,7 +4,14 @@ MP2027 Manager - Database Schema (Refactored V4.5.0)
 import sqlite3
 import os
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'mp2027.db')
+import sys
+
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+DB_PATH = os.path.join(BASE_DIR, 'mp2027.db')
 
 def get_connection(db_path: str = None) -> sqlite3.Connection:
     path = db_path or DB_PATH
