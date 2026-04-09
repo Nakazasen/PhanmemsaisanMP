@@ -17,6 +17,7 @@ from src.utils.excel_helpers import get_fy_months, safe_float
 
 TEMPLATE_FILENAME = "headcount_manual.csv"
 REQUIRED_COLUMNS = ("cc_code", "period", "headcount_staff", "headcount_worker")
+OPTIONAL_COLUMNS = ("headcount_male", "headcount_female")
 
 
 def _normalize_period(raw_period: Any, valid_periods: set[str]) -> str | None:
@@ -43,14 +44,25 @@ def ensure_manual_headcount_template(source_dir: str, fiscal_year: int) -> str:
 
     periods = get_fy_months(fiscal_year)
     sample_rows = [
-        ["1412000004", periods[0], "21", "180", "Example row - update numbers before run"],
-        ["1412000004", periods[1], "21", "182", "Month-by-month update"],
-        ["1412000025", periods[0], "35", "0", "Admin department example"],
+        ["1412000004", periods[0], "21", "180", "", "", "Example row - update numbers before run"],
+        ["1412000004", periods[1], "21", "182", "", "", "Month-by-month update"],
+        ["1412000004", periods[8], "21", "182", "95", "108", "December health-check split"],
+        ["1412000025", periods[0], "35", "0", "", "", "Admin department example"],
     ]
 
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
-        writer.writerow(["cc_code", "period", "headcount_staff", "headcount_worker", "description"])
+        writer.writerow(
+            [
+                "cc_code",
+                "period",
+                "headcount_staff",
+                "headcount_worker",
+                "headcount_male",
+                "headcount_female",
+                "description",
+            ]
+        )
         writer.writerows(sample_rows)
     return path
 
@@ -94,10 +106,19 @@ def parse_manual_headcount(conn: sqlite3.Connection, source_dir: str | None = No
             raw_period = row.get("period", "")
             raw_staff = row.get("headcount_staff", "")
             raw_worker = row.get("headcount_worker", "")
+            raw_male = row.get("headcount_male", "")
+            raw_female = row.get("headcount_female", "")
             description = str(row.get("description", "") or "").strip()
 
             # Allow blank rows in template.
-            if not raw_cc and not str(raw_period).strip() and not str(raw_staff).strip() and not str(raw_worker).strip():
+            if (
+                not raw_cc
+                and not str(raw_period).strip()
+                and not str(raw_staff).strip()
+                and not str(raw_worker).strip()
+                and not str(raw_male).strip()
+                and not str(raw_female).strip()
+            ):
                 skipped += 1
                 continue
 
@@ -117,7 +138,9 @@ def parse_manual_headcount(conn: sqlite3.Connection, source_dir: str | None = No
 
             staff = safe_float(raw_staff)
             worker = safe_float(raw_worker)
-            if staff < 0 or worker < 0:
+            male = safe_float(raw_male)
+            female = safe_float(raw_female)
+            if staff < 0 or worker < 0 or male < 0 or female < 0:
                 errors += 1
                 continue
 
@@ -125,19 +148,27 @@ def parse_manual_headcount(conn: sqlite3.Connection, source_dir: str | None = No
             if headcount_all <= 0:
                 skipped += 1
                 continue
+            if male + female > headcount_all:
+                errors += 1
+                continue
 
             cursor.execute(
                 """
                 INSERT INTO fact_monthly_headcount
-                (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
-                VALUES (?, ?, ?, ?, ?, 'manual', ?)
+                (
+                    period, cc_code, headcount_all, headcount_staff, headcount_worker,
+                    headcount_male, headcount_female, source, description
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', ?)
                 ON CONFLICT(period, cc_code, source) DO UPDATE SET
                     headcount_all = excluded.headcount_all,
                     headcount_staff = excluded.headcount_staff,
                     headcount_worker = excluded.headcount_worker,
+                    headcount_male = excluded.headcount_male,
+                    headcount_female = excluded.headcount_female,
                     description = excluded.description
                 """,
-                (period, cc_code, headcount_all, staff, worker, description),
+                (period, cc_code, headcount_all, staff, worker, male, female, description),
             )
             inserted += 1
 

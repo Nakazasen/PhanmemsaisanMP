@@ -1,1 +1,10 @@
 [15:00] RUN SUCCESS: App running (MP2027 Manager GUI)
+[22:35] SESSION SAVE: Reviewed real docs workbooks, updated loader/parsers/exporter, verified tests and E2E output, documented current state, created prioritized TODO, and repackaged dist/MP2027_Manager.exe.
+[22:36] STATUS: 2 red sheets in docs workbook are PARTIALLY_COMPLETED, not fully done. Remaining work is tracked in TODO_MP2027_OPEN_ITEMS.md.
+[22:37] NEXT READ: QUY_TRINH_NGHIEP_VU_MP2027.md -> TODO_MP2027_OPEN_ITEMS.md -> docs/Cai tien nhap du lieu chung vao file MP.xlsx -> docs/FORM.xlsx -> OUTPUT_FY2027/MP_CC_1412000089.xlsx
+[20:45] AUDIT UPDATE: 3 red sheets in docs/MP2027 were re-audited with docs/MP2026 as trusted reference. Rows 109-137 are now classified as DONE / MOSTLY_DONE / DATA_BLOCKED instead of generic partial.
+[20:46] DATA BLOCKERS: headcount_manual.csv still lacks CC 1412000089; special_costs_manual.csv still has no FY2027 NNN event rows; Company anniversary and nonparticipant company-trip gift still lack confirmed FORM rows.
+[20:47] VERIFY: Current mp2027.db contains 0 alloc_% rows for VISA/Passport/GPLD/NNN descriptions after the safeguard change.
+[22:39] TEST: 16 tests passed after final source-aligned update.
+[22:39] E2E: Re-exported OUTPUT_FY2027/MP_CC_1412000089.xlsx from docs/MP2027 sources.
+[22:47] PACKAGE: Rebuilt dist/MP2027_Manager.exe with docs/MP2027 bundled into the one-file executable.

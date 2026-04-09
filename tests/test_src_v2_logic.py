@@ -17,7 +17,7 @@ class TestSrcV2Logic(unittest.TestCase):
         self.assertEqual(schedule['202604'], 100.0)  # Trước tháng cuối
         self.assertEqual(schedule['202605'], 50.0)   # Đúng tháng cuối
         self.assertNotIn('202606', schedule)         # Sau tháng cuối (Phải bằng 0/Không tồn tại)
-        print("✅ Test Khấu hao: PASS")
+        print("Test Khau hao: PASS")
 
     def test_interest_expansion_logic(self):
         """Xác nhận logic Lãi: Tách tháng 4 và các tháng sau."""
@@ -31,13 +31,13 @@ class TestSrcV2Logic(unittest.TestCase):
         self.assertEqual(schedule['202604'], 10.0)  # Lãi tháng 4
         self.assertEqual(schedule['202605'], 8.0)   # Lãi tháng 5+
         self.assertNotIn('202606', schedule)         # Sau khi hết hạn
-        print("✅ Test Lãi: PASS")
+        print("Test Lai: PASS")
 
     def test_normalize_period(self):
         """Xác nhận logic chuẩn hóa ngày tháng."""
         self.assertEqual(helpers.normalize_period(datetime(2027, 11, 30)), '202711')
         self.assertEqual(helpers.normalize_period("2027-11-30"), '202711')
-        print("✅ Test Chuẩn hóa: PASS")
+        print("Test Chuan hoa: PASS")
 
 if __name__ == '__main__':
     unittest.main()

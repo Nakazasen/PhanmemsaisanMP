@@ -22,7 +22,7 @@ def package():
         "--onefile",
         f"--icon={icon_path}",
         "--add-data", "assets;assets",
-        "--add-data", "FORM.xlsx;.",
+        "--add-data", "docs\\MP2027;docs\\MP2027",
         "--name", "MP2027_Manager",
         "src/universal_app.py"
     ]

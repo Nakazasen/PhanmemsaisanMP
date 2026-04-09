@@ -99,6 +99,7 @@ class TestPostingMonthLogic(unittest.TestCase):
         periods = _alloc_periods(conn, rid)
         self.assertEqual(set(periods.keys()), {month_7})
         self.assertEqual(periods[month_7], 1000.0)
+        conn.close()
 
     def test_event_month_posting_types_use_positive_delta(self):
         # 入社月, 配布月, 申請月, 取得月 use event delta logic.
@@ -115,6 +116,7 @@ class TestPostingMonthLogic(unittest.TestCase):
             self.assertEqual(periods.get(months[1]), 200.0)
             self.assertEqual(periods.get(months[3]), 300.0)
             self.assertNotIn(months[0], periods)
+            conn.close()
 
     def test_next_month_rule_posts_in_month_after_delta(self):
         conn = _mk_conn()
@@ -129,6 +131,7 @@ class TestPostingMonthLogic(unittest.TestCase):
         self.assertEqual(periods.get(months[2]), 200.0)
         self.assertEqual(periods.get(months[4]), 300.0)
         self.assertNotIn(months[1], periods)
+        conn.close()
 
     def test_working_days_driver_uses_sys_params(self):
         conn = _mk_conn()
@@ -143,6 +146,7 @@ class TestPostingMonthLogic(unittest.TestCase):
         self.assertEqual(periods.get(months[1]), 40.0)
         self.assertEqual(periods.get(months[2]), 60.0)
         self.assertEqual(periods.get(months[11]), 32.0)
+        conn.close()
 
 
 if __name__ == "__main__":

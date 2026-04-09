@@ -4,7 +4,9 @@ Loads Cost Centers, Accounts, and Allocation Rules from source Excel files.
 """
 import sqlite3
 import os
+import re
 import pandas as pd
+import openpyxl
 from src.db.schema import get_connection, create_schema, init_sys_params
 from src.utils.excel_helpers import read_exchange_rate_from_form
 
@@ -16,8 +18,73 @@ else:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Source file paths
-FORM_PATH = os.path.join(BASE_DIR, 'FORM.xlsx')
-ALLOC_PATH = os.path.join(BASE_DIR, 'FY2027配賦額一覧 (2025.12.29).xlsx')
+MP2027_DOCS_DIR = os.path.join(BASE_DIR, 'docs', 'MP2027')
+if os.path.isdir(MP2027_DOCS_DIR):
+    FORM_PATH = os.path.join(MP2027_DOCS_DIR, 'FORM.xlsx')
+    ALLOC_PATH = os.path.join(MP2027_DOCS_DIR, 'FY2027配賦額一覧 (2025.12.29).xlsx')
+else:
+    FORM_PATH = os.path.join(BASE_DIR, 'FORM.xlsx')
+    ALLOC_PATH = os.path.join(BASE_DIR, 'FY2027配賦額一覧 (2025.12.29).xlsx')
+
+
+def _normalize_text(value) -> str:
+    text = str(value or "").replace("\n", " ").replace("\u3000", " ").strip().lower()
+    return " ".join(text.split())
+
+
+def _looks_like_allocation_rules_workbook(path: str) -> bool:
+    try:
+        workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    except Exception:
+        return False
+
+    try:
+        worksheet = workbook[workbook.sheetnames[0]]
+        if worksheet.max_row < 20 or worksheet.max_column < 10:
+            return False
+
+        header_cells: list[str] = []
+        for row in worksheet.iter_rows(min_row=1, max_row=6, max_col=10, values_only=True):
+            for value in row:
+                if value is not None:
+                    header_cells.append(_normalize_text(value))
+        header_blob = " | ".join(header_cells)
+        return (
+            "vnd" in header_blob
+            and ("don gia" in header_blob or "単価" in header_blob)
+            and ("ma tai khoan" in header_blob or "tai khoan" in header_blob or "計上月" in header_blob)
+        )
+    finally:
+        workbook.close()
+
+
+def find_allocation_rules_file(search_dir: str | None = None, fiscal_year: int = 2027) -> str | None:
+    candidates: list[tuple[int, str]] = []
+    base_search_dir = search_dir or BASE_DIR
+    if not os.path.isdir(base_search_dir):
+        return None
+
+    for name in os.listdir(base_search_dir):
+        lower_name = name.lower()
+        if not lower_name.endswith(".xlsx") or lower_name.startswith("~$"):
+            continue
+        path = os.path.join(base_search_dir, name)
+        if not _looks_like_allocation_rules_workbook(path):
+            continue
+
+        score = 0
+        if f"fy{fiscal_year}".lower() in lower_name:
+            score += 3
+        if "配賦" in name or "allocation" in lower_name:
+            score += 2
+        if "2025.12.29" in name:
+            score += 1
+        candidates.append((score, path))
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: (-item[0], os.path.basename(item[1]).lower()))
+    return candidates[0][1]
 
 
 def _classify_driver(raw_text: str) -> str:
@@ -37,6 +104,28 @@ def _classify_driver(raw_text: str) -> str:
         return 'fixed_ratio'
     else:
         return 'headcount_all'  # Default fallback
+
+
+def _parse_unit_price(value) -> float | None:
+    """Parse numeric unit prices such as `145$`, `1,259,500`, or plain floats."""
+    if pd.isna(value):
+        return None
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    text = str(value).strip().replace(",", "")
+    if not text:
+        return None
+
+    match = re.search(r"[-+]?\d+(?:\.\d+)?", text)
+    if not match:
+        return None
+
+    try:
+        return float(match.group(0))
+    except (ValueError, TypeError):
+        return None
 
 
 def load_cost_centers(conn: sqlite3.Connection, form_path: str = None) -> int:
@@ -179,9 +268,18 @@ def load_accounts(conn: sqlite3.Connection, form_path: str = None) -> int:
     return count
 
 
-def load_allocation_rules(conn: sqlite3.Connection, alloc_path: str = None) -> int:
+def load_allocation_rules(
+    conn: sqlite3.Connection,
+    alloc_path: str = None,
+    search_dir: str | None = None,
+    fiscal_year: int = 2027,
+) -> int:
     """Load allocation rules from FY2027配賦額一覧."""
     path = alloc_path or ALLOC_PATH
+    if not path or not os.path.exists(path):
+        discovered = find_allocation_rules_file(search_dir=search_dir, fiscal_year=fiscal_year)
+        if discovered:
+            path = discovered
     if not os.path.exists(path):
         print(f"Warning: Allocation rules file not found at {path}")
         return 0
@@ -225,12 +323,8 @@ def load_allocation_rules(conn: sqlite3.Connection, alloc_path: str = None) -> i
             continue
 
         # Skip if no unit price or it's not a number
-        unit_price = row.iloc[7] if len(row) > 7 else None
-        if pd.isna(unit_price):
-            continue
-        try:
-            unit_price = float(unit_price)
-        except (ValueError, TypeError):
+        unit_price = _parse_unit_price(row.iloc[7] if len(row) > 7 else None)
+        if unit_price is None:
             continue
 
         account_name = str(row.iloc[2]).strip() if len(row) > 2 and not pd.isna(row.iloc[2]) else None
@@ -267,12 +361,13 @@ def load_allocation_rules(conn: sqlite3.Connection, alloc_path: str = None) -> i
     return count
 
 
-def load_all(db_path: str = None, template_path: str = None, 
+def load_all(db_path: str = None, template_path: str = None,
              rules_path: str = None, fiscal_year: int = 2027,
-             exchange_rate: float = 25450.0) -> dict:
+             exchange_rate: float = 25450.0, search_dir: str | None = None) -> dict:
     """Load all master data into the database with dynamic configuration."""
     # Determine actual paths
     t_path = template_path or FORM_PATH
+    discovery_dir = search_dir or (os.path.dirname(os.path.abspath(t_path)) if t_path else BASE_DIR)
     r_path = rules_path or ALLOC_PATH
 
     # SSOT: Always try to read exchange rate from FORM.xlsx B2 as per Spec V4
@@ -295,6 +390,7 @@ def load_all(db_path: str = None, template_path: str = None,
     
     # Determine actual paths
     t_path = template_path or FORM_PATH
+    discovery_dir = search_dir or (os.path.dirname(os.path.abspath(t_path)) if t_path else BASE_DIR)
     r_path = rules_path or ALLOC_PATH
     
     # If the rules file contains the fiscal year in its name, 
@@ -304,11 +400,20 @@ def load_all(db_path: str = None, template_path: str = None,
         potential_name = ALLOC_PATH.replace('2027', str(fiscal_year))
         if os.path.exists(potential_name):
             r_path = potential_name
+        else:
+            discovered = find_allocation_rules_file(search_dir=discovery_dir, fiscal_year=fiscal_year)
+            if discovered:
+                r_path = discovered
 
     results = {
         'cost_centers': load_cost_centers(conn, t_path),
         'accounts': load_accounts(conn, t_path),
-        'allocation_rules': load_allocation_rules(conn, r_path),
+        'allocation_rules': load_allocation_rules(
+            conn,
+            r_path,
+            search_dir=discovery_dir,
+            fiscal_year=fiscal_year,
+        ),
     }
 
     conn.close()

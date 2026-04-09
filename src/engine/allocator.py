@@ -8,8 +8,54 @@ Responsibilities:
 
 import re
 import sqlite3
+import unicodedata
 
 from src.utils import excel_helpers as helpers
+
+HEALTH_CHECK_KEYWORDS = ("kham suc khoe", "khám sức khỏe", "健康診断")
+MALE_KEYWORDS = ("cho cnv nam", " nam)", " male", "男")
+FEMALE_KEYWORDS = ("cho cnv nu", "cho cnv nữ", " nu)", " nữ)", " female", "女")
+POSTING_MONTH_ITEM_OVERRIDES = (
+    (("tiệc khuấy động năm tài chính", "quyet起コンパ", "決起コンパ"), "5月"),
+    (("社員旅行 du lịch công ty", "社員旅行"), "5月"),
+    (("京セラフェスティバル", "lễ hội kyocera"), "9月"),
+    (("月餅", "bánh trung thu"), "9月"),
+    (("運動会", "đại hội thể thao"), "11月"),
+    (("忘年会補助金", "hỗ trợ tiệc tất niên"), "2月"),
+    (("お年玉", "tiền lì xì"), "2月"),
+    (("会社設立記念", "sự kiện tri ân ngày thành lập công ty"), "10月"),
+)
+
+
+MANUAL_EVENT_ITEM_TOKENS = (
+    "visa",
+    "passport",
+    "gpld",
+    "ho chieu",
+    "ho ch\u1ebfu",
+    "the tam tru",
+    "th\u1ebb t\u1ea1m tru",
+    "th\u1ebb t\u1ea1m tr\u00fa",
+    "nhap canh",
+    "nh\u1eadp canh",
+    "nh\u1eadp c\u1ea3nh",
+    "luu tru",
+    "\u52b4\u50cd\u8a31\u53ef",
+    "\u5728\u7559",
+    "\u65c5\u5238",
+    "\u5165\u56fd",
+    "\u30d3\u30b6",
+)
+EVENT_MONTH_TOKENS = (
+    "\u5165\u793e\u6708",
+    "\u914d\u5e03\u6708",
+    "\u7533\u8acb\u6708",
+    "\u53d6\u5f97\u6708",
+    "thang vao lam",
+    "thang phat",
+    "thang cap",
+)
+NEXT_EVENT_MONTH_TOKENS = ("\u7fcc\u6708", "thang tiep theo")
 
 
 class AllocationEngine:
@@ -22,6 +68,12 @@ class AllocationEngine:
         self.period_index = {p: i for i, p in enumerate(self.fy_months)}
         self.hc_cache = self._load_headcount_cache()
 
+    def _normalize_text(self, value: str) -> str:
+        text = unicodedata.normalize("NFKD", str(value or ""))
+        text = "".join(ch for ch in text if not unicodedata.combining(ch))
+        text = text.replace("\n", " ").replace("\u3000", " ").strip().lower()
+        return " ".join(text.split())
+
     def _load_sys_params(self) -> dict[str, str]:
         rows = self.conn.execute("SELECT key, value FROM sys_params").fetchall()
         return {row["key"]: row["value"] for row in rows}
@@ -33,7 +85,9 @@ class AllocationEngine:
         # Priority: manual > ga > others
         rows = self.conn.execute(
             """
-            SELECT cc_code, period, headcount_all, headcount_staff, headcount_worker, source
+            SELECT
+                cc_code, period, headcount_all, headcount_staff, headcount_worker,
+                headcount_male, headcount_female, source
             FROM fact_monthly_headcount
             ORDER BY
                 CASE source
@@ -49,6 +103,8 @@ class AllocationEngine:
                 "headcount_all": float(row["headcount_all"] or 0.0),
                 "headcount_staff": float(row["headcount_staff"] or 0.0),
                 "headcount_worker": float(row["headcount_worker"] or 0.0),
+                "headcount_male": float(row["headcount_male"] or 0.0),
+                "headcount_female": float(row["headcount_female"] or 0.0),
             }
         return cache
 
@@ -72,6 +128,8 @@ class AllocationEngine:
             return float(cc["staff_count"] or 0)
         if driver_type == "headcount_worker":
             return float(cc["worker_count"] or 0)
+        if driver_type in ("headcount_male", "headcount_female"):
+            return 0.0
         return float((cc["staff_count"] or 0) + (cc["worker_count"] or 0))
 
     def _get_prev_period(self, period: str) -> str | None:
@@ -113,24 +171,30 @@ class AllocationEngine:
         if months:
             return [p for p in self.fy_months if int(p[-2:]) in months]
 
-        # Event markers still evaluate per month (by event delta)
-        event_tokens = ("入社月", "配布月", "申請月", "取得月", "翌月", 
-                        "thang vao lam", "thang tiep theo", "thang phat", "thang cap")
-        if any(token in lower_text for token in event_tokens):
+        # Event markers still evaluate per month (by event delta).
+        if any(token in text for token in EVENT_MONTH_TOKENS + NEXT_EVENT_MONTH_TOKENS):
+            return self.fy_months
+        if any(token in lower_text for token in EVENT_MONTH_TOKENS + NEXT_EVENT_MONTH_TOKENS):
             return self.fy_months
         return self.fy_months
 
     def _is_event_month_rule(self, posting_month: str | None) -> bool:
         if not posting_month:
             return False
-        text = str(posting_month).lower()
-        return any(token in text for token in ("入社月", "配布月", "申請月", "取得月", 
-                                             "thang vao lam", "thang phat", "thang cap"))
+        raw_text = str(posting_month)
+        lower_text = raw_text.lower()
+        return any(token in raw_text for token in EVENT_MONTH_TOKENS) or any(
+            token in lower_text for token in EVENT_MONTH_TOKENS
+        )
 
     def _is_next_event_month_rule(self, posting_month: str | None) -> bool:
         if not posting_month:
             return False
-        return any(token in str(posting_month).lower() for token in ("翌月", "thang tiep theo"))
+        raw_text = str(posting_month)
+        lower_text = raw_text.lower()
+        return any(token in raw_text for token in NEXT_EVENT_MONTH_TOKENS) or any(
+            token in lower_text for token in NEXT_EVENT_MONTH_TOKENS
+        )
 
     def _get_event_delta(self, cc_code: int, period: str, driver_type: str) -> float:
         prev_period = self._get_prev_period(period)
@@ -140,6 +204,37 @@ class AllocationEngine:
         prev = self._get_monthly_hc(cc_code, prev_period, driver_type)
         delta = current - prev
         return delta if delta > 0 else 0.0
+
+    def _resolve_rule_driver_type(self, rule) -> str:
+        driver_type = str(rule["driver_type"] or "").strip() or "headcount_all"
+        if driver_type in ("headcount_male", "headcount_female"):
+            return driver_type
+
+        item_name = helpers.normalize_text(rule["item_name"] or "")
+        if any(keyword in item_name for keyword in HEALTH_CHECK_KEYWORDS):
+            if any(keyword in item_name for keyword in MALE_KEYWORDS):
+                return "headcount_male"
+            if any(keyword in item_name for keyword in FEMALE_KEYWORDS):
+                return "headcount_female"
+        return driver_type
+
+    def _effective_posting_month(self, rule) -> str | None:
+        item_name = self._normalize_text(rule["item_name"] or "")
+        for tokens, posting_month in POSTING_MONTH_ITEM_OVERRIDES:
+            normalized_tokens = tuple(self._normalize_text(token) for token in tokens)
+            if any(token in item_name for token in normalized_tokens):
+                return posting_month
+        raw_posting_month = str(rule["posting_month"] or "").strip()
+        return raw_posting_month or None
+
+    def _requires_manual_event_source(self, rule) -> bool:
+        raw_item_name = str(rule["item_name"] or "")
+        normalized_item_name = self._normalize_text(raw_item_name)
+        if any(token in raw_item_name for token in MANUAL_EVENT_ITEM_TOKENS):
+            return True
+        if any(token in normalized_item_name for token in MANUAL_EVENT_ITEM_TOKENS):
+            return True
+        return False
 
     def run_allocation(self) -> dict:
         print("Starting Refactored Allocation Engine...")
@@ -155,6 +250,9 @@ class AllocationEngine:
             if any(k.lower() in name for k in keywords):
                 return row
         return None
+
+    def _find_account_by_code(self, account_code: int):
+        return self.conn.execute("SELECT * FROM dim_accounts WHERE code = ?", (account_code,)).fetchone()
 
     def _row_to_target_acc(self, row, cost_type: str) -> int | None:
         if not row:
@@ -181,11 +279,13 @@ class AllocationEngine:
             """
         ).fetchall()
 
-        acc_depr = self._find_account_row(("減価償却", "khấu hao", "depreciation"))
-        acc_interest = self._find_account_row(("金利", "lãi", "interest"))
+        acc_depr_building = self._find_account_by_code(5006016260)
+        acc_depr_land = self._find_account_by_code(5006016261)
+        acc_depr_equipment = self._find_account_by_code(5006016244)
+        acc_interest = self._find_account_by_code(9114120007) or self._find_account_row(("金利", "lãi", "interest"))
         acc_electric = self._find_account_row(("電気", "electric", "điện"))
         acc_water = self._find_account_row(("水道", "water", "nước"))
-        acc_it = self._find_account_row(("software", "system", "it", "通信"))
+        acc_it = self._find_account_by_code(5005246282) or self._find_account_row(("software", "system", "it", "通信"))
         acc_ga = self._find_account_row(("福利", "gas", "vệ sinh", "ga"))
         default_acc = self._find_account_row(("消耗", "chi phí")) or acc_ga
 
@@ -199,8 +299,10 @@ class AllocationEngine:
 
             target_row = None
             if source == "facility":
-                if "depreciation" in desc:
-                    target_row = acc_depr
+                if "depreciation_building" in desc:
+                    target_row = acc_depr_building
+                elif "depreciation_land" in desc:
+                    target_row = acc_depr_land
                 elif "interest" in desc:
                     target_row = acc_interest
                 elif "electric" in desc:
@@ -208,7 +310,7 @@ class AllocationEngine:
                 elif "water" in desc:
                     target_row = acc_water
             elif source == "fixed_assets":
-                target_row = acc_interest if "interest" in desc else acc_depr
+                target_row = acc_interest if "interest" in desc else acc_depr_equipment
             elif source == "it_sim":
                 target_row = acc_it
             elif "ga" in source:
@@ -227,12 +329,19 @@ class AllocationEngine:
         cursor = self.conn.cursor()
 
         for rule in rules:
-            posting_month = str(rule["posting_month"] or "").strip()
+            if self._requires_manual_event_source(rule):
+                continue
+
+            unit_price = float(rule["unit_price"] or 0.0)
+            if unit_price <= 0:
+                continue
+
+            posting_month = self._effective_posting_month(rule)
             target_periods = self._resolve_target_periods(posting_month)
             if not target_periods:
                 continue
 
-            driver_type = str(rule["driver_type"] or "").strip()
+            driver_type = self._resolve_rule_driver_type(rule)
             for period in target_periods:
                 for cc in self.cost_centers:
                     if driver_type == "working_days":
@@ -260,7 +369,9 @@ class AllocationEngine:
                     if not target_acc:
                         continue
 
-                    amount_vnd = float(rule["unit_price"]) * float(driver_val)
+                    amount_vnd = unit_price * float(driver_val)
+                    if amount_vnd <= 0:
+                        continue
                     cursor.execute(
                         """
                         INSERT INTO fact_input_data

@@ -10,6 +10,7 @@ Loads:
 import os
 import re
 import sqlite3
+import unicodedata
 from collections import defaultdict
 from typing import Any
 
@@ -20,7 +21,7 @@ from src.utils.excel_helpers import get_fy_months, safe_float
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-GA_FILE_KEYWORDS = ("総務課", "振替予定")
+GA_FILE_KEYWORDS = ("fy", "mp")
 CALC_SHEET_KEYWORDS = ("cach tinh", "振替", "計算", "tinh")
 WORKING_DAY_KEYWORDS = ("稼働日", "ngay lam")
 HEADCOUNT_KEYWORDS = ("人員数", "so nguoi", "headcount", "staff", "worker", "direct", "indirect")
@@ -30,32 +31,78 @@ EXCLUDE_HEADCOUNT_ROW_KEYWORDS = ("vnd", "tiền", "tien", "alloc", "rate", "rat
 
 
 def _normalize_text(value: Any) -> str:
-    return str(value or "").strip().lower()
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = text.replace("\n", " ").replace("\u3000", " ").strip().lower()
+    return " ".join(text.split())
+
+
+def _looks_like_ga_workbook(path: str, fiscal_year: int) -> bool:
+    try:
+        workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    except Exception:
+        return False
+
+    try:
+        normalized_sheets = [_normalize_text(name) for name in workbook.sheetnames]
+        if not any("cach tinh" in name or "振替" in name or "計算" in name for name in normalized_sheets):
+            return False
+
+        worksheet = workbook[workbook.sheetnames[0]]
+        if worksheet.max_row < 8 or worksheet.max_column < 12:
+            return False
+
+        header_cells: list[str] = []
+        for row in worksheet.iter_rows(min_row=1, max_row=6, max_col=18, values_only=True):
+            for value in row:
+                if value is not None:
+                    header_cells.append(_normalize_text(value))
+        header_blob = " | ".join(header_cells)
+        return (
+            str(fiscal_year) in header_blob
+            and "vnd" in header_blob
+            and ("yotei" in header_blob or "item" in header_blob or "項目" in header_blob)
+            and ("費" in header_blob or "製造" in header_blob or "tai khoan" in header_blob or "account" in header_blob)
+        )
+    finally:
+        workbook.close()
 
 
 def _find_ga_file(source_dir: str | None, fiscal_year: int) -> str | None:
     search_dir = source_dir or BASE_DIR
-    preferred = os.path.join(search_dir, f"総務課 FY{fiscal_year} MP 振替予定.xlsx")
-    if os.path.exists(preferred):
-        return preferred
+    if not os.path.isdir(search_dir):
+        return None
 
+    candidates: list[tuple[int, str]] = []
     for name in os.listdir(search_dir):
         lower_name = name.lower()
-        if not lower_name.endswith(".xlsx"):
+        if not lower_name.endswith(".xlsx") or lower_name.startswith("~$"):
             continue
-        if all(token in name for token in GA_FILE_KEYWORDS):
-            return os.path.join(search_dir, name)
-        # Fallback: avoid matching facility/fixed-assets files.
-        if str(fiscal_year) in name and "mp" in lower_name and ("ga" in lower_name or "tong vu" in lower_name):
-            return os.path.join(search_dir, name)
-    return None
+
+        path = os.path.join(search_dir, name)
+        if not _looks_like_ga_workbook(path, fiscal_year):
+            continue
+
+        score = 0
+        if f"fy{fiscal_year}" in lower_name:
+            score += 2
+        if "mp" in lower_name:
+            score += 1
+        if "総務課" in name or "tong vu" in lower_name or "hanh chinh" in lower_name:
+            score += 2
+        candidates.append((score, path))
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: (-item[0], os.path.basename(item[1]).lower()))
+    return candidates[0][1]
 
 
 def _iter_calc_sheet_names(sheet_names: list[str]) -> list[str]:
     result: list[str] = []
     for sheet_name in sheet_names:
         normalized = _normalize_text(sheet_name)
-        if any(token in normalized for token in ("cach tinh", "振替", "計算", "tính")):
+        if any(token in normalized for token in ("cach tinh", "振替", "計算", "tinh")):
             result.append(sheet_name)
             continue
         if any(keyword in normalized for keyword in CALC_SHEET_KEYWORDS):
@@ -69,7 +116,7 @@ def _parse_ga_main_sheet(df: pd.DataFrame, fy_months: list[str]) -> list[dict[st
 
     for i in range(min(25, len(df))):
         first_col = _normalize_text(df.iloc[i, 0] if len(df.columns) > 0 else "")
-        if "item" in first_col or "内容" in first_col:
+        if "item" in first_col or "内容" in first_col or "項目" in first_col:
             header_row = i
             break
 
@@ -82,7 +129,7 @@ def _parse_ga_main_sheet(df: pd.DataFrame, fy_months: list[str]) -> list[dict[st
         if not item_name:
             continue
 
-        lowered_name = item_name.lower()
+        lowered_name = _normalize_text(item_name)
         if "total" in lowered_name or "tổng" in lowered_name or "tong" in lowered_name or "合計" in item_name:
             continue
 

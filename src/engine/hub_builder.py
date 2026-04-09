@@ -1,75 +1,607 @@
 """
 MP2027 Manager - Hub Builder.
 
-Aggregates final results and writes them back to the FORM hub sheet.
+Writes shared-cost data back into the MP detail sheet while preserving the
+original FORM layout and formulas.
 """
+
+from __future__ import annotations
+
+from collections import defaultdict
+from copy import copy
 import os
 import shutil
 import sqlite3
 from typing import Optional
+import unicodedata
 
 import openpyxl
-import pandas as pd
+from openpyxl.utils import get_column_letter
 
-from src.utils.excel_helpers import find_hub_sheet_name, get_fy_month_labels, get_fy_months
+from src.utils import excel_helpers as helpers
 
-TOTAL_LABEL = "合計"
+
+VISIBLE_MONTH_START_COL = 6   # F
+TOTAL_COL = 18                # R
+ACCOUNT_COL = 2               # B
+DESCRIPTION_COL = 19          # S
+WBS_COL = 20                  # T
+LOOKUP_NAME_COL = 3           # C
+LOOKUP_GROUP_COL = 4          # D
+APPEND_TEMPLATE_ROW = 29
+APPEND_START_ROW = 200
+MAX_DATA_ROW = 1000
+IT_COMPONENT_ORDER = ("vpn", "mail", "r3", "mes", "plm", "qlik_sense", "vps", "ams")
+MONTHLY_HEADCOUNT_FIXED_ROWS = (42, 44, 93, 94)
+FIXED_ALLOCATION_ROW_MATCHERS = {
+    54: {
+        "tokens": ("決起コンパ", "tiệc khuấy động năm tài chính"),
+        "exclude_tokens": (),
+    },
+    63: {
+        "tokens": ("お年玉", "tiền lì xì"),
+        "exclude_tokens": (),
+    },
+    66: {
+        "tokens": ("社員旅行 du lịch công ty", "社員旅行", "京セラフェスティバル", "lễ hội kyocera"),
+        "exclude_tokens": ("不参加", "gift", "quà tặng"),
+    },
+    67: {
+        "tokens": ("運動会", "đại hội thể thao"),
+        "exclude_tokens": (),
+    },
+    69: {
+        "tokens": ("khám sức khỏe (cho cnv nam)", "khám sức khỏe (cho cnv nữ)", "健康診断（ローカル）"),
+        "exclude_tokens": ("gplđ", "gpld", "労働許可証"),
+    },
+    70: {
+        "tokens": ("忘年会補助金", "hỗ trợ tiệc tất niên"),
+        "exclude_tokens": (),
+    },
+    71: {
+        "tokens": ("月餅", "bánh trung thu"),
+        "exclude_tokens": (),
+    },
+    79: {
+        "tokens": ("社員証（新入社員用・再発行時、写真含む）", "thẻ từ chấm công + ảnh"),
+        "exclude_tokens": (),
+    },
+    80: {
+        "tokens": ("社員証用写真のみ", "ảnh của thẻ từ chấm công"),
+        "exclude_tokens": (),
+    },
+    81: {
+        "tokens": ("フィロソフィ手帳1", "フィロソフィ手帳2", "philosophy quyển 1", "philosophy quyển 2"),
+        "exclude_tokens": (),
+    },
+    82: {
+        "tokens": ("ポケットカレンダー", "pocket calendar", "lịch bỏ túi"),
+        "exclude_tokens": (),
+    },
+    88: {
+        "tokens": ("社員証用ケース", "vỏ thẻ + móc thẻ"),
+        "exclude_tokens": (),
+    },
+    89: {
+        "tokens": ("alloc: ペン", "ペン bút"),
+        "exclude_tokens": (),
+    },
+    90: {
+        "tokens": ("alloc: ノート", "ノート sổ"),
+        "exclude_tokens": (),
+    },
+}
+MANAGED_FIXED_ROWS = tuple(
+    sorted(
+        set(range(38, 91))
+        | set(range(93, 110))
+        | set(range(111, 153))
+    )
+)
 
 
 class HubBuilder:
     def __init__(self, conn: sqlite3.Connection, fiscal_year: int = 2027):
         self.conn = conn
         self.fiscal_year = fiscal_year
-        self.fy_months = get_fy_months(fiscal_year)
+        self.fy_months = helpers.get_fy_months(fiscal_year)
 
-    def get_structured_data(self, cc_code: Optional[int] = None) -> pd.DataFrame:
-        """Query DB, join with dimensions, and pivot to 12 months structure."""
-        where_clause = "WHERE f.account_code > 0"
-        params = []
-        if cc_code:
-            where_clause += " AND f.cc_code = ?"
-            params.append(cc_code)
+    def _normalize_text(self, value: object) -> str:
+        text = unicodedata.normalize("NFKD", str(value or ""))
+        text = "".join(ch for ch in text if not unicodedata.combining(ch))
+        text = text.replace("\n", " ").replace("\u3000", " ").strip().lower()
+        return " ".join(text.split())
 
-        query = f"""
-            SELECT
-                f.cc_code,
-                dc.name_jp AS cc_name,
-                f.account_code,
-                da.name_jp AS account_name,
-                f.description,
-                f.period,
-                SUM(f.amount_vnd) AS amount
-            FROM fact_input_data f
-            JOIN dim_cost_centers dc ON f.cc_code = dc.code
-            JOIN dim_accounts da ON f.account_code = da.code
-            {where_clause}
-            GROUP BY f.cc_code, dc.name_jp, f.account_code, da.name_jp, f.description, f.period
-        """
-        raw_df = pd.read_sql(query, self.conn, params=params)
-        if raw_df.empty:
-            return pd.DataFrame()
+    def _format_number(self, value: float) -> str:
+        number = float(value or 0.0)
+        if abs(number - round(number)) < 1e-9:
+            return str(int(round(number)))
+        return f"{number:.6f}".rstrip("0").rstrip(".")
 
-        pivot_df = (
-            raw_df.pivot_table(
-                index=["cc_code", "cc_name", "account_code", "account_name", "description"],
-                columns="period",
-                values="amount",
-                aggfunc="sum",
-            )
-            .fillna(0)
-            .reset_index()
+    def _copy_row_style(self, worksheet, source_row: int, target_row: int) -> None:
+        worksheet.row_dimensions[target_row].height = worksheet.row_dimensions[source_row].height
+        for column_index in range(1, WBS_COL + 1):
+            source_cell = worksheet.cell(row=source_row, column=column_index)
+            target_cell = worksheet.cell(row=target_row, column=column_index)
+            if source_cell.has_style:
+                target_cell.font = copy(source_cell.font)
+                target_cell.fill = copy(source_cell.fill)
+                target_cell.border = copy(source_cell.border)
+                target_cell.alignment = copy(source_cell.alignment)
+                target_cell.number_format = source_cell.number_format
+                target_cell.protection = copy(source_cell.protection)
+
+    def _write_lookup_formulas(self, worksheet, row_index: int) -> None:
+        worksheet.cell(
+            row=row_index,
+            column=LOOKUP_NAME_COL,
+            value=(
+                f'=IFERROR(IF(VLOOKUP($B{row_index},勘定科目!$A:$H,'
+                f'HLOOKUP($E$5,勘定科目!$F$1:$H$2,2,0),0)="","",'
+                f'VLOOKUP($B{row_index},勘定科目!$A:$E,2,0)),"")'
+            ),
+        )
+        worksheet.cell(
+            row=row_index,
+            column=LOOKUP_GROUP_COL,
+            value=f'=IF(C{row_index}="","",VLOOKUP($B{row_index},勘定科目!$A:$E,4,0))',
+        )
+        worksheet.cell(
+            row=row_index,
+            column=TOTAL_COL,
+            value=f"=SUM(F{row_index}:Q{row_index})",
         )
 
-        for month in self.fy_months:
-            if month not in pivot_df.columns:
-                pivot_df[month] = 0.0
+    def _clear_visible_months(self, worksheet, row_index: int) -> None:
+        for offset in range(len(self.fy_months)):
+            worksheet.cell(row=row_index, column=VISIBLE_MONTH_START_COL + offset).value = None
+        worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
 
-        pivot_df["Total"] = pivot_df[self.fy_months].sum(axis=1)
-        for column in self.fy_months + ["Total"]:
-            pivot_df[column] = pivot_df[column].round(0).astype(int)
+    def _prepare_append_row(self, worksheet, row_index: int) -> None:
+        self._copy_row_style(worksheet, APPEND_TEMPLATE_ROW, row_index)
+        self._write_lookup_formulas(worksheet, row_index)
+        worksheet.cell(row=row_index, column=5).value = None
+        worksheet.cell(row=row_index, column=ACCOUNT_COL).value = None
+        worksheet.cell(row=row_index, column=DESCRIPTION_COL).value = None
+        worksheet.cell(row=row_index, column=WBS_COL).value = None
+        self._clear_visible_months(worksheet, row_index)
 
-        final_cols = ["cc_code", "cc_name", "account_code", "account_name", "description"] + self.fy_months + ["Total"]
-        return pivot_df[final_cols]
+    def _clear_append_area(self, worksheet, start_row: int) -> None:
+        for row_index in range(start_row, MAX_DATA_ROW + 1):
+            self._prepare_append_row(worksheet, row_index)
+
+    def _input_rows_for_cc(self, cc_code: int, source: str | None = None) -> list[sqlite3.Row]:
+        if source is None:
+            query = """
+                SELECT source, period, description, account_code, amount_vnd, amount_usd
+                FROM fact_input_data
+                WHERE cc_code = ?
+            """
+            params = (int(cc_code),)
+        else:
+            query = """
+                SELECT source, period, description, account_code, amount_vnd, amount_usd
+                FROM fact_input_data
+                WHERE cc_code = ? AND source = ?
+            """
+            params = (int(cc_code), source)
+        return self.conn.execute(query, params).fetchall()
+
+    def _month_series(
+        self,
+        cc_code: int,
+        *,
+        source: str | None = None,
+        description: str | None = None,
+        description_like: str | None = None,
+        account_code: int | None = None,
+        value_column: str = "amount_vnd",
+    ) -> dict[str, float]:
+        conditions = ["cc_code = ?"]
+        params: list[object] = [int(cc_code)]
+        if source is not None:
+            conditions.append("source = ?")
+            params.append(source)
+        if description is not None:
+            conditions.append("description = ?")
+            params.append(description)
+        if description_like is not None:
+            conditions.append("description LIKE ?")
+            params.append(description_like)
+        if account_code is not None:
+            conditions.append("account_code = ?")
+            params.append(int(account_code))
+
+        query = f"""
+            SELECT period, SUM(COALESCE({value_column}, 0)) AS amount
+            FROM fact_input_data
+            WHERE {' AND '.join(conditions)}
+            GROUP BY period
+        """
+        rows = self.conn.execute(query, params).fetchall()
+        return {str(row["period"]): float(row["amount"] or 0.0) for row in rows}
+
+    def _ga_unit_price_series(self, match_tokens: tuple[str, ...]) -> dict[str, float]:
+        rows = self.conn.execute(
+            """
+            SELECT period, description, amount_vnd
+            FROM fact_input_data
+            WHERE source = 'ga_unit_price'
+            """
+        ).fetchall()
+        result: dict[str, float] = {}
+        normalized_tokens = tuple(self._normalize_text(token) for token in match_tokens)
+        for row in rows:
+            description = self._normalize_text(row["description"])
+            if not any(token in description for token in normalized_tokens):
+                continue
+            result[str(row["period"])] = float(row["amount_vnd"] or 0.0)
+        return result
+
+    def _write_numeric_series(self, worksheet, row_index: int, values: dict[str, float]) -> None:
+        self._clear_visible_months(worksheet, row_index)
+        for offset, period in enumerate(self.fy_months):
+            amount = float(values.get(period, 0.0))
+            worksheet.cell(
+                row=row_index,
+                column=VISIBLE_MONTH_START_COL + offset,
+                value=int(round(amount)) if amount else None,
+            )
+        worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
+
+    def _write_fx_formula_series(self, worksheet, row_index: int, values_usd: dict[str, float]) -> None:
+        self._clear_visible_months(worksheet, row_index)
+        for offset, period in enumerate(self.fy_months):
+            amount_usd = float(values_usd.get(period, 0.0))
+            if amount_usd <= 0:
+                continue
+            worksheet.cell(
+                row=row_index,
+                column=VISIBLE_MONTH_START_COL + offset,
+                value=f"=ROUND({self._format_number(amount_usd)}*$B$2,0)",
+            )
+        worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
+
+    def _write_headcount_formula_series(
+        self,
+        worksheet,
+        row_index: int,
+        unit_prices: dict[str, float],
+        start_headcount_row: int = 24,
+        end_headcount_row: int = 25,
+    ) -> None:
+        self._clear_visible_months(worksheet, row_index)
+        for offset, period in enumerate(self.fy_months):
+            unit_price = float(unit_prices.get(period, 0.0))
+            if unit_price <= 0:
+                continue
+            column_letter = get_column_letter(VISIBLE_MONTH_START_COL + offset)
+            worksheet.cell(
+                row=row_index,
+                column=VISIBLE_MONTH_START_COL + offset,
+                value=(
+                    f"=SUM({column_letter}${start_headcount_row}:{column_letter}${end_headcount_row})"
+                    f"*{self._format_number(unit_price)}"
+                ),
+            )
+        worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
+
+    def _write_prev_month_headcount_formula_series(
+        self,
+        worksheet,
+        row_index: int,
+        unit_prices: dict[str, float],
+        start_headcount_row: int = 24,
+        end_headcount_row: int = 25,
+    ) -> None:
+        # Business sheet requires recurring admin costs to use previous-month headcount.
+        # April falls back to April because prior-March data is not available in the FY file.
+        self._clear_visible_months(worksheet, row_index)
+        for offset, period in enumerate(self.fy_months):
+            unit_price = float(unit_prices.get(period, 0.0))
+            if unit_price <= 0:
+                continue
+            source_offset = offset if offset == 0 else offset - 1
+            source_column_letter = get_column_letter(VISIBLE_MONTH_START_COL + source_offset)
+            worksheet.cell(
+                row=row_index,
+                column=VISIBLE_MONTH_START_COL + offset,
+                value=(
+                    f"=SUM({source_column_letter}${start_headcount_row}:{source_column_letter}${end_headcount_row})"
+                    f"*{self._format_number(unit_price)}"
+                ),
+            )
+        worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
+
+    def _match_description(self, description: str, tokens: tuple[str, ...], exclude_tokens: tuple[str, ...]) -> bool:
+        normalized_description = self._normalize_text(description)
+        normalized_tokens = tuple(self._normalize_text(token) for token in tokens)
+        normalized_excludes = tuple(self._normalize_text(token) for token in exclude_tokens)
+        return any(token in normalized_description for token in normalized_tokens) and not any(
+            token in normalized_description for token in normalized_excludes
+        )
+
+    def _series_from_tokens(
+        self,
+        cc_code: int,
+        *,
+        tokens: tuple[str, ...],
+        exclude_tokens: tuple[str, ...] = (),
+        source_prefix: str = "alloc_",
+        value_column: str = "amount_vnd",
+    ) -> dict[str, float]:
+        result: dict[str, float] = defaultdict(float)
+        for row in self._input_rows_for_cc(cc_code):
+            source = str(row["source"] or "")
+            if source_prefix and not source.startswith(source_prefix):
+                continue
+            if not self._match_description(str(row["description"] or ""), tokens, exclude_tokens):
+                continue
+            result[str(row["period"])] += float(row[value_column] or 0.0)
+        return dict(result)
+
+    def _account_code_from_tokens(
+        self,
+        cc_code: int,
+        *,
+        tokens: tuple[str, ...],
+        exclude_tokens: tuple[str, ...] = (),
+        source_prefix: str = "alloc_",
+    ) -> int | None:
+        account_codes: set[int] = set()
+        for row in self._input_rows_for_cc(cc_code):
+            source = str(row["source"] or "")
+            if source_prefix and not source.startswith(source_prefix):
+                continue
+            if not self._match_description(str(row["description"] or ""), tokens, exclude_tokens):
+                continue
+            code = int(row["account_code"] or 0)
+            if code > 0:
+                account_codes.add(code)
+        if len(account_codes) == 1:
+            return next(iter(account_codes))
+        return None
+
+    def _fixed_row_for_description(self, description: str) -> int | None:
+        for row_index, matcher in FIXED_ALLOCATION_ROW_MATCHERS.items():
+            if self._match_description(description, matcher["tokens"], matcher["exclude_tokens"]):
+                return row_index
+        return None
+
+    def _load_explicit_form_rows(self, cc_code: int) -> list[dict[str, object]]:
+        rows = self.conn.execute(
+            """
+            SELECT form_row, account_code, description, period, SUM(amount_vnd) AS amount
+            FROM fact_input_data
+            WHERE cc_code = ?
+              AND account_code > 0
+              AND form_row IS NOT NULL
+            GROUP BY form_row, account_code, description, period
+            ORDER BY form_row, account_code, description, period
+            """,
+            (int(cc_code),),
+        ).fetchall()
+
+        grouped: dict[int, dict[str, object]] = {}
+        for row in rows:
+            row_index = int(row["form_row"] or 0)
+            if row_index <= 0:
+                continue
+            bucket = grouped.setdefault(
+                row_index,
+                {
+                    "form_row": row_index,
+                    "account_codes": set(),
+                    "descriptions": set(),
+                    "months": defaultdict(float),
+                },
+            )
+            account_code = int(row["account_code"] or 0)
+            if account_code > 0:
+                bucket["account_codes"].add(account_code)
+            description = str(row["description"] or "").strip()
+            if description:
+                bucket["descriptions"].add(description)
+            bucket["months"][str(row["period"])] += float(row["amount"] or 0.0)
+
+        result: list[dict[str, object]] = []
+        for row_index in sorted(grouped):
+            bucket = grouped[row_index]
+            account_codes = bucket.pop("account_codes")
+            descriptions = bucket.pop("descriptions")
+            bucket["account_code"] = next(iter(account_codes)) if len(account_codes) == 1 else None
+            bucket["description"] = next(iter(descriptions)) if len(descriptions) == 1 else None
+            bucket["months"] = dict(bucket["months"])
+            result.append(bucket)
+        return result
+
+    def _write_explicit_form_rows(self, worksheet, cc_code: int) -> None:
+        for row in self._load_explicit_form_rows(cc_code):
+            row_index = int(row["form_row"])
+            self._clear_visible_months(worksheet, row_index)
+            account_code = row.get("account_code")
+            if account_code:
+                worksheet.cell(row=row_index, column=ACCOUNT_COL, value=int(account_code))
+            existing_description = worksheet.cell(row=row_index, column=DESCRIPTION_COL).value
+            if not existing_description and row.get("description"):
+                worksheet.cell(row=row_index, column=DESCRIPTION_COL, value=row["description"])
+            self._write_numeric_series(worksheet, row_index, row["months"])
+
+    def _write_it_system_total_row(self, worksheet, cc_code: int) -> None:
+        rows = self._input_rows_for_cc(cc_code, source="it_sim")
+        total_vnd_by_period: dict[str, float] = {}
+        component_usd_by_period: dict[str, dict[str, float]] = defaultdict(dict)
+        account_codes: set[int] = set()
+
+        for row in rows:
+            description = str(row["description"] or "")
+            period = str(row["period"])
+            account_code = int(row["account_code"] or 0)
+            if account_code > 0:
+                account_codes.add(account_code)
+
+            if description == "it_sim|system_usage_total":
+                total_vnd_by_period[period] = float(row["amount_vnd"] or 0.0)
+                continue
+
+            if description.startswith("it_sim|component|"):
+                component_key = description.split("|")[-1]
+                component_usd_by_period[period][component_key] = float(row["amount_usd"] or 0.0)
+
+        if len(account_codes) == 1:
+            worksheet.cell(row=75, column=ACCOUNT_COL, value=next(iter(account_codes)))
+
+        self._clear_visible_months(worksheet, 75)
+        for offset, period in enumerate(self.fy_months):
+            component_values = component_usd_by_period.get(period, {})
+            ordered_values = [
+                float(component_values[key])
+                for key in IT_COMPONENT_ORDER
+                if float(component_values.get(key, 0.0)) > 0
+            ]
+            cell = worksheet.cell(row=75, column=VISIBLE_MONTH_START_COL + offset)
+            if ordered_values:
+                formula = "+".join(self._format_number(value) for value in ordered_values)
+                cell.value = f"=ROUND(({formula})*$B$2,0)"
+                continue
+
+            total_amount = float(total_vnd_by_period.get(period, 0.0))
+            cell.value = int(round(total_amount)) if total_amount else None
+        worksheet.cell(row=75, column=TOTAL_COL, value="=SUM(F75:Q75)")
+
+    def _write_fixed_rows(self, worksheet, cc_code: int) -> None:
+        fixed_account_codes = {
+            40: 5005066281,
+            41: 5005066282,
+            42: 5005056281,
+            44: 5005246286,
+            93: 5005016372,
+            94: 5005016372,
+            46: 5006016260,
+            47: 5006016261,
+            48: 5006016244,
+            50: 9114120007,
+            51: 9114120007,
+            52: 9114120007,
+        }
+        for row_index in MANAGED_FIXED_ROWS:
+            self._clear_visible_months(worksheet, row_index)
+        for row_index, account_code in fixed_account_codes.items():
+            worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
+
+        self._write_numeric_series(
+            worksheet,
+            40,
+            self._month_series(cc_code, source="facility", description="electric"),
+        )
+        self._write_numeric_series(
+            worksheet,
+            41,
+            self._month_series(cc_code, source="facility", description="water"),
+        )
+        self._write_prev_month_headcount_formula_series(
+            worksheet,
+            42,
+            self._ga_unit_price_series(("gas|headcount_per_person", "食堂燃料費")),
+        )
+        self._write_prev_month_headcount_formula_series(
+            worksheet,
+            44,
+            self._ga_unit_price_series(("清掃費", "chi phí làm sạch|headcount_per_person")),
+        )
+        self._write_prev_month_headcount_formula_series(
+            worksheet,
+            93,
+            self._ga_unit_price_series(("手洗い洗剤", "nuoc rua tay|headcount_per_person", "nước rửa tay|headcount_per_person")),
+        )
+        self._write_prev_month_headcount_formula_series(
+            worksheet,
+            94,
+            self._ga_unit_price_series(("トイレットペーパー", "giay ve sinh|headcount_per_person", "giấy vệ sinh|headcount_per_person")),
+        )
+        self._write_fx_formula_series(
+            worksheet,
+            46,
+            self._month_series(cc_code, source="facility", description="depreciation_building", value_column="amount_usd"),
+        )
+        self._write_fx_formula_series(
+            worksheet,
+            47,
+            self._month_series(cc_code, source="facility", description="depreciation_land", value_column="amount_usd"),
+        )
+        self._write_fx_formula_series(
+            worksheet,
+            48,
+            self._month_series(cc_code, source="fixed_assets", description_like="fixed_assets_depr|%", value_column="amount_usd"),
+        )
+        self._write_fx_formula_series(
+            worksheet,
+            50,
+            self._month_series(cc_code, source="facility", description="interest_building", value_column="amount_usd"),
+        )
+        self._write_fx_formula_series(
+            worksheet,
+            51,
+            self._month_series(cc_code, source="facility", description="interest_land", value_column="amount_usd"),
+        )
+        self._write_fx_formula_series(
+            worksheet,
+            52,
+            self._month_series(cc_code, source="fixed_assets", description_like="fixed_assets_interest|%", value_column="amount_usd"),
+        )
+        self._write_it_system_total_row(worksheet, cc_code)
+
+        for row_index, matcher in FIXED_ALLOCATION_ROW_MATCHERS.items():
+            series = self._series_from_tokens(
+                cc_code,
+                tokens=matcher["tokens"],
+                exclude_tokens=matcher["exclude_tokens"],
+            )
+            if not series:
+                continue
+            account_code = self._account_code_from_tokens(
+                cc_code,
+                tokens=matcher["tokens"],
+                exclude_tokens=matcher["exclude_tokens"],
+            )
+            if account_code:
+                worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
+            self._write_numeric_series(worksheet, row_index, series)
+
+        self._write_explicit_form_rows(worksheet, cc_code)
+
+    def _load_append_rows(self, cc_code: int) -> list[dict[str, object]]:
+        rows = self.conn.execute(
+            """
+            SELECT account_code, description, period, SUM(amount_vnd) AS amount
+            FROM fact_input_data
+            WHERE cc_code = ?
+              AND account_code > 0
+              AND form_row IS NULL
+              AND source NOT IN ('facility', 'fixed_assets', 'it_sim', 'ga_unit_price')
+            GROUP BY account_code, description, period
+            ORDER BY account_code, description, period
+            """,
+            (int(cc_code),),
+        ).fetchall()
+
+        grouped: dict[tuple[int, str], dict[str, object]] = {}
+        for row in rows:
+            description = str(row["description"] or "")
+            if self._fixed_row_for_description(description) is not None:
+                continue
+
+            key = (int(row["account_code"]), description)
+            bucket = grouped.setdefault(
+                key,
+                {
+                    "account_code": int(row["account_code"]),
+                    "description": description,
+                    "months": {},
+                },
+            )
+            bucket["months"][str(row["period"])] = float(row["amount"] or 0.0)
+        return list(grouped.values())
 
     def export_to_template(
         self,
@@ -77,11 +609,17 @@ class HubBuilder:
         output_path: str,
         cc_code: Optional[int] = None,
         sheet_name: Optional[str] = None,
-        start_row: int = 29,
+        start_row: int = APPEND_START_ROW,
     ) -> bool:
-        """Copy the template and write data for one CC or all CCs."""
-        df = self.get_structured_data(cc_code=cc_code)
-        if df.empty:
+        target_cc = int(cc_code) if cc_code else None
+        if target_cc is None:
+            return False
+
+        fact_exists = self.conn.execute(
+            "SELECT 1 FROM fact_input_data WHERE cc_code = ? LIMIT 1",
+            (target_cc,),
+        ).fetchone()
+        if not fact_exists:
             return False
 
         if os.path.exists(output_path):
@@ -90,27 +628,21 @@ class HubBuilder:
 
         workbook = openpyxl.load_workbook(output_path)
         try:
-            hub_sheet_name = sheet_name if sheet_name and sheet_name in workbook.sheetnames else find_hub_sheet_name(workbook)
-            worksheet_hub = workbook[hub_sheet_name]
+            hub_sheet_name = sheet_name if sheet_name and sheet_name in workbook.sheetnames else helpers.find_hub_sheet_name(workbook)
+            worksheet = workbook[hub_sheet_name]
 
-            month_labels = get_fy_month_labels(self.fiscal_year)
-            for index, label in enumerate(month_labels):
-                worksheet_hub.cell(row=4, column=6 + index, value=label)
-            worksheet_hub.cell(row=4, column=18, value=TOTAL_LABEL)
+            worksheet.cell(row=5, column=ACCOUNT_COL, value=target_cc)
+            self._write_fixed_rows(worksheet, target_cc)
 
-            working_day_sheet = next((name for name in workbook.sheetnames if "稼働" in name), None)
-            if working_day_sheet:
-                worksheet_working_days = workbook[working_day_sheet]
-                for index, label in enumerate(month_labels):
-                    worksheet_working_days.cell(row=3 + index, column=1, value=label)
-
-            if worksheet_hub.max_row >= start_row:
-                worksheet_hub.delete_rows(start_row, worksheet_hub.max_row - start_row + 1)
-
+            self._clear_append_area(worksheet, start_row)
             current_row = start_row
-            for _, row in df.iterrows():
-                for column_index, value in enumerate(row, start=1):
-                    worksheet_hub.cell(row=current_row, column=column_index, value=value)
+            for row in self._load_append_rows(target_cc):
+                if current_row > MAX_DATA_ROW:
+                    raise ValueError("FORM detail sheet does not have enough append rows prepared.")
+                self._prepare_append_row(worksheet, current_row)
+                worksheet.cell(row=current_row, column=ACCOUNT_COL, value=int(row["account_code"]))
+                worksheet.cell(row=current_row, column=DESCRIPTION_COL, value=row["description"])
+                self._write_numeric_series(worksheet, current_row, row["months"])
                 current_row += 1
 
             workbook.save(output_path)

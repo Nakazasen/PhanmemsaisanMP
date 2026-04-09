@@ -13,6 +13,11 @@ else:
 
 DB_PATH = os.path.join(BASE_DIR, 'mp2027.db')
 
+
+def _column_exists(conn: sqlite3.Connection, table_name: str, column_name: str) -> bool:
+    rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return any(str(row[1]) == column_name for row in rows)
+
 def get_connection(db_path: str = None) -> sqlite3.Connection:
     path = db_path or DB_PATH
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -57,6 +62,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
         CREATE TABLE IF NOT EXISTS fact_monthly_headcount (
             id INTEGER PRIMARY KEY AUTOINCREMENT, period TEXT NOT NULL, cc_code INTEGER NOT NULL,
             headcount_all REAL DEFAULT 0, headcount_staff REAL DEFAULT 0, headcount_worker REAL DEFAULT 0,
+            headcount_male REAL DEFAULT 0, headcount_female REAL DEFAULT 0,
             source TEXT DEFAULT "hr", description TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(period, cc_code, source)
         )''')
@@ -66,7 +72,8 @@ def create_schema(conn: sqlite3.Connection) -> None:
         CREATE TABLE IF NOT EXISTS fact_input_data (
             id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT NOT NULL, period TEXT NOT NULL,
             amount_vnd REAL NOT NULL DEFAULT 0, amount_usd REAL DEFAULT NULL, cc_code INTEGER NOT NULL,
-            account_code INTEGER NOT NULL, scenario_id TEXT DEFAULT 'base', description TEXT,
+            account_code INTEGER NOT NULL, form_row INTEGER DEFAULT NULL,
+            scenario_id TEXT DEFAULT 'base', description TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
     cursor.execute("""
@@ -85,6 +92,14 @@ def create_schema(conn: sqlite3.Connection) -> None:
 
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_input_period ON fact_input_data(period)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_hc_period_cc ON fact_monthly_headcount(period, cc_code)")
+
+    if not _column_exists(conn, "fact_monthly_headcount", "headcount_male"):
+        cursor.execute("ALTER TABLE fact_monthly_headcount ADD COLUMN headcount_male REAL DEFAULT 0")
+    if not _column_exists(conn, "fact_monthly_headcount", "headcount_female"):
+        cursor.execute("ALTER TABLE fact_monthly_headcount ADD COLUMN headcount_female REAL DEFAULT 0")
+    if not _column_exists(conn, "fact_input_data", "form_row"):
+        cursor.execute("ALTER TABLE fact_input_data ADD COLUMN form_row INTEGER DEFAULT NULL")
+
     conn.commit()
 
 def init_sys_params(conn: sqlite3.Connection, exchange_rate: float | None = None, fiscal_year: int = 2027) -> None:

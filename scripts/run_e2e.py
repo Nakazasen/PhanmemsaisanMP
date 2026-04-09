@@ -22,10 +22,25 @@ from src.db.loader import load_all
 from src.parsers.facility import parse_facility
 from src.parsers.ga import parse_ga
 from src.parsers.manual_headcount import parse_manual_headcount
+from src.parsers.manual_special_costs import parse_manual_special_costs
 from src.parsers.it_sim import parse_it_simulation
 from src.parsers.fixed_assets import parse_fixed_assets
 from src.engine.allocator import AllocationEngine
 from src.engine.hub_builder import HubBuilder
+
+
+def _default_template_path() -> str:
+    candidate = os.path.join(BASE_DIR, "docs", "MP2027", "FORM.xlsx")
+    if os.path.exists(candidate):
+        return candidate
+    return os.path.join(BASE_DIR, "FORM.xlsx")
+
+
+def _default_source_dir() -> str:
+    candidate = os.path.join(BASE_DIR, "docs", "MP2027")
+    if os.path.isdir(candidate):
+        return candidate
+    return BASE_DIR
 
 def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str, 
                            exchange_rate: float = 25450.0,
@@ -59,7 +74,13 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         conn.commit()
         
         log_callback("Loading master data...")
-        load_all(db_path=db_path, template_path=template_path, fiscal_year=fiscal_year, exchange_rate=exchange_rate)
+        load_all(
+            db_path=db_path,
+            template_path=template_path,
+            fiscal_year=fiscal_year,
+            exchange_rate=exchange_rate,
+            search_dir=source_dir,
+        )
         
         # 3. Parsers
         parse_facility(conn, source_dir=source_dir)
@@ -72,6 +93,15 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 skipped=manual_hc_result.get("skipped", 0),
                 errors=manual_hc_result.get("errors", 0),
                 path=manual_hc_result.get("template_path", ""),
+            )
+        )
+        manual_special_result = parse_manual_special_costs(conn, source_dir=source_dir)
+        log_callback(
+            "Manual special costs: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
+                inserted=manual_special_result.get("inserted", 0),
+                skipped=manual_special_result.get("skipped", 0),
+                errors=manual_special_result.get("errors", 0),
+                path=manual_special_result.get("template_path", ""),
             )
         )
         parse_it_simulation(conn, source_dir=source_dir)
@@ -117,8 +147,8 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--fy', type=int, default=2027)
-    parser.add_argument('--template', type=str, default='FORM.xlsx')
-    parser.add_argument('--source', type=str, default='.')
+    parser.add_argument('--template', type=str, default=_default_template_path())
+    parser.add_argument('--source', type=str, default=_default_source_dir())
     parser.add_argument('--exchange-rate', type=float, default=25450.0)
     parser.add_argument('--target-cc', type=int, default=None)
     args = parser.parse_args()

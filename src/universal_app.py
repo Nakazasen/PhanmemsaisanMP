@@ -38,6 +38,30 @@ from src.db.schema import get_connection
 from src.parsers.manual_headcount import ensure_manual_headcount_template
 from src.utils.excel_helpers import get_fy_months
 
+
+def _default_template_path() -> str:
+    external_mp2027 = os.path.join(BASE_DIR, "docs", "MP2027", "FORM.xlsx")
+    if os.path.exists(external_mp2027):
+        return external_mp2027
+
+    packaged_mp2027 = resource_path(os.path.join("docs", "MP2027", "FORM.xlsx"))
+    if os.path.exists(packaged_mp2027):
+        return packaged_mp2027
+
+    return os.path.join(BASE_DIR, "FORM.xlsx")
+
+
+def _default_source_dir() -> str:
+    external_mp2027 = os.path.join(BASE_DIR, "docs", "MP2027")
+    if os.path.isdir(external_mp2027):
+        return external_mp2027
+
+    packaged_mp2027 = resource_path(os.path.join("docs", "MP2027"))
+    if os.path.isdir(packaged_mp2027):
+        return packaged_mp2027
+
+    return BASE_DIR
+
 USER_GUIDE_TEXT = """
 HƯỚNG DẪN SỬ DỤNG CHI TIẾT - MP2027 MANAGER
 
@@ -119,8 +143,8 @@ class MPManagerApp:
         self.fiscal_year = tk.StringVar(value="2027")
         self.exchange_rate = tk.StringVar(value="25450")
         self.cc_code_filter = tk.StringVar(value="")
-        self.template_path = tk.StringVar(value=os.path.join(BASE_DIR, "FORM.xlsx"))
-        self.source_dir = tk.StringVar(value=BASE_DIR)
+        self.template_path = tk.StringVar(value=_default_template_path())
+        self.source_dir = tk.StringVar(value=_default_source_dir())
         self.last_excel_mtime = 0.0
         self.syncing_master = False
 
@@ -182,7 +206,7 @@ class MPManagerApp:
         ttk.Button(
             container,
             text="Nhập nhân sự thủ công",
-            command=self.open_headcount_editor,
+            command=self.open_headcount_editor_v2,
         ).grid(row=6, column=1, sticky="w", pady=(8, 0))
 
         ttk.Button(
@@ -260,8 +284,7 @@ class MPManagerApp:
         
         template = self.template_path.get()
         if not os.path.exists(template):
-            # Try default FORM.xlsx in current dir
-            template = os.path.join(BASE_DIR, "FORM.xlsx")
+            template = _default_template_path()
             if not os.path.exists(template):
                 return
 
@@ -292,6 +315,28 @@ class MPManagerApp:
             return [f"{row['code']} - {row['name_jp']}" for row in rows]
         finally:
             conn.close()
+
+    def _read_manual_headcount_rows(self, csv_path: str):
+        if not os.path.exists(csv_path):
+            return []
+        with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.DictReader(f)
+            return list(reader)
+
+    def _write_manual_headcount_rows(self, csv_path: str, rows):
+        fieldnames = [
+            "cc_code",
+            "period",
+            "headcount_staff",
+            "headcount_worker",
+            "headcount_male",
+            "headcount_female",
+            "description",
+        ]
+        with open(csv_path, "w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
 
     def open_user_guide(self):
         guide = tk.Toplevel(self.root)
@@ -497,6 +542,186 @@ class MPManagerApp:
 
         tree.bind("<<TreeviewSelect>>", on_select)
         load_rows()
+
+    def open_headcount_editor_v2(self):
+        try:
+            fiscal_year = int(self.fiscal_year.get())
+        except Exception:
+            fiscal_year = 2027
+
+        source_dir = self.source_dir.get() or BASE_DIR
+        os.makedirs(source_dir, exist_ok=True)
+        csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)
+
+        editor = tk.Toplevel(self.root)
+        editor.title("Nh\u1eadp li\u1ec7u nh\u00e2n s\u1ef1 12 th\u00e1ng")
+        editor.geometry("1120x700")
+
+        frame = ttk.Frame(editor, padding=10)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(frame, text=f"CSV: {csv_path}", font=("Segoe UI", 9, "italic")).grid(
+            row=0, column=0, columnspan=8, sticky="w"
+        )
+        ttk.Label(
+            frame,
+            text=(
+                "Nh\u1eadp 1 CC cho \u0111\u1ee7 12 th\u00e1ng. Th\u00e1ng 12 c\u00f3 th\u00eam Nam/N\u1eef "
+                "\u0111\u1ec3 ph\u1ee5c v\u1ee5 chi ph\u00ed kh\u00e1m s\u1ee9c kh\u1ecfe."
+            ),
+        ).grid(row=1, column=0, columnspan=8, sticky="w", pady=(4, 10))
+
+        cc_var = tk.StringVar()
+        cc_choices = self._get_cc_choices()
+        periods = get_fy_months(fiscal_year)
+        label_by_period = {period: f"Th\u00e1ng {int(period[-2:])}" for period in periods}
+
+        ttk.Label(frame, text="M\u00e3 CC").grid(row=2, column=0, sticky="w", pady=(0, 8))
+        cc_combo = ttk.Combobox(frame, textvariable=cc_var, values=cc_choices, width=42, state="readonly")
+        cc_combo.grid(row=2, column=1, sticky="w", pady=(0, 8))
+
+        table = ttk.Frame(frame)
+        table.grid(row=3, column=0, columnspan=8, sticky="nsew")
+        frame.rowconfigure(3, weight=1)
+        frame.columnconfigure(7, weight=1)
+
+        headers = [
+            ("K\u1ef3", 0),
+            ("Nh\u00e2n vi\u00ean", 1),
+            ("C\u00f4ng nh\u00e2n", 2),
+            ("Nam (T12)", 3),
+            ("N\u1eef (T12)", 4),
+            ("Ghi ch\u00fa", 5),
+        ]
+        for text, column_index in headers:
+            ttk.Label(table, text=text).grid(row=0, column=column_index, sticky="w", padx=4, pady=(0, 6))
+
+        month_vars = {}
+        for row_index, period in enumerate(periods, start=1):
+            vars_for_period = {
+                "staff": tk.StringVar(),
+                "worker": tk.StringVar(),
+                "male": tk.StringVar(),
+                "female": tk.StringVar(),
+                "description": tk.StringVar(),
+            }
+            month_vars[period] = vars_for_period
+
+            ttk.Label(table, text=label_by_period[period]).grid(row=row_index, column=0, sticky="w", padx=4, pady=3)
+            ttk.Entry(table, textvariable=vars_for_period["staff"], width=12).grid(row=row_index, column=1, sticky="w", padx=4, pady=3)
+            ttk.Entry(table, textvariable=vars_for_period["worker"], width=12).grid(row=row_index, column=2, sticky="w", padx=4, pady=3)
+            male_entry = ttk.Entry(table, textvariable=vars_for_period["male"], width=12)
+            female_entry = ttk.Entry(table, textvariable=vars_for_period["female"], width=12)
+            male_entry.grid(row=row_index, column=3, sticky="w", padx=4, pady=3)
+            female_entry.grid(row=row_index, column=4, sticky="w", padx=4, pady=3)
+            ttk.Entry(table, textvariable=vars_for_period["description"], width=52).grid(row=row_index, column=5, sticky="ew", padx=4, pady=3)
+
+            if not period.endswith("12"):
+                male_entry.state(["disabled"])
+                female_entry.state(["disabled"])
+
+        table.columnconfigure(5, weight=1)
+
+        def parse_cc_code(text: str) -> str:
+            raw = (text or "").strip()
+            if " - " in raw:
+                raw = raw.split(" - ")[0].strip()
+            return raw
+
+        def clear_table():
+            for vars_for_period in month_vars.values():
+                for field_var in vars_for_period.values():
+                    field_var.set("")
+
+        def load_selected_cc(*_args):
+            clear_table()
+            cc_code = parse_cc_code(cc_var.get())
+            if not cc_code:
+                return
+            row_map = {
+                (str(row.get("cc_code", "")).strip(), str(row.get("period", "")).strip()): row
+                for row in self._read_manual_headcount_rows(csv_path)
+            }
+            for period in periods:
+                row = row_map.get((cc_code, period))
+                if not row:
+                    continue
+                month_vars[period]["staff"].set(str(row.get("headcount_staff", "")).strip())
+                month_vars[period]["worker"].set(str(row.get("headcount_worker", "")).strip())
+                month_vars[period]["male"].set(str(row.get("headcount_male", "")).strip())
+                month_vars[period]["female"].set(str(row.get("headcount_female", "")).strip())
+                month_vars[period]["description"].set(str(row.get("description", "")).strip())
+
+        def save_current_cc():
+            cc_code = parse_cc_code(cc_var.get())
+            if not cc_code:
+                messagebox.showerror("Loi", "Hay chon ma CC truoc khi luu.")
+                return
+
+            try:
+                int(float(cc_code))
+            except Exception:
+                messagebox.showerror("Loi", "Ma CC khong hop le.")
+                return
+
+            existing_rows = self._read_manual_headcount_rows(csv_path)
+            new_rows = [row for row in existing_rows if str(row.get("cc_code", "")).strip() != cc_code]
+            saved_count = 0
+
+            for period in periods:
+                staff_text = month_vars[period]["staff"].get().strip() or "0"
+                worker_text = month_vars[period]["worker"].get().strip() or "0"
+                male_text = month_vars[period]["male"].get().strip() if period.endswith("12") else ""
+                female_text = month_vars[period]["female"].get().strip() if period.endswith("12") else ""
+                desc_text = month_vars[period]["description"].get().strip()
+
+                if not any([staff_text.strip("0"), worker_text.strip("0"), male_text.strip("0"), female_text.strip("0"), desc_text]):
+                    continue
+
+                try:
+                    staff_val = float(staff_text)
+                    worker_val = float(worker_text)
+                    male_val = float(male_text) if male_text else 0.0
+                    female_val = float(female_text) if female_text else 0.0
+                except Exception:
+                    messagebox.showerror("Loi", f"Gia tri so khong hop le tai {label_by_period[period]}.")
+                    return
+
+                if min(staff_val, worker_val, male_val, female_val) < 0:
+                    messagebox.showerror("Loi", f"Khong duoc nhap so am tai {label_by_period[period]}.")
+                    return
+                if male_val + female_val > staff_val + worker_val:
+                    messagebox.showerror("Loi", f"So Nam + Nu vuot tong nhan su tai {label_by_period[period]}.")
+                    return
+
+                new_rows.append(
+                    {
+                        "cc_code": cc_code,
+                        "period": period,
+                        "headcount_staff": str(int(staff_val) if staff_val.is_integer() else staff_val),
+                        "headcount_worker": str(int(worker_val) if worker_val.is_integer() else worker_val),
+                        "headcount_male": str(int(male_val) if male_val.is_integer() else male_val) if period.endswith("12") else "",
+                        "headcount_female": str(int(female_val) if female_val.is_integer() else female_val) if period.endswith("12") else "",
+                        "description": desc_text,
+                    }
+                )
+                saved_count += 1
+
+            new_rows.sort(key=lambda row: (str(row.get("cc_code", "")), str(row.get("period", ""))))
+            self._write_manual_headcount_rows(csv_path, new_rows)
+            self.log(f"Luu headcount 12 thang: CC={cc_code}, rows={saved_count}, file={csv_path}")
+            messagebox.showinfo("Da luu", f"Da luu {saved_count} dong cho CC {cc_code}.")
+
+        button_row = ttk.Frame(frame)
+        button_row.grid(row=4, column=0, columnspan=8, sticky="w", pady=(12, 0))
+        ttk.Button(button_row, text="Tai du lieu CC", command=load_selected_cc).grid(row=0, column=0, padx=(0, 6))
+        ttk.Button(button_row, text="Luu 12 thang", command=save_current_cc).grid(row=0, column=1, padx=(0, 6))
+        ttk.Button(button_row, text="Dong", command=editor.destroy).grid(row=0, column=2, padx=(0, 6))
+
+        cc_combo.bind("<<ComboboxSelected>>", load_selected_cc)
+        if cc_choices:
+            cc_var.set(cc_choices[0])
+            load_selected_cc()
 
     def start_pipeline(self):
         # Layer 3: Ensure master data is in sync before running

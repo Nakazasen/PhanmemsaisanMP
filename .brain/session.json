@@ -1,30 +1,93 @@
 {
-  "updated_at": "2026-03-30T18:25:00Z",
+  "updated_at": "2026-04-09T12:48:00Z",
   "working_on": {
-    "feature": "Ultimate Sync (3-layer)",
-    "status": "COMPLETED",
-    "notes": "Hệ thống đồng bộ dữ liệu Master đã hoạt động ổn định và được đóng gói thành EXE V5.3."
+    "feature": "Final audit of the 3 red MP2027 requirement sheets and packaging of the aligned program",
+    "status": "COMPLETED_WITH_DATA_BLOCKERS",
+    "notes": "Core code paths are aligned with docs/MP2027, row 109-137 was re-audited, and the remaining gaps are source-data blockers rather than missing engine support."
   },
   "pending_tasks": [
-    { "task": "Kiểm tra sự chính xác của các quy tắc phân bổ chuyên sâu", "priority": "high" },
-    { "task": "Đối chiếu kết quả cuối cùng với file Excel FY2027配賦額一覧", "priority": "high" }
+    {
+      "task": "Collect real FY2027 headcount rows for CC 1412000089 in docs/MP2027/headcount_manual.csv",
+      "priority": "high"
+    },
+    {
+      "task": "Collect real FY2027 NNN/VISA/GPLD event rows in docs/MP2027/special_costs_manual.csv or provide an official workbook with equivalent fields",
+      "priority": "high"
+    },
+    {
+      "task": "Get confirmed FORM row mapping for Company anniversary and the nonparticipant company-trip gift item",
+      "priority": "high"
+    },
+    {
+      "task": "If exact screenshot-only layout changes are required, obtain explicit text mapping for the 2 image-only items in Hang muc can cai tien",
+      "priority": "medium"
+    }
   ],
   "recent_changes": [
     {
-      "timestamp": "2026-03-30T11:05:00Z",
-      "type": "feature",
-      "description": "Triển khai Smart Initialization và 3-layer Sync Engine.",
-      "files": ["src/universal_app.py", "src/db/loader.py", "scripts/run_e2e.py"]
+      "timestamp": "2026-04-09T10:00:00Z",
+      "type": "code",
+      "description": "Aligned runtime defaults to docs/MP2027, improved rule parsing, added manual special-cost import, and protected NNN event items from incorrect auto-allocation.",
+      "files": [
+        "src/db/loader.py",
+        "src/db/schema.py",
+        "src/engine/allocator.py",
+        "src/engine/hub_builder.py",
+        "src/parsers/manual_special_costs.py",
+        "scripts/run_e2e.py",
+        "src/universal_app.py"
+      ]
     },
     {
-      "timestamp": "2026-03-30T11:11:00Z",
+      "timestamp": "2026-04-09T11:00:00Z",
+      "type": "verification",
+      "description": "Verified 16 tests, reran E2E on docs/MP2027, and confirmed the current DB has zero alloc_% rows for VISA/Passport/GPLD/NNN descriptions.",
+      "files": [
+        "OUTPUT_FY2027/MP_CC_1412000089.xlsx",
+        "mp2027.db"
+      ]
+    },
+    {
+      "timestamp": "2026-04-09T13:30:00Z",
+      "type": "documentation",
+      "description": "Updated business process notes, open-item checklist, and .brain context to reflect the true done/blocker state after the 3-sheet audit.",
+      "files": [
+        "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "TODO_MP2027_OPEN_ITEMS.md",
+        ".brain/brain.json",
+        ".brain/session.json",
+        ".brain/mp2027_context_2026-04-09.md"
+      ]
+    },
+    {
+      "timestamp": "2026-04-09T12:47:26Z",
       "type": "deployment",
-      "description": "Packaging V5.3 với Icon và Icon.",
-      "files": ["dist/MP2027_Manager.exe"]
+      "description": "Reran tests, reran E2E against docs/MP2027, and rebuilt the packaged executable after the final documentation update.",
+      "files": [
+        "OUTPUT_FY2027/MP_CC_1412000089.xlsx",
+        "dist/MP2027_Manager.exe"
+      ]
     }
   ],
   "decisions_made": [
-    { "decision": "Chuẩn hóa DB_PATH và TEMPLATE_PATH tại root", "reason": "Tránh lỗi phân quyền file .exe" },
-    { "decision": "Thêm bước DELETE trước khi LOAD", "reason": "Đảm bảo tính nhất quán dữ liệu (Data Consistency)" }
+    {
+      "decision": "Treat docs/MP2027 as the only authoritative runtime source bundle",
+      "reason": "The root-form/template set is older and contains stale sample formulas in rows that can pollute output."
+    },
+    {
+      "decision": "Use manual_special_costs.csv for NNN event costs rather than synthesizing them from headcount rules",
+      "reason": "The requirement sheet describes an event-totaling workflow, not a headcount-driven allocation."
+    },
+    {
+      "decision": "Mark the remaining gaps as data blockers instead of open coding defects",
+      "reason": "The engine can already accept the missing inputs once the user supplies them."
+    }
+  ],
+  "read_first_next_time": [
+    "QUY_TRINH_NGHIEP_VU_MP2027.md",
+    "TODO_MP2027_OPEN_ITEMS.md",
+    "docs/MP2027/Cai tien nhap du lieu chung vao file MP.xlsx",
+    "docs/MP2027/FORM.xlsx",
+    "OUTPUT_FY2027/MP_CC_1412000089.xlsx"
   ]
 }
