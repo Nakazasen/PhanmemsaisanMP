@@ -1,6 +1,6 @@
 # QUY TRINH NGHIEP VU MP2027
 
-Ngay cap nhat: `2026-04-09`
+Ngay cap nhat: `2026-04-10`
 
 Tai lieu nay phan anh dung trang thai hien tai sau khi:
 - doc lai workbook yeu cau `docs/MP2027/Cai tien nhap du lieu chung vao file MP.xlsx`
@@ -51,6 +51,7 @@ Den hien tai, phan mem da lam duoc phan lon xuong pipeline:
 - da sua duoc cong thuc chi phi he thong
 - da lam duoc nhom chi phi hanh chinh recurring theo dau nguoi
 - da lam duoc khung xu ly cho chi phi giay to nguoi nuoc ngoai
+- da chuyen gan nhu toan bo cac o thang trong output sang cong thuc Excel
 
 Noi ngan gon:
 - engine da san sang
@@ -142,6 +143,39 @@ Theo xac nhan moi nhat cua nguoi dung:
   - chi ghi lai neu co du lieu that
   - ho tro ghi thang vao `form_row` cu the tu `fact_input_data`
   - khong append lai cac muc da co row dich ro rang
+  - bam theo `FORM.xlsx` moi co vung `内訳ﾘｽﾄ(4～3月)` den row `1015`
+  - doc va xuat dung danh sach cost center moi, ke ca ma chu-so nhu `1412C00001`
+
+### 3.5. Trang thai cong thuc trong output
+
+Trang thai: `DA CHUYEN GAN NHU TOAN BO SANG CONG THUC`
+
+Ket qua kiem tra tren output mau `OUTPUT_FY2027/MP_CC_1412000006.xlsx`:
+- `417` o thang dang la cong thuc
+- chi con `24` o la so tinh
+- `24` o so tinh do chi nam o `2` row:
+  - row `40`: `facility / electric`
+  - row `41`: `facility / water`
+
+Nhung nhom da la cong thuc:
+- recurring admin theo dau nguoi:
+  - row `42`, `44`, `93`, `94`
+- nhom USD quy doi VND:
+  - row `46`, `47`, `50`, `51`
+- IT system total:
+  - row `75`
+- nhom phan bo hanh chinh/phuc loi co rule ro:
+  - row `66`, `69`, `79`, `80`, `81`, `82`, `88`, `89`
+- cac row append `200+`
+
+Ly do row `40` va `41` chua the doi thanh cong thuc:
+- day la du lieu `facility` nguon truc tiep cho `electric` va `water`
+- workbook MP hien tai chi co tien cuoi cung theo thang
+- khong co chi tiet driver de lap cong thuc kieu `so luong * don gia` ngay trong workbook
+- muon doi thanh cong thuc thi can them nguon facility co:
+  - san luong theo thang
+  - don gia theo thang
+  - hoac bang chi tiet tuong duong
 
 ### 3.4. Bo parser bo sung
 
@@ -188,6 +222,7 @@ Da lam duoc:
   - `employee card/photo/philosophy/card case/pen/note`
 - da co headcount manual 12 thang va driver `Nam/Nu` cho health check
 - da co posting-month override cho cac item co thang phat sinh dac thu
+- da chuyen cac row phan bo co rule ro sang cong thuc Excel thay vi ghi so tinh
 
 Con block:
 - `docs/MP2027/headcount_manual.csv` chua co dong nao cho CC `1412000089`

@@ -8,3 +8,8 @@
 [22:39] TEST: 16 tests passed after final source-aligned update.
 [22:39] E2E: Re-exported OUTPUT_FY2027/MP_CC_1412000089.xlsx from docs/MP2027 sources.
 [22:47] PACKAGE: Rebuilt dist/MP2027_Manager.exe with docs/MP2027 bundled into the one-file executable.
+[09:30] FORM UPDATE: Re-audited docs/MP2027/FORM.xlsx against FORM_old.xlsx; new FORM extends detail area to row 1015 and changes the cost-center master, including alphanumeric CCs.
+[10:00] FORMULA EXPORT: Converted most allocation-driven month cells from flat values to Excel formulas in src/engine/hub_builder.py.
+[10:05] DATA LIMIT: Only rows 40 and 41 remain numeric because facility source still provides final monthly totals for electric and water without quantity/unit-price drivers.
+[10:20] VERIFY: 17 tests passed and E2E for CC 1412000006 succeeded; output now has 417 formula month cells and 24 static month cells limited to rows 40-41.
+[10:30] DOCS: Updated QUY_TRINH_NGHIEP_VU_MP2027.md, TODO_MP2027_OPEN_ITEMS.md, and .brain context with the new FORM alignment and formula-export status.

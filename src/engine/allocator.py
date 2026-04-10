@@ -20,6 +20,7 @@ POSTING_MONTH_ITEM_OVERRIDES = (
     (("社員旅行 du lịch công ty", "社員旅行"), "5月"),
     (("京セラフェスティバル", "lễ hội kyocera"), "9月"),
     (("月餅", "bánh trung thu"), "9月"),
+    (("ポケットカレンダー", "pocket calendar", "lịch bỏ túi"), "11月"),
     (("運動会", "đại hội thể thao"), "11月"),
     (("忘年会補助金", "hỗ trợ tiệc tất niên"), "2月"),
     (("お年玉", "tiền lì xì"), "2月"),
@@ -81,7 +82,7 @@ class AllocationEngine:
     def _load_cost_centers(self):
         return self.conn.execute("SELECT * FROM dim_cost_centers ORDER BY seq_no").fetchall()
 
-    def _load_headcount_cache(self) -> dict[tuple[int, str], dict[str, float]]:
+    def _load_headcount_cache(self) -> dict[tuple[str, str], dict[str, float]]:
         # Priority: manual > ga > others
         rows = self.conn.execute(
             """
@@ -97,9 +98,9 @@ class AllocationEngine:
                 END
             """
         ).fetchall()
-        cache: dict[tuple[int, str], dict[str, float]] = {}
+        cache: dict[tuple[str, str], dict[str, float]] = {}
         for row in rows:
-            cache[(int(row["cc_code"]), str(row["period"]))] = {
+            cache[(str(row["cc_code"]).strip(), str(row["period"]))] = {
                 "headcount_all": float(row["headcount_all"] or 0.0),
                 "headcount_staff": float(row["headcount_staff"] or 0.0),
                 "headcount_worker": float(row["headcount_worker"] or 0.0),
@@ -116,12 +117,13 @@ class AllocationEngine:
             return sales_acc
         return ga_acc
 
-    def _get_monthly_hc(self, cc_code: int, period: str, driver_type: str) -> float:
-        row = self.hc_cache.get((cc_code, period))
+    def _get_monthly_hc(self, cc_code: object, period: str, driver_type: str) -> float:
+        cc_key = str(cc_code).strip()
+        row = self.hc_cache.get((cc_key, period))
         if row:
             return float(row.get(driver_type, row.get("headcount_all", 0.0)))
 
-        cc = next((x for x in self.cost_centers if int(x["code"]) == int(cc_code)), None)
+        cc = next((x for x in self.cost_centers if str(x["code"]).strip() == cc_key), None)
         if not cc:
             return 0.0
         if driver_type == "headcount_staff":
@@ -196,7 +198,7 @@ class AllocationEngine:
             token in lower_text for token in NEXT_EVENT_MONTH_TOKENS
         )
 
-    def _get_event_delta(self, cc_code: int, period: str, driver_type: str) -> float:
+    def _get_event_delta(self, cc_code: object, period: str, driver_type: str) -> float:
         prev_period = self._get_prev_period(period)
         if not prev_period:
             return 0.0
@@ -294,7 +296,7 @@ class AllocationEngine:
         for row in raw_rows:
             source = str(row["source"] or "")
             desc = str(row["description"] or "").lower()
-            cc = next((c for c in self.cost_centers if int(c["code"]) == int(row["cc_code"])), None)
+            cc = next((c for c in self.cost_centers if str(c["code"]).strip() == str(row["cc_code"]).strip()), None)
             cost_type = str(cc["cost_type"]) if cc else ""
 
             target_row = None
@@ -351,11 +353,11 @@ class AllocationEngine:
                             prev_period = self._get_prev_period(period)
                             if not prev_period:
                                 continue
-                            driver_val = self._get_event_delta(int(cc["code"]), prev_period, driver_type)
+                            driver_val = self._get_event_delta(cc["code"], prev_period, driver_type)
                         elif self._is_event_month_rule(posting_month):
-                            driver_val = self._get_event_delta(int(cc["code"]), period, driver_type)
+                            driver_val = self._get_event_delta(cc["code"], period, driver_type)
                         else:
-                            driver_val = self._get_monthly_hc(int(cc["code"]), period, driver_type)
+                            driver_val = self._get_monthly_hc(cc["code"], period, driver_type)
 
                     if driver_val <= 0:
                         continue
@@ -382,7 +384,7 @@ class AllocationEngine:
                             f"alloc_{rule['id']}",
                             period,
                             amount_vnd,
-                            int(cc["code"]),
+                            str(cc["code"]).strip(),
                             int(target_acc),
                             f"Alloc: {rule['item_name']}",
                         ),

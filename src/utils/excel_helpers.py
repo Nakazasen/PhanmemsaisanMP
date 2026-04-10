@@ -68,19 +68,45 @@ def read_exchange_rate_from_form(form_path: str) -> float:
 
 import re
 
-def extract_cc_code(val: Any) -> Optional[int]:
-    """Extract 4 to 10-digit cost center code from a cell value."""
-    if pd.isna(val) or val is None: return None
+CC_CODE_PATTERNS = (
+    r"\b\d{4}[A-Za-z]\d{5,}\b",
+    r"\b\d{4,10}\b",
+)
+
+
+def normalize_cc_code(val: Any) -> Optional[str]:
+    """Normalize cost center code from raw Excel/csv values."""
+    if pd.isna(val) or val is None:
+        return None
+
+    if isinstance(val, (int, float)):
+        try:
+            number = int(float(val))
+            if number >= 1000:
+                return str(number)
+        except Exception:
+            pass
+
     s = str(val).strip()
-    # Try direct numeric
-    try:
-        n = int(float(s))
-        if 1000 <= n <= 9999999999: return n
-    except: pass
-    # Try regex search for 4-10 digit sequence
-    match = re.search(r'\b(\d{4,10})\b', s)
-    if match: return int(match.group(1))
+    if not s:
+        return None
+
+    compact = s.replace(" ", "")
+    for pattern in CC_CODE_PATTERNS:
+        direct_match = re.fullmatch(pattern, compact)
+        if direct_match:
+            return direct_match.group(0).upper()
+
+    for pattern in CC_CODE_PATTERNS:
+        match = re.search(pattern, s)
+        if match:
+            return match.group(0).upper()
     return None
+
+
+def extract_cc_code(val: Any) -> Optional[str]:
+    """Backward-compatible alias for normalized cost center extraction."""
+    return normalize_cc_code(val)
 
 def safe_float(val: Any) -> float:
     """Convert a value to float, returning 0.0 for invalid values."""

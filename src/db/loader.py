@@ -8,7 +8,7 @@ import re
 import pandas as pd
 import openpyxl
 from src.db.schema import get_connection, create_schema, init_sys_params
-from src.utils.excel_helpers import read_exchange_rate_from_form
+from src.utils.excel_helpers import normalize_cc_code, read_exchange_rate_from_form
 
 import sys
 
@@ -17,14 +17,30 @@ if getattr(sys, 'frozen', False):
 else:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
+def _packaged_base_dir() -> str:
+    return getattr(sys, "_MEIPASS", BASE_DIR)
+
+
+def _resolve_mp2027_docs_dir() -> str:
+    external_docs_dir = os.path.join(BASE_DIR, 'docs', 'MP2027')
+    if os.path.isdir(external_docs_dir):
+        return external_docs_dir
+
+    packaged_docs_dir = os.path.join(_packaged_base_dir(), 'docs', 'MP2027')
+    if os.path.isdir(packaged_docs_dir):
+        return packaged_docs_dir
+
+    raise FileNotFoundError(
+        f"Missing required source directory: {external_docs_dir}. "
+        "Expected docs/MP2027 either next to the app or bundled inside the executable."
+    )
+
+
 # Source file paths
-MP2027_DOCS_DIR = os.path.join(BASE_DIR, 'docs', 'MP2027')
-if os.path.isdir(MP2027_DOCS_DIR):
-    FORM_PATH = os.path.join(MP2027_DOCS_DIR, 'FORM.xlsx')
-    ALLOC_PATH = os.path.join(MP2027_DOCS_DIR, 'FY2027配賦額一覧 (2025.12.29).xlsx')
-else:
-    FORM_PATH = os.path.join(BASE_DIR, 'FORM.xlsx')
-    ALLOC_PATH = os.path.join(BASE_DIR, 'FY2027配賦額一覧 (2025.12.29).xlsx')
+MP2027_DOCS_DIR = _resolve_mp2027_docs_dir()
+FORM_PATH = os.path.join(MP2027_DOCS_DIR, 'FORM.xlsx')
+ALLOC_PATH = os.path.join(MP2027_DOCS_DIR, 'FY2027配賦額一覧 (2025.12.29).xlsx')
 
 
 def _normalize_text(value) -> str:
@@ -160,12 +176,11 @@ def load_cost_centers(conn: sqlite3.Connection, form_path: str = None) -> int:
     cursor.execute("DELETE FROM dim_cost_centers")
     count = 0
     for _, row in df.iterrows():
-        code = row.iloc[0]  # Unnamed: 0 = code
-        if pd.isna(code):
+        raw_code = row.iloc[0]  # Unnamed: 0 = code
+        if pd.isna(raw_code):
             continue
-        try:
-            code = int(float(code))
-        except (ValueError, TypeError):
+        code = normalize_cc_code(raw_code)
+        if not code:
             continue
 
         name_jp = str(row.iloc[1]).strip() if not pd.isna(row.iloc[1]) else ''

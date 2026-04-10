@@ -17,7 +17,7 @@ import os
 import sqlite3
 from typing import Any
 
-from src.utils.excel_helpers import get_fy_months, safe_float
+from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
 
 
 TEMPLATE_FILENAME = "special_costs_manual.csv"
@@ -59,7 +59,7 @@ def parse_manual_special_costs(conn: sqlite3.Connection, source_dir: str | None 
     if not os.path.exists(template_path):
         return {"inserted": 0, "skipped": 0, "errors": 0, "template_path": template_path}
 
-    valid_cc_codes = {int(row[0]) for row in conn.execute("SELECT code FROM dim_cost_centers").fetchall()}
+    valid_cc_codes = {str(row[0]).strip() for row in conn.execute("SELECT code FROM dim_cost_centers").fetchall() if row[0] is not None}
     cursor = conn.cursor()
     cursor.execute("DELETE FROM fact_input_data WHERE source = 'manual_special_cost'")
 
@@ -98,8 +98,8 @@ def parse_manual_special_costs(conn: sqlite3.Connection, source_dir: str | None 
                 skipped += 1
                 continue
 
+            cc_code = normalize_cc_code(raw_cc)
             try:
-                cc_code = int(float(raw_cc))
                 form_row = int(float(raw_form_row))
                 account_code = int(float(raw_account_code))
             except (ValueError, TypeError):

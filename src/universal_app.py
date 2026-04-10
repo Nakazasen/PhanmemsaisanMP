@@ -8,6 +8,7 @@ Supports:
 """
 
 import csv
+import hashlib
 import os
 import sys
 import threading
@@ -40,6 +41,10 @@ from src.utils.excel_helpers import get_fy_months
 
 
 def _default_template_path() -> str:
+    external_root_form = os.path.join(BASE_DIR, "FORM.xlsx")
+    if os.path.exists(external_root_form):
+        return external_root_form
+
     external_mp2027 = os.path.join(BASE_DIR, "docs", "MP2027", "FORM.xlsx")
     if os.path.exists(external_mp2027):
         return external_mp2027
@@ -48,10 +53,44 @@ def _default_template_path() -> str:
     if os.path.exists(packaged_mp2027):
         return packaged_mp2027
 
-    return os.path.join(BASE_DIR, "FORM.xlsx")
+    raise FileNotFoundError(
+        f"Required template not found: {external_mp2027}. "
+        "Do not fallback to the old root FORM.xlsx because it contains stale sample formulas."
+    )
+
+
+def _is_legacy_root_template(path: str) -> bool:
+    selected_path = os.path.abspath(path)
+    root_form = os.path.abspath(os.path.join(BASE_DIR, "FORM.xlsx"))
+    if selected_path != root_form:
+        return False
+
+    canonical_candidates = [
+        os.path.abspath(os.path.join(BASE_DIR, "docs", "MP2027", "FORM.xlsx")),
+        os.path.abspath(resource_path(os.path.join("docs", "MP2027", "FORM.xlsx"))),
+    ]
+    canonical_form = next((candidate for candidate in canonical_candidates if os.path.exists(candidate)), None)
+    if not os.path.exists(root_form):
+        return True
+    if canonical_form is None:
+        return False
+
+    def _sha256(file_path: str) -> str:
+        digest = hashlib.sha256()
+        with open(file_path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    return _sha256(root_form) != _sha256(canonical_form)
 
 
 def _default_source_dir() -> str:
+    external_root_form = os.path.join(BASE_DIR, "FORM.xlsx")
+    external_root_rules = os.path.join(BASE_DIR, "FY2027配賦額一覧 (2025.12.29).xlsx")
+    if os.path.exists(external_root_form) and os.path.exists(external_root_rules):
+        return BASE_DIR
+
     external_mp2027 = os.path.join(BASE_DIR, "docs", "MP2027")
     if os.path.isdir(external_mp2027):
         return external_mp2027
@@ -242,6 +281,12 @@ class MPManagerApp:
     def browse_template(self):
         path = filedialog.askopenfilename(filetypes=[("Tệp Excel", "*.xlsx")])
         if path:
+            if _is_legacy_root_template(path):
+                messagebox.showerror(
+                    "Lỗi",
+                    "Không được dùng FORM.xlsx ở root repo vì file này còn công thức mẫu cũ. Hãy chọn docs/MP2027/FORM.xlsx.",
+                )
+                return
             self.template_path.set(path)
 
     def browse_source_dir(self):
@@ -290,7 +335,8 @@ class MPManagerApp:
 
         self.syncing_master = True
         self.log("--- TỰ ĐỘNG KHỞI TẠO DỮ LIỆU ---")
-        self.log(f"Đang nạp danh sách CC từ: {os.path.basename(template)}")
+        self.log(f"Template đang dùng: {template}")
+        self.log(f"Thư mục nguồn đang dùng: {self.source_dir.get() or BASE_DIR}")
         
         def run_sync():
             try:
@@ -724,9 +770,6 @@ class MPManagerApp:
             load_selected_cc()
 
     def start_pipeline(self):
-        # Layer 3: Ensure master data is in sync before running
-        self.auto_init_master_data()
-        
         try:
             fiscal_year = int(self.fiscal_year.get())
             exchange_rate = float(self.exchange_rate.get().replace(",", ""))
@@ -734,7 +777,7 @@ class MPManagerApp:
             cc_raw = self.cc_code_filter.get().strip()
             target_cc = None
             if cc_raw:
-                target_cc = int(cc_raw.split(" - ")[0].strip()) if " - " in cc_raw else int(cc_raw)
+                target_cc = cc_raw.split(" - ")[0].strip() if " - " in cc_raw else cc_raw
 
             template = self.template_path.get()
             source = self.source_dir.get()
@@ -742,8 +785,19 @@ class MPManagerApp:
                 messagebox.showerror("Lỗi", "Đường dẫn file mẫu hoặc thư mục nguồn không hợp lệ.")
                 return
 
+            if _is_legacy_root_template(template):
+                messagebox.showerror(
+                    "Lỗi",
+                    "Không được dùng FORM.xlsx ở root repo vì file này còn công thức mẫu cũ. Hãy dùng docs/MP2027/FORM.xlsx.",
+                )
+                return
+
+            # Ensure master data is in sync only after the selected paths are validated.
+            self.auto_init_master_data()
             self.start_btn.configure(state=tk.DISABLED)
             self.log("--- BẮT ĐẦU PIPELINE ---")
+            self.log(f"Template xác nhận chạy: {template}")
+            self.log(f"Thư mục nguồn xác nhận chạy: {source}")
             threading.Thread(
                 target=self.run_process,
                 args=(fiscal_year, template, source, exchange_rate, target_cc),

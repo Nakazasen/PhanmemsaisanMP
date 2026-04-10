@@ -1,9 +1,9 @@
 """
 MP2027 Manager - IT Simulation Parser.
 
-Parses the IT Simulation .xls files for the fiscal year. The parser keeps the
-summary total used by the current export and also captures per-system detail so
-the exporter can rebuild formulas closer to the business workbook.
+Parses the IT Simulation .xls files for the fiscal year. Besides the summary
+total, it also captures per-system detailed terms so the exporter can rebuild
+the business formula in the form `so_nguoi * don_gia`.
 """
 
 from __future__ import annotations
@@ -19,14 +19,12 @@ from src.utils.excel_helpers import extract_cc_code, get_fy_months, safe_float
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-SUMMARY_VND_SHEET = "部門別サマリー(VND)"
-SUMMARY_USD_SHEET = "部門別サマリー (USD)"
 COMPONENT_SHEETS = {
-    "vpn": ("vpn", "vpn 明細"),
-    "mail": ("mail", "メール"),
-    "r3": ("r3", "r3"),
-    "mes": ("mes", "mes"),
-    "plm": ("plm", "plm"),
+    "vpn": ("vpn",),
+    "mail": ("メール",),
+    "r3": ("r3",),
+    "mes": ("mes",),
+    "plm": ("plm",),
     "qlik_sense": ("qlik", "sense"),
     "vps": ("vps",),
     "ams": ("ams",),
@@ -47,8 +45,9 @@ def _normalize_text(value: object) -> str:
 
 def _find_matching_sheet(sheet_names: list[str], tokens: tuple[str, ...]) -> str | None:
     normalized_pairs = [(name, _normalize_text(name)) for name in sheet_names]
+    normalized_tokens = tuple(_normalize_text(token) for token in tokens)
     for name, normalized in normalized_pairs:
-        if all(token in normalized for token in tokens):
+        if all(token in normalized for token in normalized_tokens):
             return name
     return None
 
@@ -63,10 +62,19 @@ def _find_header_row(df: pd.DataFrame, header_token: str) -> int | None:
 
 
 def _find_header_index(df: pd.DataFrame, header_row: int, tokens: tuple[str, ...]) -> int | None:
+    normalized_tokens = tuple(_normalize_text(token) for token in tokens)
     for col_index, value in enumerate(df.iloc[header_row].tolist()):
         normalized = _normalize_text(value)
-        if all(token in normalized for token in tokens):
+        if all(token in normalized for token in normalized_tokens):
             return col_index
+    return None
+
+
+def _find_header_index_any(df: pd.DataFrame, header_row: int, token_groups: tuple[tuple[str, ...], ...]) -> int | None:
+    for tokens in token_groups:
+        found = _find_header_index(df, header_row, tokens)
+        if found is not None:
+            return found
     return None
 
 
@@ -77,12 +85,19 @@ def _parse_summary_sheet(df: pd.DataFrame, target_months: list[str]) -> list[dic
 
     header_row = _find_header_row(df, "原価センター")
     if header_row is None:
+        header_row = _find_header_row(df, "cost center")
+    if header_row is None:
         header_row = 1
 
-    cc_col = _find_header_index(df, header_row, ("原価", "センター"))
-    total_vnd_col = _find_header_index(df, header_row, ("課金", "振替", "vnd"))
-    if total_vnd_col is None:
-        total_vnd_col = _find_header_index(df, header_row, ("課金", "vnd"))
+    cc_col = _find_header_index_any(df, header_row, (("原価センター",), ("cost", "center")))
+    total_vnd_col = _find_header_index_any(
+        df,
+        header_row,
+        (
+            ("課金金額", "vnd"),
+            ("amount", "vnd"),
+        ),
+    )
     if cc_col is None or total_vnd_col is None:
         return records
 
@@ -109,18 +124,55 @@ def _parse_summary_sheet(df: pd.DataFrame, target_months: list[str]) -> list[dic
     return records
 
 
-def _parse_component_sheet(df: pd.DataFrame, component_key: str) -> dict[int, dict[str, float]]:
+def _parse_component_sheet(
+    df: pd.DataFrame,
+) -> tuple[dict[int, dict[str, float]], dict[int, list[dict[str, float]]]]:
     header_row = _find_header_row(df, "原価センター")
     if header_row is None:
-        return {}
+        header_row = _find_header_row(df, "cost center")
+    if header_row is None:
+        return {}, {}
 
-    cc_col = _find_header_index(df, header_row, ("原価", "センター"))
-    amount_usd_col = _find_header_index(df, header_row, ("課金", "usd"))
-    amount_vnd_col = _find_header_index(df, header_row, ("課金", "vnd"))
+    cc_col = _find_header_index_any(df, header_row, (("原価センター",), ("cost", "center")))
+    amount_usd_col = _find_header_index_any(
+        df,
+        header_row,
+        (
+            ("課金金額", "usd"),
+            ("amount", "usd"),
+        ),
+    )
+    amount_vnd_col = _find_header_index_any(
+        df,
+        header_row,
+        (
+            ("課金金額", "vnd"),
+            ("amount", "vnd"),
+        ),
+    )
+    unit_price_usd_col = _find_header_index_any(
+        df,
+        header_row,
+        (
+            ("課金単価", "usd"),
+            ("unit", "usd"),
+        ),
+    )
+    usage_count_col = _find_header_index_any(
+        df,
+        header_row,
+        (
+            ("使用id数",),
+            ("id数",),
+            ("quantity",),
+        ),
+    )
     if cc_col is None:
-        return {}
+        return {}, {}
 
     aggregated: dict[int, dict[str, float]] = defaultdict(lambda: {"amount_usd": 0.0, "amount_vnd": 0.0})
+    term_map: dict[int, list[dict[str, float]]] = defaultdict(list)
+
     for row_index in range(header_row + 1, len(df)):
         cc_code = extract_cc_code(df.iloc[row_index, cc_col])
         if not cc_code:
@@ -128,13 +180,32 @@ def _parse_component_sheet(df: pd.DataFrame, component_key: str) -> dict[int, di
 
         amount_usd = safe_float(df.iloc[row_index, amount_usd_col]) if amount_usd_col is not None else 0.0
         amount_vnd = safe_float(df.iloc[row_index, amount_vnd_col]) if amount_vnd_col is not None else 0.0
+        unit_price_usd = safe_float(df.iloc[row_index, unit_price_usd_col]) if unit_price_usd_col is not None else 0.0
+        usage_count = safe_float(df.iloc[row_index, usage_count_col]) if usage_count_col is not None else 0.0
+
+        if unit_price_usd <= 0 and amount_usd > 0 and usage_count > 0:
+            unit_price_usd = amount_usd / usage_count
+        # Some sheets already contain total USD. Others only expose count + price.
+        if amount_usd <= 0 and amount_vnd > 0 and unit_price_usd > 0 and usage_count > 0:
+            amount_usd = usage_count * unit_price_usd
+
         if amount_usd <= 0 and amount_vnd <= 0:
             continue
 
         aggregated[cc_code]["amount_usd"] += amount_usd
         aggregated[cc_code]["amount_vnd"] += amount_vnd
 
-    return aggregated
+        if unit_price_usd > 0 and amount_usd > 0:
+            quantity = usage_count if usage_count > 0 else round(amount_usd / unit_price_usd, 6)
+            if quantity > 0:
+                term_map[cc_code].append(
+                    {
+                        "quantity": quantity,
+                        "unit_price_usd": unit_price_usd,
+                    }
+                )
+
+    return aggregated, term_map
 
 
 def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, object]]:
@@ -156,8 +227,10 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
             sheet_name = _find_matching_sheet(excel_file.sheet_names, tokens)
             if not sheet_name:
                 continue
+
             component_df = pd.read_excel(path, sheet_name=sheet_name, header=None, engine="xlrd")
-            aggregated = _parse_component_sheet(component_df, component_key)
+            aggregated, term_map = _parse_component_sheet(component_df)
+
             for cc_code, amounts in aggregated.items():
                 for month in target_months:
                     records.append(
@@ -170,6 +243,24 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
                             "description": f"it_sim|component|{component_key}",
                         }
                     )
+
+            for cc_code, terms in term_map.items():
+                for term in terms:
+                    for month in target_months:
+                        records.append(
+                            {
+                                "cc_code": cc_code,
+                                "period": month,
+                                "amount_vnd": 0.0,
+                                "amount_usd": term["quantity"] * term["unit_price_usd"],
+                                "source": "it_sim",
+                                "description": (
+                                    f"it_sim|component_term|{component_key}"
+                                    f"|qty={term['quantity']}"
+                                    f"|unit_usd={term['unit_price_usd']}"
+                                ),
+                            }
+                        )
     finally:
         excel_file.close()
 

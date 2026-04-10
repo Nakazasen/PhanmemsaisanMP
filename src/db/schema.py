@@ -18,6 +18,14 @@ def _column_exists(conn: sqlite3.Connection, table_name: str, column_name: str) 
     rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
     return any(str(row[1]) == column_name for row in rows)
 
+
+def _column_type(conn: sqlite3.Connection, table_name: str, column_name: str) -> str | None:
+    rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    for row in rows:
+        if str(row[1]) == column_name:
+            return str(row[2] or "").upper()
+    return None
+
 def get_connection(db_path: str = None) -> sqlite3.Connection:
     path = db_path or DB_PATH
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -29,10 +37,18 @@ def get_connection(db_path: str = None) -> sqlite3.Connection:
 
 def create_schema(conn: sqlite3.Connection) -> None:
     cursor = conn.cursor()
+    cc_code_type = _column_type(conn, "dim_cost_centers", "code")
+    if cc_code_type and cc_code_type != "TEXT":
+        cursor.execute("PRAGMA foreign_keys=OFF")
+        cursor.execute("DROP TABLE IF EXISTS fact_allocation_log")
+        cursor.execute("DROP TABLE IF EXISTS dim_cost_centers")
+        cursor.execute("PRAGMA foreign_keys=ON")
+        conn.commit()
+
     # Basic Dimension Tables
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS dim_cost_centers (
-            code INTEGER PRIMARY KEY, name_jp TEXT NOT NULL, name_vn TEXT,
+            code TEXT PRIMARY KEY, name_jp TEXT NOT NULL, name_vn TEXT,
             seq_no REAL, saisan_type TEXT NOT NULL, cost_type TEXT NOT NULL,
             staff_count INTEGER DEFAULT 0, worker_count INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
@@ -78,7 +94,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
         )""")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS fact_allocation_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, rule_id INTEGER NOT NULL, dest_cc INTEGER NOT NULL,
+            id INTEGER PRIMARY KEY AUTOINCREMENT, rule_id INTEGER NOT NULL, dest_cc TEXT NOT NULL,
             period TEXT NOT NULL, amount_vnd REAL NOT NULL, account_code INTEGER NOT NULL,
             driver_value REAL NOT NULL, driver_total REAL NOT NULL, step INTEGER DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

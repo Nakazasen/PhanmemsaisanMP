@@ -2,12 +2,12 @@
   "meta": {
     "schema_version": "1.1.0",
     "awf_version": "4.0.2",
-    "last_updated": "2026-04-09T12:48:00Z"
+    "last_updated": "2026-04-10T10:30:00Z"
   },
   "project": {
     "name": "MP2027 Manager",
     "type": "Windows desktop app for MP2027 cost allocation and FORM export",
-    "status": "Source-aligned with docs/MP2027; business-complete except for data blockers"
+    "status": "Aligned with new FORM.xlsx; output is formula-first except for facility electric/water rows that remain data-limited"
   },
   "tech_stack": {
     "language": "Python 3.13.5",
@@ -37,7 +37,9 @@
     "Allocation engine explicitly skips NNN/VISA/GPLD/Passport items until manual event data is provided.",
     "Exporter clears stale sample cells in managed fixed-row ranges before writing real data.",
     "Exporter supports explicit form_row writes so manual special costs can land on exact FORM rows.",
-    "GUI and E2E defaults point to docs/MP2027 in both dev and packaged mode."
+    "Exporter reconstructs most alloc_* rows as Excel formulas instead of flat numeric output.",
+    "GUI and E2E defaults point to docs/MP2027 in both dev and packaged mode.",
+    "The current authoritative FORM is docs/MP2027/FORM.xlsx with detail rows extended to 1015."
   ],
   "knowledge_items": {
     "patterns": [
@@ -50,7 +52,8 @@
       "Do not destroy formulas or styles in FORM.xlsx; write only to intended rows/cells.",
       "headcount_manual.csv currently lacks real rows for CC 1412000089.",
       "special_costs_manual.csv is header-only until real FY2027 NNN event data arrives.",
-      "Moon cake and Sports day still have unit_price = 0 in the current rules workbook."
+      "Moon cake and Sports day still have unit_price = 0 in the current rules workbook.",
+      "Rows 40 and 41 remain numeric because facility input currently lacks workbook-level quantity and unit-price detail."
     ],
     "conventions": [
       "Fiscal period format is YYYYMM, covering April to March.",

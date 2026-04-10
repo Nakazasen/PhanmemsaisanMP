@@ -1,6 +1,6 @@
 # TODO MP2027 Open Items
 
-Ngay cap nhat: `2026-04-09`
+Ngay cap nhat: `2026-04-10`
 
 Quy uoc:
 - `P1`: anh huong truc tiep den output nghiep vu
@@ -26,10 +26,12 @@ Ghi chu: engine san sang, con thieu du lieu that
 ## 2. Da xong trong dot nay
 
 - [x] `P1` Uu tien `docs/MP2027` lam bo input/runtime chuan
+- [x] `P1` Bam theo `FORM.xlsx` moi thay cho `FORM_old.xlsx`
+- [x] `P1` Ho tro FORM moi co vung chi tiet den row `1015`
+- [x] `P1` Ho tro cost center dang chu-so nhu `1412C00001`
 - [x] `P1` Sua loader parse duoc unit price dang `145$`
 - [x] `P1` Nang rule loader len `66` rule
-- [x] `P1` Sua token posting month `入社月`, `配布月`, `申請月`, `取得月`, `翌月`
-- [x] `P1` Chan auto-allocation sai cho NNN/VISA/GPLD/Passport
+- [x] `P1` Chan auto-allocation sai cho NNN/VISA/GPLD/Passport`
 - [x] `P1` Nang parser IT doc tong va component `VPN/Mail/R3/MES/PLM/QLIK/VPS/AMS`
 - [x] `P1` Sua row `75` thanh cong thuc tong hop IT
 - [x] `P1` Clear sample rows `38-90`, `93-109`, `111-152`
@@ -50,6 +52,10 @@ Ghi chu: engine san sang, con thieu du lieu that
   - `employee card/photo/philosophy/card case/pen/note`
 - [x] `P1` Bo sung parser `special_costs_manual.csv`
 - [x] `P1` Bo sung export theo `form_row` ro rang trong FORM
+- [x] `P1` Chuyen gan nhu toan bo output tu so tinh sang cong thuc Excel
+- [x] `P1` Cac row da la cong thuc:
+  - `42`, `44`, `46`, `47`, `50`, `51`, `66`, `69`, `75`, `79`, `80`, `81`, `82`, `88`, `89`, `93`, `94`
+  - append rows `200+`
 - [x] `P2` Chay lai unit test
 - [x] `P2` Chay lai E2E
 - [x] `P3` Cap nhat `QUY_TRINH_NGHIEP_VU_MP2027.md`
@@ -57,6 +63,18 @@ Ghi chu: engine san sang, con thieu du lieu that
 - [x] `P3` Dong goi lai `dist/MP2027_Manager.exe`
 
 ## 3. P1 con mo that su
+
+- [ ] `P1` Row `40` va `41` van la so tinh
+Code dich: `src/engine/hub_builder.py`, parser facility
+Ly do con mo:
+  - row `40` = `facility / electric`
+  - row `41` = `facility / water`
+  - nguon hien tai chi co tong tien theo thang
+  - workbook khong co driver chi tiet de lap cong thuc `so luong * don gia`
+Can them neu muon cong thuc hoa:
+  - san luong theo thang
+  - don gia theo thang
+  - hoac file facility chi tiet tuong duong
 
 - [ ] `P1` Bo sung du lieu that cho `docs/MP2027/headcount_manual.csv`
 Can co:
@@ -104,10 +122,13 @@ Code dich: `src/engine/hub_builder.py`
 
 - [x] `P2` `python -m unittest tests.test_src_v2_logic tests.test_posting_month_logic tests.test_headcount_and_export`
 - [x] `P2` `python scripts\\run_e2e.py --fy 2027 --template docs\\MP2027\\FORM.xlsx --source docs\\MP2027 --target-cc 1412000089`
+- [x] `P2` `python scripts\\run_e2e.py --fy 2027 --template docs\\MP2027\\FORM.xlsx --source docs\\MP2027 --target-cc 1412000006`
+- [x] `P2` Kiem tra output `MP_CC_1412000006.xlsx`: `417` o cong thuc, chi con `24` o so tinh tai row `40-41`
 - [x] `P2` Query DB xac nhan khong con allocation `alloc_%` nao cho `VISA/Passport/GPLD/NNN`
 - [x] `P3` `python scripts\\package_app.py`
 
 ## 6. File ban giao hien tai
 
 - [x] `P3` Output moi: `OUTPUT_FY2027/MP_CC_1412000089.xlsx`
+- [x] `P3` Output kiem tra cong thuc: `OUTPUT_FY2027/MP_CC_1412000006.xlsx`
 - [x] `P3` EXE moi: `dist/MP2027_Manager.exe`

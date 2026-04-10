@@ -269,7 +269,7 @@ class TestManualSpecialCosts(unittest.TestCase):
             result = parse_manual_special_costs(conn, source_dir=str(tmpdir))
             self.assertEqual(result["inserted"], 1)
 
-            template_path = Path(__file__).resolve().parents[1] / "FORM.xlsx"
+            template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
             output_path = tmpdir / "out_special_cost.xlsx"
             ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
             self.assertTrue(ok)
@@ -304,7 +304,7 @@ class TestManualSpecialCosts(unittest.TestCase):
         )
         conn.commit()
 
-        template_path = Path(__file__).resolve().parents[1] / "FORM.xlsx"
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
         tmpdir = _mk_tmpdir()
         try:
             output_path = tmpdir / "out_prev_month_formula.xlsx"
@@ -347,7 +347,7 @@ class TestHubBuilderExport(unittest.TestCase):
         )
         conn.commit()
 
-        template_path = Path(__file__).resolve().parents[1] / "FORM.xlsx"
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
         tmpdir = _mk_tmpdir()
         try:
             output_path = tmpdir / "out.xlsx"
@@ -399,7 +399,7 @@ class TestHubBuilderExport(unittest.TestCase):
         )
         conn.commit()
 
-        template_path = Path(__file__).resolve().parents[1] / "FORM.xlsx"
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
         tmpdir = _mk_tmpdir()
         try:
             output_path = tmpdir / "out_fixed_rows.xlsx"
@@ -415,6 +415,43 @@ class TestHubBuilderExport(unittest.TestCase):
                 self.assertEqual(ws["I79"].value, 333)
                 self.assertIsNone(ws["F67"].value)
                 self.assertEqual(ws["S200"].value, "desc")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_it_system_row_prefers_detail_formula_terms(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        conn.execute(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, amount_usd, cc_code, account_code, description)
+            VALUES
+            ('it_sim', ?, 0, 31.9, ?, 5005246282, 'it_sim|component_term|vpn|qty=10|unit_usd=3.19'),
+            ('it_sim', ?, 0, 230.2, ?, 5005246282, 'it_sim|component_term|mail|qty=20|unit_usd=11.51'),
+            ('it_sim', ?, 0, 60.04, ?, 5005246282, 'it_sim|component_term|mes|qty=2|unit_usd=30.02'),
+            ('it_sim', ?, 0, 45, ?, 5005246282, 'it_sim|component_term|vps|qty=20|unit_usd=2.25'),
+            ('it_sim', ?, 9645870, 0, ?, 5005246282, 'it_sim|system_usage_total')
+            """,
+            (periods[0], cc_code, periods[0], cc_code, periods[0], cc_code, periods[0], cc_code, periods[0], cc_code),
+        )
+        conn.commit()
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        tmpdir = _mk_tmpdir()
+        try:
+            output_path = tmpdir / "out_it_formula.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws["B75"].value, 5005246282)
+                self.assertEqual(ws["F75"].value, "=ROUND((10*3.19+20*11.51+2*30.02+20*2.25)*$B$2,0)")
             finally:
                 workbook.close()
         finally:

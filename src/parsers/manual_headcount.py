@@ -13,7 +13,7 @@ import os
 import sqlite3
 from typing import Any
 
-from src.utils.excel_helpers import get_fy_months, safe_float
+from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
 
 TEMPLATE_FILENAME = "headcount_manual.csv"
 REQUIRED_COLUMNS = ("cc_code", "period", "headcount_staff", "headcount_worker")
@@ -78,7 +78,7 @@ def parse_manual_headcount(conn: sqlite3.Connection, source_dir: str | None = No
     if not os.path.exists(template_path):
         return {"inserted": 0, "skipped": 0, "errors": 0, "template_path": template_path}
 
-    valid_cc_codes = {int(row[0]) for row in conn.execute("SELECT code FROM dim_cost_centers").fetchall()}
+    valid_cc_codes = {str(row[0]).strip() for row in conn.execute("SELECT code FROM dim_cost_centers").fetchall() if row[0] is not None}
     cursor = conn.cursor()
     cursor.execute("DELETE FROM fact_monthly_headcount WHERE source = 'manual'")
 
@@ -122,9 +122,8 @@ def parse_manual_headcount(conn: sqlite3.Connection, source_dir: str | None = No
                 skipped += 1
                 continue
 
-            try:
-                cc_code = int(float(raw_cc))
-            except (ValueError, TypeError):
+            cc_code = normalize_cc_code(raw_cc)
+            if not cc_code:
                 errors += 1
                 continue
             if cc_code not in valid_cc_codes:

@@ -17,7 +17,7 @@ from typing import Any
 import openpyxl
 import pandas as pd
 
-from src.utils.excel_helpers import get_fy_months, safe_float
+from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
@@ -180,8 +180,8 @@ def _detect_category(row_text: str, current_category: str) -> str:
     return current_category
 
 
-def _extract_candidate_numbers(cell_value: Any) -> list[int]:
-    candidates: list[int] = []
+def _extract_candidate_codes(cell_value: Any) -> list[str]:
+    candidates: list[str] = []
     if cell_value is None:
         return candidates
 
@@ -189,21 +189,16 @@ def _extract_candidate_numbers(cell_value: Any) -> list[int]:
     if not text:
         return candidates
 
-    try:
-        as_int = int(float(text))
-        candidates.append(as_int)
-    except (ValueError, TypeError):
-        pass
+    normalized = normalize_cc_code(text)
+    if normalized:
+        candidates.append(normalized)
 
     for token in re.findall(r"\d{4,10}", text):
-        try:
-            candidates.append(int(token))
-        except ValueError:
-            continue
+        candidates.append(token)
 
     # Keep stable order and remove duplicates.
-    seen: set[int] = set()
-    ordered: list[int] = []
+    seen: set[str] = set()
+    ordered: list[str] = []
     for candidate in candidates:
         if candidate in seen:
             continue
@@ -212,16 +207,16 @@ def _extract_candidate_numbers(cell_value: Any) -> list[int]:
     return ordered
 
 
-def _extract_valid_cc_from_row(row: tuple[Any, ...], valid_cc_codes: set[int]) -> int | None:
+def _extract_valid_cc_from_row(row: tuple[Any, ...], valid_cc_codes: set[str]) -> str | None:
     # Scan left-side cells first where CC usually appears.
     for cell in row[:20]:
-        candidates = _extract_candidate_numbers(cell)
+        candidates = _extract_candidate_codes(cell)
         for candidate in candidates:
             if candidate in valid_cc_codes:
                 return candidate
             # Suffix match for 4-8 digit codes (e.g. 1136 matches 1412001136)
-            if 4 <= len(str(candidate)) <= 8:
-                str_cand = str(candidate)
+            if candidate.isdigit() and 4 <= len(candidate) <= 8:
+                str_cand = candidate
                 for valid in valid_cc_codes:
                     if str(valid).endswith(str_cand):
                         return valid
@@ -232,8 +227,8 @@ def _parse_ga_headcount_sheet(
     workbook: openpyxl.Workbook,
     sheet_name: str,
     fy_months: list[str],
-    valid_cc_codes: set[int],
-) -> dict[tuple[int, str], dict[str, float]]:
+    valid_cc_codes: set[str],
+) -> dict[tuple[str, str], dict[str, float]]:
     try:
         worksheet = workbook[sheet_name]
     except Exception:
@@ -243,7 +238,7 @@ def _parse_ga_headcount_sheet(
         lambda: {"headcount_all": 0.0, "headcount_staff": 0.0, "headcount_worker": 0.0}
     )
 
-    active_cc: int | None = None
+    active_cc: str | None = None
     current_category = "staff"
 
     try:
@@ -344,9 +339,9 @@ def parse_ga(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[st
         if working_days:
             break
 
-    valid_cc_codes = {int(row[0]) for row in conn.execute("SELECT code FROM dim_cost_centers").fetchall()}
+    valid_cc_codes = {str(row[0]).strip() for row in conn.execute("SELECT code FROM dim_cost_centers").fetchall() if row[0] is not None}
 
-    aggregated_headcount: dict[tuple[int, str], dict[str, float]] = defaultdict(
+    aggregated_headcount: dict[tuple[str, str], dict[str, float]] = defaultdict(
         lambda: {"headcount_all": 0.0, "headcount_staff": 0.0, "headcount_worker": 0.0}
     )
     workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)

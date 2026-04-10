@@ -33,7 +33,10 @@ def _default_template_path() -> str:
     candidate = os.path.join(BASE_DIR, "docs", "MP2027", "FORM.xlsx")
     if os.path.exists(candidate):
         return candidate
-    return os.path.join(BASE_DIR, "FORM.xlsx")
+    raise FileNotFoundError(
+        f"Required template not found: {candidate}. "
+        "Do not fallback to the old root FORM.xlsx because it contains stale sample formulas."
+    )
 
 
 def _default_source_dir() -> str:

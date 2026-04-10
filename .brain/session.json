@@ -1,11 +1,15 @@
 {
-  "updated_at": "2026-04-09T12:48:00Z",
+  "updated_at": "2026-04-10T10:30:00Z",
   "working_on": {
-    "feature": "Final audit of the 3 red MP2027 requirement sheets and packaging of the aligned program",
+    "feature": "FORM-new alignment and formula-first export audit",
     "status": "COMPLETED_WITH_DATA_BLOCKERS",
-    "notes": "Core code paths are aligned with docs/MP2027, row 109-137 was re-audited, and the remaining gaps are source-data blockers rather than missing engine support."
+    "notes": "Core code paths are aligned with the new docs/MP2027/FORM.xlsx, most exported month cells are now formulas, and the remaining gaps are facility-data blockers plus user-side source-data gaps."
   },
   "pending_tasks": [
+    {
+      "task": "If rows 40 and 41 must also become formulas, collect facility detail by month for electric and water with quantity and unit price drivers",
+      "priority": "high"
+    },
     {
       "task": "Collect real FY2027 headcount rows for CC 1412000089 in docs/MP2027/headcount_manual.csv",
       "priority": "high"
@@ -24,6 +28,40 @@
     }
   ],
   "recent_changes": [
+    {
+      "timestamp": "2026-04-10T09:30:00Z",
+      "type": "code",
+      "description": "Aligned exporter and master-data loading with the new docs/MP2027/FORM.xlsx, including row-1015 detail range support and alphanumeric cost-center handling.",
+      "files": [
+        "src/engine/hub_builder.py",
+        "src/db/loader.py",
+        "src/db/schema.py",
+        "src/utils/excel_helpers.py",
+        "src/engine/allocator.py",
+        "src/parsers/ga.py",
+        "src/parsers/manual_headcount.py",
+        "src/parsers/manual_special_costs.py",
+        "src/universal_app.py",
+        "tests/test_headcount_and_export.py"
+      ]
+    },
+    {
+      "timestamp": "2026-04-10T10:00:00Z",
+      "type": "code",
+      "description": "Reworked export so most allocation-driven rows are written back as Excel formulas; only facility electric and water remain flat values because the source workbook lacks quantity/unit-price drivers.",
+      "files": [
+        "src/engine/hub_builder.py",
+        "OUTPUT_FY2027/MP_CC_1412000006.xlsx"
+      ]
+    },
+    {
+      "timestamp": "2026-04-10T10:20:00Z",
+      "type": "verification",
+      "description": "Verified 17 tests and reran E2E for CC 1412000006; output now contains 417 formula month cells and only 24 static month cells across rows 40 and 41.",
+      "files": [
+        "OUTPUT_FY2027/MP_CC_1412000006.xlsx"
+      ]
+    },
     {
       "timestamp": "2026-04-09T10:00:00Z",
       "type": "code",
@@ -81,6 +119,10 @@
     {
       "decision": "Mark the remaining gaps as data blockers instead of open coding defects",
       "reason": "The engine can already accept the missing inputs once the user supplies them."
+    },
+    {
+      "decision": "Keep facility electric and water as numeric output until monthly quantity/unit-price detail is available",
+      "reason": "The current facility source provides only final monthly amounts, so any Excel-side formula would be invented rather than traceable to workbook inputs."
     }
   ],
   "read_first_next_time": [

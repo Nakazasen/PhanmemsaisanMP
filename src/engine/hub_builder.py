@@ -30,7 +30,7 @@ LOOKUP_NAME_COL = 3           # C
 LOOKUP_GROUP_COL = 4          # D
 APPEND_TEMPLATE_ROW = 29
 APPEND_START_ROW = 200
-MAX_DATA_ROW = 1000
+MIN_APPEND_LAST_ROW = 1000
 IT_COMPONENT_ORDER = ("vpn", "mail", "r3", "mes", "plm", "qlik_sense", "vps", "ams")
 MONTHLY_HEADCOUNT_FIXED_ROWS = (42, 44, 93, 94)
 FIXED_ALLOCATION_ROW_MATCHERS = {
@@ -105,6 +105,7 @@ class HubBuilder:
         self.conn = conn
         self.fiscal_year = fiscal_year
         self.fy_months = helpers.get_fy_months(fiscal_year)
+        self.rule_unit_price_by_source = self._load_rule_unit_price_by_source()
 
     def _normalize_text(self, value: object) -> str:
         text = unicodedata.normalize("NFKD", str(value or ""))
@@ -117,6 +118,10 @@ class HubBuilder:
         if abs(number - round(number)) < 1e-9:
             return str(int(round(number)))
         return f"{number:.6f}".rstrip("0").rstrip(".")
+
+    def _load_rule_unit_price_by_source(self) -> dict[str, float]:
+        rows = self.conn.execute("SELECT id, unit_price FROM map_allocation_rules").fetchall()
+        return {f"alloc_{int(row['id'])}": float(row["unit_price"] or 0.0) for row in rows}
 
     def _copy_row_style(self, worksheet, source_row: int, target_row: int) -> None:
         worksheet.row_dimensions[target_row].height = worksheet.row_dimensions[source_row].height
@@ -167,24 +172,28 @@ class HubBuilder:
         self._clear_visible_months(worksheet, row_index)
 
     def _clear_append_area(self, worksheet, start_row: int) -> None:
-        for row_index in range(start_row, MAX_DATA_ROW + 1):
+        for row_index in range(start_row, self._append_last_row(worksheet) + 1):
             self._prepare_append_row(worksheet, row_index)
 
-    def _input_rows_for_cc(self, cc_code: int, source: str | None = None) -> list[sqlite3.Row]:
+    def _append_last_row(self, worksheet) -> int:
+        return max(int(worksheet.max_row or 0), MIN_APPEND_LAST_ROW)
+
+    def _input_rows_for_cc(self, cc_code: object, source: str | None = None) -> list[sqlite3.Row]:
+        cc_key = str(cc_code)
         if source is None:
             query = """
                 SELECT source, period, description, account_code, amount_vnd, amount_usd
                 FROM fact_input_data
                 WHERE cc_code = ?
             """
-            params = (int(cc_code),)
+            params = (cc_key,)
         else:
             query = """
                 SELECT source, period, description, account_code, amount_vnd, amount_usd
                 FROM fact_input_data
                 WHERE cc_code = ? AND source = ?
             """
-            params = (int(cc_code), source)
+            params = (cc_key, source)
         return self.conn.execute(query, params).fetchall()
 
     def _month_series(
@@ -198,7 +207,7 @@ class HubBuilder:
         value_column: str = "amount_vnd",
     ) -> dict[str, float]:
         conditions = ["cc_code = ?"]
-        params: list[object] = [int(cc_code)]
+        params: list[object] = [str(cc_code)]
         if source is not None:
             conditions.append("source = ?")
             params.append(source)
@@ -246,6 +255,29 @@ class HubBuilder:
                 row=row_index,
                 column=VISIBLE_MONTH_START_COL + offset,
                 value=int(round(amount)) if amount else None,
+            )
+        worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
+
+    def _write_formula_series(
+        self,
+        worksheet,
+        row_index: int,
+        terms_by_period: dict[str, list[str]],
+        numeric_values: dict[str, float] | None = None,
+    ) -> None:
+        self._clear_visible_months(worksheet, row_index)
+        numeric_values = numeric_values or {}
+        for offset, period in enumerate(self.fy_months):
+            terms = list(terms_by_period.get(period, []))
+            numeric_amount = float(numeric_values.get(period, 0.0))
+            if numeric_amount:
+                terms.append(self._format_number(numeric_amount))
+            if not terms:
+                continue
+            worksheet.cell(
+                row=row_index,
+                column=VISIBLE_MONTH_START_COL + offset,
+                value=f"={' + '.join(terms)}".replace(" + ", "+"),
             )
         worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
 
@@ -340,6 +372,44 @@ class HubBuilder:
             result[str(row["period"])] += float(row[value_column] or 0.0)
         return dict(result)
 
+    def _alloc_formula_term_from_row(self, row: sqlite3.Row) -> str | None:
+        source = str(row["source"] or "")
+        if not source.startswith("alloc_"):
+            return None
+        unit_price = float(self.rule_unit_price_by_source.get(source, 0.0) or 0.0)
+        keys = row.keys()
+        raw_amount = row["amount_vnd"] if "amount_vnd" in keys else row["amount"]
+        amount_vnd = float(raw_amount or 0.0)
+        if unit_price <= 0 or amount_vnd <= 0:
+            return None
+        driver_value = amount_vnd / unit_price
+        if abs(driver_value - round(driver_value)) < 1e-9:
+            driver_value = round(driver_value)
+        return f"{self._format_number(driver_value)}*{self._format_number(unit_price)}"
+
+    def _alloc_formula_series_from_tokens(
+        self,
+        cc_code: object,
+        *,
+        tokens: tuple[str, ...],
+        exclude_tokens: tuple[str, ...] = (),
+        source_prefix: str = "alloc_",
+    ) -> tuple[dict[str, list[str]], dict[str, float]]:
+        terms_by_period: dict[str, list[str]] = defaultdict(list)
+        numeric_values: dict[str, float] = defaultdict(float)
+        for row in self._input_rows_for_cc(cc_code):
+            source = str(row["source"] or "")
+            if source_prefix and not source.startswith(source_prefix):
+                continue
+            if not self._match_description(str(row["description"] or ""), tokens, exclude_tokens):
+                continue
+            term = self._alloc_formula_term_from_row(row)
+            if term:
+                terms_by_period[str(row["period"])].append(term)
+            else:
+                numeric_values[str(row["period"])] += float(row["amount_vnd"] or 0.0)
+        return dict(terms_by_period), dict(numeric_values)
+
     def _account_code_from_tokens(
         self,
         cc_code: int,
@@ -379,7 +449,7 @@ class HubBuilder:
             GROUP BY form_row, account_code, description, period
             ORDER BY form_row, account_code, description, period
             """,
-            (int(cc_code),),
+            (str(cc_code),),
         ).fetchall()
 
         grouped: dict[int, dict[str, object]] = {}
@@ -415,6 +485,23 @@ class HubBuilder:
             result.append(bucket)
         return result
 
+    def _parse_it_component_term(self, description: str) -> tuple[str, float, float] | None:
+        parts = description.split("|")
+        if len(parts) < 5 or parts[0:2] != ["it_sim", "component_term"]:
+            return None
+
+        component_key = parts[2]
+        quantity = 0.0
+        unit_price_usd = 0.0
+        for part in parts[3:]:
+            if part.startswith("qty="):
+                quantity = float(part.split("=", 1)[1] or 0.0)
+            elif part.startswith("unit_usd="):
+                unit_price_usd = float(part.split("=", 1)[1] or 0.0)
+        if quantity <= 0 or unit_price_usd <= 0:
+            return None
+        return component_key, quantity, unit_price_usd
+
     def _write_explicit_form_rows(self, worksheet, cc_code: int) -> None:
         for row in self._load_explicit_form_rows(cc_code):
             row_index = int(row["form_row"])
@@ -431,6 +518,7 @@ class HubBuilder:
         rows = self._input_rows_for_cc(cc_code, source="it_sim")
         total_vnd_by_period: dict[str, float] = {}
         component_usd_by_period: dict[str, dict[str, float]] = defaultdict(dict)
+        component_terms_by_period: dict[str, dict[str, list[tuple[float, float]]]] = defaultdict(lambda: defaultdict(list))
         account_codes: set[int] = set()
 
         for row in rows:
@@ -444,6 +532,12 @@ class HubBuilder:
                 total_vnd_by_period[period] = float(row["amount_vnd"] or 0.0)
                 continue
 
+            parsed_term = self._parse_it_component_term(description)
+            if parsed_term is not None:
+                component_key, quantity, unit_price_usd = parsed_term
+                component_terms_by_period[period][component_key].append((quantity, unit_price_usd))
+                continue
+
             if description.startswith("it_sim|component|"):
                 component_key = description.split("|")[-1]
                 component_usd_by_period[period][component_key] = float(row["amount_usd"] or 0.0)
@@ -453,6 +547,12 @@ class HubBuilder:
 
         self._clear_visible_months(worksheet, 75)
         for offset, period in enumerate(self.fy_months):
+            component_terms = component_terms_by_period.get(period, {})
+            ordered_terms = []
+            for key in IT_COMPONENT_ORDER:
+                for quantity, unit_price_usd in component_terms.get(key, []):
+                    ordered_terms.append(f"{self._format_number(quantity)}*{self._format_number(unit_price_usd)}")
+
             component_values = component_usd_by_period.get(period, {})
             ordered_values = [
                 float(component_values[key])
@@ -460,6 +560,9 @@ class HubBuilder:
                 if float(component_values.get(key, 0.0)) > 0
             ]
             cell = worksheet.cell(row=75, column=VISIBLE_MONTH_START_COL + offset)
+            if ordered_terms:
+                cell.value = f"=ROUND(({'+'.join(ordered_terms)})*$B$2,0)"
+                continue
             if ordered_values:
                 formula = "+".join(self._format_number(value) for value in ordered_values)
                 cell.value = f"=ROUND(({formula})*$B$2,0)"
@@ -566,23 +669,31 @@ class HubBuilder:
             )
             if account_code:
                 worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
-            self._write_numeric_series(worksheet, row_index, series)
+            terms_by_period, numeric_values = self._alloc_formula_series_from_tokens(
+                cc_code,
+                tokens=matcher["tokens"],
+                exclude_tokens=matcher["exclude_tokens"],
+            )
+            if terms_by_period:
+                self._write_formula_series(worksheet, row_index, terms_by_period, numeric_values)
+            else:
+                self._write_numeric_series(worksheet, row_index, series)
 
         self._write_explicit_form_rows(worksheet, cc_code)
 
     def _load_append_rows(self, cc_code: int) -> list[dict[str, object]]:
         rows = self.conn.execute(
             """
-            SELECT account_code, description, period, SUM(amount_vnd) AS amount
+            SELECT source, account_code, description, period, SUM(amount_vnd) AS amount
             FROM fact_input_data
             WHERE cc_code = ?
               AND account_code > 0
               AND form_row IS NULL
               AND source NOT IN ('facility', 'fixed_assets', 'it_sim', 'ga_unit_price')
-            GROUP BY account_code, description, period
-            ORDER BY account_code, description, period
+            GROUP BY source, account_code, description, period
+            ORDER BY account_code, description, source, period
             """,
-            (int(cc_code),),
+            (str(cc_code),),
         ).fetchall()
 
         grouped: dict[tuple[int, str], dict[str, object]] = {}
@@ -598,20 +709,29 @@ class HubBuilder:
                     "account_code": int(row["account_code"]),
                     "description": description,
                     "months": {},
+                    "terms": defaultdict(list),
+                    "numeric_months": defaultdict(float),
                 },
             )
-            bucket["months"][str(row["period"])] = float(row["amount"] or 0.0)
+            period = str(row["period"])
+            term = self._alloc_formula_term_from_row(row)
+            if term:
+                bucket["terms"][period].append(term)
+            else:
+                amount = float(row["amount"] or 0.0)
+                bucket["numeric_months"][period] += amount
+                bucket["months"][period] = bucket["numeric_months"][period]
         return list(grouped.values())
 
     def export_to_template(
         self,
         template_path: str,
         output_path: str,
-        cc_code: Optional[int] = None,
+        cc_code: Optional[object] = None,
         sheet_name: Optional[str] = None,
         start_row: int = APPEND_START_ROW,
     ) -> bool:
-        target_cc = int(cc_code) if cc_code else None
+        target_cc = str(cc_code).strip() if cc_code else None
         if target_cc is None:
             return False
 
@@ -631,18 +751,31 @@ class HubBuilder:
             hub_sheet_name = sheet_name if sheet_name and sheet_name in workbook.sheetnames else helpers.find_hub_sheet_name(workbook)
             worksheet = workbook[hub_sheet_name]
 
-            worksheet.cell(row=5, column=ACCOUNT_COL, value=target_cc)
+            worksheet.cell(
+                row=5,
+                column=ACCOUNT_COL,
+                value=int(target_cc) if target_cc.isdigit() else target_cc,
+            )
             self._write_fixed_rows(worksheet, target_cc)
 
             self._clear_append_area(worksheet, start_row)
+            max_data_row = self._append_last_row(worksheet)
             current_row = start_row
             for row in self._load_append_rows(target_cc):
-                if current_row > MAX_DATA_ROW:
+                if current_row > max_data_row:
                     raise ValueError("FORM detail sheet does not have enough append rows prepared.")
                 self._prepare_append_row(worksheet, current_row)
                 worksheet.cell(row=current_row, column=ACCOUNT_COL, value=int(row["account_code"]))
                 worksheet.cell(row=current_row, column=DESCRIPTION_COL, value=row["description"])
-                self._write_numeric_series(worksheet, current_row, row["months"])
+                if row["terms"]:
+                    self._write_formula_series(
+                        worksheet,
+                        current_row,
+                        dict(row["terms"]),
+                        dict(row["numeric_months"]),
+                    )
+                else:
+                    self._write_numeric_series(worksheet, current_row, row["months"])
                 current_row += 1
 
             workbook.save(output_path)
