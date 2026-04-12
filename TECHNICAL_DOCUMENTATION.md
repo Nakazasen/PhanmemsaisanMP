@@ -1,226 +1,59 @@
 # TECHNICAL DOCUMENTATION - MP2027 Manager
 
-Tai lieu nay mo ta he thong o goc nhin ky thuat, dong thoi ghi ro cac gioi han da duoc xac minh thuc te. Muc tieu la de nguoi bao tri hieu dung trang thai code, thay vi dua vao mo ta "da hoan tat" khong con phu hop.
+Ngày cập nhật: `2026-04-12`
 
-## 1. Kien truc tong quan
+Tài liệu này mô tả hệ thống ở góc nhìn kỹ thuật và chỉ ra các tài liệu hiện hành cần đọc trước khi bảo trì. Các ghi chú cũ từ tháng `2026-03` đã được rút gọn vì không còn phản ánh đúng trạng thái hiện tại sau các bản sửa MP2027.
 
-He thong gom 5 lop:
+## 1. Tài liệu hiện hành
 
-### 1. GUI Layer
+- `QUY_TRINH_NGHIEP_VU_MP2027.md`: quy trình nghiệp vụ và mapping FORM hiện tại.
+- `TODO_MP2027_OPEN_ITEMS.md`: các việc còn mở và trạng thái kiểm chứng.
+- `MP2027_REQUIREMENTS_AUDIT_CHECKLIST.md`: checklist audit theo từng sheet/dòng trong workbook yêu cầu.
+- `OUTPUT_FY2027/MP2027_AUDIT_REPORT.md`: báo cáo audit sinh ra sau lần chạy E2E gần nhất.
+- `OUTPUT_FY2027/MP2027_MISSING_INPUTS.csv`: danh sách dữ liệu cần người dùng xem/chốt.
 
-File chinh:
+## 2. Kiến trúc tổng quan
 
-- `src/universal_app.py`
+Hệ thống gồm các lớp chính:
 
-Nhiem vu:
+- GUI: `src/universal_app.py`.
+- Orchestration: `scripts/run_e2e.py`.
+- Parser nguồn: `src/parsers/`.
+- Logic tính và export: `src/engine/allocator.py`, `src/engine/hub_builder.py`.
+- Audit report: `src/audit/pipeline_audit.py`.
+- SQLite staging: `mp2027.db`.
 
-- nhan tham so tu nguoi dung
-- goi pipeline E2E
-- hien log
+## 3. Luồng chạy chính
 
-### 2. Orchestration Layer
+1. Khởi tạo database và tham số năm tài chính.
+2. Load master data từ `docs/MP2027/FORM.xlsx`.
+3. Parse các nguồn Facility, GA, IT, Fixed Assets, NNN paperwork, Birthday và CSV nhập tay.
+4. Chạy allocation engine.
+5. Export từng Cost Center vào FORM MP2027.
+6. Sinh audit report và missing-input CSV.
 
-File chinh:
+## 4. Nguyên tắc kỹ thuật quan trọng
 
-- `scripts/run_e2e.py`
+- Runtime FORM là `docs/MP2027/FORM.xlsx`.
+- `docs/MP2027/FORM_old.xlsx` chỉ dùng để đối chiếu, không dùng runtime.
+- Không copy số FY2026 sang FY2027 nếu không có xác nhận nghiệp vụ.
+- Nếu thiếu dữ liệu không thể suy luận, chương trình không tự bịa số; người dùng nhập qua `event_drivers_manual.csv`.
+- Output cố gắng giữ công thức để người dùng double-check, ví dụ `=amount`, `=count*unit_price`, hoặc `=ROUND(...*$B$2,0)`.
 
-Nhiem vu:
+## 5. Kiểm chứng nên chạy
 
-- tao va khoi tao database
-- load master data
-- chay parsers
-- chay allocation
-- export ra file MP theo tung Cost Center
+```powershell
+py -m py_compile src\universal_app.py src\audit\pipeline_audit.py scripts\run_e2e.py
+py -m unittest tests.test_src_v2_logic tests.test_posting_month_logic tests.test_headcount_and_export
+py scripts\run_e2e.py --fy 2027 --template docs\MP2027\FORM.xlsx --source docs\MP2027 --target-cc 1412000006
+```
 
-### 3. Ingestion Layer
+## 6. Khi cập nhật tài liệu
 
-Thu muc:
+Chỉ đánh dấu một mục là `verified` khi có đủ:
 
-- `src/parsers/`
+- Command/test đã chạy.
+- Workbook hoặc nguồn dữ liệu đã đối chiếu.
+- Bằng chứng trong DB, output Excel hoặc audit report.
 
-Module:
-
-- `facility.py`
-- `fixed_assets.py`
-- `it_sim.py`
-- `ga.py`
-- `manual_headcount.py`
-
-Nhiem vu:
-
-- doc workbook nguon
-- chuyen du lieu ve bang chung trong SQLite
-- quy doi USD/VND neu can
-- dua cac direct costs vao `fact_input_data`
-- dua driver phan bo vao cac bang helper
-- cho phep nguoi dung nhap `headcount_staff/headcount_worker` bang file CSV thu cong
-
-Tai lieu thao tac:
-
-- `docs/MANUAL_HEADCOUNT_INPUT.md`
-
-### 4. Logic Layer
-
-Thu muc:
-
-- `src/engine/`
-
-Module:
-
-- `allocator.py`
-- `hub_builder.py`
-
-Nhiem vu:
-
-- map direct cost vao tai khoan dich
-- tinh allocation theo rule
-- tong hop va ghi ra sheet hub cua `FORM.xlsx`
-
-### 5. Storage Layer
-
-File:
-
-- `data/mp2027.db`
-
-Bang quan trong:
-
-- `dim_cost_centers`
-- `dim_accounts`
-- `map_allocation_rules`
-- `fact_input_data`
-- `fact_monthly_headcount`
-- `sys_params`
-
-## 2. Data flow hien tai
-
-Data flow dung theo thu tu:
-
-1. `run_e2e.py`
-2. `load_all()`
-3. `parse_facility()`
-4. `parse_ga()`
-5. `parse_it_simulation()`
-6. `parse_fixed_assets()`
-7. `AllocationEngine.run_allocation()`
-8. `HubBuilder.export_to_template()`
-
-## 3. Nhung gi da duoc xac minh la chay
-
-Tại thoi diem doi chieu `2026-03-23`, da xac minh:
-
-- import smoke cua module chinh pass
-- `py -m pytest tests\\test_src_v2_logic.py -q` pass
-- `py scripts\\run_e2e.py --fy 2027 --template FORM.xlsx --source .` pass
-- pipeline sinh `62` file trong `OUTPUT_FY2027`
-
-So lieu log mot lan chay:
-
-- `Loaded 62 cost centers`
-- `Loaded 239 accounts`
-- `Loaded 50 allocation rules`
-- `Facility total: 4584 records inserted`
-- `IT Simulation total: 1992 records`
-- `Mapped 14971 direct cost records`
-
-## 4. Known gaps da xac minh
-
-Day la phan quan trong nhat cua tai lieu nay.
-
-### 4.1. Allocation nghiep vu hanh chinh chua xac minh thanh cong
-
-Quan sat database sau khi chay E2E cho thay:
-
-- `fact_input_data` khong co dong `source like 'alloc_%'`
-
-Y nghia:
-
-- allocation rule hien chua tao ra output thuc su
-- direct-cost pipeline van chay
-- nhung business rule tu file quy tac phan bo FY2027 chua duoc the hien day du trong ket qua
-
-### 4.2. GA monthly headcount chua match master Cost Center
-
-Da thay monthly headcount ghi vao DB voi ma nhu:
-
-- `1136`
-- `40237000`
-
-Trong khi `dim_cost_centers` dung ma nhu:
-
-- `1412000004`
-- `1412000005`
-
-Y nghia:
-
-- allocator khong the join dung headcount theo CC dich
-
-### 4.3. `posting_month` la rule nghiep vu bat buoc nhung chua duoc ton trong day du
-
-Workbook rule co cac gia tri:
-
-- moi thang
-- thang vao lam
-- thang phat/cap
-- thang tiep theo sau vao lam
-- thang co dinh `7`, `10`, `11`, `12`, `2`
-- thang ghi nhan tai san
-- thang de nghi
-
-Neu code khong ton trong truong nay, output co the sai du gia tri tong van nhin co ve hop ly.
-
-### 4.4. `working_days` can duoc xu ly rieng
-
-Trong nghiep vu, `working_days` khong phai headcount.
-Neu he thong tinh `working_days` thong qua ham lay headcount, phep tinh sai ban chat.
-
-### 4.5. `map_allocation_rules` chua idempotent
-
-Bang rule dang bi tich luy qua nhieu lan chay.
-
-Da xac minh:
-
-- tong so dong trong DB: `1350`
-- so signature khac nhau: `50`
-
-Nguyen nhan:
-
-- moi lan load lai rules, code insert them
-- `run_e2e.py` khong xoa bang `map_allocation_rules` truoc khi load
-
-## 5. Huong dan danh gia trang thai he thong
-
-Khi nguoi doc can danh gia xem he thong da san sang hay chua, khong nen hoi:
-
-- pipeline co chay hay khong
-
-Ma phai hoi dong thoi:
-
-- direct cost da vao dung chua
-- allocation da sinh ra dung chua
-- posting month da dung chua
-- working days da dung driver chua
-- headcount da join dung master CC chua
-
-Neu chi E2E pass ma cac cau hoi tren chua pass, khong duoc ket luan la dung nghiep vu 100%.
-
-## 6. Thu tu sua ky thuat de dong gap
-
-1. Sua parser GA de xac dinh dung khoa Cost Center.
-2. Sua allocator de xu ly `posting_month`.
-3. Tach driver `working_days` khoi logic headcount.
-4. Lam `map_allocation_rules` idempotent.
-5. Viet test bao phu cho allocation theo thang va theo driver.
-
-## 7. Quy uoc cap nhat tai lieu
-
-Moi khi danh dau mot muc la `verified`, can co:
-
-- command da chay
-- workbook da doi chieu
-- ket qua DB hoac output file da kiem
-
-Neu khong co 3 thanh phan tren, chi nen ghi:
-
-- `implemented`
-- `partially verified`
-- hoac `pending validation`
+Nếu thiếu một trong các bằng chứng trên, chỉ nên ghi `implemented`, `partially verified` hoặc `pending validation`.

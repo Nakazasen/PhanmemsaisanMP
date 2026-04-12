@@ -1,0 +1,3 @@
+﻿severity,cc_code,period,area,message,action
+review,1412000006,202612,health_check_gender_split,Chưa có dữ liệu Nam/Nữ tháng 12 cho health-check row 57.,"Nếu CC này cần tính khám sức khỏe theo Nam/Nữ, nhập headcount_male/headcount_female tháng 12 trong headcount_manual.csv."
+action,1412000006,"202704,202705,202706,202707,202708,202709,202710,202711,202712,202701,202702,202703",manual_event_driver,Chưa có dòng sự kiện thủ công nào cho các số liệu không thể suy luận.,"Nếu có JP/VN bus, quà không đi du lịch, kỷ niệm 10 năm, company anniversary, VISA/Passport row khác 137..., hãy nhập vào event_drivers_manual.csv."

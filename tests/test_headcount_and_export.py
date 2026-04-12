@@ -7,12 +7,15 @@ import uuid
 
 import openpyxl
 
-from src.db.loader import _parse_unit_price
+from src.db.loader import _apply_mp2026_reference_unit_price, _parse_unit_price
 from src.db.schema import create_schema, init_sys_params
 from src.engine.allocator import AllocationEngine
 from src.engine.hub_builder import HubBuilder
+from src.parsers.birthday import parse_birthday_workbook
+from src.parsers.manual_event_drivers import parse_manual_event_drivers
 from src.parsers.manual_headcount import parse_manual_headcount
 from src.parsers.manual_special_costs import parse_manual_special_costs
+from src.parsers.nnn_paperwork import parse_nnn_paperwork
 from src.utils.excel_helpers import find_hub_sheet_name, get_fy_months
 
 
@@ -208,6 +211,11 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
         self.assertEqual(_parse_unit_price(3000000), 3000000.0)
         self.assertIsNone(_parse_unit_price("abc"))
 
+    def test_mp2026_reference_unit_price_fills_zero_rule_prices(self):
+        self.assertEqual(_apply_mp2026_reference_unit_price("月餅 Bánh Trung Thu", 0), 56000.0)
+        self.assertEqual(_apply_mp2026_reference_unit_price("運動会 Đại hội thể thao", 0), 107000.0)
+        self.assertEqual(_apply_mp2026_reference_unit_price("運動会 Đại hội thể thao", 123), 123.0)
+
     def test_acquisition_month_rules_are_skipped_until_manual_event_data_exists(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
@@ -241,6 +249,213 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
 
 
 class TestManualSpecialCosts(unittest.TestCase):
+    def test_manual_event_driver_parser_exports_formula_to_explicit_row(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        conn.execute(
+            "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
+        )
+        conn.commit()
+        period = get_fy_months(2027)[1]
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "period",
+                        "event_name",
+                        "count",
+                        "unit_price",
+                        "amount_vnd",
+                        "account_code",
+                        "form_row",
+                        "description",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "period": period,
+                        "event_name": "no_trip_gift",
+                        "count": "3",
+                        "unit_price": "4000",
+                        "amount_vnd": "",
+                        "account_code": "5004086291",
+                        "form_row": "137",
+                        "description": "Manual event count",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 1)
+            self.assertEqual(result["errors"], 0)
+
+            template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+            output_path = tmpdir / "out_manual_event.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws["B137"].value, 5004086291)
+                self.assertEqual(ws["G137"].value, "=3*4000")
+                self.assertEqual(ws["S137"].value, "出向者の書類申請費/Chi phí làm giấy tờ cho người biệt phái")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_event_driver_without_form_row_appends_with_formula(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        conn.execute(
+            "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
+        )
+        conn.commit()
+        period = get_fy_months(2027)[0]
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "period",
+                        "event_name",
+                        "count",
+                        "unit_price",
+                        "amount_vnd",
+                        "account_code",
+                        "form_row",
+                        "description",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "period": period,
+                        "event_name": "other",
+                        "count": "2",
+                        "unit_price": "5000",
+                        "amount_vnd": "",
+                        "account_code": "5004086291",
+                        "form_row": "",
+                        "description": "Append manual event",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 1)
+            self.assertEqual(result["errors"], 0)
+
+            template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+            output_path = tmpdir / "out_manual_event_append.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws["B200"].value, 5004086291)
+                self.assertEqual(ws["F200"].value, "=2*5000")
+                self.assertEqual(ws["S200"].value, "other: Append manual event")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_nnn_paperwork_workbook_parser_exports_to_row_137(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+
+        tmpdir = _mk_tmpdir()
+        try:
+            workbook_path = tmpdir / "Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx"
+            workbook = openpyxl.Workbook()
+            ws = workbook.active
+            ws.title = "FY2027"
+            ws.cell(row=2, column=4, value="Mã costcenter")
+            ws.cell(row=2, column=5, value="Mã tài khoản")
+            ws.cell(row=3, column=2, value="VN000001")
+            ws.cell(row=3, column=3, value="TEST USER")
+            ws.cell(row=3, column=4, value=cc_code)
+            ws.cell(row=3, column=5, value=5005246286)
+            ws.cell(row=3, column=6, value=1000)
+            ws.cell(row=3, column=7, value=2000)
+            workbook.save(workbook_path)
+            workbook.close()
+
+            result = parse_nnn_paperwork(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 2)
+            self.assertEqual(result["errors"], 0)
+
+            template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+            output_path = tmpdir / "out_nnn_workbook.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws["B137"].value, 5005246286)
+                self.assertEqual(ws["F137"].value, "=1000")
+                self.assertEqual(ws["G137"].value, "=2000")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_birthday_workbook_parser_exports_to_row_59(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+
+        tmpdir = _mk_tmpdir()
+        try:
+            workbook_path = tmpdir / "Sinh nhật MP FY2027.xlsx"
+            workbook = openpyxl.Workbook()
+            ws = workbook.active
+            ws.title = "Sinh nhật MP FY2027"
+            ws.cell(row=3, column=1, value="CostCenter")
+            ws.cell(row=4, column=1, value=cc_code)
+            ws.cell(row=4, column=2, value="TEST_CC")
+            ws.cell(row=4, column=3, value=3)
+            ws.cell(row=4, column=4, value=4)
+            workbook.save(workbook_path)
+            workbook.close()
+
+            result = parse_birthday_workbook(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 2)
+            self.assertEqual(result["errors"], 0)
+
+            template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+            output_path = tmpdir / "out_birthday_workbook.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws["B59"].value, 5004086291)
+                self.assertEqual(ws["F59"].value, "=3*152000")
+                self.assertEqual(ws["G59"].value, "=4*152000")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_manual_special_cost_parser_and_export_to_explicit_form_row(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
@@ -277,7 +492,7 @@ class TestManualSpecialCosts(unittest.TestCase):
             workbook = openpyxl.load_workbook(output_path, data_only=False)
             try:
                 ws = workbook[find_hub_sheet_name(workbook)]
-                self.assertEqual(ws["F113"].value, 500)
+                self.assertEqual(ws["F113"].value, "=500")
                 self.assertIsNone(ws["G137"].value)
                 self.assertIsNone(ws["O138"].value)
                 self.assertIsNone(ws["S200"].value)
@@ -314,8 +529,8 @@ class TestManualSpecialCosts(unittest.TestCase):
             workbook = openpyxl.load_workbook(output_path, data_only=False)
             try:
                 ws = workbook[find_hub_sheet_name(workbook)]
-                self.assertEqual(ws["F93"].value, "=SUM(F$24:F$25)*100")
-                self.assertEqual(ws["G93"].value, "=SUM(F$24:F$25)*110")
+                self.assertEqual(ws["F48"].value, "=SUM(F$24:F$25)*100")
+                self.assertEqual(ws["G48"].value, "=SUM(F$24:F$25)*110")
             finally:
                 workbook.close()
         finally:
@@ -361,8 +576,8 @@ class TestHubBuilderExport(unittest.TestCase):
                 self.assertEqual(ws["B5"].value, cc_code)
                 self.assertEqual(ws["B200"].value, 500001)
                 self.assertEqual(ws["S200"].value, "desc")
-                self.assertEqual(ws["F200"].value, 123)
-                self.assertEqual(ws["G200"].value, 456)
+                self.assertEqual(ws["F200"].value, "=123")
+                self.assertEqual(ws["G200"].value, "=456")
                 self.assertEqual(ws["R200"].value, "=SUM(F200:Q200)")
             finally:
                 workbook.close()
@@ -410,11 +625,115 @@ class TestHubBuilderExport(unittest.TestCase):
             workbook = openpyxl.load_workbook(output_path, data_only=False)
             try:
                 ws = workbook[find_hub_sheet_name(workbook)]
-                self.assertEqual(ws["G66"].value, 111)
-                self.assertEqual(ws["K66"].value, 222)
-                self.assertEqual(ws["I79"].value, 333)
+                self.assertEqual(ws["G66"].value, "=111")
+                self.assertEqual(ws["K66"].value, "=222")
+                self.assertEqual(ws["I79"].value, "=333")
                 self.assertIsNone(ws["F67"].value)
                 self.assertEqual(ws["S200"].value, "desc")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_fixed_rows_follow_mp2027_form_layout(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        period = periods[0]
+        conn.executemany(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, amount_usd, cc_code, account_code, form_row, description)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                ("facility", period, 0, 1.5, cc_code, 0, None, "depreciation_building"),
+                ("facility", period, 0, 2.5, cc_code, 0, None, "depreciation_land"),
+                ("fixed_assets", period, 0, 3.5, cc_code, 0, None, "fixed_assets_depr|asset"),
+                ("facility", period, 0, 4.5, cc_code, 0, None, "interest_building"),
+                ("facility", period, 0, 5.5, cc_code, 0, None, "interest_land"),
+                ("fixed_assets", period, 0, 6.5, cc_code, 0, None, "fixed_assets_interest|asset"),
+                ("facility", period, 100, 0, cc_code, 0, None, "electric"),
+                ("facility", period, 200, 0, cc_code, 0, None, "water"),
+                ("ga_unit_price", period, 300, 0, 0, 0, None, "gas|headcount_per_person"),
+                ("ga_unit_price", period, 400, 0, 0, 0, None, "nuoc rua tay|headcount_per_person"),
+                ("ga_unit_price", period, 500, 0, 0, 0, None, "giay ve sinh|headcount_per_person"),
+                ("ga_unit_price", period, 600, 0, 0, 0, None, "cleaning|headcount_per_person"),
+                ("alloc_health", period, 700, 0, cc_code, 5004086291, None, "Alloc: kham suc khoe (cho cnv nam)"),
+                ("alloc_new_hire_health", period, 800, 0, cc_code, 5004086291, None, "Alloc: kham suc khoe khi tuyen dung"),
+                ("alloc_birthday", period, 900, 0, cc_code, 5004086291, None, "Alloc: sinh nhat"),
+                ("it_sim", period, 0, 30, cc_code, 5005246282, None, "it_sim|component_term|vpn|qty=10|unit_usd=3"),
+                ("alloc_note_staff", period, 1000, 0, cc_code, 5005246288, None, "Alloc: note staff"),
+                ("alloc_note_worker", period, 1100, 0, cc_code, 5005246288, None, "Alloc: note worker"),
+                ("manual_special_cost", period, 1200, 0, cc_code, 5005246286, 137, "manual NNN"),
+            ],
+        )
+        conn.commit()
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        tmpdir = _mk_tmpdir()
+        try:
+            output_path = tmpdir / "out_fixed_form_layout.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                expected_accounts = {
+                    36: 5006016260,
+                    37: 5006016261,
+                    38: 5006016244,
+                    40: 9114120007,
+                    41: 9114120007,
+                    42: 9114120007,
+                    44: 5005066281,
+                    45: 5005066282,
+                    46: 5005056281,
+                    48: 5005016372,
+                    49: 5005016372,
+                    51: 5005246286,
+                    57: 5004086291,
+                    58: 5004086291,
+                    59: 5004086291,
+                    75: 5005246282,
+                    97: 5005246288,
+                    98: 5005246288,
+                    137: 5005246286,
+                }
+                for row_index, account_code in expected_accounts.items():
+                    self.assertEqual(ws.cell(row_index, 2).value, account_code, f"B{row_index}")
+
+                self.assertIn("Khấu hao (Nhà)", ws["S36"].value)
+                self.assertIn("Lãi (Nhà)", ws["S40"].value)
+                self.assertIn("Tiền điện", ws["S44"].value)
+                self.assertIn("Hand wash", ws["S48"].value)
+                self.assertIn("Chi phí khám sức khỏe hàng năm", ws["S57"].value)
+                self.assertIn("Tiền sinh nhật", ws["S59"].value)
+                self.assertIn("System Cost", ws["S75"].value)
+                self.assertIn("Sổ tay", ws["S97"].value)
+                self.assertIn("Chi phí làm giấy tờ", ws["S137"].value)
+
+                self.assertEqual(ws["F36"].value, "=ROUND(1.5*$B$2,0)")
+                self.assertEqual(ws["F37"].value, "=ROUND(2.5*$B$2,0)")
+                self.assertEqual(ws["F38"].value, "=ROUND(3.5*$B$2,0)")
+                self.assertEqual(ws["F40"].value, "=ROUND(4.5*$B$2,0)")
+                self.assertEqual(ws["F41"].value, "=ROUND(5.5*$B$2,0)")
+                self.assertEqual(ws["F42"].value, "=ROUND(6.5*$B$2,0)")
+                self.assertEqual(ws["F44"].value, "=100")
+                self.assertEqual(ws["F45"].value, "=200")
+                self.assertEqual(ws["F46"].value, "=SUM(F$24:F$25)*300")
+                self.assertEqual(ws["F48"].value, "=SUM(F$24:F$25)*400")
+                self.assertEqual(ws["F49"].value, "=SUM(F$24:F$25)*500")
+                self.assertEqual(ws["F51"].value, "=SUM(F$24:F$25)*600")
+                self.assertEqual(ws["F57"].value, "=700")
+                self.assertEqual(ws["F58"].value, "=800")
+                self.assertEqual(ws["F59"].value, "=900")
+                self.assertEqual(ws["F75"].value, "=ROUND((10*3)*$B$2,0)")
+                self.assertEqual(ws["F97"].value, "=1000")
+                self.assertEqual(ws["F98"].value, "=1100")
+                self.assertEqual(ws["F137"].value, "=1200")
             finally:
                 workbook.close()
         finally:

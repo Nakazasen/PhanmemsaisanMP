@@ -1,109 +1,63 @@
 {
-  "updated_at": "2026-04-10T10:30:00Z",
+  "updated_at": "2026-04-12T22:57:55+07:00",
   "working_on": {
-    "feature": "FORM-new alignment and formula-first export audit",
-    "status": "COMPLETED_WITH_DATA_BLOCKERS",
-    "notes": "Core code paths are aligned with the new docs/MP2027/FORM.xlsx, most exported month cells are now formulas, and the remaining gaps are facility-data blockers plus user-side source-data gaps."
+    "feature": "Vietnamese-first UX and audit Dashboard confidence layer",
+    "status": "COMPLETED_PENDING_MANUAL_GUI_VISUAL_CHECK",
+    "notes": "Implemented Vietnamese UI labels, smart missing-event guidance, friendlier Dashboard, and refreshed user docs. Compile and 23 tests passed; GUI still needs visual click-through on Windows."
   },
   "pending_tasks": [
     {
-      "task": "If rows 40 and 41 must also become formulas, collect facility detail by month for electric and water with quantity and unit price drivers",
+      "task": "Collect real event driver data for JP/VN bus, no-trip gift, My Episode, 10-year events, company anniversary, and VISA/Passport rows if not row 137.",
       "priority": "high"
     },
     {
-      "task": "Collect real FY2027 headcount rows for CC 1412000089 in docs/MP2027/headcount_manual.csv",
+      "task": "Collect/confirm manual headcount by CC/month, especially December male/female split for health-check rows 57/58.",
       "priority": "high"
     },
     {
-      "task": "Collect real FY2027 NNN/VISA/GPLD event rows in docs/MP2027/special_costs_manual.csv or provide an official workbook with equivalent fields",
-      "priority": "high"
-    },
-    {
-      "task": "Get confirmed FORM row mapping for Company anniversary and the nonparticipant company-trip gift item",
-      "priority": "high"
-    },
-    {
-      "task": "If exact screenshot-only layout changes are required, obtain explicit text mapping for the 2 image-only items in Hang muc can cai tien",
+      "task": "Manually validate GUI layout in a real Windows Tkinter session after the Vietnamese UX changes.",
       "priority": "medium"
+    },
+    {
+      "task": "If finance requires output for CCs with zero fact data, revisit batch-export selection that currently exports only CCs with account_code > 0 data.",
+      "priority": "low"
     }
   ],
   "recent_changes": [
     {
-      "timestamp": "2026-04-10T09:30:00Z",
-      "type": "code",
-      "description": "Aligned exporter and master-data loading with the new docs/MP2027/FORM.xlsx, including row-1015 detail range support and alphanumeric cost-center handling.",
+      "timestamp": "2026-04-12T22:57:55+07:00",
+      "type": "ux",
+      "description": "Vietnamese-localized visible GUI labels except Dashboard; improved Dashboard kiểm toán with XANH/VÀNG/ĐỎ legend, row coloring, missing-input table, and formula preview.",
       "files": [
-        "src/engine/hub_builder.py",
-        "src/db/loader.py",
-        "src/db/schema.py",
-        "src/utils/excel_helpers.py",
-        "src/engine/allocator.py",
-        "src/parsers/ga.py",
-        "src/parsers/manual_headcount.py",
-        "src/parsers/manual_special_costs.py",
-        "src/universal_app.py",
-        "tests/test_headcount_and_export.py"
-      ]
-    },
-    {
-      "timestamp": "2026-04-10T10:00:00Z",
-      "type": "code",
-      "description": "Reworked export so most allocation-driven rows are written back as Excel formulas; only facility electric and water remain flat values because the source workbook lacks quantity/unit-price drivers.",
-      "files": [
-        "src/engine/hub_builder.py",
-        "OUTPUT_FY2027/MP_CC_1412000006.xlsx"
-      ]
-    },
-    {
-      "timestamp": "2026-04-10T10:20:00Z",
-      "type": "verification",
-      "description": "Verified 17 tests and reran E2E for CC 1412000006; output now contains 417 formula month cells and only 24 static month cells across rows 40 and 41.",
-      "files": [
-        "OUTPUT_FY2027/MP_CC_1412000006.xlsx"
-      ]
-    },
-    {
-      "timestamp": "2026-04-09T10:00:00Z",
-      "type": "code",
-      "description": "Aligned runtime defaults to docs/MP2027, improved rule parsing, added manual special-cost import, and protected NNN event items from incorrect auto-allocation.",
-      "files": [
-        "src/db/loader.py",
-        "src/db/schema.py",
-        "src/engine/allocator.py",
-        "src/engine/hub_builder.py",
-        "src/parsers/manual_special_costs.py",
-        "scripts/run_e2e.py",
         "src/universal_app.py"
       ]
     },
     {
-      "timestamp": "2026-04-09T11:00:00Z",
-      "type": "verification",
-      "description": "Verified 16 tests, reran E2E on docs/MP2027, and confirmed the current DB has zero alloc_% rows for VISA/Passport/GPLD/NNN descriptions.",
+      "timestamp": "2026-04-12T22:57:55+07:00",
+      "type": "ux",
+      "description": "Expanded Nhập sự kiện thiếu dữ liệu with why-this-is-needed text, 7-step instructions, event-specific hints, and Vietnamese labels.",
       "files": [
-        "OUTPUT_FY2027/MP_CC_1412000089.xlsx",
-        "mp2027.db"
+        "src/universal_app.py"
       ]
     },
     {
-      "timestamp": "2026-04-09T13:30:00Z",
+      "timestamp": "2026-04-12T22:57:55+07:00",
       "type": "documentation",
-      "description": "Updated business process notes, open-item checklist, and .brain context to reflect the true done/blocker state after the 3-sheet audit.",
+      "description": "Updated user-facing usage docs to match current workflow: FORM MP2027, manual data entry, Dashboard audit, and no fabricated numbers.",
       "files": [
-        "QUY_TRINH_NGHIEP_VU_MP2027.md",
-        "TODO_MP2027_OPEN_ITEMS.md",
-        ".brain/brain.json",
-        ".brain/session.json",
-        ".brain/mp2027_context_2026-04-09.md"
+        "README.md",
+        "docs/MANUAL_HEADCOUNT_INPUT.md"
       ]
     },
     {
-      "timestamp": "2026-04-09T12:47:26Z",
-      "type": "deployment",
-      "description": "Reran tests, reran E2E against docs/MP2027, and rebuilt the packaged executable after the final documentation update.",
+      "timestamp": "2026-04-12T22:57:55+07:00",
+      "type": "verification",
+      "description": "Ran py_compile for src/universal_app.py and unit tests: tests.test_src_v2_logic, tests.test_posting_month_logic, tests.test_headcount_and_export; 23 tests OK.",
       "files": [
-        "OUTPUT_FY2027/MP_CC_1412000089.xlsx",
-        "dist/MP2027_Manager.exe"
+        "src/universal_app.py",
+        "tests/test_src_v2_logic.py",
+        "tests/test_posting_month_logic.py",
+        "tests/test_headcount_and_export.py"
       ]
     }
   ],
@@ -126,10 +80,27 @@
     }
   ],
   "read_first_next_time": [
-    "QUY_TRINH_NGHIEP_VU_MP2027.md",
-    "TODO_MP2027_OPEN_ITEMS.md",
-    "docs/MP2027/Cai tien nhap du lieu chung vao file MP.xlsx",
-    "docs/MP2027/FORM.xlsx",
-    "OUTPUT_FY2027/MP_CC_1412000089.xlsx"
+    "README.md",
+    "docs/MANUAL_HEADCOUNT_INPUT.md",
+    "src/universal_app.py",
+    "OUTPUT_FY2027/MP2027_AUDIT_REPORT.md",
+    "OUTPUT_FY2027/MP2027_MISSING_INPUTS.csv"
+  ],
+  "errors_encountered": [
+    {
+      "timestamp": "2026-04-12T22:57:55+07:00",
+      "error": "PowerShell/CP932 UnicodeEncodeError occurred when printing Vietnamese test/log output earlier.",
+      "resolution": "Removed unnecessary test prints and added safe console logging for run_e2e; keep file contents UTF-8."
+    },
+    {
+      "timestamp": "2026-04-12T22:57:55+07:00",
+      "error": "Initial apply_patch for USER_GUIDE_TEXT failed due to stale context/duplicate guide block.",
+      "resolution": "Removed duplicate old guide block and kept one current Vietnamese guide source."
+    }
+  ],
+  "context_checkpoints": [
+    "Current workspace has many code/docs/output/db changes; do not revert user or generated changes without approval.",
+    "Latest verified commands: py -m py_compile src\\universal_app.py; py -m unittest tests.test_src_v2_logic tests.test_posting_month_logic tests.test_headcount_and_export.",
+    "Do not convert internal data/schema keys like staff, worker, row, form_row, cc_code; only visible UI text is Vietnamese-first."
   ]
 }

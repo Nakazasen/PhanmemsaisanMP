@@ -1,93 +1,48 @@
-# Manual Headcount Input Guide
+# Hướng dẫn nhập nhân sự thủ công
 
-This guide explains how users can provide monthly headcount manually when no reliable CC-level headcount source file exists.
+Tài liệu này dành cho người dùng cần nhập/chốt số nhân sự theo từng CC khi tệp nguồn chưa đủ tin cậy ở mức CC/tháng.
 
-## 1. Input directly from GUI (recommended)
+## Khi nào cần nhập
 
-You can now enter headcount directly in the program UI:
+- Dashboard báo VÀNG vì CC chưa có dữ liệu nhân sự nhập tay.
+- Cần tính các khoản theo số người như gas, hand wash, toilet paper, cleaning.
+- Cần tính khám sức khỏe row 57/58 và phải có Nam/Nữ tháng 12.
 
-1. Open app: `run_MP2027.bat` (or run `src/universal_app.py`).
-2. Set `Fiscal Year` and `Source folder`.
-3. Click `Manual Headcount Input`.
-4. In popup:
-- select `CC`
-- select `Period`
-- enter `Staff` and `Worker`
-- click `Add/Update`
-5. Click `Save CSV`.
-6. Run pipeline.
+## Cách nhập trên giao diện
 
-The popup writes data into `headcount_manual.csv` automatically.
+1. Mở chương trình.
+2. Kiểm tra `Năm tài chính`.
+3. Bấm `Nhập nhân sự thủ công`.
+4. Chọn CC.
+5. Nhập số nhân viên và công nhân cho từng tháng.
+6. Nếu có dữ liệu Nam/Nữ tháng 12, nhập vào dòng tháng 12.
+7. Bấm `Lưu 12 tháng`.
+8. Chạy lại tính toán và mở Dashboard kiểm toán để kiểm tra lại.
 
-## 2. Where to put the file (if editing outside GUI)
+## Cách nhập bằng tệp
 
-Place this file in the pipeline source directory:
+File cần sửa là:
 
-- `headcount_manual.csv`
+```text
+docs/MP2027/headcount_manual.csv
+```
 
-Example:
-- If you run `py scripts/run_e2e.py --source .`, then the file must be in project root.
+Cột dữ liệu:
 
-## 3. Auto-generated template
+- `cc_code`: mã CC.
+- `period`: tháng dạng `YYYYMM`.
+- `headcount_staff`: số nhân viên.
+- `headcount_worker`: số công nhân.
+- `headcount_male`: số Nam, dùng cho health-check nếu có.
+- `headcount_female`: số Nữ, dùng cho health-check nếu có.
+- `description`: ghi chú nguồn dữ liệu.
 
-If `headcount_manual.csv` is missing, the pipeline auto-creates a template with sample rows.
-
-Columns:
-- `cc_code`
-- `period`
-- `headcount_staff`
-- `headcount_worker`
-- `description` (optional)
-
-## 4. Column rules
-
-`cc_code`
-- Must exist in `FORM.xlsx` cost center master.
-- Use full CC code (example: `1412000004`).
-
-`period`
-- Preferred: `YYYYMM` (example: `202604`).
-- Also accepted: month number `1..12` (mapped to fiscal months).
-
-`headcount_staff`
-- Non-negative number.
-
-`headcount_worker`
-- Non-negative number.
-
-`description`
-- Optional text for note/tracking.
-
-## 5. How values are used
-
-For each row:
-- `headcount_all = headcount_staff + headcount_worker`
-- Data is written into `fact_monthly_headcount` with `source='manual'`.
-- When both manual and GA exist for same `(cc_code, period)`, manual is prioritized.
-
-## 6. Validation behavior
-
-A row is rejected when:
-- `cc_code` is not in master CC list.
-- `period` is invalid or outside fiscal periods.
-- staff/worker is negative.
-
-A row is skipped when:
-- all key cells are blank
-- or `headcount_staff + headcount_worker <= 0`
-
-## 7. Pipeline log messages
-
-During E2E run, you will see:
-- `Manual headcount: inserted=..., skipped=..., errors=..., file=...`
-
-Use this message to verify whether your manual file is actually being consumed.
-
-## 8. Minimal example
+Ví dụ:
 
 ```csv
-cc_code,period,headcount_staff,headcount_worker,description
-1412000004,202604,21,180,baseline
-1412000004,202605,21,182,hiring +2 workers
-1412000025,202604,35,0,admin team
+cc_code,period,headcount_staff,headcount_worker,headcount_male,headcount_female,description
+1412000004,202704,21,180,,,baseline
+1412000004,202712,21,182,120,83,gender split for health check
 ```
+
+Không nhập số ước lượng nếu chưa được chốt. Nếu chưa chắc, hãy để trống và ghi chú để kiểm toán lại.

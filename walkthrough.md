@@ -1,142 +1,76 @@
-# MP2027 Manager - Walkthrough and Current Status
+# MP2027 Manager - Walkthrough và trạng thái hiện tại
 
-Tai lieu nay tom tat trang thai thuc te cua du an sau dot doi chieu workbook nghiep vu, code hien tai, va ket qua chay thu ngay `2026-03-23`.
+Ngày cập nhật: `2026-04-12`
 
-No khong phai tai lieu marketing. Muc tieu la de nguoi doc nhin thay ro:
+Tài liệu này tóm tắt cách đọc hệ thống ở trạng thái hiện tại sau khi đã đối chiếu FORM MP2027, dữ liệu tham chiếu MP2026, parser mới và dashboard audit. Đây không phải tài liệu marketing; mục tiêu là giúp người đọc biết chương trình đang làm được gì, còn thiếu dữ liệu gì và cần kiểm chứng ở đâu.
 
-- he thong dang lam duoc gi
-- he thong chua lam duoc gi
-- can sua tiep o dau
+## 1. Luồng sử dụng chính
 
-## 1. Ket qua xac minh thuc te
+1. Người dùng mở GUI trong `src/universal_app.py`.
+2. Chương trình đọc FORM runtime tại `docs/MP2027/FORM.xlsx`.
+3. Pipeline nạp dữ liệu nguồn trong `docs/MP2027`, bao gồm Facility, Fixed Assets, IT simulation, GA unit price, NNN paperwork, Birthday và CSV nhập tay.
+4. Allocation engine tạo dữ liệu tính toán vào `mp2027.db`.
+5. Export ghi ra workbook theo từng Cost Center trong `OUTPUT_FY2027`.
+6. Audit dashboard và audit report hiển thị trạng thái xanh/vàng/đỏ, dữ liệu thiếu và preview công thức.
 
-Da thuc hien cac buoc sau:
+## 2. FORM runtime
 
-- doc workbook yeu cau tong
-- doc cac workbook nguon thuc te trong thu muc project
-- doi chieu voi code hien tai trong `src/`
-- chay test:
-  - `py -m pytest tests\\test_src_v2_logic.py -q`
-- chay E2E:
-  - `py scripts\\run_e2e.py --fy 2027 --template FORM.xlsx --source .`
+- FORM mới là `docs/MP2027/FORM.xlsx`.
+- `docs/MP2027/FORM_old.xlsx` chỉ dùng để đối chiếu, không dùng runtime.
+- Output ghi vào hub sheet `内訳ﾘｽﾄ(4～3月)` hoặc sheet tương đương do helper tìm được.
 
-Ket qua:
+## 3. Những phần đã có cơ chế tự động
 
-- `3` test hien co pass
-- import smoke cua cac module chinh pass
-- E2E chay het
-- sinh `62` file trong `OUTPUT_FY2027`
+- Mapping fixed rows theo FORM MP2027 cho các dòng quan trọng như `36/37/38`, `40/41/42`, `44/45`, `57/58/59`, `75`, `97/98`, `137`.
+- Parser NNN paperwork ghi vào row `137` và giữ công thức breakdown nếu file nguồn có công thức.
+- Parser Birthday ghi row `59` với công thức dạng `=count*152000`.
+- Manual event driver cho phép người dùng nhập sự kiện không thể suy luận qua `docs/MP2027/event_drivers_manual.csv` hoặc panel GUI.
+- MP2026 chỉ được dùng làm đơn giá tham chiếu cho Moon cake và Sports day khi FY2027 đang trống hoặc bằng `0`.
+- Output ưu tiên giữ công thức để người dùng có thể double-check sau khi export.
 
-## 2. Nhung gi da hoat dong
+## 4. Những phần không được tự đoán
 
-### Master data
+Chương trình không tự bịa số cho các dữ liệu không thể suy luận từ workbook nguồn, ví dụ:
 
-- doc duoc `62` Cost Centers tu `FORM.xlsx`
-- doc duoc `239` accounts tu `FORM.xlsx`
-- doc ty gia USD/VND tu `FORM.xlsx!B2`
+- Số người bus JP/VN theo từng sự kiện.
+- Quà không đi du lịch.
+- My Episode.
+- Quà kỷ niệm 10 năm hoặc tiệc kỷ niệm 10 năm.
+- Company anniversary.
+- VISA/Passport/GPLD/NNN nếu nghiệp vụ yêu cầu row khác mapping hiện tại.
 
-### Direct-cost parsers
+Các dữ liệu này phải được người dùng nhập/chốt trước khi coi output là hoàn chỉnh.
 
-Sau mot lan chay E2E:
+## 5. Audit dashboard
 
-- `facility`: `4584` dong
-- `fixed_assets`: `9846` dong
-- `it_sim`: `1992` dong
-- `ga_unit_price`: `72` dong
+Dashboard dùng ba trạng thái:
 
-### Export
+- `GREEN`: có dữ liệu cơ bản và không có cảnh báo nền tảng.
+- `YELLOW`: thiếu dữ liệu cần người dùng xem/chốt, ví dụ thiếu manual headcount hoặc thiếu manual event driver theo Cost Center.
+- `RED`: không có dữ liệu tính toán cho Cost Center đó.
 
-- batch export sinh duoc `62` file MP theo Cost Center
-- file dich la `FORM.xlsx`
-- sheet hub duoc ghi de Excel cong thuc tinh tiep
+Dashboard chỉ xác nhận mức độ sẵn sàng của dữ liệu, không thay thế việc người dùng nghiệp vụ kiểm tra lại workbook output.
 
-## 3. Nhung gi chua dung voi yeu cau 100%
+## 6. Kiểm chứng nên chạy
 
-### Allocation tu hanh chinh chua di vao output
+```powershell
+py -m py_compile src\universal_app.py src\audit\pipeline_audit.py scripts\run_e2e.py
+py -m unittest tests.test_src_v2_logic tests.test_posting_month_logic tests.test_headcount_and_export
+py scripts\run_e2e.py --fy 2027 --template docs\MP2027\FORM.xlsx --source docs\MP2027 --target-cc 1412000006
+```
 
-Sau khi chay full E2E, `fact_input_data` khong co dong nao co `source like 'alloc_%'`.
+Sau khi chạy E2E, kiểm tra các file:
 
-Y nghia:
+- `OUTPUT_FY2027/MP_CC_1412000006.xlsx`
+- `OUTPUT_FY2027/MP2027_AUDIT_REPORT.md`
+- `OUTPUT_FY2027/MP2027_MISSING_INPUTS.csv`
 
-- direct-cost da vao
-- nhung chi phi phan bo theo rule hanh chinh chua duoc tao thanh ket qua cuoi
+## 7. Trạng thái trung thực hiện tại
 
-### Monthly headcount GA dang lech khoa Cost Center
+Trạng thái nên mô tả là:
 
-Da ghi nhan monthly headcount voi cac ma khong match master, vi du:
-
-- `1136`
-- `40237000`
-
-Trong khi master tai `FORM.xlsx` dung ma 10 chu so nhu `1412000004`.
-
-Y nghia:
-
-- driver nhan su khong join duoc voi master CC
-- allocation theo nhan su co the mat tac dung
-
-### Posting month chua duoc xac minh la duoc ton trong
-
-Workbook rule co cac gia tri `posting_month` nhu:
-
-- moi thang
-- thang vao lam
-- thang phat/cap
-- thang tiep theo sau vao lam
-- thang co dinh `7`, `10`, `11`, `12`, `2`
-
-Neu allocator khong xu ly dung gia tri nay, ket qua nghiep vu van sai du pipeline chay xong.
-
-### Driver `working_days` can duoc xu ly rieng
-
-Trong nghiep vu goc, mot nhom chi phi tinh theo so ngay lam viec.
-Neu phan nay bi truot sang logic headcount, phep tinh se sai ban chat.
-
-### Rule master chua idempotent
-
-Trong log cua mot lan chay:
-
-- `Loaded 50 allocation rules.`
-
-Nhung database hien tai ghi nhan:
-
-- `1350` dong `map_allocation_rules`
-- chi co `50` signature thuc su khac nhau
-
-Y nghia:
-
-- bang rule dang bi tich luy qua nhieu lan chay
-
-## 4. Cach dien giai dung khi ban giao
-
-Khong nen mo ta he thong hien tai la:
-
-- `100% complete`
-- `clean & verified`
-- `ready for production handover`
-
-Nen mo ta dung hon:
-
-- direct-cost ingestion da chay va export duoc
-- E2E pipeline da thong
-- allocation nghiep vu hanh chinh chua duoc xac minh dat yeu cau goc
-- can xu ly tiep khoa CC, posting month, working-days driver, va idempotency cua rule table
-
-## 5. Thu tu sua tiep de dong gap
-
-1. Sua parser GA de khoa Cost Center trung voi `FORM.xlsx`.
-2. Sua allocator de ton trong `posting_month`.
-3. Xu ly `working_days` nhu mot driver rieng.
-4. Lam `map_allocation_rules` idempotent qua nhieu lan chay.
-5. Chay doi chieu theo tung sheet trong workbook huong dan nghiep vu tong.
-
-## 6. Trang thai de xuat hien tai
-
-Trang thai de xuat:
-
-- `E2E runnable`
-- `Direct-cost pipeline verified`
-- `Administrative allocation incomplete`
-- `Business-rule alignment pending`
-
-Day la cach ghi trang thai sat thuc te nhat o thoi diem hien tai.
+- Pipeline E2E đã chạy được.
+- Fixed-row mapping và parser mới đã có test bảo vệ.
+- Dashboard audit đã có nền tảng xanh/vàng/đỏ và preview công thức.
+- Các dữ liệu sự kiện không thể suy luận vẫn cần người dùng nhập/chốt.
+- Báo cáo audit cần được dùng như bước kiểm soát bắt buộc trước khi bàn giao output.

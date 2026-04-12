@@ -1,168 +1,60 @@
 # Business Rules - MP2027 Manager
 
-Tai lieu nay tach bach 2 khia canh:
-- `Business rule mong muon`
-- `Implementation status hien tai`
+Ngày cập nhật: `2026-04-12`
 
-Muc tieu la tranh nham lan giua "quy tac nghiep vu dung" va "code hien tai da lam duoc gi".
+Tài liệu này tách bạch giữa quy tắc nghiệp vụ cần tôn trọng và trạng thái implementation hiện tại. Nếu cần checklist chi tiết theo workbook yêu cầu, đọc `MP2027_REQUIREMENTS_AUDIT_CHECKLIST.md`.
 
-Ngay cap nhat: `2026-03-23`.
+## 1. Năm tài chính
 
-## 1. Fiscal year
+- Kỳ tài chính bắt đầu từ tháng `4` và kết thúc vào tháng `3` năm sau.
+- Mọi dữ liệu theo tháng phải được quy về period `YYYYMM`.
+- Runtime FY2027 dùng chuỗi tháng từ `202704` đến `202803`.
 
-### Business rule
+## 2. FORM runtime
 
-- Ky tai chinh bat dau tu thang `4` va ket thuc vao thang `3` nam sau.
-- Moi du lieu theo thang phai duoc quy ve period `YYYYMM`.
+- FORM runtime là `docs/MP2027/FORM.xlsx`.
+- `docs/MP2027/FORM_old.xlsx` chỉ dùng để đối chiếu, không dùng khi chạy pipeline.
+- Chương trình chỉ ghi vào hub sheet `内訳ﾘｽﾄ(4～3月)` hoặc sheet tương đương do helper tìm được.
 
-### Current status
+## 3. Mapping Cost Center và account
 
-- Da implemented.
-- Da duoc dung trong parsers va export.
+- Account đích phải được chọn theo nhóm Cost Center nếu rule có mã cho `製造/一般/販売`.
+- Không được tự đổi account code nếu workbook rule hoặc FORM chưa xác nhận.
+- Các trường `cc_code`, `account_code`, `form_row` là dữ liệu kỹ thuật, không được Việt hóa.
 
-## 2. Cost center classification
+## 4. Fixed rows quan trọng
 
-### Business rule
+- `36/37/38`: khấu hao nhà/đất/thiết bị.
+- `40/41/42`: lãi nhà/đất/thiết bị.
+- `44/45`: điện/nước.
+- `46/48/49/51`: gas, hand wash, toilet paper, cleaning.
+- `57/58/59`: health-check hàng năm, health-check tuyển dụng, birthday.
+- `75`: IT system cost.
+- `97/98`: sổ tay nhân viên/công nhân mới.
+- `137`: chi phí giấy tờ NNN theo workbook yêu cầu hiện tại.
 
-Tai khoan dich phai duoc chon theo `cost_type` cua Cost Center:
-- nhom san xuat dung `mfg_code`
-- nhom gian tiep/van phong dung `ga_code`
-- nhom ban hang dung `sales_code`
+## 5. Công thức trong output
 
-### Current status
+- Không paste số chết nếu có thể để công thức.
+- Dữ liệu nguồn chỉ có tổng tiền sẽ ghi dạng `=amount`.
+- Birthday ghi dạng `=count*152000`.
+- IT system cost ghi dạng `=ROUND((...)*$B$2,0)`.
+- Manual event driver ghi dạng `=count*unit_price` hoặc `=amount_vnd`.
 
-- Da implemented cho direct-cost mapping.
-- Chua du bang chung de ket luan allocation phan bo hanh chinh da di den dung CC dich trong moi truong hop.
+## 6. Dữ liệu không thể suy luận
 
-## 3. Direct-cost ingestion
+Những dữ liệu như số người đi bus JP/VN, quà không đi du lịch, My Episode, kỷ niệm 10 năm, company anniversary hoặc VISA/Passport cần row khác `137` không được tự đoán.
 
-### Business rule
+Người dùng nhập các dữ liệu này qua:
 
-Can lay du lieu tu:
-- Facility
-- IT Simulation
-- Fixed Assets
-- GA don gia co san
+- `docs/MP2027/event_drivers_manual.csv`
+- Panel GUI `Nhập sự kiện thiếu dữ liệu`
 
-Sau do map vao hub data de export vao `FORM.xlsx`.
+## 7. Audit và missing inputs
 
-### Current status
+Sau mỗi lần E2E, pipeline sinh:
 
-- Da implemented.
-- Da chay duoc trong E2E.
-- Da xac minh co du lieu thuc te trong `fact_input_data`.
+- `OUTPUT_FY2027/MP2027_AUDIT_REPORT.md`
+- `OUTPUT_FY2027/MP2027_MISSING_INPUTS.csv`
 
-## 4. Fixed assets month-end rule
-
-### Business rule
-
-Voi chi phi tai san co dinh:
-- cac thang truoc `last depreciation month`: ghi gia tri binh thuong
-- tai `last depreciation month`: ghi gia tri cot thang cuoi cung
-- sau thang cuoi cung: khong ghi
-
-Voi lai:
-- thang 4 dung cot lai thang 4
-- tu thang 5 tro di dung cot lai tu thang 5 tro di
-- sau thang cuoi cung: khong ghi
-
-### Current status
-
-- Da co implementation trong parser fixed assets.
-- Can tiep tuc doi chieu chi tiet voi workbook nghiep vu de xac nhan khong sot case ngoai le.
-
-## 5. Administrative allocation drivers
-
-### Business rule
-
-He thong phai ho tro cac driver:
-- `headcount_all`
-- `headcount_staff`
-- `headcount_worker`
-- `working_days`
-
-`headcount_staff` va `headcount_worker` la bat buoc vi co nhieu rule don gia khac nhau cho staff va worker.
-
-### Current status
-
-- Driver da duoc load mot phan vao DB.
-- Chua duoc xac minh thong suot tu workbook GA den allocation output.
-- Gap lon hien tai: monthly headcount tu GA chua match khoa Cost Center master.
-
-## 6. Posting month
-
-### Business rule
-
-Khong phai moi allocation rule deu ap dung cho tat ca 12 thang.
-
-He thong phai ton trong `posting_month`, bao gom cac gia tri:
-- moi thang
-- thang vao lam
-- thang phat/cap
-- thang tiep theo sau vao lam
-- thang co dinh `7`, `10`, `11`, `12`, `2`
-- thang ghi nhan tai san
-- thang de nghi
-- khong co thang co dinh
-
-### Current status
-
-- Rule da duoc load vao `map_allocation_rules`.
-- Chua duoc xac minh la allocator dang ton trong `posting_month`.
-- Ket qua kiem DB sau E2E cho thay allocation rows chua xuat hien trong output cuoi.
-
-## 7. Working days
-
-### Business rule
-
-Mot so rule phai tinh theo so ngay lam viec thuc te cua tung thang.
-
-Nguon su that:
-- GA workbook
-- doi chieu voi sheet working days trong `FORM.xlsx` neu can
-
-### Current status
-
-- Gia tri `working_days_YYYYMM` da duoc nap vao `sys_params`.
-- Chua co bang chung day du rang allocator dang dung gia tri nay nhu mot driver rieng.
-
-## 8. Excel integrity
-
-### Business rule
-
-He thong chi duoc ghi du lieu vao sheet hub cua `FORM.xlsx`.
-
-Khong duoc:
-- pha format
-- xoa cong thuc
-- ghi de vao cac sheet bao cao tong hop
-
-### Current status
-
-- Da implemented theo huong hub-and-spoke.
-- E2E da export duoc file.
-- Chua co bo test tu dong de kiem tra formula integrity sau moi lan thay doi code.
-
-## 9. Idempotency
-
-### Business rule
-
-Chay lai pipeline nhieu lan phai cho ra ket qua nhat quan, khong nhan ban du lieu master hay allocation.
-
-### Current status
-
-- `fact_input_data` duoc xoa truoc khi parse lai trong E2E.
-- `map_allocation_rules` chua idempotent qua nhieu lan chay.
-- Day la gap can sua som.
-
-## 10. Rule for status labeling
-
-Chi duoc gan nhan `verified` khi:
-- da co workbook doi chieu
-- da co command/test da chay
-- da co bang chung trong DB hoac output file
-
-Neu thieu mot trong ba dieu kien tren, nen dung:
-- `implemented`
-- `partially verified`
-- `pending verification`
+Hai file này là nơi người dùng nghiệp vụ xem phần nào đã được nạp, phần nào còn cần chốt, và phần nào chương trình không tự suy luận.

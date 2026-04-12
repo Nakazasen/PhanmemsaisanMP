@@ -19,14 +19,27 @@ if BASE_DIR not in sys.path:
 
 from src.db.schema import get_connection, create_schema, init_sys_params
 from src.db.loader import load_all
+from src.audit.pipeline_audit import write_pipeline_audit_report
 from src.parsers.facility import parse_facility
 from src.parsers.ga import parse_ga
+from src.parsers.birthday import parse_birthday_workbook
+from src.parsers.manual_event_drivers import parse_manual_event_drivers
 from src.parsers.manual_headcount import parse_manual_headcount
 from src.parsers.manual_special_costs import parse_manual_special_costs
+from src.parsers.nnn_paperwork import parse_nnn_paperwork
 from src.parsers.it_sim import parse_it_simulation
 from src.parsers.fixed_assets import parse_fixed_assets
 from src.engine.allocator import AllocationEngine
 from src.engine.hub_builder import HubBuilder
+
+
+def _safe_console_print(message):
+    text = str(message)
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        print(text.encode(encoding, errors="replace").decode(encoding, errors="replace"))
 
 
 def _default_template_path() -> str:
@@ -48,11 +61,14 @@ def _default_source_dir() -> str:
 def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str, 
                            exchange_rate: float = 25450.0,
                            target_cc: int = None,
-                           log_callback=print):
+                           log_callback=None):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports all 62 CCs.
     """
+    if log_callback is None:
+        log_callback = _safe_console_print
+
     try:
         log_callback(f"Pipeline FY{fiscal_year} (ExRate: {exchange_rate:,.0f})")
         
@@ -86,10 +102,15 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         )
         
         # 3. Parsers
-        parse_facility(conn, source_dir=source_dir)
+        parser_results = {}
+
+        facility_result = parse_facility(conn, source_dir=source_dir)
+        parser_results["facility"] = facility_result
         ga_result = parse_ga(conn, source_dir=source_dir)
+        parser_results["ga"] = ga_result
         log_callback(f"GA parser: unit-price={ga_result.get('total', 0)}, headcount={ga_result.get('headcount', 0)}")
         manual_hc_result = parse_manual_headcount(conn, source_dir=source_dir)
+        parser_results["manual_headcount"] = manual_hc_result
         log_callback(
             "Manual headcount: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
                 inserted=manual_hc_result.get("inserted", 0),
@@ -99,6 +120,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             )
         )
         manual_special_result = parse_manual_special_costs(conn, source_dir=source_dir)
+        parser_results["manual_special_costs"] = manual_special_result
         log_callback(
             "Manual special costs: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
                 inserted=manual_special_result.get("inserted", 0),
@@ -107,8 +129,40 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 path=manual_special_result.get("template_path", ""),
             )
         )
-        parse_it_simulation(conn, source_dir=source_dir)
-        parse_fixed_assets(conn, source_dir=source_dir)
+        manual_event_result = parse_manual_event_drivers(conn, source_dir=source_dir)
+        parser_results["manual_event_drivers"] = manual_event_result
+        log_callback(
+            "Manual event drivers: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
+                inserted=manual_event_result.get("inserted", 0),
+                skipped=manual_event_result.get("skipped", 0),
+                errors=manual_event_result.get("errors", 0),
+                path=manual_event_result.get("template_path", ""),
+            )
+        )
+        nnn_result = parse_nnn_paperwork(conn, source_dir=source_dir)
+        parser_results["nnn_paperwork"] = nnn_result
+        log_callback(
+            "NNN paperwork workbook: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
+                inserted=nnn_result.get("inserted", 0),
+                skipped=nnn_result.get("skipped", 0),
+                errors=nnn_result.get("errors", 0),
+                path=nnn_result.get("path", ""),
+            )
+        )
+        birthday_result = parse_birthday_workbook(conn, source_dir=source_dir)
+        parser_results["birthday_workbook"] = birthday_result
+        log_callback(
+            "Birthday workbook: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
+                inserted=birthday_result.get("inserted", 0),
+                skipped=birthday_result.get("skipped", 0),
+                errors=birthday_result.get("errors", 0),
+                path=birthday_result.get("path", ""),
+            )
+        )
+        it_result = parse_it_simulation(conn, source_dir=source_dir)
+        parser_results["it_simulation"] = it_result
+        fixed_assets_result = parse_fixed_assets(conn, source_dir=source_dir)
+        parser_results["fixed_assets"] = fixed_assets_result
         
         # 4. Allocation Engine
         log_callback("Running allocation...")
@@ -137,6 +191,17 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     count += 1
             
             log_callback(f"Successfully exported {count} files to: {output_dir}")
+
+        audit_result = write_pipeline_audit_report(
+            conn=conn,
+            output_dir=output_dir,
+            source_dir=source_dir,
+            fiscal_year=fiscal_year,
+            target_cc=target_cc,
+            parser_results=parser_results,
+        )
+        log_callback(f"Audit report: {audit_result['report_path']}")
+        log_callback(f"Missing input CSV: {audit_result['missing_csv_path']}")
         
         conn.close()
         return True, output_dir

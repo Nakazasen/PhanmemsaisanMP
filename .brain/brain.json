@@ -2,31 +2,59 @@
   "meta": {
     "schema_version": "1.1.0",
     "awf_version": "4.0.2",
-    "last_updated": "2026-04-10T10:30:00Z"
+    "last_updated": "2026-04-12T22:57:55+07:00",
+    "updated_at": "2026-04-12T22:57:55+07:00"
   },
   "project": {
     "name": "MP2027 Manager",
     "type": "Windows desktop app for MP2027 cost allocation and FORM export",
-    "status": "Aligned with new FORM.xlsx; output is formula-first except for facility electric/water rows that remain data-limited"
+    "status": "Runtime aligned with docs/MP2027/FORM.xlsx; formula-first export, NNN/Birthday/manual event parsers, audit report, and Vietnamese-first UX/Dashboard are implemented and tested. Remaining blockers are real user data/mapping confirmations."
   },
   "tech_stack": {
     "language": "Python 3.13.5",
     "gui": "Tkinter",
     "packaging": "PyInstaller (OneFile mode)",
     "database": "SQLite 3",
-    "libraries": ["pandas", "openpyxl", "xlrd", "sqlite3", "tkinter"],
+    "libraries": [
+      "pandas",
+      "openpyxl",
+      "xlrd",
+      "sqlite3",
+      "tkinter"
+    ],
     "environment": "Windows; prefer stable ASCII logs when possible"
   },
   "database_schema": {
     "summary": "Hub-centered data model for Cost Center, Account, Allocation Rules, direct-cost staging, manual headcount, and explicit FORM-row inputs.",
     "tables": [
-      { "name": "dim_cost_centers", "description": "Cost centers loaded from docs/MP2027/FORM.xlsx." },
-      { "name": "dim_accounts", "description": "Accounts loaded from docs/MP2027/FORM.xlsx." },
-      { "name": "map_allocation_rules", "description": "Allocation rules loaded from the FY2027 rules workbook." },
-      { "name": "fact_input_data", "description": "Staging hub for facility, fixed assets, IT simulation, GA, and manual special costs; includes nullable form_row." },
-      { "name": "fact_allocation_log", "description": "Allocation trace and diagnostics." },
-      { "name": "sys_params", "description": "System parameters such as exchange rate and working days." },
-      { "name": "fact_monthly_headcount", "description": "Monthly headcount by CC with all/staff/worker plus male/female drivers." }
+      {
+        "name": "dim_cost_centers",
+        "description": "Cost centers loaded from docs/MP2027/FORM.xlsx."
+      },
+      {
+        "name": "dim_accounts",
+        "description": "Accounts loaded from docs/MP2027/FORM.xlsx."
+      },
+      {
+        "name": "map_allocation_rules",
+        "description": "Allocation rules loaded from the FY2027 rules workbook."
+      },
+      {
+        "name": "fact_input_data",
+        "description": "Staging hub for facility, fixed assets, IT simulation, GA, and manual special costs; includes nullable form_row."
+      },
+      {
+        "name": "fact_allocation_log",
+        "description": "Allocation trace and diagnostics."
+      },
+      {
+        "name": "sys_params",
+        "description": "System parameters such as exchange rate and working days."
+      },
+      {
+        "name": "fact_monthly_headcount",
+        "description": "Monthly headcount by CC with all/staff/worker plus male/female drivers."
+      }
     ]
   },
   "features": [
@@ -43,22 +71,103 @@
   ],
   "knowledge_items": {
     "patterns": [
-      "Delete-before-insert is used to keep master and staging data consistent.",
-      "Direct costs and allocation rules are processed separately before export.",
-      "When a requirement depends on event data not present in official workbooks, route it through manual_special_costs.csv instead of guessing."
+      "docs/MP2027 is the authoritative runtime source; docs/MP2027/FORM_old.xlsx is comparison-only.",
+      "If a cost cannot be inferred from source workbooks, route it through event_drivers_manual.csv or special_costs_manual.csv; never fabricate budget values.",
+      "Exporter should keep Excel formulas where possible: constants as =amount, birthday as =count*152000, and IT as ROUND(component sum * $B$2).",
+      "Dashboard kiểm toán is the user-facing trust layer: XANH/VÀNG/ĐỎ per CC, missing-input actions, and formula preview before export trust."
     ],
     "gotchas": [
-      "Do not use the old root FORM.xlsx as the authoritative template.",
-      "Do not destroy formulas or styles in FORM.xlsx; write only to intended rows/cells.",
-      "headcount_manual.csv currently lacks real rows for CC 1412000089.",
-      "special_costs_manual.csv is header-only until real FY2027 NNN event data arrives.",
-      "Moon cake and Sports day still have unit_price = 0 in the current rules workbook.",
-      "Rows 40 and 41 remain numeric because facility input currently lacks workbook-level quantity and unit-price detail."
+      "Do not use old root FORM.xlsx or docs/MP2027/FORM_old.xlsx for runtime export.",
+      "event_drivers_manual.csv is still empty/header-only until the user supplies real event counts or amounts.",
+      "headcount_manual.csv only has a small subset of CCs; missing CC/month/gender split should remain YELLOW, not guessed.",
+      "Health-check rows 57/58 require male/female December headcount when business needs gender-based calculation.",
+      "Internal matcher tokens such as nhap canh are intentionally not Vietnamese-display strings and should not be blindly converted.",
+      "PowerShell/CP932 can display Vietnamese file names as ?, while UTF-8 file contents may still be correct."
     ],
     "conventions": [
       "Fiscal period format is YYYYMM, covering April to March.",
       "Primary business references are QUY_TRINH_NGHIEP_VU_MP2027.md and TODO_MP2027_OPEN_ITEMS.md.",
-      "Use docs/MP2026 only as a trusted comparison set, not as runtime input."
+      "Use docs/MP2026 only as a trusted comparison set, not as runtime input.",
+      "GUI visible text should be Vietnamese-first; the word Dashboard is allowed by user exception.",
+      "Keep FORM/account/source schema keys such as cc_code, account_code, form_row, staff, worker unchanged in code/data."
     ]
-  }
+  },
+  "decisions": [
+    {
+      "decision": "Keep Dashboard as the only English UI exception and Vietnamese-localize other visible labels.",
+      "reason": "User explicitly requested no English in UI except Dashboard, and finance users need low-anxiety clarity."
+    },
+    {
+      "decision": "Manual event entry must teach the user why and how to input missing data step-by-step.",
+      "reason": "Unknown event counts/amounts cannot be inferred safely for company budgeting."
+    },
+    {
+      "decision": "Treat YELLOW/RED Dashboard states as audit prompts, not code failures.",
+      "reason": "Many remaining gaps are missing real business inputs rather than implementation defects."
+    }
+  ],
+  "gotchas": [
+    "Do not use old root FORM.xlsx or docs/MP2027/FORM_old.xlsx for runtime export.",
+    "event_drivers_manual.csv is still empty/header-only until the user supplies real event counts or amounts.",
+    "headcount_manual.csv only has a small subset of CCs; missing CC/month/gender split should remain YELLOW, not guessed.",
+    "Health-check rows 57/58 require male/female December headcount when business needs gender-based calculation.",
+    "Internal matcher tokens such as nhap canh are intentionally not Vietnamese-display strings and should not be blindly converted.",
+    "PowerShell/CP932 can display Vietnamese file names as ?, while UTF-8 file contents may still be correct."
+  ],
+  "pending_tasks": [
+    {
+      "task": "Collect real event driver data for JP/VN bus, no-trip gift, My Episode, 10-year events, company anniversary, and VISA/Passport rows if not row 137.",
+      "priority": "high"
+    },
+    {
+      "task": "Collect/confirm manual headcount by CC/month, especially December male/female split for health-check rows 57/58.",
+      "priority": "high"
+    },
+    {
+      "task": "Manually validate GUI layout in a real Windows Tkinter session after the Vietnamese UX changes.",
+      "priority": "medium"
+    },
+    {
+      "task": "If finance requires output for CCs with zero fact data, revisit batch-export selection that currently exports only CCs with account_code > 0 data.",
+      "priority": "low"
+    }
+  ],
+  "recent_changes": [
+    {
+      "timestamp": "2026-04-12T22:57:55+07:00",
+      "type": "ux",
+      "description": "Vietnamese-localized visible GUI labels except Dashboard; improved Dashboard kiểm toán with XANH/VÀNG/ĐỎ legend, row coloring, missing-input table, and formula preview.",
+      "files": [
+        "src/universal_app.py"
+      ]
+    },
+    {
+      "timestamp": "2026-04-12T22:57:55+07:00",
+      "type": "ux",
+      "description": "Expanded Nhập sự kiện thiếu dữ liệu with why-this-is-needed text, 7-step instructions, event-specific hints, and Vietnamese labels.",
+      "files": [
+        "src/universal_app.py"
+      ]
+    },
+    {
+      "timestamp": "2026-04-12T22:57:55+07:00",
+      "type": "documentation",
+      "description": "Updated user-facing usage docs to match current workflow: FORM MP2027, manual data entry, Dashboard audit, and no fabricated numbers.",
+      "files": [
+        "README.md",
+        "docs/MANUAL_HEADCOUNT_INPUT.md"
+      ]
+    },
+    {
+      "timestamp": "2026-04-12T22:57:55+07:00",
+      "type": "verification",
+      "description": "Ran py_compile for src/universal_app.py and unit tests: tests.test_src_v2_logic, tests.test_posting_month_logic, tests.test_headcount_and_export; 23 tests OK.",
+      "files": [
+        "src/universal_app.py",
+        "tests/test_src_v2_logic.py",
+        "tests/test_posting_month_logic.py",
+        "tests/test_headcount_and_export.py"
+      ]
+    }
+  ]
 }

@@ -1,58 +1,48 @@
-# 📊 MP2027 Manager: Giải pháp Quản trị Tài chính thông minh
+# MP2027 Manager
 
-**MP2027 Manager** (Phần mềm Saisan MP) là hệ thống tự động hóa cốt lõi dành cho việc lập kế hoạch ngân sách và phân bổ chi phí cho năm tài chính **FY2027**. Hệ thống được thiết kế để chuẩn hóa dữ liệu từ nhiều nguồn khác nhau, thực hiện tính toán vĩ mô và xuất báo cáo chính xác theo tiêu chuẩn nội bộ.
+MP2027 Manager là chương trình hỗ trợ lập ngân sách MP FY2027 theo từng CC. Chương trình nạp dữ liệu từ bộ tệp trong `docs/MP2027`, tính toán, xuất tệp Excel theo FORM mới và tạo báo cáo kiểm toán để người dùng biết phần nào đã đủ dữ liệu, phần nào còn cần nhập/chốt.
 
----
+Nguyên tắc quan trọng nhất: chương trình không tự bịa số. Những khoản không thể suy luận từ tệp nguồn, ví dụ xe bus JP/VN, quà không đi du lịch, My Episode, kỷ niệm 10 năm, kỷ niệm công ty, hoặc VISA/Passport/GPLD/NNN cần dòng FORM khác, phải được người dùng nhập/chốt trước khi tin kết quả.
 
-## 🚀 Tính năng Cốt lõi (V6.0.0)
+## Cách chạy bằng giao diện
 
-### 1. 🇻🇳 Việt hóa Toàn diện
-- Toàn bộ tài liệu kỹ thuật (`GEMINI.md`) và hệ thống tri thức (`.brain/`) đã được dịch sang Tiếng Việt chuyên sâu, giúp đội ngũ vận hành dễ dàng tiếp cận.
+1. Chạy `run_MP2027.bat` hoặc `py src/universal_app.py`.
+2. Kiểm tra `Tệp mẫu FORM` đang trỏ tới `docs/MP2027/FORM.xlsx`.
+3. Kiểm tra `Thư mục nguồn` đang trỏ tới `docs/MP2027`.
+4. Nếu cần, bấm `Nhập nhân sự thủ công` để nhập staff/worker 12 tháng và Nam/Nữ tháng 12.
+5. Nếu Dashboard hoặc nghiệp vụ báo thiếu dữ liệu sự kiện, bấm `Nhập sự kiện thiếu dữ liệu`.
+6. Bấm `CHẠY TÍNH TOÁN`.
+7. Mở `Dashboard kiểm toán` để kiểm tra đèn XANH/VÀNG/ĐỎ, danh sách việc cần chốt và công thức trong tệp kết quả.
 
-### 2. 🧩 Khớp mã Trung tâm Chi phí (CC) Linh hoạt
-- Thuật toán thông minh tự động ánh xạ các mã CC từ 4 đến 8 chữ số từ nguồn GA vào mã chuẩn 10 chữ số trong Master Data thông qua cơ chế khớp hậu tố (suffix matching).
+## Cách đọc Dashboard
 
-### 3. ⚙️ Bộ máy Phân bổ Chi phí (Administrative Allocation) đa ngôn ngữ
-- Hỗ trợ các quy tắc hạch toán tháng (`posting_month`) bằng cả Tiếng Việt và Tiếng Nhật (ví dụ: "tháng vào làm", "tháng tiếp theo", "入社月", "翌月").
-- Đảm bảo tính nhất quán tuyệt đối giữa dữ liệu nhân sự (Headcount) và các driver vận hành (Working Days).
+- XANH: CC đã có dữ liệu nền tảng và chưa có cảnh báo cơ bản.
+- VÀNG: CC có dữ liệu nhưng còn việc cần người dùng xem/chốt.
+- ĐỎ: CC chưa có dữ liệu tính toán sau lần chạy gần nhất.
 
-### 4. 📈 Quy trình E2E Siêu tốc
-- Pipeline xử lý dữ liệu đầu-cuối: Từ khâu nạp dữ liệu thô (Fixed Assets, IT Sim, Facility) đến khâu xuất hơn 60 file Excel báo cáo chi tiết cho từng bộ phận chỉ trong vài phút.
+Nếu thấy VÀNG hoặc ĐỎ, hãy chọn dòng CC đó, đọc cột `Lý do`, xem bảng `Việc cần người dùng chốt`, rồi nhập bổ sung nếu cần.
 
----
+## File đầu vào quan trọng
 
-## 💻 Công nghệ Sử dụng
-- **Ngôn ngữ**: Python 3.13+
-- **Cơ sở dữ liệu**: SQLite 3 (Lưu trữ tập trung, đảm bảo tính nhất quán)
-- **Xử lý dữ liệu**: Pandas, Openpyxl, Xlrd
-- **Giao diện**: Tkinter (Universal App GUI)
+- `docs/MP2027/FORM.xlsx`: FORM runtime hiện tại.
+- `docs/MP2027/headcount_manual.csv`: nhân sự nhập tay theo CC/tháng.
+- `docs/MP2027/event_drivers_manual.csv`: sự kiện hoặc khoản tiền không thể tự suy luận.
+- `docs/MP2027/special_costs_manual.csv`: chi phí đặc biệt cần nhập trực tiếp theo dòng FORM.
 
----
+`docs/MP2027/FORM_old.xlsx` chỉ dùng để đối chiếu, không dùng để chạy.
 
-## 📁 Cấu trúc Thư mục Chính
-- `src/`: Mã nguồn cốt lõi (Allocator, Parsers, DB Loaders).
-- `data/`: Lưu trữ Database và các file Driver tham chiếu.
-- `docs/`: Tài liệu hướng dẫn chi tiết dành cho người dùng.
-- `OUTPUT_FY2027/`: Thư mục lưu trữ kết quả báo cáo sau khi chạy.
+## File kết quả
 
----
+Sau khi chạy, kiểm tra trong `OUTPUT_FY2027`:
 
-## 🛠️ Hướng dẫn Cài đặt & Chạy
-1. Đảm bảo đã cài đặt Python 3.13.
-2. Chạy file khởi động nhanh:
-   ```cmd
-   run_MP2027.bat
-   ```
-3. Hoặc chạy trực tiếp giao diện GUI:
-   ```bash
-   py src/universal_app.py
-   ```
+- `MP_CC_<mã CC>.xlsx`: tệp kết quả theo CC.
+- `MP2027_AUDIT_REPORT.md`: báo cáo kiểm toán.
+- `MP2027_MISSING_INPUTS.csv`: danh sách dữ liệu cần người dùng xem/chốt.
 
----
+## Lệnh kiểm chứng cho người bảo trì
 
-## 📝 Lưu ý Quan trọng
-- Dữ liệu `working_days` giờ đây được quản lý độc lập trong bảng `sys_params` thay vì lấy từ nhân sự.
-- Luôn kiểm tra file `FORM.xlsx` (Master Template) trước khi chạy batch export hàng loạt.
-
----
-**Được phát triển bởi Nakazasen - Tự động hóa để dẫn đầu.**
+```powershell
+py -m py_compile src\universal_app.py src\audit\pipeline_audit.py scripts\run_e2e.py
+py -m unittest tests.test_src_v2_logic tests.test_posting_month_logic tests.test_headcount_and_export
+py scripts\run_e2e.py --fy 2027 --template docs\MP2027\FORM.xlsx --source docs\MP2027 --target-cc 1412000006
+```

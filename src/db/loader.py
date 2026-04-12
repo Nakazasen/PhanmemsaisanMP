@@ -144,6 +144,23 @@ def _parse_unit_price(value) -> float | None:
         return None
 
 
+MP2026_REFERENCE_UNIT_PRICES = (
+    (("月餅", "bánh trung thu", "banh trung thu", "luna cake"), 56000.0),
+    (("運動会", "đại hội thể thao", "dai hoi the thao", "sports day"), 107000.0),
+)
+
+
+def _apply_mp2026_reference_unit_price(item_name: str, unit_price: float) -> float:
+    """Use audited FY2026 FORM notes only when FY2027 rule price is blank/zero."""
+    if float(unit_price or 0.0) > 0:
+        return float(unit_price)
+    normalized_item = _normalize_text(item_name)
+    for tokens, reference_price in MP2026_REFERENCE_UNIT_PRICES:
+        if any(_normalize_text(token) in normalized_item for token in tokens):
+            return reference_price
+    return float(unit_price or 0.0)
+
+
 def load_cost_centers(conn: sqlite3.Connection, form_path: str = None) -> int:
     """Load cost centers from FORM.xlsx 原価センタ sheet."""
     path = form_path or FORM_PATH
@@ -341,6 +358,7 @@ def load_allocation_rules(
         unit_price = _parse_unit_price(row.iloc[7] if len(row) > 7 else None)
         if unit_price is None:
             continue
+        unit_price = _apply_mp2026_reference_unit_price(item_str, unit_price)
 
         account_name = str(row.iloc[2]).strip() if len(row) > 2 and not pd.isna(row.iloc[2]) else None
 

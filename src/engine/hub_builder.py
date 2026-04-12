@@ -32,8 +32,28 @@ APPEND_TEMPLATE_ROW = 29
 APPEND_START_ROW = 200
 MIN_APPEND_LAST_ROW = 1000
 IT_COMPONENT_ORDER = ("vpn", "mail", "r3", "mes", "plm", "qlik_sense", "vps", "ams")
-MONTHLY_HEADCOUNT_FIXED_ROWS = (42, 44, 93, 94)
+MONTHLY_HEADCOUNT_FIXED_ROWS = (46, 48, 49, 51)
 FIXED_ALLOCATION_ROW_MATCHERS = {
+    57: {
+        "tokens": ("kham suc khoe (cho cnv nam)", "kham suc khoe (cho cnv nu)", "health check"),
+        "exclude_tokens": ("tuyen dung", "gpld"),
+    },
+    58: {
+        "tokens": ("kham suc khoe khi tuyen dung", "tuyen dung"),
+        "exclude_tokens": (),
+    },
+    59: {
+        "tokens": ("sinh nhat", "birthday"),
+        "exclude_tokens": (),
+    },
+    97: {
+        "tokens": ("ノート", "note", "notebook"),
+        "exclude_tokens": ("g7", "worker", "cong nhan"),
+    },
+    98: {
+        "tokens": ("ノート", "note", "notebook"),
+        "exclude_tokens": ("staff", "nhan vien"),
+    },
     54: {
         "tokens": ("決起コンパ", "tiệc khuấy động năm tài chính"),
         "exclude_tokens": (),
@@ -251,10 +271,11 @@ class HubBuilder:
         self._clear_visible_months(worksheet, row_index)
         for offset, period in enumerate(self.fy_months):
             amount = float(values.get(period, 0.0))
+            formula_value = f"={self._format_number(amount)}" if amount else None
             worksheet.cell(
                 row=row_index,
                 column=VISIBLE_MONTH_START_COL + offset,
-                value=int(round(amount)) if amount else None,
+                value=formula_value,
             )
         worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
 
@@ -464,6 +485,8 @@ class HubBuilder:
                     "account_codes": set(),
                     "descriptions": set(),
                     "months": defaultdict(float),
+                    "terms": defaultdict(list),
+                    "numeric_values": defaultdict(float),
                 },
             )
             account_code = int(row["account_code"] or 0)
@@ -471,8 +494,17 @@ class HubBuilder:
                 bucket["account_codes"].add(account_code)
             description = str(row["description"] or "").strip()
             if description:
-                bucket["descriptions"].add(description)
-            bucket["months"][str(row["period"])] += float(row["amount"] or 0.0)
+                clean_description = self._strip_explicit_formula_metadata(description)
+                if clean_description:
+                    bucket["descriptions"].add(clean_description)
+            period = str(row["period"])
+            amount = float(row["amount"] or 0.0)
+            term = self._explicit_formula_term_from_description(description)
+            if term:
+                bucket["terms"][period].append(term)
+            else:
+                bucket["numeric_values"][period] += amount
+                bucket["months"][period] += amount
 
         result: list[dict[str, object]] = []
         for row_index in sorted(grouped):
@@ -482,8 +514,25 @@ class HubBuilder:
             bucket["account_code"] = next(iter(account_codes)) if len(account_codes) == 1 else None
             bucket["description"] = next(iter(descriptions)) if len(descriptions) == 1 else None
             bucket["months"] = dict(bucket["months"])
+            bucket["terms"] = dict(bucket["terms"])
+            bucket["numeric_values"] = dict(bucket["numeric_values"])
             result.append(bucket)
         return result
+
+    def _explicit_formula_term_from_description(self, description: str) -> str | None:
+        marker = "formula_expr="
+        for part in str(description or "").split("|"):
+            if part.startswith(marker):
+                formula = part[len(marker):].strip()
+                return formula[1:] if formula.startswith("=") else formula
+        return None
+
+    def _strip_explicit_formula_metadata(self, description: str) -> str:
+        return "|".join(
+            part
+            for part in str(description or "").split("|")
+            if not part.startswith("formula_expr=")
+        ).strip()
 
     def _parse_it_component_term(self, description: str) -> tuple[str, float, float] | None:
         parts = description.split("|")
@@ -512,7 +561,10 @@ class HubBuilder:
             existing_description = worksheet.cell(row=row_index, column=DESCRIPTION_COL).value
             if not existing_description and row.get("description"):
                 worksheet.cell(row=row_index, column=DESCRIPTION_COL, value=row["description"])
-            self._write_numeric_series(worksheet, row_index, row["months"])
+            if row.get("terms"):
+                self._write_formula_series(worksheet, row_index, row["terms"], row["numeric_values"])
+            else:
+                self._write_numeric_series(worksheet, row_index, row["months"])
 
     def _write_it_system_total_row(self, worksheet, cc_code: int) -> None:
         rows = self._input_rows_for_cc(cc_code, source="it_sim")
@@ -574,18 +626,25 @@ class HubBuilder:
 
     def _write_fixed_rows(self, worksheet, cc_code: int) -> None:
         fixed_account_codes = {
-            40: 5005066281,
-            41: 5005066282,
-            42: 5005056281,
-            44: 5005246286,
-            93: 5005016372,
-            94: 5005016372,
-            46: 5006016260,
-            47: 5006016261,
-            48: 5006016244,
-            50: 9114120007,
-            51: 9114120007,
-            52: 9114120007,
+            36: 5006016260,
+            37: 5006016261,
+            38: 5006016244,
+            40: 9114120007,
+            41: 9114120007,
+            42: 9114120007,
+            44: 5005066281,
+            45: 5005066282,
+            46: 5005056281,
+            48: 5005016372,
+            49: 5005016372,
+            51: 5005246286,
+            57: 5004086291,
+            58: 5004086291,
+            59: 5004086291,
+            75: 5005246282,
+            97: 5005246288,
+            98: 5005246288,
+            137: 5005246286,
         }
         for row_index in MANAGED_FIXED_ROWS:
             self._clear_visible_months(worksheet, row_index)
@@ -594,62 +653,65 @@ class HubBuilder:
 
         self._write_numeric_series(
             worksheet,
-            40,
+            44,
             self._month_series(cc_code, source="facility", description="electric"),
         )
         self._write_numeric_series(
             worksheet,
-            41,
+            45,
             self._month_series(cc_code, source="facility", description="water"),
         )
         self._write_prev_month_headcount_formula_series(
             worksheet,
-            42,
+            46,
             self._ga_unit_price_series(("gas|headcount_per_person", "食堂燃料費")),
         )
         self._write_prev_month_headcount_formula_series(
             worksheet,
-            44,
+            51,
             self._ga_unit_price_series(("清掃費", "chi phí làm sạch|headcount_per_person")),
         )
+        cleaning_series = self._ga_unit_price_series(("cleaning|headcount_per_person",))
+        if cleaning_series:
+            self._write_prev_month_headcount_formula_series(worksheet, 51, cleaning_series)
         self._write_prev_month_headcount_formula_series(
             worksheet,
-            93,
+            48,
             self._ga_unit_price_series(("手洗い洗剤", "nuoc rua tay|headcount_per_person", "nước rửa tay|headcount_per_person")),
         )
         self._write_prev_month_headcount_formula_series(
             worksheet,
-            94,
+            49,
             self._ga_unit_price_series(("トイレットペーパー", "giay ve sinh|headcount_per_person", "giấy vệ sinh|headcount_per_person")),
         )
         self._write_fx_formula_series(
             worksheet,
-            46,
+            36,
             self._month_series(cc_code, source="facility", description="depreciation_building", value_column="amount_usd"),
         )
         self._write_fx_formula_series(
             worksheet,
-            47,
+            37,
             self._month_series(cc_code, source="facility", description="depreciation_land", value_column="amount_usd"),
         )
         self._write_fx_formula_series(
             worksheet,
-            48,
+            38,
             self._month_series(cc_code, source="fixed_assets", description_like="fixed_assets_depr|%", value_column="amount_usd"),
         )
         self._write_fx_formula_series(
             worksheet,
-            50,
+            40,
             self._month_series(cc_code, source="facility", description="interest_building", value_column="amount_usd"),
         )
         self._write_fx_formula_series(
             worksheet,
-            51,
+            41,
             self._month_series(cc_code, source="facility", description="interest_land", value_column="amount_usd"),
         )
         self._write_fx_formula_series(
             worksheet,
-            52,
+            42,
             self._month_series(cc_code, source="fixed_assets", description_like="fixed_assets_interest|%", value_column="amount_usd"),
         )
         self._write_it_system_total_row(worksheet, cc_code)
@@ -702,19 +764,20 @@ class HubBuilder:
             if self._fixed_row_for_description(description) is not None:
                 continue
 
-            key = (int(row["account_code"]), description)
+            clean_description = self._strip_explicit_formula_metadata(description)
+            key = (int(row["account_code"]), clean_description)
             bucket = grouped.setdefault(
                 key,
                 {
                     "account_code": int(row["account_code"]),
-                    "description": description,
+                    "description": clean_description,
                     "months": {},
                     "terms": defaultdict(list),
                     "numeric_months": defaultdict(float),
                 },
             )
             period = str(row["period"])
-            term = self._alloc_formula_term_from_row(row)
+            term = self._explicit_formula_term_from_description(description) or self._alloc_formula_term_from_row(row)
             if term:
                 bucket["terms"][period].append(term)
             else:
