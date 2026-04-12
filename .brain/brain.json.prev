@@ -1,0 +1,64 @@
+{
+  "meta": {
+    "schema_version": "1.1.0",
+    "awf_version": "4.0.2",
+    "last_updated": "2026-04-10T10:30:00Z"
+  },
+  "project": {
+    "name": "MP2027 Manager",
+    "type": "Windows desktop app for MP2027 cost allocation and FORM export",
+    "status": "Aligned with new FORM.xlsx; output is formula-first except for facility electric/water rows that remain data-limited"
+  },
+  "tech_stack": {
+    "language": "Python 3.13.5",
+    "gui": "Tkinter",
+    "packaging": "PyInstaller (OneFile mode)",
+    "database": "SQLite 3",
+    "libraries": ["pandas", "openpyxl", "xlrd", "sqlite3", "tkinter"],
+    "environment": "Windows; prefer stable ASCII logs when possible"
+  },
+  "database_schema": {
+    "summary": "Hub-centered data model for Cost Center, Account, Allocation Rules, direct-cost staging, manual headcount, and explicit FORM-row inputs.",
+    "tables": [
+      { "name": "dim_cost_centers", "description": "Cost centers loaded from docs/MP2027/FORM.xlsx." },
+      { "name": "dim_accounts", "description": "Accounts loaded from docs/MP2027/FORM.xlsx." },
+      { "name": "map_allocation_rules", "description": "Allocation rules loaded from the FY2027 rules workbook." },
+      { "name": "fact_input_data", "description": "Staging hub for facility, fixed assets, IT simulation, GA, and manual special costs; includes nullable form_row." },
+      { "name": "fact_allocation_log", "description": "Allocation trace and diagnostics." },
+      { "name": "sys_params", "description": "System parameters such as exchange rate and working days." },
+      { "name": "fact_monthly_headcount", "description": "Monthly headcount by CC with all/staff/worker plus male/female drivers." }
+    ]
+  },
+  "features": [
+    "docs/MP2027 is now the authoritative runtime source folder.",
+    "FORM.xlsx!B2 remains the single source of truth for exchange rate.",
+    "Loader parses numeric, comma-separated, and currency-suffixed unit prices such as 145$.",
+    "Allocation engine supports event posting-month tokens including 入社月, 配布月, 申請月, 取得月, and 翌月.",
+    "Allocation engine explicitly skips NNN/VISA/GPLD/Passport items until manual event data is provided.",
+    "Exporter clears stale sample cells in managed fixed-row ranges before writing real data.",
+    "Exporter supports explicit form_row writes so manual special costs can land on exact FORM rows.",
+    "Exporter reconstructs most alloc_* rows as Excel formulas instead of flat numeric output.",
+    "GUI and E2E defaults point to docs/MP2027 in both dev and packaged mode.",
+    "The current authoritative FORM is docs/MP2027/FORM.xlsx with detail rows extended to 1015."
+  ],
+  "knowledge_items": {
+    "patterns": [
+      "Delete-before-insert is used to keep master and staging data consistent.",
+      "Direct costs and allocation rules are processed separately before export.",
+      "When a requirement depends on event data not present in official workbooks, route it through manual_special_costs.csv instead of guessing."
+    ],
+    "gotchas": [
+      "Do not use the old root FORM.xlsx as the authoritative template.",
+      "Do not destroy formulas or styles in FORM.xlsx; write only to intended rows/cells.",
+      "headcount_manual.csv currently lacks real rows for CC 1412000089.",
+      "special_costs_manual.csv is header-only until real FY2027 NNN event data arrives.",
+      "Moon cake and Sports day still have unit_price = 0 in the current rules workbook.",
+      "Rows 40 and 41 remain numeric because facility input currently lacks workbook-level quantity and unit-price detail."
+    ],
+    "conventions": [
+      "Fiscal period format is YYYYMM, covering April to March.",
+      "Primary business references are QUY_TRINH_NGHIEP_VU_MP2027.md and TODO_MP2027_OPEN_ITEMS.md.",
+      "Use docs/MP2026 only as a trusted comparison set, not as runtime input."
+    ]
+  }
+}
