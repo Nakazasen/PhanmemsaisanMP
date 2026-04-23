@@ -18,6 +18,7 @@ import openpyxl
 import pandas as pd
 
 from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
+from src.utils.source_manifest import resolve_manifest_file
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
@@ -69,6 +70,10 @@ def _looks_like_ga_workbook(path: str, fiscal_year: int) -> bool:
 
 
 def _find_ga_file(source_dir: str | None, fiscal_year: int) -> str | None:
+    manifest_path = resolve_manifest_file(source_dir, "ga")
+    if manifest_path:
+        return manifest_path
+
     search_dir = source_dir or BASE_DIR
     if not os.path.isdir(search_dir):
         return None

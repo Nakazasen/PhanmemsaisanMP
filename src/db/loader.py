@@ -9,6 +9,7 @@ import pandas as pd
 import openpyxl
 from src.db.schema import get_connection, create_schema, init_sys_params
 from src.utils.excel_helpers import normalize_cc_code, read_exchange_rate_from_form
+from src.utils.source_manifest import resolve_manifest_file
 
 import sys
 
@@ -75,6 +76,10 @@ def _looks_like_allocation_rules_workbook(path: str) -> bool:
 
 
 def find_allocation_rules_file(search_dir: str | None = None, fiscal_year: int = 2027) -> str | None:
+    manifest_path = resolve_manifest_file(search_dir, "allocation_rules")
+    if manifest_path:
+        return manifest_path
+
     candidates: list[tuple[int, str]] = []
     base_search_dir = search_dir or BASE_DIR
     if not os.path.isdir(base_search_dir):

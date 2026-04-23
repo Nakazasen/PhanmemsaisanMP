@@ -8,6 +8,7 @@ from pathlib import Path
 import openpyxl
 
 from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
+from src.utils.source_manifest import resolve_manifest_file
 
 
 SOURCE_NAME = "nnn_paperwork"
@@ -19,6 +20,10 @@ def _format_formula_number(value: float) -> str:
 
 
 def find_nnn_paperwork_file(source_dir: str | None = None) -> str | None:
+    manifest_path = resolve_manifest_file(source_dir, "nnn_paperwork")
+    if manifest_path:
+        return manifest_path
+
     search_dir = Path(source_dir or Path.cwd())
     for path in search_dir.glob("*.xlsx"):
         name = path.name.lower()

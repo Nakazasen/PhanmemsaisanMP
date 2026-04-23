@@ -6,8 +6,13 @@ import sqlite3
 from pathlib import Path
 import openpyxl
 from src.utils import excel_helpers as helpers
+from src.utils.source_manifest import resolve_manifest_file
 
 def find_fixed_assets_file(source_dir: str = None) -> str | None:
+    manifest_path = resolve_manifest_file(source_dir, "fixed_assets")
+    if manifest_path:
+        return manifest_path
+
     search_dir = Path(source_dir or Path(__file__).resolve().parents[2])
     for path in search_dir.glob('*.xlsx'):
         if 'Fixed_Assets_Information' in path.name: return str(path)

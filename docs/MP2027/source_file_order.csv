@@ -1,0 +1,10 @@
+order,category,filename,enabled,description
+1,facility,施設課　MPFY2027.xlsx,1,Facility depreciation interest electric water source
+2,fixed_assets,固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx,1,Fixed assets source
+3,it_simulation,システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls,1,IT simulation Apr-Jun source
+4,it_simulation,システム課金金額(Simulation)_FY2027_July.2026 ~ Dec.2026(Change AMS & PLM price).xls,1,IT simulation Jul-Dec source
+5,it_simulation,システム課金金額(Simulation)_FY2027_Jan.2027 ~ March.2027(Change SAP price).xls,1,IT simulation Jan-Mar source
+6,ga,総務課 FY2027 MP 振替予定.xlsx,1,General affairs source
+7,birthday,Sinh nhật MP FY2027.xlsx,1,Birthday source
+8,allocation_rules,FY2027配賦額一覧 (2025.12.29).xlsx,1,Allocation rules source
+9,nnn_paperwork,Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx,1,NNN paperwork source

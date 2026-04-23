@@ -38,10 +38,6 @@ from src.utils.excel_helpers import get_fy_months
 
 
 def _default_template_path() -> str:
-    external_root_form = os.path.join(BASE_DIR, "FORM.xlsx")
-    if os.path.exists(external_root_form):
-        return external_root_form
-
     external_mp2027 = os.path.join(BASE_DIR, "docs", "MP2027", "FORM.xlsx")
     if os.path.exists(external_mp2027):
         return external_mp2027
@@ -49,6 +45,10 @@ def _default_template_path() -> str:
     packaged_mp2027 = resource_path(os.path.join("docs", "MP2027", "FORM.xlsx"))
     if os.path.exists(packaged_mp2027):
         return packaged_mp2027
+
+    external_root_form = os.path.join(BASE_DIR, "FORM.xlsx")
+    if os.path.exists(external_root_form):
+        return external_root_form
 
     raise FileNotFoundError(
         f"Không tìm thấy tệp mẫu bắt buộc: {external_mp2027}. "
@@ -83,11 +83,6 @@ def _is_legacy_root_template(path: str) -> bool:
 
 
 def _default_source_dir() -> str:
-    external_root_form = os.path.join(BASE_DIR, "FORM.xlsx")
-    external_root_rules = os.path.join(BASE_DIR, "FY2027配賦額一覧 (2025.12.29).xlsx")
-    if os.path.exists(external_root_form) and os.path.exists(external_root_rules):
-        return BASE_DIR
-
     external_mp2027 = os.path.join(BASE_DIR, "docs", "MP2027")
     if os.path.isdir(external_mp2027):
         return external_mp2027

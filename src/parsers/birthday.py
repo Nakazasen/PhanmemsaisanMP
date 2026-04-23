@@ -8,6 +8,7 @@ from pathlib import Path
 import openpyxl
 
 from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
+from src.utils.source_manifest import resolve_manifest_file
 
 
 SOURCE_NAME = "birthday_workbook"
@@ -17,6 +18,10 @@ UNIT_PRICE_VND = 152000
 
 
 def find_birthday_file(source_dir: str | None = None) -> str | None:
+    manifest_path = resolve_manifest_file(source_dir, "birthday")
+    if manifest_path:
+        return manifest_path
+
     search_dir = Path(source_dir or Path.cwd())
     for path in search_dir.glob("*.xlsx"):
         name = path.name.lower()

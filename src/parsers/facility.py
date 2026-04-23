@@ -9,6 +9,7 @@ import pandas as pd
 import sqlite3
 import os
 from src.utils.excel_helpers import safe_float, extract_cc_code, get_fy_months
+from src.utils.source_manifest import resolve_manifest_file
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
@@ -131,7 +132,10 @@ def parse_facility(conn: sqlite3.Connection, source_dir: str = None) -> dict:
 
     # Use source_dir if provided
     search_dir = source_dir or BASE_DIR
+    manifest_path = resolve_manifest_file(search_dir, "facility")
     path = os.path.join(search_dir, f'施設課　MP{fy_str}.xlsx')
+    if manifest_path:
+        path = manifest_path
     print(f"Opening Facility: {path}")
     if not os.path.exists(path):
         # Try local folder

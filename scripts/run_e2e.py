@@ -31,6 +31,7 @@ from src.parsers.it_sim import parse_it_simulation
 from src.parsers.fixed_assets import parse_fixed_assets
 from src.engine.allocator import AllocationEngine
 from src.engine.hub_builder import HubBuilder
+from src.utils.source_manifest import describe_manifest
 
 
 def _safe_console_print(message):
@@ -103,12 +104,31 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         
         # 3. Parsers
         parser_results = {}
+        manifest_lines = describe_manifest(source_dir)
+        if manifest_lines:
+            log_callback("Configured source file order:")
+            for line in manifest_lines:
+                log_callback(f"  {line}")
 
         facility_result = parse_facility(conn, source_dir=source_dir)
         parser_results["facility"] = facility_result
+        fixed_assets_result = parse_fixed_assets(conn, source_dir=source_dir)
+        parser_results["fixed_assets"] = fixed_assets_result
+        it_result = parse_it_simulation(conn, source_dir=source_dir)
+        parser_results["it_simulation"] = it_result
         ga_result = parse_ga(conn, source_dir=source_dir)
         parser_results["ga"] = ga_result
         log_callback(f"GA parser: unit-price={ga_result.get('total', 0)}, headcount={ga_result.get('headcount', 0)}")
+        birthday_result = parse_birthday_workbook(conn, source_dir=source_dir)
+        parser_results["birthday_workbook"] = birthday_result
+        log_callback(
+            "Birthday workbook: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
+                inserted=birthday_result.get("inserted", 0),
+                skipped=birthday_result.get("skipped", 0),
+                errors=birthday_result.get("errors", 0),
+                path=birthday_result.get("path", ""),
+            )
+        )
         manual_hc_result = parse_manual_headcount(conn, source_dir=source_dir)
         parser_results["manual_headcount"] = manual_hc_result
         log_callback(
@@ -149,21 +169,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 path=nnn_result.get("path", ""),
             )
         )
-        birthday_result = parse_birthday_workbook(conn, source_dir=source_dir)
-        parser_results["birthday_workbook"] = birthday_result
-        log_callback(
-            "Birthday workbook: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
-                inserted=birthday_result.get("inserted", 0),
-                skipped=birthday_result.get("skipped", 0),
-                errors=birthday_result.get("errors", 0),
-                path=birthday_result.get("path", ""),
-            )
-        )
-        it_result = parse_it_simulation(conn, source_dir=source_dir)
-        parser_results["it_simulation"] = it_result
-        fixed_assets_result = parse_fixed_assets(conn, source_dir=source_dir)
-        parser_results["fixed_assets"] = fixed_assets_result
-        
+
         # 4. Allocation Engine
         log_callback("Running allocation...")
         engine = AllocationEngine(conn)

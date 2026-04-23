@@ -16,6 +16,7 @@ from collections import defaultdict
 import pandas as pd
 
 from src.utils.excel_helpers import extract_cc_code, get_fy_months, safe_float
+from src.utils.source_manifest import resolve_manifest_files
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
@@ -275,7 +276,9 @@ def parse_it_simulation(conn: sqlite3.Connection, source_dir: str | None = None)
     fy_months = get_fy_months(fy_int)
 
     search_dir = source_dir or BASE_DIR
-    all_files = os.listdir(search_dir)
+    manifest_files = resolve_manifest_files(search_dir, "it_simulation")
+    all_files = [os.path.basename(path) for path in manifest_files] if manifest_files else os.listdir(search_dir)
+    manifest_by_name = {os.path.basename(path): path for path in manifest_files}
     files_to_parse: list[tuple[str, list[str]]] = []
 
     for start, end, keywords in FILE_RANGES:
@@ -288,7 +291,7 @@ def parse_it_simulation(conn: sqlite3.Connection, source_dir: str | None = None)
             if str(fy_int) not in name and str(fy_int - 1) not in name:
                 continue
             if any(keyword in lower_name for keyword in keywords):
-                matched_path = os.path.join(search_dir, name)
+                matched_path = manifest_by_name.get(name, os.path.join(search_dir, name))
                 break
         if matched_path:
             files_to_parse.append((matched_path, months))

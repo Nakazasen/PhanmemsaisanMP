@@ -1,9 +1,9 @@
 {
-  "updated_at": "2026-04-12T22:57:55+07:00",
+  "updated_at": "2026-04-24T06:39:11+07:00",
   "working_on": {
-    "feature": "Vietnamese-first UX and audit Dashboard confidence layer",
-    "status": "COMPLETED_PENDING_MANUAL_GUI_VISUAL_CHECK",
-    "notes": "Implemented Vietnamese UI labels, smart missing-event guidance, friendlier Dashboard, and refreshed user docs. Compile and 23 tests passed; GUI still needs visual click-through on Windows."
+    "feature": "Single Markdown handover and latest .brain update",
+    "status": "COMPLETED",
+    "notes": "All project .md files were consolidated into QUY_TRINH_NGHIEP_VU_MP2027.md; other Markdown files were deleted. The retained document covers user requirements workbook, business workflow, OneFile placement, source order manifest, current code status, verification commands, pending items, and AI handover."
   },
   "pending_tasks": [
     {
