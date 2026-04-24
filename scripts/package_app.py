@@ -1,6 +1,7 @@
 import subprocess
 import os
 import sys
+import shutil
 
 def package():
     print("Starting packaging process for MP2027 Manager...")
@@ -16,7 +17,7 @@ def package():
 
     # PyInstaller command
     cmd = [
-        "pyinstaller",
+        sys.executable, "-m", "PyInstaller",
         "--noconsole",
         "--hide-console", "minimize-late",
         "--onefile",
@@ -31,8 +32,13 @@ def package():
     
     try:
         subprocess.run(cmd, check=True)
+        dist_docs = os.path.join(project_root, "dist", "docs", "MP2027")
+        if os.path.exists(dist_docs):
+            shutil.rmtree(dist_docs)
+        shutil.copytree(os.path.join(project_root, "docs", "MP2027"), dist_docs)
         print("\nSUCCESS! Packaging complete.")
         print(f"Executable is located at: {os.path.join(project_root, 'dist', 'MP2027_Manager.exe')}")
+        print(f"Editable runtime data copied to: {dist_docs}")
     except subprocess.CalledProcessError as e:
         print(f"\nERROR during packaging: {e}")
 

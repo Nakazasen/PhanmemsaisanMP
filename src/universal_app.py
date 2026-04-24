@@ -180,6 +180,190 @@ Bước 5: Mở tệp kết quả CC để đối chiếu công thức.
 - Không nhập số ước lượng nếu chưa chắc. Hãy để trống và ghi chú để kiểm toán lại.
 """.strip()
 
+USER_GUIDE_TEXT_LATEST = """
+HƯỚNG DẪN SỬ DỤNG MP2027 MANAGER
+
+1. MỤC ĐÍCH
+MP2027 Manager dùng để lập ngân sách MP FY2027 theo từng Cost Center.
+Chương trình đọc dữ liệu từ thư mục docs/MP2027, tính phân bổ chi phí, rồi xuất file Excel theo FORM MP2027.
+
+Nguyên tắc quan trọng:
+- Chương trình không tự bịa số.
+- Khoản nào thiếu dữ liệu thật sẽ được báo trên Dashboard để người dùng nhập hoặc chốt lại.
+- FORM.xlsx là mẫu xuất kết quả, không phải nơi nhập tay chính cho headcount hoặc sự kiện.
+
+2. THƯ MỤC ĐÚNG KHI CHẠY
+Khi chạy từ source code:
+- Tệp mẫu FORM: docs/MP2027/FORM.xlsx
+- Thư mục nguồn: docs/MP2027
+
+Khi dùng bản đóng gói onefile:
+- Đặt MP2027_Manager.exe trong một thư mục riêng.
+- Bên cạnh exe phải có thư mục docs/MP2027.
+- Người dùng sửa dữ liệu trong docs/MP2027 bên cạnh exe, không sửa dữ liệu bên trong file exe.
+
+Ví dụ:
+MP2027_App/
+  MP2027_Manager.exe
+  docs/
+    MP2027/
+      FORM.xlsx
+      source_file_order.xlsx
+      headcount_manual.csv
+      event_drivers_manual.csv
+      special_costs_manual.csv
+      các file Excel nguồn khác
+
+3. CÁC TRƯỜNG TRÊN MÀN HÌNH CHÍNH
+- Năm tài chính:
+  Nhập năm cần chạy, ví dụ 2027.
+
+- Tỷ giá (USD/VND):
+  Khi chạy, chương trình ưu tiên đọc tỷ giá từ FORM.xlsx ô B2.
+  Ô trên màn hình chỉ dùng để kiểm tra nhanh.
+
+- Trung tâm chi phí:
+  Để trống nếu muốn xuất toàn bộ CC có dữ liệu.
+  Chọn một CC nếu chỉ muốn kiểm tra/chạy thử một bộ phận.
+
+- Tệp mẫu FORM:
+  Phải trỏ tới docs/MP2027/FORM.xlsx.
+  Không dùng FORM.xlsx ở thư mục gốc nếu đó là bản cũ.
+
+- Thư mục nguồn:
+  Phải trỏ tới docs/MP2027.
+  Đây là nơi chứa FORM, file nguồn, CSV nhập tay và source_file_order.xlsx.
+
+4. THỨ TỰ FILE NGUỒN
+Nút "Thứ tự file nguồn" dùng để quy định file nào được đọc và đọc theo thứ tự nào.
+
+Cách dùng:
+Bước 1: Bấm "Thứ tự file nguồn".
+Bước 2: Chọn một dòng trong bảng.
+Bước 3: Bấm "Chọn file..." nếu cần đổi file nguồn.
+Bước 4: Bấm "Lên" hoặc "Xuống" để đổi thứ tự.
+Bước 5: Bỏ chọn "Dùng dòng này" nếu muốn tạm thời không đọc một file.
+Bước 6: Bấm "Lưu".
+
+Tệp được lưu là:
+docs/MP2027/source_file_order.xlsx
+
+Không nên sửa source_file_order.csv bằng Excel. CSV chỉ là fallback kỹ thuật và có thể lỗi font nếu mở sai encoding.
+
+5. QUY TRÌNH CHẠY ĐỀ XUẤT
+Bước 1: Kiểm tra Tệp mẫu FORM là docs/MP2027/FORM.xlsx.
+Bước 2: Kiểm tra Thư mục nguồn là docs/MP2027.
+Bước 3: Bấm "Thứ tự file nguồn" nếu vừa đổi tên file hoặc thêm file nguồn.
+Bước 4: Nếu cần, nhập nhân sự bằng nút "Nhập nhân sự thủ công".
+Bước 5: Nếu có khoản thiếu dữ liệu thật, bấm "Nhập sự kiện thiếu dữ liệu".
+Bước 6: Nếu muốn kiểm tra nhanh, chọn một CC; nếu không thì để trống.
+Bước 7: Bấm "CHẠY TÍNH TOÁN".
+Bước 8: Mở Dashboard kiểm toán.
+Bước 9: Mở file kết quả CC để kiểm tra công thức và số liệu.
+
+6. NHẬP NHÂN SỰ THỦ CÔNG
+Dùng khi cần chốt số người theo CC/tháng hoặc khi Dashboard báo thiếu headcount.
+
+Cách nhập:
+Bước 1: Bấm "Nhập nhân sự thủ công".
+Bước 2: Chọn CC.
+Bước 3: Nhập số nhân viên và công nhân cho 12 tháng.
+Bước 4: Nếu cần tính health check row 57/58, nhập Nam/Nữ tháng 12.
+Bước 5: Bấm "Lưu 12 tháng".
+Bước 6: Chạy tính toán lại.
+
+Tệp lưu dữ liệu:
+docs/MP2027/headcount_manual.csv
+
+Lưu ý:
+- Nếu sửa số người trực tiếp trong FORM, lần chạy sau có thể bị ghi đè.
+- Hãy nhập/chốt headcount bằng màn hình này hoặc bằng headcount_manual.csv.
+
+7. NHẬP SỰ KIỆN THIẾU DỮ LIỆU
+Dùng cho các khoản chương trình không thể tự biết số thật, ví dụ:
+- Xe bus JP/VN.
+- Quà cho người không đi du lịch.
+- My Episode.
+- Kỷ niệm 10 năm.
+- Kỷ niệm thành lập công ty.
+- VISA/Passport/GPLD/NNN nếu phải ghi vào row khác row 137.
+
+Cách nhập:
+Bước 1: Bấm "Nhập sự kiện thiếu dữ liệu".
+Bước 2: Chọn CC và tháng phát sinh.
+Bước 3: Nhập tên sự kiện.
+Bước 4: Nếu biết số người và đơn giá, nhập count và unit_price.
+Bước 5: Nếu chỉ biết tổng tiền, nhập amount_vnd.
+Bước 6: Nhập account_code.
+Bước 7: Nếu biết row FORM cần ghi, nhập form_row.
+Bước 8: Bấm "Thêm/Cập nhật", rồi bấm "Lưu tệp".
+Bước 9: Chạy tính toán lại.
+
+Tệp lưu dữ liệu:
+docs/MP2027/event_drivers_manual.csv
+
+8. CHI PHÍ ĐẶC BIỆT THEO ROW FORM
+Nếu có chi phí cần ghi đúng một row FORM nhưng chưa có parser tự động, dùng:
+docs/MP2027/special_costs_manual.csv
+
+Ví dụ:
+- Passport/VISA/GPLD cần row khác row 137.
+- Một khoản NNN cần tách riêng theo row đã được finance xác nhận.
+
+Không nhập form_row nếu chưa chắc row đích.
+
+9. CÁCH ĐỌC DASHBOARD KIỂM TOÁN
+- XANH: CC có dữ liệu nền tảng và chưa có cảnh báo cơ bản.
+- VÀNG: CC có dữ liệu nhưng còn điểm cần người dùng xem/chốt.
+- ĐỎ: CC chưa có dữ liệu tính toán sau lần chạy gần nhất.
+
+Khi thấy VÀNG hoặc ĐỎ:
+Bước 1: Chọn dòng CC.
+Bước 2: Đọc cột "Lý do".
+Bước 3: Xem bảng "Việc cần người dùng chốt".
+Bước 4: Nếu thiếu sự kiện, bấm "Nhập dữ liệu thiếu".
+Bước 5: Nếu thiếu nhân sự, bấm "Nhập nhân sự thủ công".
+Bước 6: Chạy lại và kiểm tra file kết quả.
+
+Lưu ý:
+XANH không có nghĩa là số liệu đã đúng 100%. XANH chỉ nghĩa là chương trình chưa thấy thiếu input cơ bản.
+Người dùng vẫn cần kiểm tra công thức và nguồn dữ liệu trước khi gửi chính thức.
+
+10. FILE KẾT QUẢ
+Sau khi chạy, kiểm tra thư mục:
+OUTPUT_FY2027
+
+Các file thường gặp:
+- MP_CC_<mã CC>.xlsx: kết quả theo từng Cost Center.
+- MP2027_MISSING_INPUTS.csv: danh sách dữ liệu còn cần người dùng xem/chốt.
+- MP2027_AUDIT_REPORT.md: báo cáo kiểm toán nếu pipeline sinh ra.
+
+11. LỖI THƯỜNG GẶP
+- Lỗi "Không được dùng FORM.xlsx...":
+  Tệp mẫu đang trỏ nhầm FORM ở thư mục gốc hoặc bản FORM cũ.
+  Hãy chọn docs/MP2027/FORM.xlsx.
+
+- Mở source_file_order.csv bị lỗi font:
+  Không dùng CSV để chỉnh. Hãy dùng nút "Thứ tự file nguồn" hoặc mở source_file_order.xlsx.
+
+- Dashboard vẫn VÀNG:
+  Đây không phải lỗi chương trình. Nghĩa là còn dữ liệu cần người dùng xác nhận.
+
+- Nhập xong nhưng kết quả chưa đổi:
+  Kiểm tra đã bấm "Lưu tệp" hoặc "Lưu 12 tháng", rồi chạy tính toán lại.
+
+- Không thấy file output cho một CC:
+  Có thể CC đó chưa có dữ liệu fact để export batch. Hãy chạy riêng CC đó hoặc kiểm tra Dashboard.
+
+12. KHUYẾN NGHỊ VẬN HÀNH
+- Chạy thử một CC trước khi xuất hàng loạt.
+- Luôn mở Dashboard sau khi chạy.
+- Luôn kiểm tra file Excel kết quả trước khi gửi.
+- Không nhập số ước lượng nếu chưa chắc.
+- Khi thêm file nguồn mới, cập nhật bằng nút "Thứ tự file nguồn" trước khi chạy.
+- Khi bàn giao bản onefile, luôn bàn giao cả thư mục docs/MP2027 cạnh exe.
+""".strip()
+
 
 class MPManagerApp:
     def __init__(self, root: tk.Tk):
@@ -646,7 +830,7 @@ class MPManagerApp:
             height=28,
         )
         guide_text.pack(fill=tk.BOTH, expand=True)
-        guide_text.insert("1.0", USER_GUIDE_TEXT)
+        guide_text.insert("1.0", USER_GUIDE_TEXT_LATEST)
         guide_text.configure(state=tk.DISABLED)
 
         ttk.Button(frame, text="Đóng", command=guide.destroy).pack(anchor="e", pady=(10, 0))
