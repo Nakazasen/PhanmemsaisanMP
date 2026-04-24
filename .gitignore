@@ -21,3 +21,14 @@ Thumbs.db
 build/
 dist/
 *.spec
+
+# ABW runtime noise (safe to regenerate)
+.brain/used_nonces.json
+.brain/route_log.jsonl
+.brain/acceptance_log.jsonl
+.brain/acceptance_requests/
+.brain/runner_artifacts/
+.brain/cache/
+.brain/tmp/
+.brain/*.log
+drafts/*.tmp
