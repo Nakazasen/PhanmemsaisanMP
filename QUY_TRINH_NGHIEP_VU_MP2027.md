@@ -44,7 +44,7 @@ Mức đáp ứng hiện tại: khoảng `85-90%` về kỹ thuật. Phần đã
 - Không auto-allocation sai cho NNN/VISA/GPLD/Passport khi thiếu driver.
 - Dashboard kiểm toán có trạng thái XANH/VÀNG/ĐỎ, missing-input table và preview công thức.
 - GUI đã Việt hóa phần lớn visible text, ngoại lệ cho từ `Dashboard`.
-- Có file `docs/MP2027/source_file_order.csv` để quy định thứ tự file nguồn.
+- Có file `docs/MP2027/source_file_order.xlsx` để quy định thứ tự file nguồn. Người dùng có thể chỉnh file này bằng Excel hoặc bằng nút `Thứ tự file nguồn` trên GUI.
 
 Chưa hoàn tất:
 
@@ -65,7 +65,8 @@ Các file quan trọng:
 | File | Vai trò |
 |---|---|
 | `FORM.xlsx` | Template FORM MP2027 chuẩn để load master, đọc tỷ giá và export output. |
-| `source_file_order.csv` | Danh sách thứ tự file nguồn do chương trình ưu tiên đọc. |
+| `source_file_order.xlsx` | Danh sách thứ tự file nguồn do chương trình ưu tiên đọc, không bị lỗi font khi mở bằng Excel. |
+| `source_file_order.csv` | Fallback kỹ thuật dạng UTF-8-BOM; không khuyến nghị người dùng chỉnh trực tiếp. |
 | `施設課　MPFY2027.xlsx` | Facility: khấu hao/lãi nhà đất, điện nước. |
 | `固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx` | Fixed Assets: lịch khấu hao/lãi tài sản cố định. |
 | `システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls` | IT Simulation tháng 4-6. |
@@ -99,7 +100,7 @@ Khuyến nghị khi bàn giao onefile:
 
 - Đặt file exe tại một thư mục bàn giao, ví dụ `MP2027_App`.
 - Bên cạnh exe phải có thư mục `docs\MP2027`.
-- Trong `docs\MP2027` đặt `FORM.xlsx`, các workbook nguồn, các CSV manual và `source_file_order.csv`.
+- Trong `docs\MP2027` đặt `FORM.xlsx`, các workbook nguồn, các CSV manual và `source_file_order.xlsx`.
 
 Cấu trúc đúng:
 
@@ -109,7 +110,7 @@ MP2027_App/
   docs/
     MP2027/
       FORM.xlsx
-      source_file_order.csv
+      source_file_order.xlsx
       headcount_manual.csv
       event_drivers_manual.csv
       special_costs_manual.csv
@@ -128,11 +129,13 @@ Có thể bundle `docs/MP2027/FORM.xlsx` vào onefile, nhưng không nên phụ 
 
 ## 5. Thứ tự file nguồn và phương án dự phòng
 
-Chương trình ưu tiên `docs/MP2027/source_file_order.csv`.
+Chương trình ưu tiên `docs/MP2027/source_file_order.xlsx`.
 
-Format:
+Đây là workbook Excel để tránh lỗi font khi người dùng mở file có tên tiếng Nhật/tiếng Việt. CSV `source_file_order.csv` chỉ còn là fallback kỹ thuật cho script, không phải file người dùng nên chỉnh.
 
-```csv
+Format trong sheet `source_file_order`:
+
+```text
 order,category,filename,enabled,description
 1,facility,施設課　MPFY2027.xlsx,1,Facility depreciation interest electric water source
 2,fixed_assets,固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx,1,Fixed assets source
@@ -149,6 +152,8 @@ order,category,filename,enabled,description
 
 Nếu sau này người dùng bổ sung file hoặc đổi thứ tự:
 
+- Cách dễ nhất là mở chương trình và bấm `Thứ tự file nguồn`.
+- Có thể chọn lại file cho từng dòng, bấm `Lên`/`Xuống`, bật/tắt dòng rồi bấm `Lưu`.
 - Nếu là file cùng loại đã có parser, thêm dòng mới hoặc đổi `filename`.
 - Nếu muốn tạm bỏ một file, đặt `enabled=0`.
 - Nếu là loại dữ liệu mới chưa có parser, phải thêm parser/code mới và thêm `category` tương ứng.
@@ -157,7 +162,7 @@ Nếu sau này người dùng bổ sung file hoặc đổi thứ tự:
 ## 6. Luồng chạy nghiệp vụ
 
 1. Người dùng đặt toàn bộ nguồn vào `docs/MP2027`.
-2. Người dùng kiểm tra `source_file_order.csv` nếu có đổi tên file/thứ tự.
+2. Người dùng kiểm tra `source_file_order.xlsx` hoặc bấm `Thứ tự file nguồn` nếu có đổi tên file/thứ tự.
 3. Chương trình load `FORM.xlsx` để lấy tỷ giá, Cost Center, Account.
 4. Chương trình load allocation rules từ workbook `FY2027配賦額一覧`.
 5. Chương trình parse từng nguồn:
@@ -366,7 +371,7 @@ Module chính:
 | `src/engine/allocator.py` | Tính allocation. |
 | `src/engine/hub_builder.py` | Export công thức và dữ liệu vào FORM. |
 | `src/audit/pipeline_audit.py` | Sinh audit report và missing-input CSV. |
-| `src/utils/source_manifest.py` | Đọc `source_file_order.csv`. |
+| `src/utils/source_manifest.py` | Đọc/ghi `source_file_order.xlsx`, fallback `source_file_order.csv`. |
 
 ## 16. Database
 
@@ -394,7 +399,7 @@ Ngày `2026-04-24`:
 
 - Sửa GUI default để ưu tiên `docs/MP2027/FORM.xlsx`, không tự chọn nhầm `FORM.xlsx` ở root.
 - Sửa default source dir để ưu tiên `docs/MP2027`.
-- Thêm `docs/MP2027/source_file_order.csv`.
+- Thêm `docs/MP2027/source_file_order.xlsx` làm cấu hình người dùng và `source_file_order.csv` làm fallback kỹ thuật.
 - Thêm `src/utils/source_manifest.py`.
 - Parser/loader ưu tiên manifest trước, fallback auto-detect sau.
 - `scripts/run_e2e.py` log thứ tự file nguồn và chạy parser theo thứ tự mới.
@@ -473,7 +478,7 @@ P3:
 - Không tự tạo số liệu sự kiện khi thiếu driver.
 - Không Việt hóa key kỹ thuật trong schema/CSV/code.
 - Khi sửa parser mới, phải giữ khả năng ghi công thức nếu có thể.
-- Khi thêm nguồn mới, ưu tiên cập nhật `source_file_order.csv` và parser tương ứng.
+- Khi thêm nguồn mới, ưu tiên cập nhật `source_file_order.xlsx` bằng GUI và parser tương ứng.
 - Khi chạy test/E2E có thể làm đổi `mp2027.db` và `OUTPUT_FY2027`; chỉ commit output nếu thật sự muốn bàn giao output mới.
 - PowerShell có thể hiển thị mojibake với tiếng Việt/Nhật do codepage, nhưng file UTF-8 vẫn có thể đúng. Dùng `$env:PYTHONIOENCODING='utf-8'` khi chạy script/log có Unicode.
 
@@ -488,7 +493,7 @@ Trạng thái code mới nhất:
 - FORM runtime mặc định: `docs/MP2027/FORM.xlsx`.
 - Source dir mặc định: `docs/MP2027`.
 - OneFile cần thư mục `docs\MP2027` cạnh `.exe` nếu muốn người dùng sửa dữ liệu.
-- Thứ tự file nguồn được điều khiển bởi `docs/MP2027/source_file_order.csv`.
+- Thứ tự file nguồn được điều khiển bởi `docs/MP2027/source_file_order.xlsx`; GUI có nút `Thứ tự file nguồn` để người dùng chỉnh.
 - Helper manifest: `src/utils/source_manifest.py`.
 - Parser/loader đã đọc manifest: facility, fixed_assets, it_simulation, ga, birthday, allocation_rules, nnn_paperwork.
 - Test gần nhất: 23 unit tests OK; E2E một CC OK trong temp output.

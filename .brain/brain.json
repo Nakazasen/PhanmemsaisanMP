@@ -3,12 +3,12 @@
     "schema_version": "1.1.0",
     "awf_version": "4.0.2",
     "last_updated": "2026-04-12T22:57:55+07:00",
-    "updated_at": "2026-04-24T06:39:11+07:00"
+    "updated_at": "2026-04-24T07:03:38+07:00"
   },
   "project": {
     "name": "MP2027 Manager",
     "type": "Windows desktop app for MP2027 cost allocation and FORM export",
-    "status": "Documentation consolidated into QUY_TRINH_NGHIEP_VU_MP2027.md as the single Markdown handover/business-process source. Runtime defaults to docs/MP2027/FORM.xlsx; OneFile should ship editable docs/MP2027 next to the exe; source order is configurable via docs/MP2027/source_file_order.csv."
+    "status": "Source order is now user-editable in the GUI and stored primarily in docs/MP2027/source_file_order.xlsx to avoid Excel CSV font/encoding issues; CSV remains UTF-8-BOM fallback only."
   },
   "tech_stack": {
     "language": "Python 3.13.5",

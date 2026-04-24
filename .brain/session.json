@@ -1,9 +1,9 @@
 {
-  "updated_at": "2026-04-24T06:39:11+07:00",
+  "updated_at": "2026-04-24T07:03:38+07:00",
   "working_on": {
-    "feature": "Single Markdown handover and latest .brain update",
-    "status": "COMPLETED",
-    "notes": "All project .md files were consolidated into QUY_TRINH_NGHIEP_VU_MP2027.md; other Markdown files were deleted. The retained document covers user requirements workbook, business workflow, OneFile placement, source order manifest, current code status, verification commands, pending items, and AI handover."
+    "feature": "Excel-safe source order editor",
+    "status": "COMPLETED_VERIFIED",
+    "notes": "Added source_file_order.xlsx support, GUI source-order editor, regenerated source_file_order.csv with UTF-8-BOM fallback, updated handover docs, and verified source manifest plus tests.test_headcount_and_export."
   },
   "pending_tasks": [
     {

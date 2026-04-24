@@ -35,6 +35,13 @@ from src.db.schema import get_connection
 from src.parsers.manual_event_drivers import ensure_manual_event_drivers_template
 from src.parsers.manual_headcount import ensure_manual_headcount_template
 from src.utils.excel_helpers import get_fy_months
+from src.utils.source_manifest import (
+    DEFAULT_DESCRIPTIONS,
+    MANIFEST_COLUMNS,
+    ensure_source_manifest,
+    read_source_manifest,
+    write_source_manifest_xlsx,
+)
 
 
 def _default_template_path() -> str:
@@ -257,6 +264,12 @@ class MPManagerApp:
 
         ttk.Button(
             container,
+            text="Thứ tự file nguồn",
+            command=self.open_source_order_editor,
+        ).grid(row=6, column=1, sticky="w", padx=(340, 0), pady=(8, 0))
+
+        ttk.Button(
+            container,
             text="Hướng dẫn sử dụng chi tiết",
             command=self.open_user_guide,
         ).grid(row=6, column=2, sticky="w", pady=(8, 0))
@@ -305,6 +318,204 @@ class MPManagerApp:
         path = filedialog.askdirectory()
         if path:
             self.source_dir.set(path)
+
+    def open_source_order_editor(self):
+        source_dir = self.source_dir.get() or BASE_DIR
+        os.makedirs(source_dir, exist_ok=True)
+        try:
+            manifest_path = ensure_source_manifest(source_dir)
+        except Exception as exc:
+            messagebox.showerror("Lỗi", f"Không tạo được tệp thứ tự nguồn:\n{exc}")
+            return
+
+        editor = tk.Toplevel(self.root)
+        editor.title("Thứ tự file nguồn")
+        editor.geometry("980x520")
+        editor.transient(self.root)
+        editor.grab_set()
+
+        frame = ttk.Frame(editor, padding=12)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(
+            frame,
+            text=(
+                "Người dùng có thể đổi thứ tự, chọn lại file hoặc tắt dòng không dùng. "
+                "Tệp cấu hình Excel: source_file_order.xlsx"
+            ),
+            wraplength=900,
+        ).grid(row=0, column=0, columnspan=6, sticky="w", pady=(0, 10))
+
+        columns = ("order", "category", "filename", "enabled", "description")
+        tree = ttk.Treeview(frame, columns=columns, show="headings", height=14)
+        tree.heading("order", text="Thứ tự")
+        tree.heading("category", text="Loại nguồn")
+        tree.heading("filename", text="Tên file")
+        tree.heading("enabled", text="Dùng")
+        tree.heading("description", text="Ghi chú")
+        tree.column("order", width=60, anchor="center")
+        tree.column("category", width=130)
+        tree.column("filename", width=430)
+        tree.column("enabled", width=60, anchor="center")
+        tree.column("description", width=250)
+        tree.grid(row=1, column=0, columnspan=6, sticky="nsew")
+
+        scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
+        scrollbar.grid(row=1, column=6, sticky="ns")
+        tree.configure(yscrollcommand=scrollbar.set)
+
+        form = ttk.Frame(frame)
+        form.grid(row=2, column=0, columnspan=6, sticky="ew", pady=(10, 0))
+        ttk.Label(form, text="Loại nguồn").grid(row=0, column=0, sticky="w")
+        category_var = tk.StringVar()
+        category_combo = ttk.Combobox(
+            form,
+            textvariable=category_var,
+            values=list(DEFAULT_DESCRIPTIONS.keys()),
+            width=22,
+            state="readonly",
+        )
+        category_combo.grid(row=1, column=0, sticky="w", padx=(0, 8))
+
+        ttk.Label(form, text="Tên file").grid(row=0, column=1, sticky="w")
+        filename_var = tk.StringVar()
+        ttk.Entry(form, textvariable=filename_var, width=70).grid(row=1, column=1, sticky="w")
+        ttk.Button(
+            form,
+            text="Chọn file...",
+            command=lambda: browse_manifest_file(),
+        ).grid(row=1, column=2, sticky="w", padx=(6, 8))
+
+        enabled_var = tk.IntVar(value=1)
+        ttk.Checkbutton(form, text="Dùng dòng này", variable=enabled_var).grid(row=1, column=3, sticky="w")
+
+        ttk.Label(form, text="Ghi chú").grid(row=2, column=0, sticky="w", pady=(8, 0))
+        description_var = tk.StringVar()
+        ttk.Entry(form, textvariable=description_var, width=96).grid(
+            row=3, column=0, columnspan=3, sticky="w", pady=(0, 8)
+        )
+
+        def rows_from_tree() -> list[dict[str, str]]:
+            rows: list[dict[str, str]] = []
+            for index, item_id in enumerate(tree.get_children(), start=1):
+                values = tree.item(item_id, "values")
+                rows.append(
+                    {
+                        "order": str(index),
+                        "category": str(values[1]),
+                        "filename": str(values[2]),
+                        "enabled": str(values[3]),
+                        "description": str(values[4]),
+                    }
+                )
+            return rows
+
+        def refresh_order_numbers() -> None:
+            for index, item_id in enumerate(tree.get_children(), start=1):
+                values = list(tree.item(item_id, "values"))
+                values[0] = str(index)
+                tree.item(item_id, values=values)
+
+        def load_rows() -> None:
+            for item_id in tree.get_children():
+                tree.delete(item_id)
+            for row in read_source_manifest(source_dir, include_missing=True):
+                tree.insert(
+                    "",
+                    tk.END,
+                    values=(
+                        row.get("order", ""),
+                        row.get("category", ""),
+                        row.get("filename", ""),
+                        row.get("enabled", "1"),
+                        row.get("description", ""),
+                    ),
+                )
+            refresh_order_numbers()
+
+        def selected_item() -> str | None:
+            selection = tree.selection()
+            return selection[0] if selection else None
+
+        def fill_form_from_selection(_event=None) -> None:
+            item_id = selected_item()
+            if not item_id:
+                return
+            values = tree.item(item_id, "values")
+            category_var.set(str(values[1]))
+            filename_var.set(str(values[2]))
+            enabled_var.set(1 if str(values[3]).strip() not in {"0", "False", "false"} else 0)
+            description_var.set(str(values[4]))
+
+        def browse_manifest_file() -> None:
+            path = filedialog.askopenfilename(
+                initialdir=source_dir,
+                filetypes=[("Excel files", "*.xlsx *.xls"), ("All files", "*.*")],
+            )
+            if not path:
+                return
+            try:
+                filename_var.set(os.path.relpath(path, source_dir))
+            except ValueError:
+                filename_var.set(os.path.basename(path))
+
+        def add_or_update() -> None:
+            category = category_var.get().strip()
+            filename = filename_var.get().strip()
+            if not category or not filename:
+                messagebox.showwarning("Thiếu dữ liệu", "Hãy chọn loại nguồn và tên file.")
+                return
+            description = description_var.get().strip() or DEFAULT_DESCRIPTIONS.get(category, "")
+            enabled = "1" if enabled_var.get() else "0"
+            item_id = selected_item()
+            if item_id:
+                order = tree.item(item_id, "values")[0]
+                tree.item(item_id, values=(order, category, filename, enabled, description))
+            else:
+                tree.insert("", tk.END, values=("", category, filename, enabled, description))
+            refresh_order_numbers()
+
+        def remove_selected() -> None:
+            item_id = selected_item()
+            if item_id:
+                tree.delete(item_id)
+                refresh_order_numbers()
+
+        def move_selected(delta: int) -> None:
+            item_id = selected_item()
+            if not item_id:
+                return
+            siblings = list(tree.get_children())
+            current_index = siblings.index(item_id)
+            target_index = current_index + delta
+            if target_index < 0 or target_index >= len(siblings):
+                return
+            tree.move(item_id, "", target_index)
+            tree.selection_set(item_id)
+            refresh_order_numbers()
+
+        def save_manifest() -> None:
+            try:
+                saved_path = write_source_manifest_xlsx(source_dir, rows_from_tree())
+                self.log(f"Đã lưu thứ tự file nguồn: {saved_path}")
+                messagebox.showinfo("Đã lưu", f"Đã lưu cấu hình:\n{saved_path}")
+            except Exception as exc:
+                messagebox.showerror("Lỗi", f"Không lưu được thứ tự file nguồn:\n{exc}")
+
+        tree.bind("<<TreeviewSelect>>", fill_form_from_selection)
+        load_rows()
+
+        buttons = ttk.Frame(frame)
+        buttons.grid(row=4, column=0, columnspan=6, sticky="w", pady=(10, 0))
+        ttk.Button(buttons, text="Thêm/Cập nhật", command=add_or_update).grid(row=0, column=0, padx=(0, 6))
+        ttk.Button(buttons, text="Xóa dòng", command=remove_selected).grid(row=0, column=1, padx=(0, 6))
+        ttk.Button(buttons, text="Lên", command=lambda: move_selected(-1)).grid(row=0, column=2, padx=(0, 6))
+        ttk.Button(buttons, text="Xuống", command=lambda: move_selected(1)).grid(row=0, column=3, padx=(0, 6))
+        ttk.Button(buttons, text="Lưu", command=save_manifest).grid(row=0, column=4, padx=(0, 6))
+        ttk.Button(buttons, text="Đóng", command=editor.destroy).grid(row=0, column=5, padx=(0, 6))
+
+        frame.rowconfigure(1, weight=1)
+        frame.columnconfigure(2, weight=1)
 
     def load_cc_list(self):
         db_path = os.path.join(BASE_DIR, "mp2027.db")
