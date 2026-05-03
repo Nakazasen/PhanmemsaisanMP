@@ -1,0 +1,157 @@
+{
+  "_schema": "hybrid-abw/knowledge-gaps/1.0",
+  "_description": "Log of knowledge gaps. See templates/knowledge_gaps.example.json for entry format.",
+  "updated_at": "2026-04-29T03:20:10Z",
+  "stats": {
+    "total": 8,
+    "open": 8,
+    "investigating": 0,
+    "resolved": 0
+  },
+  "gaps": [
+    {
+      "id": "gap-1777366695442",
+      "query": "What does the MP2027 process documentation say about data import?",
+      "context": "ABW runner knowledge retrieval",
+      "searched_locations": [
+        "wiki/",
+        "explicit local sources"
+      ],
+      "notebooklm_checked": false,
+      "notebooklm_notebook_id": null,
+      "reason": "Query lane could not find grounded evidence.",
+      "priority": "medium",
+      "status": "open",
+      "created_at": "2026-04-28T08:58:15Z",
+      "resolved_at": null,
+      "resolution_path": null,
+      "suggested_sources": []
+    },
+    {
+      "id": "gap-1777366696391",
+      "query": "Summarize MP2027 operational workflow constraints",
+      "context": "ABW runner knowledge retrieval",
+      "searched_locations": [
+        "wiki/",
+        "explicit local sources"
+      ],
+      "notebooklm_checked": false,
+      "notebooklm_notebook_id": null,
+      "reason": "Query lane could not find grounded evidence.",
+      "priority": "medium",
+      "status": "open",
+      "created_at": "2026-04-28T08:58:16Z",
+      "resolved_at": null,
+      "resolution_path": null,
+      "suggested_sources": []
+    },
+    {
+      "id": "gap-1777372621145",
+      "query": "What documents describe AGV communication?",
+      "context": "ABW runner knowledge retrieval",
+      "searched_locations": [
+        "wiki/",
+        "explicit local sources"
+      ],
+      "notebooklm_checked": false,
+      "notebooklm_notebook_id": null,
+      "reason": "Query lane could not find grounded evidence.",
+      "priority": "medium",
+      "status": "open",
+      "created_at": "2026-04-28T10:37:01Z",
+      "resolved_at": null,
+      "resolution_path": null,
+      "suggested_sources": []
+    },
+    {
+      "id": "gap-1777372621221",
+      "query": "Which sources mention MOM WMS workflow constraints?",
+      "context": "ABW runner knowledge retrieval",
+      "searched_locations": [
+        "wiki/",
+        "explicit local sources"
+      ],
+      "notebooklm_checked": false,
+      "notebooklm_notebook_id": null,
+      "reason": "Query lane could not find grounded evidence.",
+      "priority": "medium",
+      "status": "open",
+      "created_at": "2026-04-28T10:37:01Z",
+      "resolved_at": null,
+      "resolution_path": null,
+      "suggested_sources": []
+    },
+    {
+      "id": "gap-1777372621299",
+      "query": "Summarize MOM WMS workflow constraints.",
+      "context": "ABW runner knowledge retrieval",
+      "searched_locations": [
+        "wiki/",
+        "explicit local sources"
+      ],
+      "notebooklm_checked": false,
+      "notebooklm_notebook_id": null,
+      "reason": "Query lane could not find grounded evidence.",
+      "priority": "medium",
+      "status": "open",
+      "created_at": "2026-04-28T10:37:01Z",
+      "resolved_at": null,
+      "resolution_path": null,
+      "suggested_sources": []
+    },
+    {
+      "id": "gap-1777372621372",
+      "query": "What is the approved production cutover date for the MOM WMS system?",
+      "context": "ABW runner knowledge retrieval",
+      "searched_locations": [
+        "wiki/",
+        "explicit local sources"
+      ],
+      "notebooklm_checked": false,
+      "notebooklm_notebook_id": null,
+      "reason": "Query lane could not find grounded evidence.",
+      "priority": "medium",
+      "status": "open",
+      "created_at": "2026-04-28T10:37:01Z",
+      "resolved_at": null,
+      "resolution_path": null,
+      "suggested_sources": []
+    },
+    {
+      "id": "gap-1777372621461",
+      "query": "What spreadsheet or CSV sources are available for MP2027 budgeting or simulation?",
+      "context": "ABW runner knowledge retrieval",
+      "searched_locations": [
+        "wiki/",
+        "explicit local sources"
+      ],
+      "notebooklm_checked": false,
+      "notebooklm_notebook_id": null,
+      "reason": "Query lane could not find grounded evidence.",
+      "priority": "medium",
+      "status": "open",
+      "created_at": "2026-04-28T10:37:01Z",
+      "resolved_at": null,
+      "resolution_path": null,
+      "suggested_sources": []
+    },
+    {
+      "id": "gap-1777372621537",
+      "query": "What do the DOCX source files say about website content?",
+      "context": "ABW runner knowledge retrieval",
+      "searched_locations": [
+        "wiki/",
+        "explicit local sources"
+      ],
+      "notebooklm_checked": false,
+      "notebooklm_notebook_id": null,
+      "reason": "Query lane could not find grounded evidence.",
+      "priority": "medium",
+      "status": "open",
+      "created_at": "2026-04-28T10:37:01Z",
+      "resolved_at": null,
+      "resolution_path": null,
+      "suggested_sources": []
+    }
+  ]
+}

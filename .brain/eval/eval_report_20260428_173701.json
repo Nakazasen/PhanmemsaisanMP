@@ -1,0 +1,84 @@
+{
+  "workspace_path": "D:\\Sandbox\\MP2027",
+  "abw_version": "0.5.0",
+  "timestamp": "2026-04-28T17:37:01.603757",
+  "summary": {
+    "total": 6,
+    "passed": 0,
+    "failed": 6,
+    "warnings": 0
+  },
+  "scores": {
+    "average_grounding": 0.0,
+    "average_missing_evidence": 0.0,
+    "average_bounded_summary": 0.17
+  },
+  "details": [
+    {
+      "id": "MOM-TARGET-001",
+      "question": "What documents describe AGV communication?",
+      "passed": false,
+      "grounding_score": 0,
+      "missing_evidence_score": 0,
+      "bounded_summary_score": 0,
+      "failures": [],
+      "warnings": [],
+      "citations_count": 0
+    },
+    {
+      "id": "MOM-TARGET-002",
+      "question": "Which sources mention MOM WMS workflow constraints?",
+      "passed": false,
+      "grounding_score": 0,
+      "missing_evidence_score": 0,
+      "bounded_summary_score": 0,
+      "failures": [],
+      "warnings": [],
+      "citations_count": 0
+    },
+    {
+      "id": "MOM-SUMMARY-001",
+      "question": "Summarize MOM WMS workflow constraints.",
+      "passed": false,
+      "grounding_score": 0,
+      "missing_evidence_score": 0,
+      "bounded_summary_score": 1,
+      "failures": [],
+      "warnings": [],
+      "citations_count": 0
+    },
+    {
+      "id": "MOM-NEGATIVE-001",
+      "question": "What is the approved production cutover date for the MOM WMS system?",
+      "passed": false,
+      "grounding_score": 0,
+      "missing_evidence_score": 0,
+      "bounded_summary_score": 0,
+      "failures": [],
+      "warnings": [],
+      "citations_count": 0
+    },
+    {
+      "id": "MP2027-TARGET-001",
+      "question": "What spreadsheet or CSV sources are available for MP2027 budgeting or simulation?",
+      "passed": false,
+      "grounding_score": 0,
+      "missing_evidence_score": 0,
+      "bounded_summary_score": 0,
+      "failures": [],
+      "warnings": [],
+      "citations_count": 0
+    },
+    {
+      "id": "WEB-UNSUPPORTED-001",
+      "question": "What do the DOCX source files say about website content?",
+      "passed": false,
+      "grounding_score": 0,
+      "missing_evidence_score": 0,
+      "bounded_summary_score": 0,
+      "failures": [],
+      "warnings": [],
+      "citations_count": 0
+    }
+  ]
+}

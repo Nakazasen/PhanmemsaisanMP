@@ -1,0 +1,109 @@
+{
+  "workspace_path": "D:\\Sandbox\\MP2027",
+  "abw_version": "0.6.0",
+  "timestamp": "2026-04-29T09:56:19.758589",
+  "harness_runtime_status": "completed",
+  "retrieval_quality_status": "fail",
+  "reason": "one or more applicable retrieval checks failed",
+  "summary": {
+    "total": 6,
+    "passed": 3,
+    "failed": 3,
+    "warnings": 2
+  },
+  "scores": {
+    "average_grounding": 0.17,
+    "average_missing_evidence": 2.17,
+    "average_bounded_summary": 0.17
+  },
+  "details": [
+    {
+      "id": "MOM-TARGET-001",
+      "question": "What documents describe AGV communication?",
+      "passed": true,
+      "grounding_score": 0,
+      "missing_evidence_score": 3,
+      "bounded_summary_score": 0,
+      "harness_runtime_status": "completed",
+      "retrieval_quality_status": "corpus_gap",
+      "reason": "expected sources are not present in this workspace",
+      "failures": [],
+      "warnings": [
+        "missing_gap_logging: reported missing evidence but did not explicitly log a gap"
+      ],
+      "citations_count": 0
+    },
+    {
+      "id": "MOM-TARGET-002",
+      "question": "Which sources mention MOM WMS workflow constraints?",
+      "passed": false,
+      "grounding_score": 1,
+      "missing_evidence_score": 2,
+      "bounded_summary_score": 0,
+      "harness_runtime_status": "completed",
+      "retrieval_quality_status": "fail",
+      "reason": "grounding score below threshold",
+      "failures": [],
+      "warnings": [
+        "missing_gap_logging: reported missing evidence but did not explicitly log a gap"
+      ],
+      "citations_count": 1
+    },
+    {
+      "id": "MOM-SUMMARY-001",
+      "question": "Summarize MOM WMS workflow constraints.",
+      "passed": false,
+      "grounding_score": 0,
+      "missing_evidence_score": 2,
+      "bounded_summary_score": 1,
+      "harness_runtime_status": "completed",
+      "retrieval_quality_status": "fail",
+      "reason": "grounding score below threshold",
+      "failures": [],
+      "warnings": [],
+      "citations_count": 0
+    },
+    {
+      "id": "MOM-NEGATIVE-001",
+      "question": "What is the approved production cutover date for the MOM WMS system?",
+      "passed": true,
+      "grounding_score": 0,
+      "missing_evidence_score": 2,
+      "bounded_summary_score": 0,
+      "harness_runtime_status": "completed",
+      "retrieval_quality_status": "pass",
+      "reason": "missing evidence was reported",
+      "failures": [],
+      "warnings": [],
+      "citations_count": 0
+    },
+    {
+      "id": "MP2027-TARGET-001",
+      "question": "What spreadsheet or CSV sources are available for MP2027 budgeting or simulation?",
+      "passed": false,
+      "grounding_score": 0,
+      "missing_evidence_score": 2,
+      "bounded_summary_score": 0,
+      "harness_runtime_status": "completed",
+      "retrieval_quality_status": "fail",
+      "reason": "grounding score below threshold",
+      "failures": [],
+      "warnings": [],
+      "citations_count": 0
+    },
+    {
+      "id": "WEB-UNSUPPORTED-001",
+      "question": "What do the DOCX source files say about website content?",
+      "passed": true,
+      "grounding_score": 0,
+      "missing_evidence_score": 2,
+      "bounded_summary_score": 0,
+      "harness_runtime_status": "completed",
+      "retrieval_quality_status": "pass",
+      "reason": "missing evidence was reported",
+      "failures": [],
+      "warnings": [],
+      "citations_count": 0
+    }
+  ]
+}
