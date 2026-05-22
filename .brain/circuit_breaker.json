@@ -1,0 +1,48 @@
+{
+  "_comment": "Circuit Breaker -- prevents infinite or wasteful deliberation loops",
+  "_schema_version": "1.0.0",
+
+  "triggers": {
+    "duplicate_notebooklm_query": {
+      "description": "Same NotebookLM query issued twice with no score improvement",
+      "threshold": 2,
+      "action": "break"
+    },
+    "no_new_evidence": {
+      "description": "Consecutive rounds that added zero new wiki notes or manifest refs",
+      "rounds": 2,
+      "action": "break"
+    },
+    "contradiction_stall": {
+      "description": "Contradiction count did not decrease after N repair passes",
+      "rounds": 2,
+      "action": "break"
+    },
+    "score_plateau": {
+      "description": "Exit gate score unchanged for N consecutive rounds",
+      "rounds": 2,
+      "action": "break"
+    },
+    "max_rounds_exceeded": {
+      "description": "Total rounds exceeded the limit in exit_gate_policy",
+      "action": "break"
+    },
+    "token_budget_exceeded": {
+      "description": "Cumulative token usage exceeded max_token_budget",
+      "action": "break"
+    }
+  },
+
+  "on_break": {
+    "return_best_answer": true,
+    "label": "circuit_breaker_triggered",
+    "log_to_deliberation_runs": true,
+    "log_gap_if_score_below": 5,
+    "include_reason_in_response": true
+  },
+
+  "cooldown": {
+    "same_query_retry_seconds": 300,
+    "description": "Prevent re-deliberating the same query within this window"
+  }
+}

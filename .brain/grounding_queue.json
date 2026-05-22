@@ -1,0 +1,18 @@
+{
+  "gaps": [
+    {
+      "id": "gq-SRC-20260522-0001",
+      "manifest_ref": "processed/manifest.jsonl#line-1",
+      "source_title": "Cải tiến nhập dữ liệu chung vào file MPnew.xlsx",
+      "query": "Verify key claims from Cải tiến nhập dữ liệu chung vào file MPnew.xlsx",
+      "priority": "high",
+      "status": "pending",
+      "created_at": "2026-05-22T10:31:58Z",
+      "grounding_engine": "notebooklm",
+      "notebook_id": null,
+      "result_summary": null,
+      "target_wiki_path": null,
+      "error": "MCP_UNAVAILABLE"
+    }
+  ]
+}

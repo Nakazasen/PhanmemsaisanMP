@@ -1,0 +1,70 @@
+{
+  "_comment": "Exit Gate Policy -- configures when deliberation should stop",
+  "_schema_version": "1.0.0",
+  "scoring_criteria": {
+    "evidence_coverage": {
+      "description": "Are primary sources present for the answer?",
+      "scores": {
+        "0": "Missing primary source",
+        "1": "Has source but incomplete",
+        "2": "Sufficient sources present"
+      }
+    },
+    "citation_integrity": {
+      "description": "Can the full provenance chain be traced?",
+      "scores": {
+        "0": "No provenance traceable",
+        "1": "Partial chain (wiki note exists but manifest ref missing)",
+        "2": "Full chain: wiki -> manifest -> raw"
+      }
+    },
+    "consistency": {
+      "description": "Are there unresolved contradictions?",
+      "scores": {
+        "0": "Unresolved contradiction present",
+        "1": "Ambiguity exists but no hard contradiction",
+        "2": "Fully consistent across sources"
+      }
+    },
+    "grounding_status": {
+      "description": "What is the grounding level of cited notes?",
+      "scores": {
+        "0": "All cited notes are draft/unverified",
+        "1": "Mixed -- some grounded, some draft",
+        "2": "All cited notes grounded or verified"
+      }
+    },
+    "answer_completeness": {
+      "description": "Does the answer address the full query?",
+      "scores": {
+        "0": "Answer misses the core question",
+        "1": "Partial answer -- addresses some aspects",
+        "2": "Complete answer to the query as asked"
+      }
+    },
+    "instruction_compliance": {
+      "description": "Does the answer follow all user constraints (format, negative constraints, scope limits)?",
+      "scores": {
+        "0": "Violates negative constraints or ignores required format",
+        "1": "Follows some constraints but misses others",
+        "2": "Fully complies with all explicit instructions"
+      }
+    }
+  },
+  "thresholds": {
+    "early_exit": 10,
+    "continue": 6,
+    "force_partial": 5
+  },
+  "limits": {
+    "max_rounds": 4,
+    "max_token_budget": 8000,
+    "max_notebooklm_queries": 2
+  },
+  "on_score_below_threshold_at_max_rounds": {
+    "action": "return_partial",
+    "log_gap": true,
+    "label_answer": "partial",
+    "include_score_in_response": true
+  }
+}
