@@ -39,7 +39,7 @@ class TestAccountResolver(unittest.TestCase):
         """Cost Center có cost_type = 製造 thì Account Resolver phải chọn cột mfg_acc."""
         conn = _mk_conn()
         engine = AllocationEngine(conn)
-        
+
         resolved = engine._get_account_for_cc(
             cost_type="製造",
             mfg_acc=5004086291,
@@ -53,7 +53,7 @@ class TestAccountResolver(unittest.TestCase):
         """Cost Center có cost_type = 一般 thì Account Resolver phải chọn cột ga_acc."""
         conn = _mk_conn()
         engine = AllocationEngine(conn)
-        
+
         resolved = engine._get_account_for_cc(
             cost_type="一般",
             mfg_acc=5004086291,
@@ -67,7 +67,7 @@ class TestAccountResolver(unittest.TestCase):
         """Cost Center có cost_type = 販売 thì Account Resolver phải chọn cột sales_acc."""
         conn = _mk_conn()
         engine = AllocationEngine(conn)
-        
+
         resolved = engine._get_account_for_cc(
             cost_type="販売",
             mfg_acc=5004086291,
@@ -82,10 +82,10 @@ class TestAccountResolver(unittest.TestCase):
         conn = _mk_conn()
         # CC có saisan_type = 部外間接1 nhưng cost_type = 製造
         _seed_cc(conn, code="1412000006", name_jp="TEST_CC", saisan_type="部外間接1", cost_type="製造")
-        
+
         engine = AllocationEngine(conn)
         cc = next(x for x in engine.cost_centers if str(x["code"]).strip() == "1412000006")
-        
+
         resolved = engine._get_account_for_cc(
             cost_type=cc["cost_type"],
             mfg_acc=5004086291,
@@ -99,7 +99,7 @@ class TestAccountResolver(unittest.TestCase):
         """Nếu account theo nhóm cần lấy bị thiếu, chương trình không đoán bừa sang account khác."""
         conn = _mk_conn()
         engine = AllocationEngine(conn)
-        
+
         # 1. Kiểm tra trực tiếp method get_account_for_cc với mfg_acc là None
         resolved_none = engine._get_account_for_cc(
             cost_type="製造",
@@ -110,12 +110,12 @@ class TestAccountResolver(unittest.TestCase):
         self.assertIsNone(resolved_none)
         self.assertNotEqual(resolved_none, 6004086651)
         self.assertNotEqual(resolved_none, 6004086551)
-        
+
         # 2. Kiểm tra tích hợp: khi mfg_account của rule là NULL và CC thuộc nhóm 製造,
         # engine sẽ skip CC này và không tạo dòng dữ liệu phân bổ sai.
         _seed_cc(conn, code="1412000089", name_jp="TEST_CC", saisan_type="一般", cost_type="製造")
         _seed_hc(conn, "1412000089", 10.0)
-        
+
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -127,16 +127,16 @@ class TestAccountResolver(unittest.TestCase):
         )
         conn.commit()
         rule_id = cursor.lastrowid
-        
+
         engine = AllocationEngine(conn)
         engine._process_allocation_rules()
-        
+
         # Kiểm tra bảng fact_input_data xem có bản ghi phân bổ nào cho rule này không
         allocs = conn.execute(
             "SELECT * FROM fact_input_data WHERE source = ?",
             (f"alloc_{rule_id}",)
         ).fetchall()
-        
+
         # Phải bằng 0 vì target_acc = None nên rule đã bị bỏ qua (fail-closed)
         self.assertEqual(len(allocs), 0)
         conn.close()
