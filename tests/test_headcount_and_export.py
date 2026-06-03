@@ -513,11 +513,24 @@ class TestManualSpecialCosts(unittest.TestCase):
             INSERT INTO fact_input_data
             (source, period, amount_vnd, cc_code, account_code, description)
             VALUES
-            ('ga_unit_price', ?, 100, 0, 0, '手洗い洗剤|headcount_per_person'),
-            ('ga_unit_price', ?, 110, 0, 0, '手洗い洗剤|headcount_per_person'),
+            ('ga_unit_price', ?, 100, 0, 0, 'gas|headcount_per_person'),
+            ('ga_unit_price', ?, 110, 0, 0, 'gas|headcount_per_person'),
+            ('ga_unit_price', ?, 120, 0, 0, 'gas|headcount_per_person'),
+            ('ga_unit_price', ?, 200, 0, 0, '手洗い洗剤|headcount_per_person'),
+            ('ga_unit_price', ?, 300, 0, 0, 'giay ve sinh|headcount_per_person'),
+            ('ga_unit_price', ?, 400, 0, 0, 'cleaning|headcount_per_person'),
             ('manual', ?, 1, ?, 500001, 'seed')
             """,
-            (periods[0], periods[1], periods[0], cc_code),
+            (
+                periods[0],
+                periods[1],
+                periods[2],
+                periods[1],
+                periods[1],
+                periods[2],
+                periods[0],
+                cc_code,
+            ),
         )
         conn.commit()
 
@@ -531,8 +544,16 @@ class TestManualSpecialCosts(unittest.TestCase):
             workbook = openpyxl.load_workbook(output_path, data_only=False)
             try:
                 ws = workbook[find_hub_sheet_name(workbook)]
-                self.assertEqual(ws["F48"].value, "=SUM(F$24:F$25)*100")
-                self.assertEqual(ws["G48"].value, "=SUM(F$24:F$25)*110")
+                # Gas: April uses April headcount; May uses April, not May; June uses May.
+                self.assertEqual(ws["F46"].value, "=SUM(F$24:F$25)*100")
+                self.assertEqual(ws["G46"].value, "=SUM(F$24:F$25)*110")
+                self.assertNotIn("G$24:G$25", ws["G46"].value)
+                self.assertEqual(ws["H46"].value, "=SUM(G$24:G$25)*120")
+
+                # Other recurring administrative allocations follow the same previous-month pattern.
+                self.assertEqual(ws["G48"].value, "=SUM(F$24:F$25)*200")
+                self.assertEqual(ws["G49"].value, "=SUM(F$24:F$25)*300")
+                self.assertEqual(ws["H51"].value, "=SUM(G$24:G$25)*400")
             finally:
                 workbook.close()
         finally:
