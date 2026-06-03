@@ -387,6 +387,8 @@ class TestManualSpecialCosts(unittest.TestCase):
             ws.title = "FY2027"
             ws.cell(row=2, column=4, value="Mã costcenter")
             ws.cell(row=2, column=5, value="Mã tài khoản")
+            ws.cell(row=2, column=6, value="2026/04")
+            ws.cell(row=2, column=7, value="2026/05")
             ws.cell(row=3, column=2, value="VN000001")
             ws.cell(row=3, column=3, value="TEST USER")
             ws.cell(row=3, column=4, value=cc_code)
