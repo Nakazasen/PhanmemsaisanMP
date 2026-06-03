@@ -779,6 +779,126 @@ class TestHubBuilderExport(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_nnn_paperwork_exports_to_row_137_f_to_q(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        conn.execute(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
+            VALUES
+            ('nnn_paperwork', ?, 1000000, ?, 5005246286, 137, 'base', 'NNN paperwork: VN0001 Worker A|formula_expr=1000000'),
+            ('nnn_paperwork', ?, 2000000, ?, 5005246286, 137, 'base', 'NNN paperwork: VN0001 Worker A|formula_expr=2000000'),
+            ('nnn_paperwork', ?, 12000000, ?, 5005246286, 137, 'base', 'NNN paperwork: VN0001 Worker A|formula_expr=12000000')
+            """,
+            (periods[0], cc_code, periods[1], cc_code, periods[11], cc_code),
+        )
+        conn.commit()
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        tmpdir = _mk_tmpdir()
+        try:
+            output_path = tmpdir / "out_nnn_f_to_q.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws["B137"].value, 5005246286)
+                self.assertEqual(ws["F137"].value, "=1000000")
+                self.assertEqual(ws["G137"].value, "=2000000")
+                self.assertEqual(ws["Q137"].value, "=12000000")
+                self.assertEqual(ws["R137"].value, "=SUM(F137:Q137)")
+                # Other months should be cleared/empty
+                for month_col in ("H", "I", "J", "K", "L", "M", "N", "O", "P"):
+                    self.assertIsNone(ws[f"{month_col}137"].value)
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_nnn_paperwork_sums_multiple_records_on_row_137(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        conn.execute(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
+            VALUES
+            ('nnn_paperwork', ?, 1000000, ?, 5005246286, 137, 'base', 'NNN paperwork: VN0001 Worker A|formula_expr=1000000'),
+            ('nnn_paperwork', ?, 6000000, ?, 5005246286, 137, 'base', 'NNN paperwork: VN0002 Worker B|formula_expr=2000*3')
+            """,
+            (periods[0], cc_code, periods[0], cc_code),
+        )
+        conn.commit()
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        tmpdir = _mk_tmpdir()
+        try:
+            output_path = tmpdir / "out_nnn_sum.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws["B137"].value, 5005246286)
+                self.assertEqual(ws["F137"].value, "=1000000+2000*3")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_nnn_paperwork_does_not_export_unknown_cost_center(self):
+        conn = _mk_conn()
+        cc_code_target = _seed_cc(conn, code=1412000004)
+        cc_code_other = _seed_cc(conn, code=1412000018)
+        periods = get_fy_months(2027)
+        conn.execute(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
+            VALUES
+            ('nnn_paperwork', ?, 1000000, ?, 5005246286, 137, 'base', 'NNN paperwork: VN0001 Worker A|formula_expr=1000000')
+            """,
+            (periods[0], cc_code_other),
+        )
+        conn.commit()
+
+        # Seed at least one dummy record for the target CC so that HubBuilder knows the CC has fact input data
+        conn.execute(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
+            VALUES
+            ('dummy', ?, 1, ?, 500001, 200, 'base', 'dummy')
+            """,
+            (periods[0], cc_code_target),
+        )
+        conn.commit()
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        tmpdir = _mk_tmpdir()
+        try:
+            output_path = tmpdir / "out_nnn_other_cc.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code_target)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertIsNone(ws["F137"].value)
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()
