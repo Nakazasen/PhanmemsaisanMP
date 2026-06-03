@@ -109,13 +109,23 @@ class AllocationEngine:
             }
         return cache
 
+    @staticmethod
+    def _is_valid_account_code(value) -> bool:
+        """Account code hợp lệ: not None, not empty, not 0, not '0'."""
+        if value is None:
+            return False
+        if isinstance(value, str):
+            return value.strip() not in ("", "0")
+        return value != 0
+
     def _get_account_for_cc(self, cost_type: str, mfg_acc: int, ga_acc: int, sales_acc: int) -> int | None:
         text = str(cost_type or "")
         if "製造" in text:
-            return mfg_acc
+            return mfg_acc if self._is_valid_account_code(mfg_acc) else None
         if "販売" in text:
-            return sales_acc
-        return ga_acc
+            return sales_acc if self._is_valid_account_code(sales_acc) else None
+        # Unknown / 一般 cost_type → ga_acc (existing behavior)
+        return ga_acc if self._is_valid_account_code(ga_acc) else None
 
     def _get_monthly_hc(self, cc_code: object, period: str, driver_type: str) -> float:
         cc_key = str(cc_code).strip()

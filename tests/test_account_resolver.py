@@ -141,5 +141,120 @@ class TestAccountResolver(unittest.TestCase):
         self.assertEqual(len(allocs), 0)
         conn.close()
 
+    # ── Fail-closed: manufacturing account missing (edge values) ────────
+    def test_mfg_account_empty_string_returns_none(self):
+        """cost_type=製造, mfg_acc="" → None, không fallback ga/sales."""
+        conn = _mk_conn()
+        engine = AllocationEngine(conn)
+        result = engine._get_account_for_cc(
+            cost_type="製造", mfg_acc="", ga_acc=6004086651, sales_acc=6004086551
+        )
+        self.assertIsNone(result)
+        conn.close()
+
+    def test_mfg_account_zero_string_returns_none(self):
+        """cost_type=製造, mfg_acc="0" → None, không fallback ga/sales."""
+        conn = _mk_conn()
+        engine = AllocationEngine(conn)
+        result = engine._get_account_for_cc(
+            cost_type="製造", mfg_acc="0", ga_acc=6004086651, sales_acc=6004086551
+        )
+        self.assertIsNone(result)
+        conn.close()
+
+    def test_mfg_account_zero_int_returns_none(self):
+        """cost_type=製造, mfg_acc=0 → None, không fallback ga/sales."""
+        conn = _mk_conn()
+        engine = AllocationEngine(conn)
+        result = engine._get_account_for_cc(
+            cost_type="製造", mfg_acc=0, ga_acc=6004086651, sales_acc=6004086551
+        )
+        self.assertIsNone(result)
+        conn.close()
+
+    # ── Fail-closed: general account missing (edge values) ──────────────
+    def test_ga_account_none_returns_none(self):
+        """cost_type=一般, ga_acc=None → None, không fallback mfg/sales."""
+        conn = _mk_conn()
+        engine = AllocationEngine(conn)
+        result = engine._get_account_for_cc(
+            cost_type="一般", mfg_acc=5004086291, ga_acc=None, sales_acc=6004086551
+        )
+        self.assertIsNone(result)
+        conn.close()
+
+    def test_ga_account_empty_string_returns_none(self):
+        """cost_type=一般, ga_acc="" → None, không fallback mfg/sales."""
+        conn = _mk_conn()
+        engine = AllocationEngine(conn)
+        result = engine._get_account_for_cc(
+            cost_type="一般", mfg_acc=5004086291, ga_acc="", sales_acc=6004086551
+        )
+        self.assertIsNone(result)
+        conn.close()
+
+    def test_ga_account_zero_string_returns_none(self):
+        """cost_type=一般, ga_acc="0" → None, không fallback mfg/sales."""
+        conn = _mk_conn()
+        engine = AllocationEngine(conn)
+        result = engine._get_account_for_cc(
+            cost_type="一般", mfg_acc=5004086291, ga_acc="0", sales_acc=6004086551
+        )
+        self.assertIsNone(result)
+        conn.close()
+
+    # ── Fail-closed: sales account missing (edge values) ────────────────
+    def test_sales_account_none_returns_none(self):
+        """cost_type=販売, sales_acc=None → None, không fallback mfg/ga."""
+        conn = _mk_conn()
+        engine = AllocationEngine(conn)
+        result = engine._get_account_for_cc(
+            cost_type="販売", mfg_acc=5004086291, ga_acc=6004086651, sales_acc=None
+        )
+        self.assertIsNone(result)
+        conn.close()
+
+    def test_sales_account_empty_string_returns_none(self):
+        """cost_type=販売, sales_acc="" → None, không fallback mfg/ga."""
+        conn = _mk_conn()
+        engine = AllocationEngine(conn)
+        result = engine._get_account_for_cc(
+            cost_type="販売", mfg_acc=5004086291, ga_acc=6004086651, sales_acc=""
+        )
+        self.assertIsNone(result)
+        conn.close()
+
+    def test_sales_account_zero_int_returns_none(self):
+        """cost_type=販売, sales_acc=0 → None, không fallback mfg/ga."""
+        conn = _mk_conn()
+        engine = AllocationEngine(conn)
+        result = engine._get_account_for_cc(
+            cost_type="販売", mfg_acc=5004086291, ga_acc=6004086651, sales_acc=0
+        )
+        self.assertIsNone(result)
+        conn.close()
+
+    # ── Unknown cost_type ───────────────────────────────────────────────
+    def test_unknown_cost_type_falls_back_to_ga(self):
+        """RISK: unknown cost_type hiện tại fallback sang ga_acc (existing behavior)."""
+        conn = _mk_conn()
+        engine = AllocationEngine(conn)
+        # Unknown cost_type → trả ga_acc (documented existing behavior)
+        result = engine._get_account_for_cc(
+            cost_type="UNKNOWN", mfg_acc=5004086291, ga_acc=6004086651, sales_acc=6004086551
+        )
+        self.assertEqual(result, 6004086651)
+        conn.close()
+
+    def test_empty_cost_type_falls_back_to_ga(self):
+        """RISK: empty cost_type hiện tại fallback sang ga_acc (existing behavior)."""
+        conn = _mk_conn()
+        engine = AllocationEngine(conn)
+        result = engine._get_account_for_cc(
+            cost_type="", mfg_acc=5004086291, ga_acc=6004086651, sales_acc=6004086551
+        )
+        self.assertEqual(result, 6004086651)
+        conn.close()
+
 if __name__ == "__main__":
     unittest.main()
