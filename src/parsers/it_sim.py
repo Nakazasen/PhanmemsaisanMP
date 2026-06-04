@@ -84,6 +84,25 @@ def classify_it_summary_variance(detail_vnd: float, summary_vnd: float) -> tuple
     return "ERROR_REVIEW", diff
 
 
+def _attach_summary_audit_metadata(
+    records: list[dict[str, object]], detail_vnd_by_cc: dict[int, float]
+) -> None:
+    for record in records:
+        description = str(record.get("description") or "")
+        if not description.startswith("it_sim|system_usage_total"):
+            continue
+
+        cc_code = int(record["cc_code"])
+        if cc_code not in detail_vnd_by_cc:
+            continue
+
+        status, diff = classify_it_summary_variance(detail_vnd_by_cc[cc_code], float(record.get("amount_vnd") or 0.0))
+        record["description"] = _join_description(
+            description,
+            metadata=_metadata_parts(audit_status=status, audit_diff_vnd=diff),
+        )
+
+
 def _find_matching_sheet(sheet_names: list[str], tokens: tuple[str, ...]) -> str | None:
     normalized_pairs = [(name, _normalize_text(name)) for name in sheet_names]
     normalized_tokens = tuple(_normalize_text(token) for token in tokens)
@@ -266,6 +285,7 @@ def _parse_component_sheet(
 def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, object]]:
     """Parse a single IT Simulation .xls file."""
     records: list[dict[str, object]] = []
+    detail_vnd_by_cc: dict[int, float] = defaultdict(float)
     try:
         excel_file = pd.ExcelFile(path, engine="xlrd")
     except Exception as exc:
@@ -294,6 +314,7 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
             aggregated, term_map = _parse_component_sheet(component_df)
 
             for cc_code, amounts in aggregated.items():
+                detail_vnd_by_cc[cc_code] += float(amounts["amount_vnd"] or 0.0)
                 for month in target_months:
                     records.append(
                         {
@@ -342,6 +363,7 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
     finally:
         excel_file.close()
 
+    _attach_summary_audit_metadata(records, detail_vnd_by_cc)
     return records
 
 

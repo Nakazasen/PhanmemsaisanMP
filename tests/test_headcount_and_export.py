@@ -1773,6 +1773,76 @@ class TestHubBuilderExport(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_it_system_summary_fallback_accepts_metadata_description(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        period = get_fy_months(2027)[0]
+        conn.execute(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, amount_usd, cc_code, account_code, description)
+            VALUES (
+                'it_sim', ?, 9645870, 0, ?, 5005246282,
+                'it_sim|system_usage_total|source_file=abc.xls|source_sheet=summary|source_filter=cc:1412000006|audit_status=OK|audit_diff_vnd=0'
+            )
+            """,
+            (period, cc_code),
+        )
+        conn.commit()
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        tmpdir = _mk_tmpdir()
+        try:
+            output_path = tmpdir / "out_it_summary_metadata.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                system_row = _find_system_cost_rows(ws)[0]
+                self.assertEqual(ws.cell(system_row, 6).value, 9645870)
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_it_system_component_fallback_accepts_metadata_description(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        period = get_fy_months(2027)[0]
+        conn.execute(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, amount_usd, cc_code, account_code, description)
+            VALUES (
+                'it_sim', ?, 0, 31.9, ?, 5005246282,
+                'it_sim|component|vpn|source_file=abc.xls|source_sheet=VPN|source_filter=cc:1412000006'
+            )
+            """,
+            (period, cc_code),
+        )
+        conn.commit()
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        tmpdir = _mk_tmpdir()
+        try:
+            output_path = tmpdir / "out_it_component_metadata.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                system_row = _find_system_cost_rows(ws)[0]
+                self.assertEqual(ws.cell(system_row, 6).value, "=ROUND((31.9)*$B$2,0)")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_nnn_paperwork_exports_to_row_137_f_to_q(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)

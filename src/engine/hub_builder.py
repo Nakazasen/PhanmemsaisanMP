@@ -630,7 +630,7 @@ class HubBuilder:
             if account_code > 0:
                 account_codes.add(account_code)
 
-            if description == "it_sim|system_usage_total":
+            if description.startswith("it_sim|system_usage_total"):
                 total_vnd_by_period[period] = float(row["amount_vnd"] or 0.0)
                 continue
 
@@ -641,8 +641,10 @@ class HubBuilder:
                 continue
 
             if description.startswith("it_sim|component|"):
-                component_key = description.split("|")[-1]
-                component_usd_by_period[period][component_key] = float(row["amount_usd"] or 0.0)
+                parts = description.split("|")
+                if len(parts) >= 3:
+                    component_key = parts[2]
+                    component_usd_by_period[period][component_key] = float(row["amount_usd"] or 0.0)
 
         row_index = self._find_it_system_total_row(worksheet)
         account_code = self._resolve_it_system_account_code(cc_code, account_codes)

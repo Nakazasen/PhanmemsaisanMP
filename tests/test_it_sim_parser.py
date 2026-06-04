@@ -70,6 +70,42 @@ class TestItSimParserAuditMetadata(unittest.TestCase):
         self.assertIn("audit_status=WARN_ROUNDING", metadata)
         self.assertIn("audit_diff_vnd=3", metadata)
 
+    def test_it_summary_records_include_audit_status_when_detail_vnd_available(self):
+        from src.parsers.it_sim import _attach_summary_audit_metadata
+
+        cases = [
+            (100, "OK", 0),
+            (103, "WARN_ROUNDING", 3),
+            (94, "ERROR_REVIEW", -6),
+        ]
+        for detail_vnd, expected_status, expected_diff in cases:
+            with self.subTest(expected_status=expected_status):
+                records = [
+                    {
+                        "cc_code": 1412000006,
+                        "period": "202604",
+                        "amount_vnd": 100.0,
+                        "amount_usd": 0.0,
+                        "source": "it_sim",
+                        "description": _join_description(
+                            "it_sim",
+                            "system_usage_total",
+                            metadata=_metadata_parts(
+                                source_file="system_sim.xls",
+                                source_sheet="部門別サマリー（USD）",
+                                source_filter="cc:1412000006",
+                            ),
+                        ),
+                    }
+                ]
+
+                _attach_summary_audit_metadata(records, {1412000006: detail_vnd})
+
+                description = records[0]["description"]
+                self.assertTrue(description.startswith("it_sim|system_usage_total"))
+                self.assertIn(f"audit_status={expected_status}", description)
+                self.assertIn(f"audit_diff_vnd={expected_diff}", description)
+
 
 if __name__ == "__main__":
     unittest.main()
