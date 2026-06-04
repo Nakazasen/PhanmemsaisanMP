@@ -1620,11 +1620,111 @@ class TestHubBuilderExport(unittest.TestCase):
                 ws = workbook[find_hub_sheet_name(workbook)]
                 system_rows = _find_system_cost_rows(ws)
                 self.assertEqual(system_rows, [76])
+                self.assertEqual(ws["B76"].value, 5005246282)
                 self.assertIsNone(ws["F75"].value)
                 self.assertEqual(ws["F76"].value, "=ROUND((10*3.19)*$B$2,0)")
                 self.assertEqual(ws["R76"].value, "=SUM(F76:Q76)")
             finally:
                 workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_it_system_account_resolves_from_cost_type_when_fact_account_is_zero(self):
+        cases = [
+            (1412000006, "製造", 5005246282),
+            (1412000086, "一般", 6005146628),
+            (1412000030, "販売", 6005146542),
+        ]
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        for cc_code, cost_type, expected_account in cases:
+            with self.subTest(cost_type=cost_type):
+                conn = _mk_conn()
+                _seed_cc(conn, code=cc_code, cost_type=cost_type)
+                period = get_fy_months(2027)[0]
+                conn.execute(
+                    """
+                    INSERT INTO fact_input_data
+                    (source, period, amount_vnd, amount_usd, cc_code, account_code, description)
+                    VALUES ('it_sim', ?, 0, 31.9, ?, 0, 'it_sim|component_term|vpn|qty=10|unit_usd=3.19')
+                    """,
+                    (period, cc_code),
+                )
+                conn.commit()
+
+                tmpdir = _mk_tmpdir()
+                try:
+                    output_path = tmpdir / f"out_it_kdc_{cost_type}.xlsx"
+                    ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+                    self.assertTrue(ok)
+
+                    workbook = openpyxl.load_workbook(output_path, data_only=False)
+                    try:
+                        ws = workbook[find_hub_sheet_name(workbook)]
+                        system_rows = _find_system_cost_rows(ws)
+                        self.assertEqual(system_rows, [75])
+                        system_row = system_rows[0]
+                        self.assertEqual(ws.cell(system_row, 2).value, expected_account)
+                        self.assertEqual(ws.cell(system_row, 6).value, "=ROUND((10*3.19)*$B$2,0)")
+                    finally:
+                        workbook.close()
+                finally:
+                    conn.close()
+                    shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_it_system_account_prefers_valid_fact_kdc_account(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn, cost_type="製造")
+        period = get_fy_months(2027)[0]
+        conn.execute(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, amount_usd, cc_code, account_code, description)
+            VALUES ('it_sim', ?, 0, 31.9, ?, 6005146628, 'it_sim|component_term|vpn|qty=10|unit_usd=3.19')
+            """,
+            (period, cc_code),
+        )
+        conn.commit()
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        tmpdir = _mk_tmpdir()
+        try:
+            output_path = tmpdir / "out_it_fact_account.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                system_row = _find_system_cost_rows(ws)[0]
+                self.assertEqual(ws.cell(system_row, 2).value, 6005146628)
+                self.assertEqual(ws.cell(system_row, 6).value, "=ROUND((10*3.19)*$B$2,0)")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_it_system_account_missing_cost_center_fails_closed(self):
+        conn = _mk_conn()
+        cc_code = 1412000999
+        period = get_fy_months(2027)[0]
+        conn.execute(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, amount_usd, cc_code, account_code, description)
+            VALUES ('it_sim', ?, 0, 31.9, ?, 0, 'it_sim|component_term|vpn|qty=10|unit_usd=3.19')
+            """,
+            (period, cc_code),
+        )
+        conn.commit()
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        tmpdir = _mk_tmpdir()
+        try:
+            output_path = tmpdir / "out_it_missing_cc.xlsx"
+            with self.assertRaisesRegex(RuntimeError, "Unable to resolve KDC System Cost account"):
+                HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)

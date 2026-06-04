@@ -646,8 +646,9 @@ class HubBuilder:
 
         row_index = self._find_it_system_total_row(worksheet)
         account_code = self._resolve_it_system_account_code(cc_code, account_codes)
-        if account_code is not None:
-            worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
+        if account_code is None:
+            raise RuntimeError(f"Unable to resolve KDC System Cost account for cost center {cc_code}")
+        worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
 
         self._clear_visible_months(worksheet, row_index)
         for offset, period in enumerate(self.fy_months):
