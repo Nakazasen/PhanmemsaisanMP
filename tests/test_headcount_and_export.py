@@ -618,6 +618,216 @@ class TestManualSpecialCosts(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def _seed_travel_unit_price_lookup(self, conn):
+        conn.execute(
+            """
+            INSERT INTO map_allocation_rules
+            (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
+             posting_month, unit_price, unit, driver_type, driver_raw)
+            VALUES ('GA', '社員旅行', '福利厚生費', 5004086291, 6004086651, 6004086551,
+                    '5月', 1874000, '/person', 'headcount_all', 'manual event')
+            """
+        )
+
+    def _seed_travel_resolver_master(self, conn):
+        cc_code = 1412000089
+        conn.execute(
+            """
+            INSERT INTO dim_cost_centers
+            (code, name_jp, seq_no, saisan_type, cost_type, staff_count, worker_count)
+            VALUES (?, 'MFG_CC', 1, '一般', '製造', 0, 0)
+            """,
+            (str(cc_code),),
+        )
+        conn.execute(
+            """
+            INSERT INTO dim_accounts
+            (code, name_jp, name_vn, mfg_code, ga_code, sales_code)
+            VALUES (5004086291, '福利厚生費', 'Welfare', 5004086291, 6004086651, 6004086551)
+            """
+        )
+        return cc_code
+
+    def test_manual_event_driver_resolves_unit_price_key_for_travel(self):
+        conn = _mk_conn()
+        cc_code = self._seed_travel_resolver_master(conn)
+        self._seed_travel_unit_price_lookup(conn)
+        conn.commit()
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "target_month",
+                        "event_name",
+                        "event_type",
+                        "count",
+                        "unit_price_key",
+                        "account_jp_name",
+                        "row",
+                        "note",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "target_month": "202705",
+                        "event_name": "社員旅行 Du lịch công ty",
+                        "event_type": "month_specific_driver",
+                        "count": "111",
+                        "unit_price_key": "社員旅行",
+                        "account_jp_name": "福利厚生費",
+                        "row": "66",
+                        "note": "Company trip manual driver for May",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 1)
+            self.assertEqual(result["errors"], 0)
+
+            fact_row = conn.execute(
+                """
+                SELECT account_code, amount_vnd, description
+                FROM fact_input_data
+                WHERE source = 'manual_event_driver'
+                """
+            ).fetchone()
+            self.assertIsNotNone(fact_row)
+            self.assertEqual(int(fact_row["account_code"]), 5004086291)
+            self.assertEqual(float(fact_row["amount_vnd"]), 208014000.0)
+            self.assertIn("formula_expr=111*1874000", fact_row["description"])
+
+            template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+            output_path = tmpdir / "out_manual_travel_unit_price_key.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws["G66"].value, "=111*1874000")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_event_driver_explicit_unit_price_wins_over_key(self):
+        conn = _mk_conn()
+        cc_code = self._seed_travel_resolver_master(conn)
+        self._seed_travel_unit_price_lookup(conn)
+        conn.commit()
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=["cc_code", "target_month", "event_name", "count", "unit_price", "unit_price_key", "account_jp_name", "row"],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "target_month": "202705",
+                        "event_name": "社員旅行 Du lịch công ty",
+                        "count": "111",
+                        "unit_price": "123",
+                        "unit_price_key": "社員旅行",
+                        "account_jp_name": "福利厚生費",
+                        "row": "66",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 1)
+            self.assertEqual(result["errors"], 0)
+            row = conn.execute("SELECT amount_vnd, description FROM fact_input_data").fetchone()
+            self.assertEqual(float(row["amount_vnd"]), 13653.0)
+            self.assertIn("formula_expr=111*123", row["description"])
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_event_driver_rejects_unknown_unit_price_key(self):
+        conn = _mk_conn()
+        cc_code = self._seed_travel_resolver_master(conn)
+        conn.commit()
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=["cc_code", "target_month", "event_name", "count", "unit_price_key", "account_jp_name", "row"],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "target_month": "202705",
+                        "event_name": "社員旅行 Du lịch công ty",
+                        "count": "111",
+                        "unit_price_key": "DOES_NOT_EXIST",
+                        "account_jp_name": "福利厚生費",
+                        "row": "66",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 0)
+            self.assertEqual(result["errors"], 1)
+            count = conn.execute("SELECT COUNT(*) FROM fact_input_data").fetchone()[0]
+            self.assertEqual(count, 0)
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_event_driver_rejects_duplicate_unit_price_key(self):
+        conn = _mk_conn()
+        cc_code = self._seed_travel_resolver_master(conn)
+        self._seed_travel_unit_price_lookup(conn)
+        self._seed_travel_unit_price_lookup(conn)
+        conn.commit()
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=["cc_code", "target_month", "event_name", "count", "unit_price_key", "account_jp_name", "row"],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "target_month": "202705",
+                        "event_name": "社員旅行 Du lịch công ty",
+                        "count": "111",
+                        "unit_price_key": "社員旅行",
+                        "account_jp_name": "福利厚生費",
+                        "row": "66",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 0)
+            self.assertEqual(result["errors"], 1)
+            count = conn.execute("SELECT COUNT(*) FROM fact_input_data").fetchone()[0]
+            self.assertEqual(count, 0)
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_manual_event_driver_without_form_row_appends_with_formula(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
@@ -700,6 +910,8 @@ class TestManualSpecialCosts(unittest.TestCase):
                     "event_type",
                     "count",
                     "unit_price",
+                    "unit_price_key",
+                    "allocation_content",
                     "amount_vnd",
                     "account_code",
                     "account_jp_name",

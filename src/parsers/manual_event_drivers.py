@@ -20,6 +20,8 @@ OPTIONAL_COLUMNS = (
     "event_type",
     "count",
     "unit_price",
+    "unit_price_key",
+    "allocation_content",
     "amount_vnd",
     "account_code",
     "account_jp_name",
@@ -40,6 +42,8 @@ TEMPLATE_COLUMNS = (
     "event_type",
     "count",
     "unit_price",
+    "unit_price_key",
+    "allocation_content",
     "amount_vnd",
     "account_code",
     "account_jp_name",
@@ -137,6 +141,33 @@ def _resolve_account_code(conn: sqlite3.Connection, cc_code: str, account_jp_nam
         return None
 
     return _account_for_cost_type(str(cc_row["cost_type"] or ""), account_rows[0])
+
+
+def _normalize_unit_price_key(value: Any) -> str:
+    text = str(value or "").replace("\u3000", " ").strip()
+    if ":" in text:
+        text = text.split(":", 1)[0].strip()
+    return " ".join(text.split())
+
+
+def _resolve_unit_price(conn: sqlite3.Connection, unit_price_key: str) -> float | None:
+    normalized_key = _normalize_unit_price_key(unit_price_key)
+    if not normalized_key:
+        return None
+
+    rows = conn.execute(
+        "SELECT item_name, unit_price FROM map_allocation_rules"
+    ).fetchall()
+    matches = [
+        row
+        for row in rows
+        if _normalize_unit_price_key(row["item_name"]) == normalized_key
+    ]
+    if len(matches) != 1:
+        return None
+
+    unit_price = safe_float(matches[0]["unit_price"])
+    return unit_price if unit_price > 0 else None
 
 
 def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[str, int | str]:
@@ -252,6 +283,18 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
             unit_price = safe_float(row.get("unit_price"))
             amount_vnd = safe_float(row.get("amount_vnd"))
             formula_expr = None
+            if count > 0 and unit_price <= 0:
+                unit_price_key, unit_price_key_ok = _merged_value(row, "unit_price_key", "allocation_content")
+                if not unit_price_key_ok:
+                    errors += 1
+                    continue
+                if unit_price_key:
+                    resolved_unit_price = _resolve_unit_price(conn, unit_price_key)
+                    if resolved_unit_price is None:
+                        errors += 1
+                        continue
+                    unit_price = resolved_unit_price
+
             if count > 0 and unit_price > 0:
                 amount_vnd = count * unit_price
                 formula_expr = f"{_format_number(count)}*{_format_number(unit_price)}"
