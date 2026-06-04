@@ -32,6 +32,13 @@ APPEND_TEMPLATE_ROW = 29
 APPEND_START_ROW = 200
 MIN_APPEND_LAST_ROW = 1000
 IT_COMPONENT_ORDER = ("vpn", "mail", "r3", "mes", "plm", "qlik_sense", "vps", "ams")
+IT_SYSTEM_ACCOUNT_CODES = {5005246282, 6005146628, 6005146542}
+IT_SYSTEM_ACCOUNT_BY_COST_TYPE = {
+    "製造": 5005246282,
+    "一般": 6005146628,
+    "販売": 6005146542,
+}
+IT_SYSTEM_ROW_TEXT_TOKENS = ("system cost", "kdc", "ｋｄｃ", "システム", "社内システム")
 MONTHLY_HEADCOUNT_FIXED_ROWS = (46, 48, 49, 51)
 FIXED_ALLOCATION_ROW_MATCHERS = {
     57: {
@@ -138,6 +145,49 @@ class HubBuilder:
         if abs(number - round(number)) < 1e-9:
             return str(int(round(number)))
         return f"{number:.6f}".rstrip("0").rstrip(".")
+
+    def _as_int(self, value: object) -> int | None:
+        try:
+            if value is None or str(value).strip() == "":
+                return None
+            return int(float(str(value).strip()))
+        except (TypeError, ValueError):
+            return None
+
+    def _find_it_system_total_row(self, worksheet) -> int:
+        candidates: list[tuple[int, int]] = []
+        for row_index in range(1, worksheet.max_row + 1):
+            account_code = self._as_int(worksheet.cell(row=row_index, column=ACCOUNT_COL).value)
+            has_kdc_account = account_code in IT_SYSTEM_ACCOUNT_CODES
+            row_text = " ".join(
+                self._normalize_text(worksheet.cell(row=row_index, column=column_index).value)
+                for column_index in range(1, WBS_COL + 1)
+                if worksheet.cell(row=row_index, column=column_index).value is not None
+            )
+            has_system_text = any(token in row_text for token in IT_SYSTEM_ROW_TEXT_TOKENS)
+            if has_kdc_account or has_system_text:
+                score = (2 if has_kdc_account else 0) + (3 if has_system_text else 0)
+                candidates.append((score, row_index))
+
+        if not candidates:
+            raise RuntimeError("Unable to locate System Cost row in FORM template")
+        candidates.sort(key=lambda item: (-item[0], item[1]))
+        return candidates[0][1]
+
+    def _resolve_it_system_account_code(self, cc_code: int, fact_account_codes: set[int]) -> int | None:
+        valid_fact_accounts = fact_account_codes & IT_SYSTEM_ACCOUNT_CODES
+        if len(valid_fact_accounts) == 1:
+            return next(iter(valid_fact_accounts))
+
+        row = self.conn.execute(
+            "SELECT cost_type FROM dim_cost_centers WHERE code = ? LIMIT 1",
+            (str(cc_code),),
+        ).fetchone()
+        if row:
+            cost_type = str(row["cost_type"] or "").strip()
+            if cost_type in IT_SYSTEM_ACCOUNT_BY_COST_TYPE:
+                return IT_SYSTEM_ACCOUNT_BY_COST_TYPE[cost_type]
+        return None
 
     def _load_rule_unit_price_by_source(self) -> dict[str, float]:
         rows = self.conn.execute("SELECT id, unit_price FROM map_allocation_rules").fetchall()
@@ -594,10 +644,12 @@ class HubBuilder:
                 component_key = description.split("|")[-1]
                 component_usd_by_period[period][component_key] = float(row["amount_usd"] or 0.0)
 
-        if len(account_codes) == 1:
-            worksheet.cell(row=75, column=ACCOUNT_COL, value=next(iter(account_codes)))
+        row_index = self._find_it_system_total_row(worksheet)
+        account_code = self._resolve_it_system_account_code(cc_code, account_codes)
+        if account_code is not None:
+            worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
 
-        self._clear_visible_months(worksheet, 75)
+        self._clear_visible_months(worksheet, row_index)
         for offset, period in enumerate(self.fy_months):
             component_terms = component_terms_by_period.get(period, {})
             ordered_terms = []
@@ -611,7 +663,7 @@ class HubBuilder:
                 for key in IT_COMPONENT_ORDER
                 if float(component_values.get(key, 0.0)) > 0
             ]
-            cell = worksheet.cell(row=75, column=VISIBLE_MONTH_START_COL + offset)
+            cell = worksheet.cell(row=row_index, column=VISIBLE_MONTH_START_COL + offset)
             if ordered_terms:
                 cell.value = f"=ROUND(({'+'.join(ordered_terms)})*$B$2,0)"
                 continue
@@ -622,7 +674,7 @@ class HubBuilder:
 
             total_amount = float(total_vnd_by_period.get(period, 0.0))
             cell.value = int(round(total_amount)) if total_amount else None
-        worksheet.cell(row=75, column=TOTAL_COL, value="=SUM(F75:Q75)")
+        worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
 
     def _write_fixed_rows(self, worksheet, cc_code: int) -> None:
         fixed_account_codes = {
@@ -641,7 +693,6 @@ class HubBuilder:
             57: 5004086291,
             58: 5004086291,
             59: 5004086291,
-            75: 5005246282,
             97: 5005246288,
             98: 5005246288,
             137: 5005246286,

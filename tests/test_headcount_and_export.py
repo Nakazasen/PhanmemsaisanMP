@@ -37,17 +37,30 @@ def _mk_conn():
     return conn
 
 
-def _seed_cc(conn, code=1412000004):
+def _seed_cc(conn, code=1412000004, cost_type="一般"):
     conn.execute(
         """
         INSERT INTO dim_cost_centers
         (code, name_jp, seq_no, saisan_type, cost_type, staff_count, worker_count)
-        VALUES (?, 'TEST_CC', 1, '製造', '一般', 0, 0)
+        VALUES (?, 'TEST_CC', 1, '製造', ?, 0, 0)
         """,
-        (code,),
+        (code, cost_type),
     )
     conn.commit()
     return code
+
+
+def _find_system_cost_rows(ws):
+    rows = []
+    for row_index in range(1, ws.max_row + 1):
+        row_text = " ".join(
+            str(ws.cell(row_index, column_index).value).lower()
+            for column_index in range(1, 21)
+            if ws.cell(row_index, column_index).value is not None
+        )
+        if "system cost" in row_text:
+            rows.append(row_index)
+    return rows
 
 
 class TestManualHeadcountGenderSplit(unittest.TestCase):
@@ -1522,7 +1535,6 @@ class TestHubBuilderExport(unittest.TestCase):
                     57: 5004086291,
                     58: 5004086291,
                     59: 5004086291,
-                    75: 5005246282,
                     97: 5005246288,
                     98: 5005246288,
                     137: 5005246286,
@@ -1536,7 +1548,10 @@ class TestHubBuilderExport(unittest.TestCase):
                 self.assertIn("Hand wash", ws["S48"].value)
                 self.assertIn("Chi phí khám sức khỏe hàng năm", ws["S57"].value)
                 self.assertIn("Tiền sinh nhật", ws["S59"].value)
-                self.assertIn("System Cost", ws["S75"].value)
+                system_rows = _find_system_cost_rows(ws)
+                self.assertEqual(system_rows, [75])
+                system_row = system_rows[0]
+                self.assertIn("System Cost", ws.cell(system_row, 19).value)
                 self.assertIn("Sổ tay", ws["S97"].value)
                 self.assertIn("Chi phí làm giấy tờ", ws["S137"].value)
 
@@ -1555,10 +1570,59 @@ class TestHubBuilderExport(unittest.TestCase):
                 self.assertEqual(ws["F57"].value, "=700")
                 self.assertEqual(ws["F58"].value, "=800")
                 self.assertEqual(ws["F59"].value, "=900")
-                self.assertEqual(ws["F75"].value, "=ROUND((10*3)*$B$2,0)")
+                self.assertEqual(ws.cell(system_row, 6).value, "=ROUND((10*3)*$B$2,0)")
+                self.assertEqual(ws.cell(system_row, 18).value, f"=SUM(F{system_row}:Q{system_row})")
                 self.assertEqual(ws["F97"].value, "=1000")
                 self.assertEqual(ws["F98"].value, "=1100")
                 self.assertEqual(ws["F137"].value, "=1200")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_it_system_row_discovery_does_not_hardcode_row_75(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn, cost_type="製造")
+        periods = get_fy_months(2027)
+        conn.execute(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, amount_usd, cc_code, account_code, description)
+            VALUES ('it_sim', ?, 0, 31.9, ?, 0, 'it_sim|component_term|vpn|qty=10|unit_usd=3.19')
+            """,
+            (periods[0], cc_code),
+        )
+        conn.commit()
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        tmpdir = _mk_tmpdir()
+        try:
+            moved_template = tmpdir / "form_system_row_moved.xlsx"
+            shutil.copy2(template_path, moved_template)
+            workbook = openpyxl.load_workbook(moved_template)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                ws["B75"].value = None
+                ws["S75"].value = None
+                ws["B76"].value = 5005246282
+                ws["S76"].value = "System Cost moved template row"
+                workbook.save(moved_template)
+            finally:
+                workbook.close()
+
+            output_path = tmpdir / "out_it_moved_row.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(moved_template), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                system_rows = _find_system_cost_rows(ws)
+                self.assertEqual(system_rows, [76])
+                self.assertIsNone(ws["F75"].value)
+                self.assertEqual(ws["F76"].value, "=ROUND((10*3.19)*$B$2,0)")
+                self.assertEqual(ws["R76"].value, "=SUM(F76:Q76)")
             finally:
                 workbook.close()
         finally:
@@ -1594,8 +1658,15 @@ class TestHubBuilderExport(unittest.TestCase):
             workbook = openpyxl.load_workbook(output_path, data_only=False)
             try:
                 ws = workbook[find_hub_sheet_name(workbook)]
-                self.assertEqual(ws["B75"].value, 5005246282)
-                self.assertEqual(ws["F75"].value, "=ROUND((10*3.19+20*11.51+2*30.02+20*2.25)*$B$2,0)")
+                system_rows = _find_system_cost_rows(ws)
+                self.assertEqual(system_rows, [75])
+                system_row = system_rows[0]
+                self.assertEqual(ws.cell(system_row, 2).value, 5005246282)
+                self.assertEqual(
+                    ws.cell(system_row, 6).value,
+                    "=ROUND((10*3.19+20*11.51+2*30.02+20*2.25)*$B$2,0)",
+                )
+                self.assertEqual(ws.cell(system_row, 18).value, f"=SUM(F{system_row}:Q{system_row})")
             finally:
                 workbook.close()
         finally:
