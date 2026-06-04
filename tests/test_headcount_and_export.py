@@ -718,6 +718,78 @@ class TestManualSpecialCosts(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_manual_travel_absent_gift_event_driver_parses_june_driver(self):
+        conn = _mk_conn()
+        cc_code = self._seed_travel_resolver_master(conn)
+        event_name = "社員旅行不参加対象者へのギフト贈呈 Quà tặng cho CNV không thể tham gia du lịch"
+        unit_price_key = "社員旅行不参加対象者へのギフト贈呈 Quà tặng cho CNV không thể tham gia du lịch."
+        conn.execute(
+            """
+            INSERT INTO map_allocation_rules
+            (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
+             posting_month, unit_price, unit, driver_type, driver_raw)
+            VALUES ('GA', ?, '福利厚生費', 5004086291, 6004086651, 6004086551,
+                    '6月', 1312500, '/person', 'working_days', 'manual event')
+            """,
+            (unit_price_key,),
+        )
+        conn.commit()
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "target_month",
+                        "event_name",
+                        "event_type",
+                        "count",
+                        "unit_price_key",
+                        "account_jp_name",
+                        "note",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "target_month": "202706",
+                        "event_name": event_name,
+                        "event_type": "month_specific_driver",
+                        "count": "7",
+                        "unit_price_key": unit_price_key,
+                        "account_jp_name": "福利厚生費",
+                        "note": "Sample: travel absent gift June driver",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 1)
+            self.assertEqual(result["errors"], 0)
+
+            fact_row = conn.execute(
+                """
+                SELECT source, period, cc_code, account_code, form_row, amount_vnd, description
+                FROM fact_input_data
+                WHERE source = 'manual_event_driver'
+                """
+            ).fetchone()
+            self.assertIsNotNone(fact_row)
+            self.assertEqual(fact_row["source"], "manual_event_driver")
+            self.assertEqual(fact_row["period"], "202706")
+            self.assertEqual(str(fact_row["cc_code"]), str(cc_code))
+            self.assertEqual(int(fact_row["account_code"]), 5004086291)
+            self.assertIsNone(fact_row["form_row"])
+            self.assertEqual(float(fact_row["amount_vnd"]), 9187500.0)
+            self.assertIn(event_name, fact_row["description"])
+            self.assertIn("formula_expr=7*1312500", fact_row["description"])
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_manual_event_driver_explicit_unit_price_wins_over_key(self):
         conn = _mk_conn()
         cc_code = self._seed_travel_resolver_master(conn)
