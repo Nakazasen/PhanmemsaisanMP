@@ -12,6 +12,7 @@ import os
 import sqlite3
 import unicodedata
 from collections import defaultdict
+from urllib.parse import quote
 
 import pandas as pd
 
@@ -42,6 +43,45 @@ def _normalize_text(value: object) -> str:
     text = "".join(ch for ch in text if not unicodedata.combining(ch))
     text = text.replace("\n", " ").replace("\u3000", " ").strip().lower()
     return " ".join(text.split())
+
+
+def _metadata_parts(
+    *,
+    source_file: str | None = None,
+    source_sheet: str | None = None,
+    source_filter: str | None = None,
+    audit_status: str | None = None,
+    audit_diff_vnd: int | float | None = None,
+) -> list[str]:
+    metadata = {
+        "source_file": source_file,
+        "source_sheet": source_sheet,
+        "source_filter": source_filter,
+        "audit_status": audit_status,
+        "audit_diff_vnd": audit_diff_vnd,
+    }
+    parts: list[str] = []
+    for key, value in metadata.items():
+        if value is None:
+            continue
+        parts.append(f"{key}={quote(str(value), safe=':-_.')}")
+    return parts
+
+
+def _join_description(*parts: object, metadata: list[str] | None = None) -> str:
+    description_parts = [str(part) for part in parts if str(part) != ""]
+    if metadata:
+        description_parts.extend(metadata)
+    return "|".join(description_parts)
+
+
+def classify_it_summary_variance(detail_vnd: float, summary_vnd: float) -> tuple[str, int]:
+    diff = int(round(float(detail_vnd or 0.0) - float(summary_vnd or 0.0)))
+    if abs(diff) == 0:
+        return "OK", diff
+    if abs(diff) <= 5:
+        return "WARN_ROUNDING", diff
+    return "ERROR_REVIEW", diff
 
 
 def _find_matching_sheet(sheet_names: list[str], tokens: tuple[str, ...]) -> str | None:
@@ -79,7 +119,13 @@ def _find_header_index_any(df: pd.DataFrame, header_row: int, token_groups: tupl
     return None
 
 
-def _parse_summary_sheet(df: pd.DataFrame, target_months: list[str]) -> list[dict[str, object]]:
+def _parse_summary_sheet(
+    df: pd.DataFrame,
+    target_months: list[str],
+    *,
+    source_file: str | None = None,
+    source_sheet: str | None = None,
+) -> list[dict[str, object]]:
     records: list[dict[str, object]] = []
     if len(df) <= 2:
         return records
@@ -119,7 +165,15 @@ def _parse_summary_sheet(df: pd.DataFrame, target_months: list[str]) -> list[dic
                     "amount_vnd": amount_vnd,
                     "amount_usd": 0.0,
                     "source": "it_sim",
-                    "description": "it_sim|system_usage_total",
+                    "description": _join_description(
+                        "it_sim",
+                        "system_usage_total",
+                        metadata=_metadata_parts(
+                            source_file=source_file,
+                            source_sheet=source_sheet,
+                            source_filter=f"cc:{cc_code}",
+                        ),
+                    ),
                 }
             )
     return records
@@ -222,7 +276,14 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
         summary_sheet = _find_matching_sheet(excel_file.sheet_names, ("サマリー", "vnd"))
         if summary_sheet:
             summary_df = pd.read_excel(path, sheet_name=summary_sheet, header=None, engine="xlrd")
-            records.extend(_parse_summary_sheet(summary_df, target_months))
+            records.extend(
+                _parse_summary_sheet(
+                    summary_df,
+                    target_months,
+                    source_file=os.path.basename(path),
+                    source_sheet=summary_sheet,
+                )
+            )
 
         for component_key, tokens in COMPONENT_SHEETS.items():
             sheet_name = _find_matching_sheet(excel_file.sheet_names, tokens)
@@ -241,7 +302,16 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
                             "amount_vnd": amounts["amount_vnd"],
                             "amount_usd": amounts["amount_usd"],
                             "source": "it_sim",
-                            "description": f"it_sim|component|{component_key}",
+                            "description": _join_description(
+                                "it_sim",
+                                "component",
+                                component_key,
+                                metadata=_metadata_parts(
+                                    source_file=os.path.basename(path),
+                                    source_sheet=sheet_name,
+                                    source_filter=f"cc:{cc_code}",
+                                ),
+                            ),
                         }
                     )
 
@@ -255,10 +325,17 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
                                 "amount_vnd": 0.0,
                                 "amount_usd": term["quantity"] * term["unit_price_usd"],
                                 "source": "it_sim",
-                                "description": (
-                                    f"it_sim|component_term|{component_key}"
-                                    f"|qty={term['quantity']}"
-                                    f"|unit_usd={term['unit_price_usd']}"
+                                "description": _join_description(
+                                    "it_sim",
+                                    "component_term",
+                                    component_key,
+                                    f"qty={term['quantity']}",
+                                    f"unit_usd={term['unit_price_usd']}",
+                                    metadata=_metadata_parts(
+                                        source_file=os.path.basename(path),
+                                        source_sheet=sheet_name,
+                                        source_filter=f"cc:{cc_code}",
+                                    ),
                                 ),
                             }
                         )
