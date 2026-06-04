@@ -32,7 +32,7 @@ if BASE_DIR not in sys.path:
 from scripts.run_e2e import run_universal_pipeline
 from src.db.loader import load_all
 from src.db.schema import get_connection
-from src.parsers.manual_event_drivers import ensure_manual_event_drivers_template
+from src.parsers.manual_event_drivers import TEMPLATE_COLUMNS, ensure_manual_event_drivers_template
 from src.parsers.manual_headcount import ensure_manual_headcount_template
 from src.utils.excel_helpers import get_fy_months
 from src.utils.source_manifest import (
@@ -290,14 +290,16 @@ Dùng cho các khoản chương trình không thể tự biết số thật, ví
 
 Cách nhập:
 Bước 1: Bấm "Nhập sự kiện thiếu dữ liệu".
-Bước 2: Chọn CC và tháng phát sinh.
-Bước 3: Nhập tên sự kiện.
-Bước 4: Nếu biết số người và đơn giá, nhập count và unit_price.
-Bước 5: Nếu chỉ biết tổng tiền, nhập amount_vnd.
-Bước 6: Nhập account_code.
-Bước 7: Nếu biết row FORM cần ghi, nhập form_row.
-Bước 8: Bấm "Thêm/Cập nhật", rồi bấm "Lưu tệp".
-Bước 9: Chạy tính toán lại.
+Bước 2: Chọn CC và tháng ghi chi phí. Ví dụ 202705 là tháng 5 FY2027.
+Bước 3: Nhập tên sự kiện, ví dụ 社員旅行 Du lịch công ty.
+Bước 4: Chọn loại sự kiện. Với event phát sinh riêng theo tháng, dùng month_specific_driver.
+Bước 5: Nếu biết số người/số lượng, nhập count.
+Bước 6: Nếu muốn tự nhập đơn giá, nhập unit_price; đơn giá nhập tay sẽ được ưu tiên.
+Bước 7: Nếu muốn chương trình tự lấy đơn giá từ FY2027配賦額一覧, nhập unit_price_key, ví dụ 社員旅行.
+Bước 8: Có thể bỏ trống account_code nếu nhập account_jp_name/account_name, ví dụ 福利厚生費.
+Bước 9: Nếu biết row FORM cần ghi, nhập row/form_row, ví dụ 66 cho 社員旅行.
+Bước 10: Nếu chỉ biết tổng tiền, nhập amount_vnd.
+Bước 11: Ghi note/description để kiểm toán lại nguồn số liệu, rồi bấm "Thêm/Cập nhật" và "Lưu tệp".
 
 Tệp lưu dữ liệu:
 docs/MP2027/event_drivers_manual.csv
@@ -1215,6 +1217,7 @@ class MPManagerApp:
             text=(
                 "Mục này dùng cho khoản tiền mà chương trình không thể tự biết. "
                 "Ví dụ: số người đi xe bus, quà không đi du lịch, kỷ niệm 10 năm, VISA/Passport ở dòng FORM khác. "
+                "Có thể nhập account_jp_name để tự resolve account_code và unit_price_key để tự lấy đơn giá từ FY2027配賦額一覧. "
                 "Nếu không có số thật, hãy để trống; chương trình sẽ không tự bịa số."
             ),
             wraplength=1180,
@@ -1226,10 +1229,12 @@ class MPManagerApp:
         ttk.Label(
             guide,
             text=(
-                "Bước 1: chọn CC.  Bước 2: chọn tháng.  Bước 3: chọn loại sự kiện.  "
-                "Bước 4: điền Số người + Đơn giá nếu tính theo người; nếu chỉ biết tổng tiền thì điền Số tiền trực tiếp.  "
-                "Bước 5: điền Mã tài khoản.  Bước 6: nếu biết dòng FORM thì điền, nếu chưa chắc hãy ghi chú để kiểm toán lại.  "
-                "Bước 7: bấm Thêm/Cập nhật rồi bấm Lưu tệp."
+                "target_month/period = tháng ghi chi phí, ví dụ 202705 là tháng 5 FY2027.  "
+                "event_type có thể dùng month_specific_driver cho event theo tháng riêng.  "
+                "Nếu nhập unit_price thì đơn giá nhập tay được ưu tiên; nếu bỏ trống unit_price, nhập unit_price_key/allocation_content để tự lấy đơn giá từ FY2027配賦額一覧.  "
+                "Có thể bỏ trống account_code nếu nhập account_jp_name/account_name, ví dụ 福利厚生費.  "
+                "row/form_row = dòng FORM cần ghi, ví dụ 66 cho 社員旅行.  "
+                "Sample help-only: 1412000089,202705,社員旅行 Du lịch công ty,month_specific_driver,111,社員旅行,福利厚生費,66,Sample: company trip May driver."
             ),
             wraplength=1160,
         ).grid(row=0, column=0, sticky="w", padx=8, pady=(6, 2))
@@ -1246,10 +1251,13 @@ class MPManagerApp:
         cc_var = tk.StringVar()
         period_var = tk.StringVar()
         event_var = tk.StringVar()
+        event_type_var = tk.StringVar(value="month_specific_driver")
         count_var = tk.StringVar()
         unit_price_var = tk.StringVar()
+        unit_price_key_var = tk.StringVar()
         amount_var = tk.StringVar()
         account_var = tk.StringVar()
+        account_jp_name_var = tk.StringVar()
         form_row_var = tk.StringVar()
         desc_var = tk.StringVar()
 
@@ -1293,38 +1301,49 @@ class MPManagerApp:
             return widget
 
         add_label_entry(3, 0, "Mã CC", cc_var, width=38, values=cc_choices)
-        add_label_entry(3, 2, "Tháng", period_var, width=12, values=periods)
+        add_label_entry(3, 2, "Tháng ghi chi phí", period_var, width=12, values=periods)
         event_combo = add_label_entry(3, 4, "Sự kiện", event_var, width=28, values=event_choices)
-        add_label_entry(4, 0, "Số người", count_var, width=16)
-        add_label_entry(4, 2, "Đơn giá", unit_price_var, width=16)
-        add_label_entry(4, 4, "Số tiền trực tiếp", amount_var, width=18)
-        add_label_entry(5, 0, "Mã tài khoản", account_var, width=16)
-        add_label_entry(5, 2, "Dòng FORM", form_row_var, width=12)
-        ttk.Label(frame, text="Ghi chú").grid(row=5, column=4, sticky="w", padx=(0, 4), pady=3)
-        ttk.Entry(frame, textvariable=desc_var, width=42).grid(row=5, column=5, columnspan=3, sticky="w", pady=3)
-
-        columns = (
-            "cc_code",
-            "period",
-            "event_name",
-            "count",
-            "unit_price",
-            "amount_vnd",
-            "account_code",
-            "form_row",
-            "description",
+        add_label_entry(
+            3,
+            6,
+            "Loại event",
+            event_type_var,
+            width=24,
+            values=["manual_count_unit_price", "manual_amount", "month_specific_driver"],
         )
+        add_label_entry(4, 0, "Số người/count", count_var, width=16)
+        add_label_entry(4, 2, "Đơn giá nhập tay", unit_price_var, width=16)
+        add_label_entry(4, 4, "Key đơn giá", unit_price_key_var, width=24)
+        add_label_entry(4, 6, "Số tiền trực tiếp", amount_var, width=18)
+        add_label_entry(5, 0, "Mã tài khoản", account_var, width=16)
+        add_label_entry(5, 2, "Tên TK Nhật", account_jp_name_var, width=18)
+        add_label_entry(5, 4, "Dòng FORM", form_row_var, width=12)
+        ttk.Label(frame, text="Ghi chú").grid(row=5, column=6, sticky="w", padx=(0, 4), pady=3)
+        ttk.Entry(frame, textvariable=desc_var, width=32).grid(row=5, column=7, sticky="w", pady=3)
+
+        columns = tuple(TEMPLATE_COLUMNS)
         tree = ttk.Treeview(frame, columns=columns, show="headings", height=20)
         headings = [
-            ("cc_code", 115, "Mã CC"),
-            ("period", 85, "Tháng"),
+            ("cc_code", 105, "Mã CC"),
+            ("period", 80, "Period"),
+            ("target_month", 90, "Tháng"),
             ("event_name", 170, "Sự kiện"),
-            ("count", 80, "Số người"),
+            ("event_type", 150, "Loại event"),
+            ("count", 70, "Count"),
             ("unit_price", 100, "Đơn giá"),
-            ("amount_vnd", 120, "Số tiền"),
-            ("account_code", 95, "Mã tài khoản"),
-            ("form_row", 80, "Dòng FORM"),
-            ("description", 300, "Ghi chú"),
+            ("unit_price_key", 120, "Key đơn giá"),
+            ("allocation_content", 130, "Nội dung phân bổ"),
+            ("amount_vnd", 115, "Số tiền"),
+            ("account_code", 95, "Mã TK"),
+            ("account_jp_name", 120, "Tên TK Nhật"),
+            ("account_name", 120, "Alias TK"),
+            ("account_group", 100, "Nhóm TK"),
+            ("form_row", 75, "Form row"),
+            ("row", 65, "Row"),
+            ("source_month", 100, "Source month"),
+            ("headcount_basis", 120, "Headcount basis"),
+            ("description", 180, "Description"),
+            ("note", 220, "Note"),
         ]
         for col, width, text in headings:
             tree.heading(col, text=text)
@@ -1343,14 +1362,38 @@ class MPManagerApp:
             return raw
 
         def clear_inputs():
-            for variable in (cc_var, period_var, event_var, count_var, unit_price_var, amount_var, account_var, form_row_var, desc_var):
+            for variable in (
+                cc_var,
+                period_var,
+                event_var,
+                event_type_var,
+                count_var,
+                unit_price_var,
+                unit_price_key_var,
+                amount_var,
+                account_var,
+                account_jp_name_var,
+                form_row_var,
+                desc_var,
+            ):
                 variable.set("")
+            event_type_var.set("month_specific_driver")
 
         def load_rows():
             for item in tree.get_children():
                 tree.delete(item)
             for row in self._read_csv_rows(csv_path):
-                tree.insert("", tk.END, values=tuple(str(row.get(col, "") or "").strip() for col in columns))
+                values = []
+                for col in columns:
+                    value = str(row.get(col, "") or "").strip()
+                    if col == "target_month" and not value:
+                        value = str(row.get("period", "") or "").strip()
+                    elif col == "row" and not value:
+                        value = str(row.get("form_row", "") or "").strip()
+                    elif col == "note" and not value:
+                        value = str(row.get("description", "") or "").strip()
+                    values.append(value)
+                tree.insert("", tk.END, values=tuple(values))
 
         def validate_numeric(raw, label, required=False):
             text = str(raw or "").strip()
@@ -1367,29 +1410,45 @@ class MPManagerApp:
             event_name = event_var.get().strip()
             try:
                 if not cc_code or not period or not event_name:
-                    raise ValueError("Cần nhập Mã CC, Tháng và Sự kiện.")
-                count = validate_numeric(count_var.get(), "số người")
+                    raise ValueError("Cần nhập Mã CC, Tháng ghi chi phí và Sự kiện.")
+                count = validate_numeric(count_var.get(), "số người/count")
                 unit_price = validate_numeric(unit_price_var.get(), "đơn giá")
+                unit_price_key = unit_price_key_var.get().strip()
                 amount_vnd = validate_numeric(amount_var.get(), "số tiền")
-                account_code = validate_numeric(account_var.get(), "mã tài khoản", required=True)
+                account_code = validate_numeric(account_var.get(), "mã tài khoản")
+                account_jp_name = account_jp_name_var.get().strip()
                 form_row = validate_numeric(form_row_var.get(), "dòng FORM")
-                if not ((count and unit_price) or amount_vnd):
-                    raise ValueError("Cần nhập Số người + Đơn giá, hoặc nhập Số tiền trực tiếp.")
+                if not account_code and not account_jp_name:
+                    raise ValueError("Cần nhập Mã tài khoản, hoặc Tên TK Nhật để tự resolve account_code.")
+                if not ((count and (unit_price or unit_price_key)) or amount_vnd):
+                    raise ValueError("Cần nhập count + unit_price, hoặc count + unit_price_key, hoặc amount_vnd.")
             except Exception as exc:
                 messagebox.showerror("Lỗi dữ liệu", str(exc))
                 return
 
-            values = (
-                cc_code,
-                period,
-                event_name,
-                count,
-                unit_price,
-                amount_vnd,
-                account_code,
-                form_row,
-                desc_var.get().strip(),
+            row_data = {col: "" for col in columns}
+            row_data.update(
+                {
+                    "cc_code": cc_code,
+                    "period": period,
+                    "target_month": period,
+                    "event_name": event_name,
+                    "event_type": event_type_var.get().strip() or "month_specific_driver",
+                    "count": count,
+                    "unit_price": unit_price,
+                    "unit_price_key": unit_price_key,
+                    "allocation_content": unit_price_key,
+                    "amount_vnd": amount_vnd,
+                    "account_code": account_code,
+                    "account_jp_name": account_jp_name,
+                    "account_name": account_jp_name,
+                    "form_row": form_row,
+                    "row": form_row,
+                    "description": desc_var.get().strip(),
+                    "note": desc_var.get().strip(),
+                }
             )
+            values = tuple(row_data[col] for col in columns)
             selected = tree.selection()
             if selected:
                 tree.item(selected[0], values=values)
@@ -1406,17 +1465,25 @@ class MPManagerApp:
             if not selected:
                 return
             values = tree.item(selected[0], "values")
-            for variable, value in zip(
-                (cc_var, period_var, event_var, count_var, unit_price_var, amount_var, account_var, form_row_var, desc_var),
-                values,
-            ):
-                variable.set(value)
+            row_data = {col: str(values[index]) if index < len(values) else "" for index, col in enumerate(columns)}
+            cc_var.set(row_data.get("cc_code", ""))
+            period_var.set(row_data.get("target_month") or row_data.get("period", ""))
+            event_var.set(row_data.get("event_name", ""))
+            event_type_var.set(row_data.get("event_type", "") or "month_specific_driver")
+            count_var.set(row_data.get("count", ""))
+            unit_price_var.set(row_data.get("unit_price", ""))
+            unit_price_key_var.set(row_data.get("unit_price_key") or row_data.get("allocation_content", ""))
+            amount_var.set(row_data.get("amount_vnd", ""))
+            account_var.set(row_data.get("account_code", ""))
+            account_jp_name_var.set(row_data.get("account_jp_name") or row_data.get("account_name", ""))
+            form_row_var.set(row_data.get("row") or row_data.get("form_row", ""))
+            desc_var.set(row_data.get("note") or row_data.get("description", ""))
 
         def save_file():
             rows = []
             for item in tree.get_children():
                 values = tree.item(item, "values")
-                rows.append({col: values[index] for index, col in enumerate(columns)})
+                rows.append({col: values[index] if index < len(values) else "" for index, col in enumerate(columns)})
             self._write_csv_rows(csv_path, columns, rows)
             self.log(f"Lưu sự kiện thiếu dữ liệu: số dòng={len(rows)}, tệp={csv_path}")
             messagebox.showinfo("Đã lưu", f"Đã lưu {len(rows)} dòng sự kiện.")
