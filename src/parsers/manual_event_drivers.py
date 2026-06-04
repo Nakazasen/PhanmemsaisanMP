@@ -72,6 +72,14 @@ def _normalize_period(raw_period: Any, valid_periods: set[str]) -> str | None:
     return None
 
 
+def _target_periods(raw_period: Any, fy_months: list[str], valid_periods: set[str]) -> tuple[list[str], bool]:
+    text = str(raw_period or "").strip().lower()
+    if text in {"all", "every_month", "12months"}:
+        return list(fy_months), True
+    period = _normalize_period(raw_period, valid_periods)
+    return ([period], False) if period is not None else ([], False)
+
+
 def _format_number(value: float) -> str:
     return str(int(round(value))) if abs(value - round(value)) < 1e-9 else str(value)
 
@@ -179,7 +187,8 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
     """
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
     fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip()) if fy_row else 2027
-    valid_periods = set(get_fy_months(fiscal_year))
+    fy_months = get_fy_months(fiscal_year)
+    valid_periods = set(fy_months)
 
     search_dir = source_dir or os.getcwd()
     template_path = ensure_manual_event_drivers_template(search_dir, fiscal_year)
@@ -231,7 +240,7 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                 continue
 
             cc_code = normalize_cc_code(row.get("cc_code"))
-            period = _normalize_period(period_text, valid_periods)
+            target_periods, repeat_all_months = _target_periods(period_text, fy_months, valid_periods)
             event_name = str(row.get("event_name", "") or "").strip()
             event_type = str(row.get("event_type", "") or "").strip()
             description = str(row.get("description", "") or "").strip()
@@ -261,7 +270,7 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                     errors += 1
                     continue
 
-            if not cc_code or cc_code not in valid_cc_codes or period is None or not event_name:
+            if not cc_code or cc_code not in valid_cc_codes or not target_periods or not event_name:
                 errors += 1
                 continue
             if account_code not in valid_accounts:
@@ -306,15 +315,20 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
 
             final_description = description or event_name
             final_description = f"{event_name}: {final_description}|formula_expr={formula_expr}"
-            cursor.execute(
+            if repeat_all_months:
+                final_description = f"{final_description}|repeat=all_months"
+            cursor.executemany(
                 """
                 INSERT INTO fact_input_data
                 (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
                 VALUES (?, ?, ?, ?, ?, ?, 'base', ?)
                 """,
-                (SOURCE_NAME, period, amount_vnd, cc_code, account_code, form_row, final_description),
+                [
+                    (SOURCE_NAME, period, amount_vnd, cc_code, account_code, form_row, final_description)
+                    for period in target_periods
+                ],
             )
-            inserted += 1
+            inserted += len(target_periods)
 
     conn.commit()
     return {"inserted": inserted, "skipped": skipped, "errors": errors, "template_path": template_path}

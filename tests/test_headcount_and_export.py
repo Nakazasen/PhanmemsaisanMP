@@ -803,6 +803,81 @@ class TestManualSpecialCosts(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_manual_bus_jp_event_driver_all_months_posts_to_row_53(self):
+        conn = _mk_conn()
+        cc_code = self._seed_travel_resolver_master(conn)
+        periods = get_fy_months(2027)
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "target_month",
+                        "event_name",
+                        "event_type",
+                        "count",
+                        "unit_price",
+                        "account_jp_name",
+                        "row",
+                        "note",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "target_month": "all",
+                        "event_name": "出向者BUS送迎費 Chi phí xe bus người JP",
+                        "event_type": "manual_count_unit_price",
+                        "count": "10",
+                        "unit_price": "12345",
+                        "account_jp_name": "福利厚生費",
+                        "row": "53",
+                        "note": "Bus JP all months test",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 12)
+            self.assertEqual(result["errors"], 0)
+
+            fact_rows = conn.execute(
+                """
+                SELECT period, account_code, form_row, amount_vnd, description
+                FROM fact_input_data
+                WHERE source = 'manual_event_driver'
+                ORDER BY period
+                """
+            ).fetchall()
+            self.assertEqual([row["period"] for row in fact_rows], sorted(periods))
+            for row in fact_rows:
+                self.assertEqual(int(row["account_code"]), 5004086291)
+                self.assertEqual(int(row["form_row"]), 53)
+                self.assertEqual(float(row["amount_vnd"]), 123450.0)
+                self.assertIn("formula_expr=10*12345", row["description"])
+                self.assertIn("repeat=all_months", row["description"])
+
+            template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+            output_path = tmpdir / "out_manual_bus_jp_all_months.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws["B53"].value, 5004086291)
+                for column in range(6, 18):
+                    self.assertEqual(ws.cell(53, column).value, "=10*12345")
+                self.assertEqual(ws["R53"].value, "=SUM(F53:Q53)")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_manual_event_driver_explicit_unit_price_wins_over_key(self):
         conn = _mk_conn()
         cc_code = self._seed_travel_resolver_master(conn)
