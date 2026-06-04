@@ -12,8 +12,41 @@ from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
 
 TEMPLATE_FILENAME = "event_drivers_manual.csv"
 SOURCE_NAME = "manual_event_driver"
-REQUIRED_COLUMNS = ("cc_code", "period", "event_name", "account_code")
-OPTIONAL_COLUMNS = ("count", "unit_price", "amount_vnd", "form_row", "description")
+ALLOWED_EVENT_TYPES = {"", "manual_amount", "manual_count_unit_price", "month_specific_driver"}
+REQUIRED_COLUMNS = ("cc_code", "event_name", "account_code")
+OPTIONAL_COLUMNS = (
+    "period",
+    "target_month",
+    "event_type",
+    "count",
+    "unit_price",
+    "amount_vnd",
+    "account_group",
+    "form_row",
+    "row",
+    "source_month",
+    "headcount_basis",
+    "description",
+    "note",
+)
+TEMPLATE_COLUMNS = (
+    "cc_code",
+    "period",
+    "target_month",
+    "event_name",
+    "event_type",
+    "count",
+    "unit_price",
+    "amount_vnd",
+    "account_code",
+    "account_group",
+    "form_row",
+    "row",
+    "source_month",
+    "headcount_basis",
+    "description",
+    "note",
+)
 
 
 def _normalize_period(raw_period: Any, valid_periods: set[str]) -> str | None:
@@ -41,20 +74,20 @@ def ensure_manual_event_drivers_template(source_dir: str, fiscal_year: int) -> s
 
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
-        writer.writerow(
-            [
-                "cc_code",
-                "period",
-                "event_name",
-                "count",
-                "unit_price",
-                "amount_vnd",
-                "account_code",
-                "form_row",
-                "description",
-            ]
-        )
+        writer.writerow(TEMPLATE_COLUMNS)
     return path
+
+
+def _same_nonempty_values(left: str, right: str) -> bool:
+    return not left or not right or left == right
+
+
+def _merged_value(row: dict[str, Any], primary: str, alias: str) -> tuple[str, bool]:
+    primary_value = str(row.get(primary, "") or "").strip()
+    alias_value = str(row.get(alias, "") or "").strip()
+    if not _same_nonempty_values(primary_value, alias_value):
+        return "", False
+    return primary_value or alias_value, True
 
 
 def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[str, int | str]:
@@ -111,10 +144,24 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                 skipped += 1
                 continue
 
+            period_text, period_ok = _merged_value(row, "period", "target_month")
+            form_row_text, form_row_ok = _merged_value(row, "form_row", "row")
+            if not period_ok or not form_row_ok:
+                errors += 1
+                continue
+
             cc_code = normalize_cc_code(row.get("cc_code"))
-            period = _normalize_period(row.get("period"), valid_periods)
+            period = _normalize_period(period_text, valid_periods)
             event_name = str(row.get("event_name", "") or "").strip()
+            event_type = str(row.get("event_type", "") or "").strip()
             description = str(row.get("description", "") or "").strip()
+            note = str(row.get("note", "") or "").strip()
+            if not description:
+                description = note
+
+            if event_type not in ALLOWED_EVENT_TYPES:
+                errors += 1
+                continue
 
             try:
                 account_code = int(float(str(row.get("account_code", "")).strip()))
@@ -130,10 +177,9 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                 continue
 
             form_row = None
-            raw_form_row = str(row.get("form_row", "") or "").strip()
-            if raw_form_row:
+            if form_row_text:
                 try:
-                    form_row = int(float(raw_form_row))
+                    form_row = int(float(form_row_text))
                 except (TypeError, ValueError):
                     errors += 1
                     continue

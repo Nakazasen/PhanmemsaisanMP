@@ -375,6 +375,216 @@ class TestManualSpecialCosts(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_manual_event_driver_template_includes_friendly_schema_columns(self):
+        from src.parsers.manual_event_drivers import ensure_manual_event_drivers_template
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = Path(ensure_manual_event_drivers_template(str(tmpdir), 2027))
+            with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+                header = next(csv.reader(f))
+
+            self.assertEqual(
+                header,
+                [
+                    "cc_code",
+                    "period",
+                    "target_month",
+                    "event_name",
+                    "event_type",
+                    "count",
+                    "unit_price",
+                    "amount_vnd",
+                    "account_code",
+                    "account_group",
+                    "form_row",
+                    "row",
+                    "source_month",
+                    "headcount_basis",
+                    "description",
+                    "note",
+                ],
+            )
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_event_driver_accepts_new_alias_columns(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        conn.execute(
+            "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
+        )
+        conn.commit()
+        period = get_fy_months(2027)[2]
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "target_month",
+                        "event_name",
+                        "event_type",
+                        "count",
+                        "unit_price",
+                        "account_code",
+                        "row",
+                        "note",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "target_month": period,
+                        "event_name": "month_specific_driver",
+                        "event_type": "manual_count_unit_price",
+                        "count": "4",
+                        "unit_price": "2500",
+                        "account_code": "5004086291",
+                        "row": "137",
+                        "note": "Alias driven event",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 1)
+            self.assertEqual(result["errors"], 0)
+
+            row = conn.execute(
+                """
+                SELECT period, amount_vnd, form_row, description
+                FROM fact_input_data
+                WHERE source = 'manual_event_driver'
+                """
+            ).fetchone()
+            self.assertIsNotNone(row)
+            self.assertEqual(row["period"], period)
+            self.assertEqual(float(row["amount_vnd"]), 10000.0)
+            self.assertEqual(int(row["form_row"]), 137)
+            self.assertEqual(row["description"], "month_specific_driver: Alias driven event|formula_expr=4*2500")
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_event_driver_rejects_conflicting_alias_values(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        conn.execute(
+            "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
+        )
+        conn.commit()
+        periods = get_fy_months(2027)
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "period",
+                        "target_month",
+                        "event_name",
+                        "count",
+                        "unit_price",
+                        "account_code",
+                        "form_row",
+                        "row",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "period": periods[0],
+                        "target_month": periods[1],
+                        "event_name": "period conflict",
+                        "count": "1",
+                        "unit_price": "100",
+                        "account_code": "5004086291",
+                        "form_row": "46",
+                        "row": "46",
+                    }
+                )
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "period": periods[0],
+                        "target_month": periods[0],
+                        "event_name": "row conflict",
+                        "count": "1",
+                        "unit_price": "100",
+                        "account_code": "5004086291",
+                        "form_row": "46",
+                        "row": "47",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 0)
+            self.assertEqual(result["errors"], 2)
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_event_driver_validates_event_type(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        conn.execute(
+            "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
+        )
+        conn.commit()
+        period = get_fy_months(2027)[0]
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "period",
+                        "event_name",
+                        "event_type",
+                        "amount_vnd",
+                        "account_code",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "period": period,
+                        "event_name": "manual amount",
+                        "event_type": "manual_amount",
+                        "amount_vnd": "1234",
+                        "account_code": "5004086291",
+                    }
+                )
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "period": period,
+                        "event_name": "bad type",
+                        "event_type": "unknown_event",
+                        "amount_vnd": "5678",
+                        "account_code": "5004086291",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 1)
+            self.assertEqual(result["errors"], 1)
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_nnn_paperwork_workbook_parser_exports_to_row_137(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
