@@ -484,6 +484,86 @@ class TestManualSpecialCosts(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_manual_worker_notebook_event_driver_posts_to_row_98(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn, code=1412000089, cost_type="製造")
+        conn.execute(
+            "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5005246288, '事務用消耗品費', 'Office supplies')"
+        )
+        conn.commit()
+        period = "202705"
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "target_month",
+                        "event_name",
+                        "event_type",
+                        "count",
+                        "unit_price",
+                        "account_code",
+                        "row",
+                        "note",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "target_month": period,
+                        "event_name": "新入社員：ノート (G7社員用） Người mới: Sổ tay công nhân",
+                        "event_type": "manual_count_unit_price",
+                        "count": "4",
+                        "unit_price": "4000",
+                        "account_code": "5005246288",
+                        "row": "98",
+                        "note": "Worker notebook row 98 test",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 1)
+            self.assertEqual(result["errors"], 0)
+
+            fact_row = conn.execute(
+                """
+                SELECT period, cc_code, account_code, form_row, amount_vnd, description
+                FROM fact_input_data
+                WHERE source = 'manual_event_driver'
+                """
+            ).fetchone()
+            self.assertIsNotNone(fact_row)
+            self.assertEqual(fact_row["period"], "202705")
+            self.assertEqual(str(fact_row["cc_code"]), "1412000089")
+            self.assertEqual(int(fact_row["account_code"]), 5005246288)
+            self.assertEqual(int(fact_row["form_row"]), 98)
+            self.assertEqual(float(fact_row["amount_vnd"]), 16000.0)
+            self.assertIn("formula_expr=4*4000", fact_row["description"])
+
+            template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+            output_path = tmpdir / "out_manual_worker_notebook.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws["B98"].value, 5005246288)
+                self.assertEqual(ws["G98"].value, "=4*4000")
+                self.assertEqual(ws["R98"].value, "=SUM(F98:Q98)")
+                other_month_cells = ["F98", "H98", "I98", "J98", "K98", "L98", "M98", "N98", "O98", "P98", "Q98"]
+                self.assertTrue(all(ws[cell].value is None for cell in other_month_cells))
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_manual_event_driver_resolves_account_jp_name_for_travel_manufacturing(self):
         conn = _mk_conn()
         cc_code = 1412000089
