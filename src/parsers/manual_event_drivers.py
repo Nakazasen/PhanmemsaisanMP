@@ -17,6 +17,9 @@ REQUIRED_COLUMNS = ("cc_code", "event_name")
 OPTIONAL_COLUMNS = (
     "period",
     "target_month",
+    "source_month",
+    "posting_rule",
+    "target_month_rule",
     "event_type",
     "count",
     "unit_price",
@@ -29,7 +32,6 @@ OPTIONAL_COLUMNS = (
     "account_group",
     "form_row",
     "row",
-    "source_month",
     "headcount_basis",
     "description",
     "note",
@@ -38,6 +40,8 @@ TEMPLATE_COLUMNS = (
     "cc_code",
     "period",
     "target_month",
+    "source_month",
+    "posting_rule",
     "event_name",
     "event_type",
     "count",
@@ -51,7 +55,6 @@ TEMPLATE_COLUMNS = (
     "account_group",
     "form_row",
     "row",
-    "source_month",
     "headcount_basis",
     "description",
     "note",
@@ -78,6 +81,52 @@ def _target_periods(raw_period: Any, fy_months: list[str], valid_periods: set[st
         return list(fy_months), True
     period = _normalize_period(raw_period, valid_periods)
     return ([period], False) if period is not None else ([], False)
+
+
+def _normalize_posting_rule(value: Any) -> str:
+    return str(value or "").replace("\u3000", " ").strip().lower()
+
+
+def _is_next_month_rule(value: Any) -> bool:
+    return _normalize_posting_rule(value) in {"next_month", "next_month_from_source", "source_month_next"}
+
+
+def _next_calendar_month(period: str) -> str | None:
+    text = str(period or "").strip()
+    if len(text) != 6 or not text.isdigit():
+        return None
+    year = int(text[:4])
+    month = int(text[4:])
+    if not 1 <= month <= 12:
+        return None
+    if month == 12:
+        return f"{year + 1}01"
+    return f"{year}{month + 1:02d}"
+
+
+def _target_periods_from_rule(
+    row: dict[str, Any], fy_months: list[str], valid_periods: set[str]
+) -> tuple[list[str], bool, str, str | None]:
+    posting_rule, posting_rule_ok = _merged_value(row, "posting_rule", "target_month_rule")
+    if not posting_rule_ok:
+        return [], False, "", "Conflicting posting_rule/target_month_rule values"
+    if not _is_next_month_rule(posting_rule):
+        period_text, period_ok = _merged_value(row, "period", "target_month")
+        if not period_ok:
+            return [], False, "", "Conflicting period/target_month values"
+        target_periods, repeat_all_months = _target_periods(period_text, fy_months, valid_periods)
+        return target_periods, repeat_all_months, "", None
+
+    source_text = str(row.get("source_month") or "").strip()
+    shifted_period = _next_calendar_month(source_text)
+    if shifted_period is None:
+        return [], False, "", "posting_rule next_month requires a valid source_month"
+    if shifted_period not in valid_periods:
+        return [], False, "", f"next month from source_month {source_text} is outside FY months"
+    source_period = _normalize_period(source_text, valid_periods)
+    if source_period is None:
+        source_period = source_text
+    return [shifted_period], False, f"|source_month={source_period}|posting_rule=next_month|shifted_to={shifted_period}", None
 
 
 def _format_number(value: float) -> str:
@@ -211,6 +260,7 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
     inserted = 0
     skipped = 0
     errors = 0
+    error_messages: list[str] = []
 
     with open(template_path, "r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
@@ -233,14 +283,15 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                 skipped += 1
                 continue
 
-            period_text, period_ok = _merged_value(row, "period", "target_month")
-            form_row_text, form_row_ok = _merged_value(row, "form_row", "row")
-            if not period_ok or not form_row_ok:
+            target_periods, repeat_all_months, shift_metadata, period_error = _target_periods_from_rule(
+                row, fy_months, valid_periods
+            )
+            if period_error:
                 errors += 1
+                error_messages.append(period_error)
                 continue
 
             cc_code = normalize_cc_code(row.get("cc_code"))
-            target_periods, repeat_all_months = _target_periods(period_text, fy_months, valid_periods)
             event_name = str(row.get("event_name", "") or "").strip()
             event_type = str(row.get("event_type", "") or "").strip()
             description = str(row.get("description", "") or "").strip()
@@ -271,6 +322,10 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                     continue
 
             if not cc_code or cc_code not in valid_cc_codes or not target_periods or not event_name:
+                errors += 1
+                continue
+            form_row_text, form_row_ok = _merged_value(row, "form_row", "row")
+            if not form_row_ok:
                 errors += 1
                 continue
             if account_code not in valid_accounts:
@@ -314,7 +369,7 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                 continue
 
             final_description = description or event_name
-            final_description = f"{event_name}: {final_description}|formula_expr={formula_expr}"
+            final_description = f"{event_name}: {final_description}|formula_expr={formula_expr}{shift_metadata}"
             if repeat_all_months:
                 final_description = f"{final_description}|repeat=all_months"
             cursor.executemany(
@@ -331,4 +386,7 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
             inserted += len(target_periods)
 
     conn.commit()
-    return {"inserted": inserted, "skipped": skipped, "errors": errors, "template_path": template_path}
+    result: dict[str, int | str] = {"inserted": inserted, "skipped": skipped, "errors": errors, "template_path": template_path}
+    if error_messages:
+        result["error_message"] = "; ".join(error_messages)
+    return result

@@ -564,6 +564,145 @@ class TestManualSpecialCosts(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_manual_recruitment_health_event_driver_source_month_posts_next_month_to_row_58(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn, code=1412000089, cost_type="製造")
+        conn.execute(
+            "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
+        )
+        conn.commit()
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "source_month",
+                        "posting_rule",
+                        "event_name",
+                        "event_type",
+                        "count",
+                        "unit_price",
+                        "account_code",
+                        "row",
+                        "note",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "source_month": "202706",
+                        "posting_rule": "next_month",
+                        "event_name": "採用の健康診断費 Chi phí khám sức khỏe tuyển dụng",
+                        "event_type": "manual_count_unit_price",
+                        "count": "2",
+                        "unit_price": "123000",
+                        "account_code": "5004086291",
+                        "row": "58",
+                        "note": "Recruitment health source month next month test",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 1)
+            self.assertEqual(result["errors"], 0)
+
+            fact_row = conn.execute(
+                """
+                SELECT period, cc_code, account_code, form_row, amount_vnd, description
+                FROM fact_input_data
+                WHERE source = 'manual_event_driver'
+                """
+            ).fetchone()
+            self.assertIsNotNone(fact_row)
+            self.assertEqual(fact_row["period"], "202707")
+            self.assertEqual(str(fact_row["cc_code"]), "1412000089")
+            self.assertEqual(int(fact_row["account_code"]), 5004086291)
+            self.assertEqual(int(fact_row["form_row"]), 58)
+            self.assertEqual(float(fact_row["amount_vnd"]), 246000.0)
+            self.assertIn("formula_expr=2*123000", fact_row["description"])
+            self.assertIn("source_month=202706", fact_row["description"])
+            self.assertIn("posting_rule=next_month", fact_row["description"])
+            self.assertIn("shifted_to=202707", fact_row["description"])
+
+            template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+            output_path = tmpdir / "out_manual_recruitment_health.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws["B58"].value, 5004086291)
+                self.assertIsNone(ws["H58"].value)
+                self.assertEqual(ws["I58"].value, "=2*123000")
+                self.assertEqual(ws["R58"].value, "=SUM(F58:Q58)")
+                self.assertIsNone(ws["I57"].value)
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_recruitment_health_source_month_outside_fy_fails_closed(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn, code=1412000089, cost_type="製造")
+        conn.execute(
+            "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
+        )
+        conn.commit()
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "source_month",
+                        "posting_rule",
+                        "event_name",
+                        "event_type",
+                        "count",
+                        "unit_price",
+                        "account_code",
+                        "row",
+                        "note",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "source_month": "202803",
+                        "posting_rule": "next_month",
+                        "event_name": "採用の健康診断費 Chi phí khám sức khỏe tuyển dụng",
+                        "event_type": "manual_count_unit_price",
+                        "count": "1",
+                        "unit_price": "123000",
+                        "account_code": "5004086291",
+                        "row": "58",
+                        "note": "Recruitment health outside FY test",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 0)
+            self.assertEqual(result["errors"], 1)
+            self.assertIn("outside FY", str(result.get("error_message", "")))
+            count = conn.execute(
+                "SELECT COUNT(*) FROM fact_input_data WHERE source = 'manual_event_driver' AND form_row = 58"
+            ).fetchone()[0]
+            self.assertEqual(count, 0)
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_manual_event_driver_resolves_account_jp_name_for_travel_manufacturing(self):
         conn = _mk_conn()
         cc_code = 1412000089
@@ -1301,6 +1440,8 @@ class TestManualSpecialCosts(unittest.TestCase):
                     "cc_code",
                     "period",
                     "target_month",
+                    "source_month",
+                    "posting_rule",
                     "event_name",
                     "event_type",
                     "count",
@@ -1314,7 +1455,6 @@ class TestManualSpecialCosts(unittest.TestCase):
                     "account_group",
                     "form_row",
                     "row",
-                    "source_month",
                     "headcount_basis",
                     "description",
                     "note",
