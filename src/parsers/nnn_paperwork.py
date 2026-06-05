@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ast
 import datetime
+import operator
 import sqlite3
 from pathlib import Path
 
@@ -25,24 +27,63 @@ def _normalize_header(val) -> str:
     if isinstance(val, (datetime.datetime, datetime.date)):
         return val.strftime("%Y%m")
     val_str = str(val).strip().lower()
-    for char in ["/", "-", ".", " ", "_"]:
+    for char in ["/", "-", ".", " ", "_", "\n", "\r", "\t"]:
         val_str = val_str.replace(char, "")
     return val_str
 
 
+def _matches_header(cell: str, aliases: set[str]) -> bool:
+    return cell in aliases or any(alias and alias in cell for alias in aliases)
+
+
+_FORMULA_OPERATORS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.USub: operator.neg,
+}
+
+
+def _evaluate_simple_formula(expr: str) -> float | None:
+    """Evaluate simple numeric Excel formulas without cell refs/functions."""
+    try:
+        node = ast.parse(expr, mode="eval")
+    except SyntaxError:
+        return None
+
+    def _eval(inner):
+        if isinstance(inner, ast.Expression):
+            return _eval(inner.body)
+        if isinstance(inner, ast.Constant) and isinstance(inner.value, (int, float)):
+            return float(inner.value)
+        if isinstance(inner, ast.UnaryOp) and type(inner.op) in _FORMULA_OPERATORS:
+            return _FORMULA_OPERATORS[type(inner.op)](_eval(inner.operand))
+        if isinstance(inner, ast.BinOp) and type(inner.op) in _FORMULA_OPERATORS:
+            return _FORMULA_OPERATORS[type(inner.op)](_eval(inner.left), _eval(inner.right))
+        raise ValueError("unsupported formula")
+
+    try:
+        return float(_eval(node))
+    except Exception:
+        return None
+
+
 CC_RAW = [
     "cost center", "costcenter", "code phòng chịu chi phí", "code phong chiu chi phi",
-    "mã cost center", "ma cost center", "原価センタ", "cc_code", "cost_center", "cc code", "cccode"
+    "mã cost center", "ma cost center", "mã costcenter", "ma costcenter",
+    "コードセンター", "原価センタ", "cc_code", "cost_center", "cc code", "cccode"
 ]
 ACC_RAW = [
     "account code", "accountcode", "code tài khoản chịu chi phí", "code tai khan chiu chi phi",
-    "code tài khoản", "code tai khoan", "mã tài khoản", "ma tai khoan", "勘定科目", "account"
+    "code tài khoản", "code tai khoan", "mã tài khoản", "ma tai khoan", "コード",
+    "勘定科目", "account"
 ]
 EMP_CODE_RAW = [
     "mã nhân viên", "ma nhan vien", "employee code", "mã nv", "ma nv", "emp code", "社員番号", "code nhân viên"
 ]
 EMP_NAME_RAW = [
-    "tên nhân viên", "ten nhan vien", "employee name", "tên nv", "ten nv", "emp name", "氏名", "tên người nước ngoài"
+    "tên nhân viên", "ten nhan vien", "employee name", "tên nv", "ten nv", "emp name", "氏名", "お名前", "name", "tên người nước ngoài"
 ]
 
 CC_ALIASES = { _normalize_header(x) for x in CC_RAW }
@@ -76,6 +117,12 @@ MONTH_MAP = {
     # Tháng 3 (index 11)
     "202603": 11, "202703": 11, "mar2026": 11, "mar2027": 11, "march2026": 11, "march2027": 11, "3月": 11,
 }
+for year in (2026, 2027):
+    for month in range(1, 13):
+        normalized = _normalize_header(f"{year}年{month}月")
+        mapped_period = MONTH_MAP.get(f"{year}{month:02d}") or MONTH_MAP.get(f"{month}月")
+        if mapped_period is not None:
+            MONTH_MAP[normalized] = mapped_period
 
 
 def find_nnn_paperwork_file(source_dir: str | None = None) -> str | None:
@@ -128,8 +175,8 @@ def parse_nnn_paperwork(conn: sqlite3.Connection, source_dir: str | None = None,
             if not row:
                 continue
             normalized_row = [_normalize_header(cell) for cell in row]
-            has_cc = any(cell in CC_ALIASES for cell in normalized_row)
-            has_acc = any(cell in ACC_ALIASES for cell in normalized_row)
+            has_cc = any(_matches_header(cell, CC_ALIASES) for cell in normalized_row)
+            has_acc = any(_matches_header(cell, ACC_ALIASES) for cell in normalized_row)
             has_month = any(cell in MONTH_MAP for cell in normalized_row)
             if has_cc and has_acc and has_month:
                 header_row_idx = row_idx
@@ -146,13 +193,13 @@ def parse_nnn_paperwork(conn: sqlite3.Connection, source_dir: str | None = None,
         month_col_indices = {}
 
         for col_idx, cell in enumerate(header_cells):
-            if cell in CC_ALIASES and cc_col_idx is None:
+            if _matches_header(cell, CC_ALIASES) and cc_col_idx is None:
                 cc_col_idx = col_idx
-            elif cell in ACC_ALIASES and acc_col_idx is None:
+            elif _matches_header(cell, ACC_ALIASES) and acc_col_idx is None:
                 acc_col_idx = col_idx
-            elif cell in EMP_CODE_ALIASES and emp_code_col_idx is None:
+            elif _matches_header(cell, EMP_CODE_ALIASES) and emp_code_col_idx is None:
                 emp_code_col_idx = col_idx
-            elif cell in EMP_NAME_ALIASES and emp_name_col_idx is None:
+            elif _matches_header(cell, EMP_NAME_ALIASES) and emp_name_col_idx is None:
                 emp_name_col_idx = col_idx
             elif cell in MONTH_MAP:
                 period = MONTH_MAP[cell]
@@ -196,13 +243,17 @@ def parse_nnn_paperwork(conn: sqlite3.Connection, source_dir: str | None = None,
                     continue
                 col_idx = month_col_indices[offset]
                 amount = safe_float(row[col_idx] if len(row) > col_idx else 0)
-                if amount <= 0:
-                    continue
                 raw_formula = formula_row[col_idx] if len(formula_row) > col_idx else None
                 if isinstance(raw_formula, str) and raw_formula.startswith("="):
                     formula_expr = raw_formula[1:]
+                    if amount <= 0:
+                        evaluated = _evaluate_simple_formula(formula_expr)
+                        if evaluated is not None:
+                            amount = evaluated
                 else:
                     formula_expr = _format_formula_number(amount)
+                if amount <= 0:
+                    continue
                 cursor.execute(
                     """
                     INSERT INTO fact_input_data

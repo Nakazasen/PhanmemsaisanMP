@@ -311,6 +311,61 @@ class TestNNNPaperworkParser(unittest.TestCase):
             parse_nnn_paperwork(conn, workbook_path=str(workbook_path))
 
         conn.close()
+    def test_parse_nnn_japanese_month_headers(self):
+        conn = _mk_conn()
+        cc_code = "1412000018"
+        _seed_cc(conn, cc_code)
+        periods = get_fy_months(2027)
+
+        tmpdir = self._create_temp_dir()
+        workbook_path = tmpdir / "nnn_japanese_month_headers.xlsx"
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "FY2027"
+        ws.append(["コードセンター\nMã costcenter", "コード\nMã tài khoản", "2026年4月", "2026年5月"])
+        ws.append([cc_code, 5005246286, 1000, 2000])
+        wb.save(workbook_path)
+        wb.close()
+
+        result = parse_nnn_paperwork(conn, workbook_path=str(workbook_path))
+
+        self.assertEqual(result["errors"], 0)
+        self.assertEqual(result["inserted"], 2)
+        rows = conn.execute(
+            "SELECT period, amount_vnd FROM fact_input_data WHERE source = 'nnn_paperwork' ORDER BY period"
+        ).fetchall()
+        self.assertEqual([row["period"] for row in rows], periods[:2])
+        self.assertEqual([float(row["amount_vnd"]) for row in rows], [1000.0, 2000.0])
+        conn.close()
+
+    def test_parse_nnn_simple_excel_formula_values(self):
+        conn = _mk_conn()
+        cc_code = "1412000018"
+        _seed_cc(conn, cc_code)
+
+        tmpdir = self._create_temp_dir()
+        workbook_path = tmpdir / "nnn_formula_values.xlsx"
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "FY2027"
+        ws.append(["コードセンター\nMã costcenter", "コード\nMã tài khoản", "2026年4月", "2026年5月"])
+        ws.append([cc_code, 5005246286, "=130000+1820000+50000", "=105*26400"])
+        wb.save(workbook_path)
+        wb.close()
+
+        result = parse_nnn_paperwork(conn, workbook_path=str(workbook_path))
+
+        self.assertEqual(result["errors"], 0)
+        self.assertEqual(result["inserted"], 2)
+        rows = conn.execute(
+            "SELECT amount_vnd, description FROM fact_input_data WHERE source = 'nnn_paperwork' ORDER BY period"
+        ).fetchall()
+        self.assertEqual([float(row["amount_vnd"]) for row in rows], [2000000.0, 2772000.0])
+        self.assertIn("formula_expr=130000+1820000+50000", rows[0]["description"])
+        self.assertIn("formula_expr=105*26400", rows[1]["description"])
+        conn.close()
 
 
 if __name__ == "__main__":
