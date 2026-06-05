@@ -13,6 +13,10 @@ data/
 *.xls
 !FORM.xlsx
 
+# Keep generated Excel files ignored by default, but track requirement source workbooks.
+!raw/requirements/
+!raw/requirements/*.xlsx
+
 # System files
 .DS_Store
 Thumbs.db
