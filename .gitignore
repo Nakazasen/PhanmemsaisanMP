@@ -17,6 +17,14 @@ data/
 !raw/requirements/
 !raw/requirements/*.xlsx
 
+# Track curated reference outputs while keeping global Excel/zip ignores intact.
+!reference_outputs/
+!reference_outputs/**
+!reference_outputs/primary/
+!reference_outputs/secondary/
+!reference_outputs/primary/*.xlsx
+!reference_outputs/secondary/*.zip
+
 # System files
 .DS_Store
 Thumbs.db
