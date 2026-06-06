@@ -39,8 +39,8 @@ def test_compare_primary_reference_identical_workbooks(tmp_path):
     result = compare_workbooks(generated, reference, out_dir)
 
     assert result["summary"]["differences"] == 0
-    assert result["summary"]["fixed_rows_compared"] == 4
-    assert result["summary"]["identity_rows_checked"] == 6
+    assert result["summary"]["fixed_rows_compared"] == 2
+    assert result["summary"]["identity_rows_checked"] == 8
     assert Path(result["xlsx_path"]).is_file()
     assert Path(result["json_path"]).is_file()
 
@@ -50,18 +50,18 @@ def test_compare_primary_reference_detects_fixed_row_b_account_high_severity(tmp
     generated = tmp_path / "generated.xlsx"
     out_dir = tmp_path / "reports"
     _make_workbook(reference)
-    _make_workbook(generated, {"B97": 9999999999})
+    _make_workbook(generated, {"B66": 9999999999})
 
     result = compare_workbooks(generated, reference, out_dir)
 
     payload = _payload(result)
     assert result["summary"]["fixed_row_differences"] > 0
-    b97 = [
+    b66 = [
         row for row in payload["important_row_diff"]
-        if row["row"] == 97 and row["column"] == "B" and row["compare_mode"] == "fixed_row"
+        if row["row"] == 66 and row["column"] == "B" and row["compare_mode"] == "fixed_row"
     ][0]
-    assert b97["match"] is False
-    assert b97["severity"] == "High"
+    assert b66["match"] is False
+    assert b66["severity"] == "High"
 
 
 def test_compare_primary_reference_detects_fixed_row_fq_medium_severity(tmp_path):
@@ -180,6 +180,62 @@ def test_bus_jp_identity_prefers_expats_transport(tmp_path):
     alignment = [row for row in _payload(result)["identity_row_alignment"] if row["generated_row"] == 53][0]
     assert alignment["reference_matched_row"] == 286
     assert alignment["match_method"] == "same_account"
+
+
+def test_staff_notebook_row_is_identity_aligned_not_fixed(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "reports"
+    _make_workbook(generated, {
+        "B97": 5005246288,
+        "S97": "Staff notebook So tay nhan vien",
+    })
+    _make_workbook(reference, {
+        "B97": 5005016371,
+        "S97": "Battery purchase unrelated item",
+        "B210": 5005246288,
+        "R210": "=SUM(F210:Q210)",
+        "S210": "Staff notebook ノート nhan vien",
+    })
+
+    result = compare_workbooks(generated, reference, out_dir)
+
+    payload = _payload(result)
+    alignment = [row for row in payload["identity_row_alignment"] if row["generated_row"] == 97][0]
+    assert alignment["reference_matched_row"] == 210
+    assert alignment["match_method"] == "same_account"
+    assert not any(
+        row for row in payload["important_row_diff"]
+        if row["row"] == 97 and row["compare_mode"] == "fixed_row"
+    )
+
+
+def test_worker_notebook_row_is_identity_aligned_not_fixed(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "reports"
+    _make_workbook(generated, {
+        "B98": 5005246288,
+        "S98": "Worker G7 notebook So tay cong nhan",
+    })
+    _make_workbook(reference, {
+        "B98": 5005016371,
+        "S98": "SSD purchase unrelated item",
+        "B211": 5005246288,
+        "R211": "=SUM(F211:Q211)",
+        "S211": "Worker G7 notebook ノート cong nhan",
+    })
+
+    result = compare_workbooks(generated, reference, out_dir)
+
+    payload = _payload(result)
+    alignment = [row for row in payload["identity_row_alignment"] if row["generated_row"] == 98][0]
+    assert alignment["reference_matched_row"] == 211
+    assert alignment["match_method"] == "same_account"
+    assert not any(
+        row for row in payload["important_row_diff"]
+        if row["row"] == 98 and row["compare_mode"] == "fixed_row"
+    )
 
 
 def test_nnn_row_is_identity_aligned_not_fixed(tmp_path):

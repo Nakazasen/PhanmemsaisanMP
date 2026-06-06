@@ -15,8 +15,6 @@ DETAIL_SHEET = "内訳ﾘｽﾄ(4～3月)"
 FIXED_ROW_RULES = {
     58: "Recruitment health",
     66: "Company trip",
-    97: "Staff notebook",
-    98: "Worker notebook",
 }
 IDENTITY_ROW_CANDIDATES = {
     38: "Fixed Assets depreciation",
@@ -24,6 +22,8 @@ IDENTITY_ROW_CANDIDATES = {
     53: "Bus JP / Expat transport",
     54: "Bus VN / Local transport",
     75: "System Cost",
+    97: "Staff notebook",
+    98: "Worker notebook",
     137: "NNN paperwork",
 }
 COMPARE_COLUMNS = ("B", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S")
@@ -37,6 +37,9 @@ IDENTITY_TOKENS = {
     "bus": ("bus", "バス", "送迎", "通勤", "xe bus", "xe buýt"),
     "bus_local": ("ローカル", "local", "ベトナム", "người vn"),
     "bus_expat": ("出向者", "日本", "người jp", "expat"),
+    "notebook": ("ノート", "notebook", "note", "sổ", "so tay", "sổ tay"),
+    "notebook_staff": ("staff", "nhân viên", "nhan vien", "スタッフ", "社員用"),
+    "notebook_worker": ("worker", "công nhân", "cong nhan", "g7", "ローカル"),
     "paperwork": ("nnn", "書類", "giấy tờ", "paperwork", "document", "visa", "work permit", "residence"),
 }
 
@@ -112,6 +115,10 @@ def _find_identity_match(gen_ws, ref_ws, generated_row: int) -> IdentityAlignmen
         desired_tokens.add("bus_expat")
     elif generated_row == 54:
         desired_tokens.add("bus_local")
+    elif generated_row == 97:
+        desired_tokens.add("notebook_staff")
+    elif generated_row == 98:
+        desired_tokens.add("notebook_worker")
     best = None
     max_row = ref_ws.max_row or 1
     for row in range(1, max_row + 1):
@@ -121,15 +128,20 @@ def _find_identity_match(gen_ws, ref_ws, generated_row: int) -> IdentityAlignmen
         same_account = gen_account not in (None, "") and gen_account == ref_account
         token_overlap = bool(gen_tokens & ref_tokens)
         transport_preferred = "bus" in ref_tokens and bool(desired_tokens & ref_tokens)
+        notebook_preferred = "notebook" in ref_tokens and bool(desired_tokens & ref_tokens)
+        requires_notebook = generated_row in (97, 98)
+        if requires_notebook and "notebook" not in ref_tokens:
+            continue
+        preferred_identity = transport_preferred or notebook_preferred
         if same_account and normalize_text(gen_desc) == normalize_text(ref_desc):
             return IdentityAlignment(generated_row, gen_account, gen_desc, row, ref_account, ref_desc, "same_account", "High", True, "same account and description")
         if same_account:
-            score = 4 if transport_preferred else 3
-            note = "same account with preferred transport token" if transport_preferred else "same account"
+            score = 4 if preferred_identity else 3
+            note = "same account with preferred identity token" if preferred_identity else "same account"
             candidate = (score, row, ref_account, ref_desc, "same_account", "High", True, note)
         elif token_overlap:
-            score = 2.5 if transport_preferred else 2
-            note = "strong description token overlap with preferred transport token" if transport_preferred else "strong description token overlap"
+            score = 2.5 if preferred_identity else 2
+            note = "strong description token overlap with preferred identity token" if preferred_identity else "strong description token overlap"
             candidate = (score, row, ref_account, ref_desc, "token_overlap", "Medium", True, note)
         else:
             continue
