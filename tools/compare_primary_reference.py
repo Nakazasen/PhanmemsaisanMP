@@ -13,7 +13,6 @@ from openpyxl import Workbook, load_workbook
 
 DETAIL_SHEET = "内訳ﾘｽﾄ(4～3月)"
 FIXED_ROW_RULES = {
-    58: "Recruitment health",
     66: "Company trip",
 }
 IDENTITY_ROW_CANDIDATES = {
@@ -21,6 +20,7 @@ IDENTITY_ROW_CANDIDATES = {
     42: "Fixed Assets interest",
     53: "Bus JP / Expat transport",
     54: "Bus VN / Local transport",
+    58: "Recruitment health",
     75: "System Cost",
     97: "Staff notebook",
     98: "Worker notebook",
@@ -40,6 +40,7 @@ IDENTITY_TOKENS = {
     "notebook": ("ノート", "notebook", "note", "sổ", "so tay", "sổ tay"),
     "notebook_staff": ("staff", "nhân viên", "nhan vien", "スタッフ", "社員用"),
     "notebook_worker": ("worker", "công nhân", "cong nhan", "g7", "ローカル"),
+    "health": ("健康", "健診", "採用", "入社", "入社月", "health", "medical", "checkup", "khám", "sức khỏe", "suc khoe", "tuyen dung", "tuyển dụng"),
     "paperwork": ("nnn", "書類", "giấy tờ", "paperwork", "document", "visa", "work permit", "residence"),
 }
 
@@ -129,6 +130,9 @@ def _find_identity_match(gen_ws, ref_ws, generated_row: int) -> IdentityAlignmen
         token_overlap = bool(gen_tokens & ref_tokens)
         transport_preferred = "bus" in ref_tokens and bool(desired_tokens & ref_tokens)
         notebook_preferred = "notebook" in ref_tokens and bool(desired_tokens & ref_tokens)
+        requires_health = generated_row == 58
+        if requires_health and "health" not in ref_tokens:
+            continue
         requires_notebook = generated_row in (97, 98)
         if requires_notebook and "notebook" not in ref_tokens:
             continue

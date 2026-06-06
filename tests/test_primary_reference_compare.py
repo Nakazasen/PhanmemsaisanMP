@@ -39,8 +39,8 @@ def test_compare_primary_reference_identical_workbooks(tmp_path):
     result = compare_workbooks(generated, reference, out_dir)
 
     assert result["summary"]["differences"] == 0
-    assert result["summary"]["fixed_rows_compared"] == 2
-    assert result["summary"]["identity_rows_checked"] == 8
+    assert result["summary"]["fixed_rows_compared"] == 1
+    assert result["summary"]["identity_rows_checked"] == 9
     assert Path(result["xlsx_path"]).is_file()
     assert Path(result["json_path"]).is_file()
 
@@ -69,18 +69,18 @@ def test_compare_primary_reference_detects_fixed_row_fq_medium_severity(tmp_path
     generated = tmp_path / "generated.xlsx"
     out_dir = tmp_path / "reports"
     _make_workbook(reference)
-    _make_workbook(generated, {"F58": "=999"})
+    _make_workbook(generated, {"F66": "=999"})
 
     result = compare_workbooks(generated, reference, out_dir)
 
     payload = _payload(result)
-    f58 = [
+    f66 = [
         row for row in payload["important_row_diff"]
-        if row["row"] == 58 and row["column"] == "F" and row["compare_mode"] == "fixed_row"
+        if row["row"] == 66 and row["column"] == "F" and row["compare_mode"] == "fixed_row"
     ][0]
     assert result["summary"]["fixed_row_differences"] > 0
-    assert f58["match"] is False
-    assert f58["severity"] == "Medium"
+    assert f66["match"] is False
+    assert f66["severity"] == "Medium"
 
 
 def test_compare_primary_reference_aligns_system_cost_identity_row(tmp_path):
@@ -165,14 +165,13 @@ def test_bus_jp_identity_prefers_expats_transport(tmp_path):
     out_dir = tmp_path / "reports"
     _make_workbook(generated, {
         "B53": 5004086291,
-        "S53": "Expat BUS transport xe bus nguoi JP",
+        "S53": "日本人出向者バス transport",
     })
     _make_workbook(reference, {
-        "B53": 5005016371,
-        "S53": "Gia do but Marking",
         "B286": 5004086291,
-        "R286": "=SUM(F286:Q286)",
-        "S286": "expat bus transport",
+        "S286": "出向者 社員送迎費",
+        "B287": 5004086291,
+        "S287": "ローカル社員送迎費",
     })
 
     result = compare_workbooks(generated, reference, out_dir)
@@ -180,6 +179,34 @@ def test_bus_jp_identity_prefers_expats_transport(tmp_path):
     alignment = [row for row in _payload(result)["identity_row_alignment"] if row["generated_row"] == 53][0]
     assert alignment["reference_matched_row"] == 286
     assert alignment["match_method"] == "same_account"
+
+
+def test_recruitment_health_row_is_identity_aligned_not_fixed(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "reports"
+    _make_workbook(generated, {
+        "B58": 5005246288,
+        "S58": "Recruitment health checkup kham suc khoe tuyen dung",
+    })
+    _make_workbook(reference, {
+        "B58": 5005016371,
+        "S58": "Business trip meal unrelated item",
+        "B210": 5005246288,
+        "R210": "=SUM(F210:Q210)",
+        "S210": "Recruitment health checkup 健康診断 入社",
+    })
+
+    result = compare_workbooks(generated, reference, out_dir)
+
+    payload = _payload(result)
+    alignment = [row for row in payload["identity_row_alignment"] if row["generated_row"] == 58][0]
+    assert alignment["reference_matched_row"] == 210
+    assert alignment["match_method"] == "same_account"
+    assert not any(
+        row for row in payload["important_row_diff"]
+        if row["row"] == 58 and row["compare_mode"] == "fixed_row"
+    )
 
 
 def test_staff_notebook_row_is_identity_aligned_not_fixed(tmp_path):
