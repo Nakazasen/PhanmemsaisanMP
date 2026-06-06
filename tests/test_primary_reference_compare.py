@@ -39,8 +39,8 @@ def test_compare_primary_reference_identical_workbooks(tmp_path):
     result = compare_workbooks(generated, reference, out_dir)
 
     assert result["summary"]["differences"] == 0
-    assert result["summary"]["fixed_rows_compared"] == 5
-    assert result["summary"]["identity_rows_checked"] == 5
+    assert result["summary"]["fixed_rows_compared"] == 4
+    assert result["summary"]["identity_rows_checked"] == 6
     assert Path(result["xlsx_path"]).is_file()
     assert Path(result["json_path"]).is_file()
 
@@ -180,6 +180,34 @@ def test_bus_jp_identity_prefers_expats_transport(tmp_path):
     alignment = [row for row in _payload(result)["identity_row_alignment"] if row["generated_row"] == 53][0]
     assert alignment["reference_matched_row"] == 286
     assert alignment["match_method"] == "same_account"
+
+
+def test_nnn_row_is_identity_aligned_not_fixed(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "reports"
+    _make_workbook(generated, {
+        "B137": 5004086291,
+        "S137": "NNN paperwork giay to document",
+    })
+    _make_workbook(reference, {
+        "B137": 5005016371,
+        "S137": "Business trip meal",
+        "B210": 5004086291,
+        "R210": "=SUM(F210:Q210)",
+        "S210": "NNN paperwork document",
+    })
+
+    result = compare_workbooks(generated, reference, out_dir)
+
+    payload = _payload(result)
+    alignment = [row for row in payload["identity_row_alignment"] if row["generated_row"] == 137][0]
+    assert alignment["reference_matched_row"] == 210
+    assert alignment["match_method"] == "same_account"
+    assert not any(
+        row for row in payload["important_row_diff"]
+        if row["row"] == 137 and row["compare_mode"] == "fixed_row"
+    )
 
 
 def test_compare_primary_reference_records_identity_not_found(tmp_path):

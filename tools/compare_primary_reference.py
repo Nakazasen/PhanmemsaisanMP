@@ -17,7 +17,6 @@ FIXED_ROW_RULES = {
     66: "Company trip",
     97: "Staff notebook",
     98: "Worker notebook",
-    137: "NNN paperwork",
 }
 IDENTITY_ROW_CANDIDATES = {
     38: "Fixed Assets depreciation",
@@ -25,6 +24,7 @@ IDENTITY_ROW_CANDIDATES = {
     53: "Bus JP / Expat transport",
     54: "Bus VN / Local transport",
     75: "System Cost",
+    137: "NNN paperwork",
 }
 COMPARE_COLUMNS = ("B", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S")
 MEDIUM_COLUMNS = set("FGHIJKLMNOPQ")
@@ -37,6 +37,7 @@ IDENTITY_TOKENS = {
     "bus": ("bus", "バス", "送迎", "通勤", "xe bus", "xe buýt"),
     "bus_local": ("ローカル", "local", "ベトナム", "người vn"),
     "bus_expat": ("出向者", "日本", "người jp", "expat"),
+    "paperwork": ("nnn", "書類", "giấy tờ", "paperwork", "document", "visa", "work permit", "residence"),
 }
 
 
