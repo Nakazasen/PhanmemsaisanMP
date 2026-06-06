@@ -39,48 +39,59 @@ def test_compare_primary_reference_identical_workbooks(tmp_path):
     result = compare_workbooks(generated, reference, out_dir)
 
     assert result["summary"]["differences"] == 0
-    assert result["summary"]["fixed_rows_compared"] == 1
-    assert result["summary"]["identity_rows_checked"] == 9
+    assert result["summary"]["fixed_rows_compared"] == 0
+    assert result["summary"]["identity_rows_checked"] == 10
     assert Path(result["xlsx_path"]).is_file()
     assert Path(result["json_path"]).is_file()
 
 
-def test_compare_primary_reference_detects_fixed_row_b_account_high_severity(tmp_path):
+def test_company_trip_row_is_identity_aligned_not_fixed(tmp_path):
     reference = tmp_path / "reference.xlsx"
     generated = tmp_path / "generated.xlsx"
     out_dir = tmp_path / "reports"
-    _make_workbook(reference)
-    _make_workbook(generated, {"B66": 9999999999})
+    _make_workbook(generated, {
+        "B66": 5005246299,
+        "S66": "Company trip 社員旅行 du lich cong ty",
+    })
+    _make_workbook(reference, {
+        "B66": 5005026371,
+        "S66": "Resistor unrelated item",
+        "B210": 5005246299,
+        "R210": "=SUM(F210:Q210)",
+        "S210": "Company trip 社員旅行",
+    })
 
     result = compare_workbooks(generated, reference, out_dir)
 
     payload = _payload(result)
-    assert result["summary"]["fixed_row_differences"] > 0
-    b66 = [
+    alignment = [row for row in payload["identity_row_alignment"] if row["generated_row"] == 66][0]
+    assert alignment["reference_matched_row"] == 210
+    assert alignment["match_method"] == "same_account"
+    assert not any(
         row for row in payload["important_row_diff"]
-        if row["row"] == 66 and row["column"] == "B" and row["compare_mode"] == "fixed_row"
-    ][0]
-    assert b66["match"] is False
-    assert b66["severity"] == "High"
+        if row["row"] == 66 and row["compare_mode"] == "fixed_row"
+    )
 
 
-def test_compare_primary_reference_detects_fixed_row_fq_medium_severity(tmp_path):
+def test_company_trip_identity_not_found_does_not_crash(tmp_path):
     reference = tmp_path / "reference.xlsx"
     generated = tmp_path / "generated.xlsx"
     out_dir = tmp_path / "reports"
-    _make_workbook(reference)
-    _make_workbook(generated, {"F66": "=999"})
+    _make_workbook(generated, {
+        "B66": 5005246299,
+        "S66": "Company trip 社員旅行 du lich cong ty",
+    })
+    _make_workbook(reference, {
+        "B66": 5005026371,
+        "S66": "Resistor unrelated item",
+    })
 
     result = compare_workbooks(generated, reference, out_dir)
 
-    payload = _payload(result)
-    f66 = [
-        row for row in payload["important_row_diff"]
-        if row["row"] == 66 and row["column"] == "F" and row["compare_mode"] == "fixed_row"
-    ][0]
-    assert result["summary"]["fixed_row_differences"] > 0
-    assert f66["match"] is False
-    assert f66["severity"] == "Medium"
+    alignment = [row for row in _payload(result)["identity_row_alignment"] if row["generated_row"] == 66][0]
+    assert alignment["reference_matched_row"] is None
+    assert alignment["match_method"] == "not_found"
+    assert result["summary"]["identity_rows_not_found"] >= 1
 
 
 def test_compare_primary_reference_aligns_system_cost_identity_row(tmp_path):
