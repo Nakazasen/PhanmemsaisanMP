@@ -1,4 +1,4 @@
-"""Compare generated MP2027 output against the primary trusted reference."""
+﻿"""Compare generated MP2027 output against the primary trusted reference."""
 
 from __future__ import annotations
 
@@ -27,6 +27,7 @@ IDENTITY_ROW_CANDIDATES = {
     137: "NNN paperwork",
 }
 COMPARE_COLUMNS = ("B", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S")
+STRICT_COMPARE_COLUMNS = ("F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R")
 MEDIUM_COLUMNS = set("FGHIJKLMNOPQ")
 IDENTITY_TOKENS = {
     "system": ("system cost", "mail", "vpn", "r3", "mes", "plm", "vps", "システム"),
@@ -184,7 +185,69 @@ def _compare_row(gen_ws, ref_ws, generated_row: int, reference_row: int, mode: s
     return diffs, summary
 
 
-def compare_workbooks(generated_path: Path, reference_path: Path, out_dir: Path) -> dict[str, Any]:
+def _compare_workbooks_strict_exact(generated_path: Path, reference_path: Path, out_dir: Path) -> dict[str, Any]:
+    if not generated_path.is_file():
+        raise FileNotFoundError(f"Generated workbook not found: {generated_path}")
+    if not reference_path.is_file():
+        raise FileNotFoundError(f"Reference workbook not found: {reference_path}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    gen_wb = load_workbook(generated_path, data_only=False)
+    ref_wb = load_workbook(reference_path, data_only=False)
+    try:
+        if DETAIL_SHEET not in gen_wb.sheetnames or DETAIL_SHEET not in ref_wb.sheetnames:
+            raise ValueError(f"Required sheet missing: {DETAIL_SHEET}")
+        gen_ws = gen_wb[DETAIL_SHEET]
+        ref_ws = ref_wb[DETAIL_SHEET]
+        diffs: list[CellDiff] = []
+        row_counts: dict[int, int] = {}
+        total_cells = 0
+        max_row = max(gen_ws.max_row or 1, ref_ws.max_row or 1)
+        for row in range(1, max_row + 1):
+            for column in STRICT_COMPARE_COLUMNS:
+                generated = _cell_value(gen_ws, row, column)
+                reference = _cell_value(ref_ws, row, column)
+                if generated in (None, "") and reference in (None, ""):
+                    continue
+                if generated in (None, "") or reference in (None, ""):
+                    continue
+                total_cells += 1
+                match = generated == reference
+                if not match:
+                    row_counts[row] = row_counts.get(row, 0) + 1
+                    severity, note = _severity(column, generated, reference, match, "strict_exact")
+                    diffs.append(CellDiff(row, column, generated, reference, match, severity, note, "strict_exact", row))
+        diff_total = len(diffs)
+        summary = {
+            "generated_path": str(generated_path),
+            "reference_path": str(reference_path),
+            "compare_mode": "strict_exact",
+            "total_cells_compared": total_cells,
+            "exact_matches": total_cells - diff_total,
+            "diff_total": diff_total,
+            "differences": diff_total,
+            "diff_by_row": {str(row): count for row, count in sorted(row_counts.items())},
+        }
+        xlsx_path = out_dir / "MP2027_primary_reference_compare.xlsx"
+        json_path = out_dir / "MP2027_primary_reference_compare.json"
+        row_summary = [{"row": row, "reference_row": row, "compare_mode": "strict_exact", "description_generated": _cell_value(gen_ws, row, "S"), "description_reference": _cell_value(ref_ws, row, "S"), "differences_count": count, "status": "DIFF"} for row, count in sorted(row_counts.items())]
+        _write_excel_report(xlsx_path, summary, diffs, row_summary, [])
+        json_payload = {
+            "summary": summary,
+            "diff_detail": [asdict(diff) for diff in diffs],
+            "diff_by_row": summary["diff_by_row"],
+            "important_row_diff": [asdict(diff) for diff in diffs],
+            "row_summary": row_summary,
+            "identity_row_alignment": [],
+        }
+        json_path.write_text(json.dumps(json_payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+        return {"summary": summary, "xlsx_path": str(xlsx_path), "json_path": str(json_path)}
+    finally:
+        gen_wb.close()
+        ref_wb.close()
+
+def compare_workbooks(generated_path: Path, reference_path: Path, out_dir: Path, strict_exact: bool = False) -> dict[str, Any]:
+    if strict_exact:
+        return _compare_workbooks_strict_exact(generated_path, reference_path, out_dir)
     if not generated_path.is_file():
         raise FileNotFoundError(f"Generated workbook not found: {generated_path}")
     if not reference_path.is_file():
@@ -261,7 +324,7 @@ def _write_excel_report(path: Path, summary: dict[str, Any], diffs: list[CellDif
     ws = wb.active
     ws.title = "Summary"
     for key, value in summary.items():
-        ws.append([key, json.dumps(value, ensure_ascii=False) if isinstance(value, list) else value])
+        ws.append([key, json.dumps(value, ensure_ascii=False) if isinstance(value, (list, dict)) else value])
     ws = wb.create_sheet("Important_Row_Diff")
     ws.append(["Row", "Reference row", "Mode", "Column", "Generated value/formula", "Reference value/formula", "Match?", "Severity", "Note"])
     for diff in diffs:
@@ -291,8 +354,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--generated", required=True, type=Path)
     parser.add_argument("--reference", required=True, type=Path)
     parser.add_argument("--out-dir", required=True, type=Path)
+    parser.add_argument("--strict-exact", action="store_true", help="Compare exact formulas/values without identity alignment or accepted caveats.")
     args = parser.parse_args(argv)
-    result = compare_workbooks(args.generated, args.reference, args.out_dir)
+    result = compare_workbooks(args.generated, args.reference, args.out_dir, strict_exact=args.strict_exact)
     print(json.dumps(result["summary"], ensure_ascii=False, indent=2))
     print(f"Excel report: {result['xlsx_path']}")
     print(f"JSON report: {result['json_path']}")

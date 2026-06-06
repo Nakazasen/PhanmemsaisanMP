@@ -1,4 +1,4 @@
-import json
+﻿import json
 from pathlib import Path
 
 import openpyxl
@@ -333,3 +333,52 @@ def test_compare_primary_reference_records_identity_not_found(tmp_path):
     alignment = [row for row in payload["identity_row_alignment"] if row["generated_row"] == 75][0]
     assert alignment["match_method"] == "not_found"
     assert alignment["reference_matched_row"] is None
+
+
+def test_strict_exact_reports_same_row_diffs_without_identity_alignment(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "strict_reports"
+    _make_workbook(generated, {
+        "B66": 5005246299,
+        "S66": "Company trip 社員旅行 du lich cong ty",
+        "F66": "=1+1",
+    })
+    _make_workbook(reference, {
+        "B66": 5005026371,
+        "S66": "Resistor unrelated item",
+        "F66": "=9+9",
+        "B210": 5005246299,
+        "F210": "=1+1",
+        "S210": "Company trip 社員旅行",
+    })
+
+    non_strict = compare_workbooks(generated, reference, tmp_path / "non_strict_reports")
+    strict = compare_workbooks(generated, reference, out_dir, strict_exact=True)
+
+    assert strict["summary"]["compare_mode"] == "strict_exact"
+    assert strict["summary"]["diff_total"] >= 1
+    assert strict["summary"]["diff_by_row"]["66"] >= 1
+    payload = _payload(strict)
+    assert "diff_detail" in payload
+    assert payload["summary"]["diff_total"] == len(payload["diff_detail"])
+    assert any(row["row"] == 66 and row["reference_row"] == 66 for row in payload["diff_detail"])
+    assert non_strict["summary"]["identity_rows_matched"] >= 1
+
+
+def test_strict_exact_identical_workbooks_has_zero_diff_total(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "strict_reports"
+    _make_workbook(reference)
+    _make_workbook(generated)
+
+    result = compare_workbooks(generated, reference, out_dir, strict_exact=True)
+
+    assert result["summary"]["compare_mode"] == "strict_exact"
+    assert result["summary"]["diff_total"] == 0
+    assert result["summary"]["total_cells_compared"] > 0
+    assert result["summary"]["exact_matches"] == result["summary"]["total_cells_compared"]
+    payload = _payload(result)
+    assert payload["diff_by_row"] == {}
+    assert payload["diff_detail"] == []
