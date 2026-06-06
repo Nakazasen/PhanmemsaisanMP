@@ -13,8 +13,6 @@ from openpyxl import Workbook, load_workbook
 
 DETAIL_SHEET = "内訳ﾘｽﾄ(4～3月)"
 FIXED_ROW_RULES = {
-    53: "Bus JP",
-    54: "Bus VN",
     58: "Recruitment health",
     66: "Company trip",
     97: "Staff notebook",
@@ -24,6 +22,8 @@ FIXED_ROW_RULES = {
 IDENTITY_ROW_CANDIDATES = {
     38: "Fixed Assets depreciation",
     42: "Fixed Assets interest",
+    53: "Bus JP / Expat transport",
+    54: "Bus VN / Local transport",
     75: "System Cost",
 }
 COMPARE_COLUMNS = ("B", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S")
@@ -34,6 +34,9 @@ IDENTITY_TOKENS = {
     "interest": ("金利", "lãi", "lai", "interest"),
     "building": ("建物", "nhà", "nha", "building"),
     "equipment": ("設備", "thiết bị", "thiet bi", "equipment"),
+    "bus": ("bus", "バス", "送迎", "通勤", "xe bus", "xe buýt"),
+    "bus_local": ("ローカル", "local", "ベトナム", "người vn"),
+    "bus_expat": ("出向者", "日本", "người jp", "expat"),
 }
 
 
@@ -103,6 +106,11 @@ def _find_identity_match(gen_ws, ref_ws, generated_row: int) -> IdentityAlignmen
     gen_account = _cell_value(gen_ws, generated_row, "B")
     gen_desc = _cell_value(gen_ws, generated_row, "S")
     gen_tokens = _token_hits(gen_desc)
+    desired_tokens = set()
+    if generated_row == 53:
+        desired_tokens.add("bus_expat")
+    elif generated_row == 54:
+        desired_tokens.add("bus_local")
     best = None
     max_row = ref_ws.max_row or 1
     for row in range(1, max_row + 1):
@@ -111,12 +119,17 @@ def _find_identity_match(gen_ws, ref_ws, generated_row: int) -> IdentityAlignmen
         ref_tokens = _token_hits(ref_desc)
         same_account = gen_account not in (None, "") and gen_account == ref_account
         token_overlap = bool(gen_tokens & ref_tokens)
+        transport_preferred = "bus" in ref_tokens and bool(desired_tokens & ref_tokens)
         if same_account and normalize_text(gen_desc) == normalize_text(ref_desc):
             return IdentityAlignment(generated_row, gen_account, gen_desc, row, ref_account, ref_desc, "same_account", "High", True, "same account and description")
         if same_account:
-            candidate = (3, row, ref_account, ref_desc, "same_account", "High", True, "same account")
+            score = 4 if transport_preferred else 3
+            note = "same account with preferred transport token" if transport_preferred else "same account"
+            candidate = (score, row, ref_account, ref_desc, "same_account", "High", True, note)
         elif token_overlap:
-            candidate = (2, row, ref_account, ref_desc, "token_overlap", "Medium", True, "strong description token overlap")
+            score = 2.5 if transport_preferred else 2
+            note = "strong description token overlap with preferred transport token" if transport_preferred else "strong description token overlap"
+            candidate = (score, row, ref_account, ref_desc, "token_overlap", "Medium", True, note)
         else:
             continue
         if best is None or candidate[0] > best[0]:
