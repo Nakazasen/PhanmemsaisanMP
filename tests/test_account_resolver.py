@@ -330,15 +330,20 @@ class TestSharedAccountResolver(unittest.TestCase):
         with self.assertRaisesRegex(error_cls, "has no ga_code value"):
             resolve_account_code(db_path, 1412000099, "製造のみ")
 
-    def test_shared_resolver_matches_manual_event_driver_behavior(self):
-        from src.engine.account_resolver import resolve_account_code
-        from src.parsers.manual_event_drivers import _resolve_account_code as legacy_resolve
+    def test_manual_event_driver_uses_shared_connection_resolver(self):
+        from unittest.mock import patch
+        from src.parsers import manual_event_drivers
         db_path, conn, _ = self._mk_file_db()
         try:
-            self.assertEqual(
-                legacy_resolve(conn, "1412000040", "福利厚生費"),
-                resolve_account_code(db_path, "1412000040", "福利厚生費"),
-            )
+            with patch(
+                "src.parsers.manual_event_drivers.resolve_account_code_for_connection",
+                return_value=5004086291,
+            ) as mocked:
+                self.assertEqual(
+                    manual_event_drivers._resolve_account_code_or_error(conn, "1412000040", "福利厚生費"),
+                    5004086291,
+                )
+            mocked.assert_called_once_with(conn, "1412000040", "福利厚生費")
         finally:
             conn.close()
 

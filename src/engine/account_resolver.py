@@ -31,6 +31,23 @@ def _is_valid_account_code(value: Any) -> bool:
     return text not in {"", "0", "0.0"}
 
 
+def _account_column_for_connection(conn: sqlite3.Connection, target_cc: int | str) -> tuple[str, str]:
+    cc_text = str(target_cc or "").strip()
+    if not cc_text:
+        raise AccountResolutionError("Missing target cost center for account lookup")
+
+    row = conn.execute(
+        "SELECT cost_type FROM dim_cost_centers WHERE code = ?",
+        (cc_text,),
+    ).fetchone()
+    if row is None:
+        raise AccountResolutionError(f"Cost center not found for account lookup: {cc_text}")
+    cost_type = str(row["cost_type"] or "").strip()
+    if not cost_type:
+        raise AccountResolutionError(f"Cost center has no cost_type for account lookup: {cc_text}")
+    return cost_type, resolve_account_column_by_cost_type(cost_type)
+
+
 def resolve_account_column_by_cost_type(cost_type: str) -> str:
     """Return dim_accounts column for FORM cost type/原価区分."""
     text = str(cost_type or "").strip()
@@ -40,53 +57,40 @@ def resolve_account_column_by_cost_type(cost_type: str) -> str:
     raise AccountResolutionError(f"Unsupported cost type for account lookup: {cost_type!r}")
 
 
-def resolve_cost_type_for_cc(db_path: str | Path, target_cc: int | str) -> str:
-    """Resolve 原価区分/cost_type for a target cost center from dim_cost_centers."""
-    cc_text = str(target_cc or "").strip()
-    if not cc_text:
-        raise AccountResolutionError("Missing target cost center for account lookup")
-
-    with _connect(db_path) as conn:
-        row = conn.execute(
-            "SELECT cost_type FROM dim_cost_centers WHERE code = ?",
-            (cc_text,),
-        ).fetchone()
-    if row is None:
-        raise AccountResolutionError(f"Cost center not found for account lookup: {cc_text}")
-    cost_type = str(row["cost_type"] or "").strip()
-    if not cost_type:
-        raise AccountResolutionError(f"Cost center has no cost_type for account lookup: {cc_text}")
-    resolve_account_column_by_cost_type(cost_type)
+def resolve_cost_type_for_connection(conn: sqlite3.Connection, target_cc: int | str) -> str:
+    """Resolve 原価区分/cost_type using an existing SQLite connection."""
+    cost_type, _ = _account_column_for_connection(conn, target_cc)
     return cost_type
 
 
-def resolve_account_code(db_path: str | Path, target_cc: int | str, account_key_or_name: int | str) -> int:
-    """Resolve account_code using target CC cost type and dim_accounts.
+def resolve_cost_type_for_cc(db_path: str | Path, target_cc: int | str) -> str:
+    """Resolve 原価区分/cost_type for a target cost center from dim_cost_centers."""
+    with _connect(db_path) as conn:
+        return resolve_cost_type_for_connection(conn, target_cc)
 
-    ``account_key_or_name`` may be an existing account code or an account Japanese
-    name. The resolver never falls back to another cost-type column.
-    """
+
+def resolve_account_code_for_connection(
+    conn: sqlite3.Connection, target_cc: int | str, account_key_or_name: int | str
+) -> int:
+    """Resolve account_code using an existing SQLite connection."""
     account_key = str(account_key_or_name or "").strip()
     if not account_key:
         raise AccountResolutionError("Missing account key/name for account lookup")
 
-    cost_type = resolve_cost_type_for_cc(db_path, target_cc)
-    column = resolve_account_column_by_cost_type(cost_type)
-
-    with _connect(db_path) as conn:
-        if account_key.replace(".", "", 1).isdigit():
-            row = conn.execute(
-                f"SELECT {column} AS account_code FROM dim_accounts WHERE code = ?",
-                (int(float(account_key)),),
-            ).fetchone()
-        else:
-            rows = conn.execute(
-                f"SELECT {column} AS account_code FROM dim_accounts WHERE name_jp = ?",
-                (account_key,),
-            ).fetchall()
-            if len(rows) > 1:
-                raise AccountResolutionError(f"Ambiguous account name for account lookup: {account_key}")
-            row = rows[0] if rows else None
+    cost_type, column = _account_column_for_connection(conn, target_cc)
+    if account_key.replace(".", "", 1).isdigit():
+        row = conn.execute(
+            f"SELECT {column} AS account_code FROM dim_accounts WHERE code = ?",
+            (int(float(account_key)),),
+        ).fetchone()
+    else:
+        rows = conn.execute(
+            f"SELECT {column} AS account_code FROM dim_accounts WHERE name_jp = ?",
+            (account_key,),
+        ).fetchall()
+        if len(rows) > 1:
+            raise AccountResolutionError(f"Ambiguous account name for account lookup: {account_key}")
+        row = rows[0] if rows else None
 
     if row is None:
         raise AccountResolutionError(f"Account not found for account lookup: {account_key}")
@@ -96,3 +100,13 @@ def resolve_account_code(db_path: str | Path, target_cc: int | str, account_key_
             f"Account {account_key!r} has no {column} value for cost type {cost_type!r}"
         )
     return int(float(value))
+
+
+def resolve_account_code(db_path: str | Path, target_cc: int | str, account_key_or_name: int | str) -> int:
+    """Resolve account_code using target CC cost type and dim_accounts.
+
+    ``account_key_or_name`` may be an existing account code or an account Japanese
+    name. The resolver never falls back to another cost-type column.
+    """
+    with _connect(db_path) as conn:
+        return resolve_account_code_for_connection(conn, target_cc, account_key_or_name)

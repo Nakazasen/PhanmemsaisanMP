@@ -7,6 +7,7 @@ import os
 import sqlite3
 from typing import Any
 
+from src.engine.account_resolver import AccountResolutionError, resolve_account_code_for_connection
 from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
 
 
@@ -156,48 +157,15 @@ def _merged_value(row: dict[str, Any], primary: str, alias: str) -> tuple[str, b
     return primary_value or alias_value, True
 
 
-def _is_valid_account_code(value: Any) -> bool:
-    if value is None:
-        return False
-    if isinstance(value, str):
-        return value.strip() not in ("", "0")
-    return value != 0
-
-
-def _account_for_cost_type(cost_type: str, account_row: sqlite3.Row) -> int | None:
-    text = str(cost_type or "")
-    if "製造" in text:
-        value = account_row["mfg_code"]
-    elif "販売" in text:
-        value = account_row["sales_code"]
-    else:
-        value = account_row["ga_code"]
-
-    if not _is_valid_account_code(value):
-        return None
-    return int(value)
-
-
 def _resolve_account_code(conn: sqlite3.Connection, cc_code: str, account_jp_name: str) -> int | None:
-    account_name = str(account_jp_name or "").strip()
-    if not cc_code or not account_name:
+    try:
+        return resolve_account_code_for_connection(conn, cc_code, account_jp_name)
+    except AccountResolutionError:
         return None
 
-    cc_row = conn.execute(
-        "SELECT cost_type FROM dim_cost_centers WHERE code = ?",
-        (str(cc_code).strip(),),
-    ).fetchone()
-    if cc_row is None:
-        return None
 
-    account_rows = conn.execute(
-        "SELECT mfg_code, ga_code, sales_code FROM dim_accounts WHERE name_jp = ?",
-        (account_name,),
-    ).fetchall()
-    if len(account_rows) != 1:
-        return None
-
-    return _account_for_cost_type(str(cc_row["cost_type"] or ""), account_rows[0])
+def _resolve_account_code_or_error(conn: sqlite3.Connection, cc_code: str, account_jp_name: str) -> int:
+    return resolve_account_code_for_connection(conn, cc_code, account_jp_name)
 
 
 def _normalize_unit_price_key(value: Any) -> str:
@@ -316,9 +284,11 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                     errors += 1
                     continue
             else:
-                account_code = _resolve_account_code(conn, cc_code, account_jp_name)
-                if account_code is None:
+                try:
+                    account_code = _resolve_account_code_or_error(conn, cc_code, account_jp_name)
+                except AccountResolutionError as exc:
                     errors += 1
+                    error_messages.append(str(exc))
                     continue
 
             if not cc_code or cc_code not in valid_cc_codes or not target_periods or not event_name:
