@@ -39,6 +39,7 @@ from src.engine.facility_file_order_writer import (
 from src.engine.admin_consumables_writer import apply_admin_consumables_to_workbook
 from src.engine.system_cost_writer import apply_system_cost_to_workbook
 from src.engine.reference_assisted_fill import apply_reference_assisted_fill_to_workbook
+from src.engine.fixed_assets_reference_skeleton import apply_fixed_assets_reference_skeleton_to_workbook
 from src.utils.source_manifest import describe_manifest
 
 
@@ -70,6 +71,15 @@ def _default_source_dir() -> str:
 
 def _default_reference_map_path() -> str:
     return os.path.join(BASE_DIR, "docs", "config", "reference_workbook_map.csv")
+
+
+def _default_fixed_assets_skeleton_csv_path() -> str:
+    return os.path.join(
+        BASE_DIR,
+        "docs",
+        "audits",
+        "phase42n2e_5005026371_secondary_skeleton_patterns.csv",
+    )
 
 
 def _default_primary_reference_for_current_target() -> str:
@@ -130,7 +140,10 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            primary_reference_fill_start_row: int = 213,
                            file_order_export_v2: bool = False,
                            primary_reference_path: str | None = None,
-                           reference_map_path: str | None = None):
+                           reference_map_path: str | None = None,
+                           fixed_assets_reference_skeleton_export: bool = False,
+                           fixed_assets_skeleton_csv: str | None = None,
+                           fixed_assets_skeleton_start_row: int | None = None):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports all 62 CCs.
@@ -142,6 +155,12 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         file_order_export_v1 = True
         primary_reference_fill = True
         primary_reference_fill_start_row = 213
+
+    if fixed_assets_reference_skeleton_export and primary_reference_fill:
+        return False, (
+            "Duplicate risk: --fixed-assets-reference-skeleton-export cannot run with "
+            "--primary-reference-fill or --file-order-export-v2. Run it separately."
+        )
 
     if file_order_export_v1:
         facility_file_order_export = True
@@ -318,6 +337,18 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     start_row=primary_reference_fill_start_row,
                 )
                 log_callback(f"Reference-assisted primary fill applied: {fill_result}")
+            if fixed_assets_reference_skeleton_export:
+                if primary_reference_fill:
+                    raise ValueError(
+                        "Duplicate risk: --fixed-assets-reference-skeleton-export cannot run with "
+                        "--primary-reference-fill or --file-order-export-v2. Run it separately."
+                    )
+                skeleton_result = apply_fixed_assets_reference_skeleton_to_workbook(
+                    workbook_path=out_path,
+                    csv_path=fixed_assets_skeleton_csv or _default_fixed_assets_skeleton_csv_path(),
+                    start_row=fixed_assets_skeleton_start_row,
+                )
+                log_callback(f"Fixed-assets reference skeleton applied: {skeleton_result}")
             log_callback(f"Done: {output_dir}")
         else:
             # Batch Export
@@ -373,6 +404,18 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             start_row=primary_reference_fill_start_row,
                         )
                         log_callback(f"Reference-assisted primary fill applied: {fill_result}")
+                    if fixed_assets_reference_skeleton_export and str(cc) == "1412000040":
+                        if primary_reference_fill:
+                            raise ValueError(
+                                "Duplicate risk: --fixed-assets-reference-skeleton-export cannot run with "
+                                "--primary-reference-fill or --file-order-export-v2. Run it separately."
+                            )
+                        skeleton_result = apply_fixed_assets_reference_skeleton_to_workbook(
+                            workbook_path=out_path,
+                            csv_path=fixed_assets_skeleton_csv or _default_fixed_assets_skeleton_csv_path(),
+                            start_row=fixed_assets_skeleton_start_row,
+                        )
+                        log_callback(f"Fixed-assets reference skeleton applied: {skeleton_result}")
                     count += 1
             
             log_callback(f"Successfully exported {count} files to: {output_dir}")
@@ -475,6 +518,18 @@ if __name__ == '__main__':
         help='Primary reference workbook for reference-assisted fill. Required for CCs other than 1412000040 unless mapped.',
     )
     parser.add_argument('--reference-map-path', type=str, default=_default_reference_map_path())
+    parser.add_argument(
+        '--fixed-assets-reference-skeleton-export',
+        action='store_true',
+        help='Explicit opt-in: append fixed-assets secondary skeleton rows with not-source-derived provenance.',
+    )
+    parser.add_argument(
+        '--fixed-assets-skeleton-csv',
+        type=str,
+        default=_default_fixed_assets_skeleton_csv_path(),
+        help='42N2E fixed-assets secondary skeleton candidate CSV.',
+    )
+    parser.add_argument('--fixed-assets-skeleton-start-row', type=int, default=None)
     args = parser.parse_args()
     
     run_universal_pipeline(
@@ -498,4 +553,7 @@ if __name__ == '__main__':
         file_order_export_v2=args.file_order_export_v2,
         primary_reference_path=args.primary_reference_path,
         reference_map_path=args.reference_map_path,
+        fixed_assets_reference_skeleton_export=args.fixed_assets_reference_skeleton_export,
+        fixed_assets_skeleton_csv=args.fixed_assets_skeleton_csv,
+        fixed_assets_skeleton_start_row=args.fixed_assets_skeleton_start_row,
     )
