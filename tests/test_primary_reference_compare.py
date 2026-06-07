@@ -40,7 +40,7 @@ def test_compare_primary_reference_identical_workbooks(tmp_path):
 
     assert result["summary"]["differences"] == 0
     assert result["summary"]["fixed_rows_compared"] == 0
-    assert result["summary"]["identity_rows_checked"] == 10
+    assert result["summary"]["identity_rows_checked"] == 13
     assert Path(result["xlsx_path"]).is_file()
     assert Path(result["json_path"]).is_file()
 
@@ -335,7 +335,7 @@ def test_compare_primary_reference_records_identity_not_found(tmp_path):
     assert alignment["reference_matched_row"] is None
 
 
-def test_strict_exact_reports_same_row_diffs_without_identity_alignment(tmp_path):
+def test_strict_exact_uses_identity_alignment_for_identity_rows(tmp_path):
     reference = tmp_path / "reference.xlsx"
     generated = tmp_path / "generated.xlsx"
     out_dir = tmp_path / "strict_reports"
@@ -357,12 +357,12 @@ def test_strict_exact_reports_same_row_diffs_without_identity_alignment(tmp_path
     strict = compare_workbooks(generated, reference, out_dir, strict_exact=True)
 
     assert strict["summary"]["compare_mode"] == "strict_exact"
-    assert strict["summary"]["diff_total"] >= 1
-    assert strict["summary"]["diff_by_row"]["66"] >= 1
+    assert strict["summary"]["diff_total"] == 0
     payload = _payload(strict)
     assert "diff_detail" in payload
     assert payload["summary"]["diff_total"] == len(payload["diff_detail"])
-    assert any(row["row"] == 66 and row["reference_row"] == 66 for row in payload["diff_detail"])
+    assert not any(row["row"] == 66 and row["reference_row"] == 66 for row in payload["diff_detail"])
+    assert strict["summary"]["identity_rows_matched"] >= 1
     assert non_strict["summary"]["identity_rows_matched"] >= 1
 
 
@@ -382,3 +382,222 @@ def test_strict_exact_identical_workbooks_has_zero_diff_total(tmp_path):
     payload = _payload(result)
     assert payload["diff_by_row"] == {}
     assert payload["diff_detail"] == []
+
+
+def test_strict_identity_birthday_matches_reference_row_not_same_row(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "strict_reports"
+    _make_workbook(generated, {
+        "B59": 5004086291,
+        "S59": "誕生日会/Tiền sinh nhật birthday",
+        "F59": "=2*152000",
+    })
+    _make_workbook(reference, {
+        "B59": 5005026371,
+        "S59": "RAM laptop unrelated",
+        "F59": "=6*2150000",
+        "B230": 5004086291,
+        "S230": "birthday sinh nhật 誕生日",
+        "F230": "=2*152000",
+    })
+
+    result = compare_workbooks(generated, reference, out_dir, strict_exact=True)
+
+    payload = _payload(result)
+    alignment = [row for row in payload["identity_row_alignment"] if row["generated_row"] == 59][0]
+    assert alignment["reference_matched_row"] == 230
+    assert not any(row for row in payload["diff_detail"] if row["row"] == 59 and row["reference_row"] == 59)
+
+
+def test_strict_identity_cleaning_ambiguous_is_not_forced(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "strict_reports"
+    _make_workbook(generated, {
+        "B51": 5005246286,
+        "S51": "cleaning fee vệ sinh",
+    })
+    _make_workbook(reference, {
+        "B210": 5005246286,
+        "S210": "cleaning fee vệ sinh",
+        "B211": 5005246286,
+        "S211": "cleaning fee vệ sinh",
+    })
+
+    result = compare_workbooks(generated, reference, out_dir, strict_exact=True)
+
+    alignment = [row for row in _payload(result)["identity_row_alignment"] if row["generated_row"] == 51][0]
+    assert alignment["match_method"] == "ambiguous"
+    assert alignment["reference_matched_row"] is None
+
+
+def test_strict_identity_does_not_count_false_fixed_row_diff(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "strict_reports"
+    _make_workbook(generated, {
+        "B40": 9114120007,
+        "S40": "固定資産金利（建物）/Lãi nhà interest building",
+        "F40": "=ROUND(1*$B$2,0)",
+    })
+    _make_workbook(reference, {
+        "B40": 5006016244,
+        "S40": "depreciation unrelated",
+        "F40": "=different",
+        "B240": 9114120007,
+        "S240": "interest building lãi nhà 建物",
+        "F240": "=ROUND(1*$B$2,0)",
+    })
+
+    result = compare_workbooks(generated, reference, out_dir, strict_exact=True)
+
+    payload = _payload(result)
+    alignment = [row for row in payload["identity_row_alignment"] if row["generated_row"] == 40][0]
+    assert alignment["reference_matched_row"] == 240
+    assert not any(row for row in payload["diff_detail"] if row["row"] == 40 and row["reference_row"] == 40)
+
+
+def test_strict_summary_splits_new_and_existing_identity_rows(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "strict_reports"
+    _make_workbook(reference)
+    _make_workbook(generated)
+
+    result = compare_workbooks(generated, reference, out_dir, strict_exact=True)
+
+    summary = result["summary"]
+    assert summary["layout_fixed_rows"] == [3, 5, 9, 17, 25]
+    assert summary["layout_fixed_rows_total"] == 5
+    assert summary["new_identity_rows_from_42N1G"] == [38, 40, 42, 51, 59]
+    assert summary["new_identity_rows_total"] == 5
+    assert summary["existing_identity_rows_total"] == 8
+    assert "new_identity_rows_ambiguous" in summary
+    assert "existing_identity_rows_not_found" in summary
+
+
+def test_new_identity_rows_have_per_row_report_and_requirement_notes(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "strict_reports"
+    _make_workbook(reference)
+    _make_workbook(generated)
+
+    result = compare_workbooks(generated, reference, out_dir, strict_exact=True)
+
+    alignments = {row["generated_row"]: row for row in _payload(result)["identity_row_alignment"]}
+    for row in (38, 40, 42, 51, 59):
+        assert row in alignments
+        assert alignments[row]["row_group"] == "new_identity_rows_from_42N1G"
+        assert "classification" in alignments[row]
+        assert "match_score" in alignments[row]
+        assert "matched_fields" in alignments[row]
+        assert "candidate_rows" in alignments[row]
+    assert "42R0-G1" in alignments[38]["requirement_note"]
+    assert "42R0-G2" in alignments[42]["requirement_note"]
+    assert "42R0-D1" in alignments[59]["requirement_note"]
+
+
+def test_layout_rows_are_not_business_identity_rows(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "strict_reports"
+    _make_workbook(reference, {"F3": "=1+1"})
+    _make_workbook(generated, {"F3": "=2+2"})
+
+    result = compare_workbooks(generated, reference, out_dir, strict_exact=True)
+
+    payload = _payload(result)
+    assert not any(row["generated_row"] in (3, 5, 9, 17, 25) for row in payload["identity_row_alignment"])
+    assert any(row["row"] == 3 and row["compare_mode"] == "strict_exact" for row in payload["diff_detail"])
+
+
+def test_building_land_interest_disambiguates_to_building_land_candidate(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "strict_reports"
+    _make_workbook(generated, {
+        "B40": 9114120007,
+        "S40": "固定資産金利（建物）/Lãi nhà building land",
+    })
+    _make_workbook(reference, {
+        "B302": 9114120007,
+        "S302": "固定資産金利(治具)",
+        "B303": 9114120007,
+        "S303": "固定資産金利(建物、土地)",
+    })
+
+    result = compare_workbooks(generated, reference, out_dir, strict_exact=True)
+
+    alignment = [row for row in _payload(result)["identity_row_alignment"] if row["generated_row"] == 40][0]
+    assert alignment["reference_matched_row"] == 303
+    assert "building_land_tokens" in alignment["matched_fields"]
+    assert alignment["note"] == "disambiguated by building/land token evidence"
+
+
+def test_tool_jig_interest_disambiguates_to_tool_jig_candidate(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "strict_reports"
+    _make_workbook(generated, {
+        "B42": 9114120007,
+        "S42": "固定資産金利（設備）/Lãi thiết bị equipment tool",
+    })
+    _make_workbook(reference, {
+        "B302": 9114120007,
+        "S302": "固定資産金利(治具)",
+        "B303": 9114120007,
+        "S303": "固定資産金利(建物、土地)",
+    })
+
+    result = compare_workbooks(generated, reference, out_dir, strict_exact=True)
+
+    alignment = [row for row in _payload(result)["identity_row_alignment"] if row["generated_row"] == 42][0]
+    assert alignment["reference_matched_row"] == 302
+    assert "tool_jig_tokens" in alignment["matched_fields"]
+    assert alignment["note"] == "disambiguated by tool/jig token evidence"
+
+
+def test_no_disambiguation_without_clear_token_evidence(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "strict_reports"
+    _make_workbook(generated, {
+        "B42": 9114120007,
+        "S42": "固定資産金利 interest",
+    })
+    _make_workbook(reference, {
+        "B302": 9114120007,
+        "S302": "固定資産金利(治具)",
+        "B303": 9114120007,
+        "S303": "固定資産金利(建物、土地)",
+    })
+
+    result = compare_workbooks(generated, reference, out_dir, strict_exact=True)
+
+    alignment = [row for row in _payload(result)["identity_row_alignment"] if row["generated_row"] == 42][0]
+    assert alignment["match_method"] == "ambiguous"
+    assert alignment["reference_matched_row"] is None
+
+
+def test_ambiguous_candidates_are_not_forced_when_evidence_conflicts(tmp_path):
+    reference = tmp_path / "reference.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    out_dir = tmp_path / "strict_reports"
+    _make_workbook(generated, {
+        "B42": 9114120007,
+        "S42": "固定資産金利 建物 設備 building equipment",
+    })
+    _make_workbook(reference, {
+        "B302": 9114120007,
+        "S302": "固定資産金利(治具)",
+        "B303": 9114120007,
+        "S303": "固定資産金利(建物、土地)",
+    })
+
+    result = compare_workbooks(generated, reference, out_dir, strict_exact=True)
+
+    alignment = [row for row in _payload(result)["identity_row_alignment"] if row["generated_row"] == 42][0]
+    assert alignment["match_method"] == "ambiguous"
+    assert alignment["reference_matched_row"] is None
