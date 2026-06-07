@@ -35,6 +35,7 @@ from src.engine.facility_file_order_writer import (
     apply_facility_file_order_to_workbook,
     write_facility_file_order_preview_workbook,
 )
+from src.engine.admin_consumables_writer import apply_admin_consumables_to_workbook
 from src.utils.source_manifest import describe_manifest
 
 
@@ -71,7 +72,9 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            facility_preview_output: str | None = None,
                            facility_preview_start_row: int = 200,
                            facility_file_order_export: bool = False,
-                           facility_file_order_start_row: int = 200):
+                           facility_file_order_start_row: int = 200,
+                           admin_consumables_export: bool = False,
+                           admin_consumables_start_row: int = 207):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports all 62 CCs.
@@ -190,6 +193,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         builder = HubBuilder(conn, fiscal_year=fiscal_year)
         
         facility_source_path = os.path.join(source_dir, "施設課　MPFY2027.xlsx")
+        admin_source_path = os.path.join(source_dir, "総務課 FY2027 MP 振替予定.xlsx")
+        allocation_source_path = os.path.join(source_dir, "FY2027配賦額一覧 (2025.12.29).xlsx")
         if target_cc:
             # Single Export
             log_callback(f"Exporting Single CC: {target_cc}")
@@ -203,6 +208,15 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     start_row=facility_file_order_start_row,
                 )
                 log_callback(f"Facility file-order export applied: {out_path}")
+            if admin_consumables_export:
+                apply_admin_consumables_to_workbook(
+                    workbook_path=out_path,
+                    admin_source_path=admin_source_path,
+                    allocation_source_path=allocation_source_path,
+                    cost_center=target_cc,
+                    start_row=admin_consumables_start_row,
+                )
+                log_callback(f"Admin consumables export applied: {out_path}")
             log_callback(f"Done: {output_dir}")
         else:
             # Batch Export
@@ -222,6 +236,15 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             start_row=facility_file_order_start_row,
                         )
                         log_callback(f"Facility file-order export applied: {out_path}")
+                    if admin_consumables_export and str(cc) == "1412000040":
+                        apply_admin_consumables_to_workbook(
+                            workbook_path=out_path,
+                            admin_source_path=admin_source_path,
+                            allocation_source_path=allocation_source_path,
+                            cost_center=cc,
+                            start_row=admin_consumables_start_row,
+                        )
+                        log_callback(f"Admin consumables export applied: {out_path}")
                     count += 1
             
             log_callback(f"Successfully exported {count} files to: {output_dir}")
@@ -289,6 +312,12 @@ if __name__ == '__main__':
         help='Explicit opt-in: apply Facility file-order rows to generated output workbook(s).',
     )
     parser.add_argument('--facility-file-order-start-row', type=int, default=200)
+    parser.add_argument(
+        '--admin-consumables-export',
+        action='store_true',
+        help='Explicit opt-in: apply Admin consumables file-order rows to generated output workbook(s).',
+    )
+    parser.add_argument('--admin-consumables-start-row', type=int, default=207)
     args = parser.parse_args()
     
     run_universal_pipeline(
@@ -302,4 +331,6 @@ if __name__ == '__main__':
         facility_preview_start_row=args.facility_preview_start_row,
         facility_file_order_export=args.facility_file_order_export,
         facility_file_order_start_row=args.facility_file_order_start_row,
+        admin_consumables_export=args.admin_consumables_export,
+        admin_consumables_start_row=args.admin_consumables_start_row,
     )
