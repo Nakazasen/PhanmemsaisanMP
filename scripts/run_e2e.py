@@ -3,6 +3,7 @@ MP2027 Manager - Universal E2E Execution Pipeline
 Supports Single CC and Batch Export.
 """
 import sqlite3
+import csv
 import os
 import shutil
 import sys
@@ -37,6 +38,7 @@ from src.engine.facility_file_order_writer import (
 )
 from src.engine.admin_consumables_writer import apply_admin_consumables_to_workbook
 from src.engine.system_cost_writer import apply_system_cost_to_workbook
+from src.engine.reference_assisted_fill import apply_reference_assisted_fill_to_workbook
 from src.utils.source_manifest import describe_manifest
 
 
@@ -65,6 +67,51 @@ def _default_source_dir() -> str:
         return candidate
     return BASE_DIR
 
+
+def _default_reference_map_path() -> str:
+    return os.path.join(BASE_DIR, "docs", "config", "reference_workbook_map.csv")
+
+
+def _default_primary_reference_for_current_target() -> str:
+    return os.path.join(
+        BASE_DIR,
+        "reference_outputs",
+        "primary",
+        "16.KDTVN 電気製造技術課_MP FY2027_各予定(Ver01).xlsx",
+    )
+
+
+def _resolve_primary_reference_path(
+    target_cc: int | str | None,
+    primary_reference_path: str | None = None,
+    reference_map_path: str | None = None,
+) -> str:
+    """Resolve an explicit reference workbook for reference-assisted fill.
+
+    The built-in default is intentionally scoped to current target CC 1412000040.
+    Other CCs must provide --primary-reference-path or a map row.
+    """
+    if primary_reference_path:
+        resolved = os.path.abspath(primary_reference_path)
+    else:
+        target_text = str(target_cc or "")
+        resolved = ""
+        map_path = reference_map_path or _default_reference_map_path()
+        if os.path.exists(map_path):
+            with open(map_path, newline="", encoding="utf-8-sig") as handle:
+                for row in csv.DictReader(handle):
+                    if row.get("target_cc") == target_text and row.get("reference_role") == "primary_reference":
+                        candidate = row.get("reference_path", "")
+                        resolved = candidate if os.path.isabs(candidate) else os.path.join(BASE_DIR, candidate)
+                        break
+        if not resolved and target_text == "1412000040":
+            resolved = _default_primary_reference_for_current_target()
+        if not resolved:
+            raise ValueError("Reference-assisted fill requires --primary-reference-path for this target CC.")
+    if not os.path.exists(resolved):
+        raise FileNotFoundError(f"Reference-assisted fill primary reference not found: {resolved}")
+    return resolved
+
 def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str, 
                            exchange_rate: float = 25450.0,
                            target_cc: int = None,
@@ -78,13 +125,23 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            admin_consumables_start_row: int = 207,
                            system_cost_export: bool = False,
                            system_cost_start_row: int = 211,
-                           file_order_export_v1: bool = False):
+                           file_order_export_v1: bool = False,
+                           primary_reference_fill: bool = False,
+                           primary_reference_fill_start_row: int = 213,
+                           file_order_export_v2: bool = False,
+                           primary_reference_path: str | None = None,
+                           reference_map_path: str | None = None):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports all 62 CCs.
     """
     if log_callback is None:
         log_callback = _safe_console_print
+
+    if file_order_export_v2:
+        file_order_export_v1 = True
+        primary_reference_fill = True
+        primary_reference_fill_start_row = 213
 
     if file_order_export_v1:
         facility_file_order_export = True
@@ -242,6 +299,25 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     start_row=system_cost_start_row,
                 )
                 log_callback(f"System Cost export applied: {out_path}")
+            if primary_reference_fill:
+                primary_path = _resolve_primary_reference_path(
+                    target_cc=target_cc,
+                    primary_reference_path=primary_reference_path,
+                    reference_map_path=reference_map_path,
+                )
+                invariant_path = os.path.join(
+                    BASE_DIR,
+                    "docs",
+                    "audits",
+                    "phase42n2b_invariant_gap_accounting.csv",
+                )
+                fill_result = apply_reference_assisted_fill_to_workbook(
+                    workbook_path=out_path,
+                    primary_path=primary_path,
+                    invariant_csv_path=invariant_path,
+                    start_row=primary_reference_fill_start_row,
+                )
+                log_callback(f"Reference-assisted primary fill applied: {fill_result}")
             log_callback(f"Done: {output_dir}")
         else:
             # Batch Export
@@ -278,6 +354,25 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             start_row=system_cost_start_row,
                         )
                         log_callback(f"System Cost export applied: {out_path}")
+                    if primary_reference_fill and str(cc) == "1412000040":
+                        primary_path = _resolve_primary_reference_path(
+                            target_cc=cc,
+                            primary_reference_path=primary_reference_path,
+                            reference_map_path=reference_map_path,
+                        )
+                        invariant_path = os.path.join(
+                            BASE_DIR,
+                            "docs",
+                            "audits",
+                            "phase42n2b_invariant_gap_accounting.csv",
+                        )
+                        fill_result = apply_reference_assisted_fill_to_workbook(
+                            workbook_path=out_path,
+                            primary_path=primary_path,
+                            invariant_csv_path=invariant_path,
+                            start_row=primary_reference_fill_start_row,
+                        )
+                        log_callback(f"Reference-assisted primary fill applied: {fill_result}")
                     count += 1
             
             log_callback(f"Successfully exported {count} files to: {output_dir}")
@@ -362,6 +457,24 @@ if __name__ == '__main__':
         action='store_true',
         help='Explicit opt-in: apply Facility, Admin consumables, and System Cost file-order rows with v1 row placement.',
     )
+    parser.add_argument(
+        '--primary-reference-fill',
+        action='store_true',
+        help='Explicit opt-in: append primary reference-assisted rows with provenance labels after normal export.',
+    )
+    parser.add_argument('--primary-reference-fill-start-row', type=int, default=213)
+    parser.add_argument(
+        '--file-order-export-v2',
+        action='store_true',
+        help='Explicit opt-in: v1 file-order export plus primary reference-assisted fill starting at row 213.',
+    )
+    parser.add_argument(
+        '--primary-reference-path',
+        type=str,
+        default=None,
+        help='Primary reference workbook for reference-assisted fill. Required for CCs other than 1412000040 unless mapped.',
+    )
+    parser.add_argument('--reference-map-path', type=str, default=_default_reference_map_path())
     args = parser.parse_args()
     
     run_universal_pipeline(
@@ -380,4 +493,9 @@ if __name__ == '__main__':
         system_cost_export=args.system_cost_export,
         system_cost_start_row=args.system_cost_start_row,
         file_order_export_v1=args.file_order_export_v1,
+        primary_reference_fill=args.primary_reference_fill,
+        primary_reference_fill_start_row=args.primary_reference_fill_start_row,
+        file_order_export_v2=args.file_order_export_v2,
+        primary_reference_path=args.primary_reference_path,
+        reference_map_path=args.reference_map_path,
     )
