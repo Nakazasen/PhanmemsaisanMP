@@ -1,4 +1,4 @@
-"""Explicit Facility file-order preview workbook writer.
+"""Explicit Facility file-order preview/export workbook writer.
 
 This module is intentionally separate from HubBuilder. It only writes when callers
 explicitly provide an output path, and it never changes the default export flow.
@@ -40,6 +40,45 @@ def _clear_preview_row(worksheet, row_index: int) -> None:
         worksheet.cell(row=row_index, column=column_index).value = None
 
 
+def _write_facility_preview_rows(worksheet, facility_source_path: str | Path, cost_center: str | int, start_row: int) -> None:
+    preview = preview_facility_file_order(facility_source_path, cost_center=cost_center, start_row=start_row)
+    for item in preview.items:
+        row_index = item.planned_row
+        _clear_preview_row(worksheet, row_index)
+        worksheet.cell(row=row_index, column=ITEM_ID_COL, value=item.item_id)
+        worksheet.cell(row=row_index, column=DESCRIPTION_COL, value=item.display_name)
+        worksheet.cell(row=row_index, column=NOTE_COL, value=item.note if item.confidence != "HIGH" else item.formula_policy)
+        worksheet.cell(row=row_index, column=VISIBLE_MONTH_START_COL, value=_preview_value(item, VISIBLE_MONTH_START_COL))
+        worksheet.cell(row=row_index, column=VISIBLE_MONTH_END_COL, value=_preview_value(item, VISIBLE_MONTH_END_COL))
+
+    if preview.blank_row_after is not None:
+        _clear_preview_row(worksheet, preview.blank_row_after)
+
+
+def apply_facility_file_order_to_workbook(
+    workbook_path: str | Path,
+    facility_source_path: str | Path,
+    cost_center: str | int = "1412000040",
+    start_row: int = 200,
+) -> Path:
+    """Apply Facility file-order rows to an explicit existing workbook path."""
+    if not workbook_path:
+        raise ValueError("workbook_path is required for Facility file-order export")
+    workbook_file = Path(workbook_path)
+    facility_source = Path(facility_source_path)
+    if workbook_file.resolve() == facility_source.resolve():
+        raise ValueError("workbook_path must not overwrite the Facility source workbook")
+
+    workbook = load_workbook(workbook_file)
+    try:
+        worksheet = workbook[helpers.find_hub_sheet_name(workbook)]
+        _write_facility_preview_rows(worksheet, facility_source, cost_center, start_row)
+        workbook.save(workbook_file)
+    finally:
+        workbook.close()
+    return workbook_file
+
+
 def write_facility_file_order_preview_workbook(
     template_path: str | Path,
     facility_source_path: str | Path,
@@ -61,24 +100,4 @@ def write_facility_file_order_preview_workbook(
 
     output.parent.mkdir(parents=True, exist_ok=True)
     copy2(template, output)
-
-    preview = preview_facility_file_order(facility_source, cost_center=cost_center, start_row=start_row)
-    workbook = load_workbook(output)
-    try:
-        worksheet = workbook[helpers.find_hub_sheet_name(workbook)]
-        for item in preview.items:
-            row_index = item.planned_row
-            _clear_preview_row(worksheet, row_index)
-            worksheet.cell(row=row_index, column=ITEM_ID_COL, value=item.item_id)
-            worksheet.cell(row=row_index, column=DESCRIPTION_COL, value=item.display_name)
-            worksheet.cell(row=row_index, column=NOTE_COL, value=item.note if item.confidence != "HIGH" else item.formula_policy)
-            worksheet.cell(row=row_index, column=VISIBLE_MONTH_START_COL, value=_preview_value(item, VISIBLE_MONTH_START_COL))
-            worksheet.cell(row=row_index, column=VISIBLE_MONTH_END_COL, value=_preview_value(item, VISIBLE_MONTH_END_COL))
-
-        if preview.blank_row_after is not None:
-            _clear_preview_row(worksheet, preview.blank_row_after)
-
-        workbook.save(output)
-    finally:
-        workbook.close()
-    return output
+    return apply_facility_file_order_to_workbook(output, facility_source, cost_center=cost_center, start_row=start_row)

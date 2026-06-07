@@ -31,7 +31,10 @@ from src.parsers.it_sim import parse_it_simulation
 from src.parsers.fixed_assets import parse_fixed_assets
 from src.engine.allocator import AllocationEngine
 from src.engine.hub_builder import HubBuilder
-from src.engine.facility_file_order_writer import write_facility_file_order_preview_workbook
+from src.engine.facility_file_order_writer import (
+    apply_facility_file_order_to_workbook,
+    write_facility_file_order_preview_workbook,
+)
 from src.utils.source_manifest import describe_manifest
 
 
@@ -66,7 +69,9 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            log_callback=None,
                            facility_file_order_preview: bool = False,
                            facility_preview_output: str | None = None,
-                           facility_preview_start_row: int = 200):
+                           facility_preview_start_row: int = 200,
+                           facility_file_order_export: bool = False,
+                           facility_file_order_start_row: int = 200):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports all 62 CCs.
@@ -176,17 +181,28 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
 
         # 4. Allocation Engine
         log_callback("Running allocation...")
+        # 4. Allocation Engine
+        log_callback("Running allocation...")
         engine = AllocationEngine(conn)
         engine.run_allocation()
         
         # 5. Export Logic
         builder = HubBuilder(conn, fiscal_year=fiscal_year)
         
+        facility_source_path = os.path.join(source_dir, "施設課　MPFY2027.xlsx")
         if target_cc:
             # Single Export
             log_callback(f"Exporting Single CC: {target_cc}")
             out_path = os.path.join(output_dir, f"MP_CC_{target_cc}.xlsx")
             builder.export_to_template(template_path, out_path, cc_code=target_cc)
+            if facility_file_order_export:
+                apply_facility_file_order_to_workbook(
+                    workbook_path=out_path,
+                    facility_source_path=facility_source_path,
+                    cost_center=target_cc,
+                    start_row=facility_file_order_start_row,
+                )
+                log_callback(f"Facility file-order export applied: {out_path}")
             log_callback(f"Done: {output_dir}")
         else:
             # Batch Export
@@ -198,6 +214,14 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             for cc in all_ccs:
                 out_path = os.path.join(output_dir, f"MP_CC_{cc}.xlsx")
                 if builder.export_to_template(template_path, out_path, cc_code=cc):
+                    if facility_file_order_export and str(cc) == "1412000040":
+                        apply_facility_file_order_to_workbook(
+                            workbook_path=out_path,
+                            facility_source_path=facility_source_path,
+                            cost_center=cc,
+                            start_row=facility_file_order_start_row,
+                        )
+                        log_callback(f"Facility file-order export applied: {out_path}")
                     count += 1
             
             log_callback(f"Successfully exported {count} files to: {output_dir}")
@@ -214,7 +238,6 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         log_callback(f"Missing input CSV: {audit_result['missing_csv_path']}")
 
         if facility_file_order_preview:
-            facility_source_path = os.path.join(source_dir, "施設課　MPFY2027.xlsx")
             preview_output = facility_preview_output or os.path.join(
                 BASE_DIR,
                 "dist",
@@ -260,6 +283,12 @@ if __name__ == '__main__':
         help='Output path for Facility preview workbook. Defaults to dist/preview/facility_file_order_preview.xlsx when preview is enabled.',
     )
     parser.add_argument('--facility-preview-start-row', type=int, default=200)
+    parser.add_argument(
+        '--facility-file-order-export',
+        action='store_true',
+        help='Explicit opt-in: apply Facility file-order rows to generated output workbook(s).',
+    )
+    parser.add_argument('--facility-file-order-start-row', type=int, default=200)
     args = parser.parse_args()
     
     run_universal_pipeline(
@@ -271,4 +300,6 @@ if __name__ == '__main__':
         facility_file_order_preview=args.facility_file_order_preview,
         facility_preview_output=args.facility_preview_output,
         facility_preview_start_row=args.facility_preview_start_row,
+        facility_file_order_export=args.facility_file_order_export,
+        facility_file_order_start_row=args.facility_file_order_start_row,
     )
