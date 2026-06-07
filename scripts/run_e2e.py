@@ -40,6 +40,7 @@ from src.engine.admin_consumables_writer import apply_admin_consumables_to_workb
 from src.engine.system_cost_writer import apply_system_cost_to_workbook
 from src.engine.reference_assisted_fill import apply_reference_assisted_fill_to_workbook
 from src.engine.fixed_assets_reference_skeleton import apply_fixed_assets_reference_skeleton_to_workbook
+from src.engine.mp_saisan_complete_export import apply_mp_saisan_complete_v1
 from src.utils.source_manifest import describe_manifest
 
 
@@ -143,7 +144,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            reference_map_path: str | None = None,
                            fixed_assets_reference_skeleton_export: bool = False,
                            fixed_assets_skeleton_csv: str | None = None,
-                           fixed_assets_skeleton_start_row: int | None = None):
+                           fixed_assets_skeleton_start_row: int | None = None,
+                           mp_saisan_complete_v1: bool = False):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports all 62 CCs.
@@ -155,6 +157,11 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         file_order_export_v1 = True
         primary_reference_fill = True
         primary_reference_fill_start_row = 213
+
+    if mp_saisan_complete_v1:
+        file_order_export_v1 = True
+        primary_reference_fill = False
+        fixed_assets_reference_skeleton_export = False
 
     if fixed_assets_reference_skeleton_export and primary_reference_fill:
         return False, (
@@ -337,6 +344,21 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     start_row=primary_reference_fill_start_row,
                 )
                 log_callback(f"Reference-assisted primary fill applied: {fill_result}")
+            if mp_saisan_complete_v1:
+                complete_result = apply_mp_saisan_complete_v1(
+                    workbook_path=out_path,
+                    target_cc=target_cc,
+                    primary_reference_path=primary_reference_path,
+                    reference_map_path=reference_map_path or _default_reference_map_path(),
+                    fixed_assets_skeleton_csv=fixed_assets_skeleton_csv or _default_fixed_assets_skeleton_csv_path(),
+                    invariant_csv_path=os.path.join(
+                        BASE_DIR,
+                        "docs",
+                        "audits",
+                        "phase42n2b_invariant_gap_accounting.csv",
+                    ),
+                )
+                log_callback(f"MP Saisan complete v1 applied: {complete_result}")
             if fixed_assets_reference_skeleton_export:
                 if primary_reference_fill:
                     raise ValueError(
@@ -530,6 +552,11 @@ if __name__ == '__main__':
         help='42N2E fixed-assets secondary skeleton candidate CSV.',
     )
     parser.add_argument('--fixed-assets-skeleton-start-row', type=int, default=None)
+    parser.add_argument(
+        '--mp-saisan-complete-v1',
+        action='store_true',
+        help='Explicit opt-in: apply file-order v1 plus deduped primary and secondary reference-assisted layers.',
+    )
     args = parser.parse_args()
     
     run_universal_pipeline(
@@ -556,4 +583,5 @@ if __name__ == '__main__':
         fixed_assets_reference_skeleton_export=args.fixed_assets_reference_skeleton_export,
         fixed_assets_skeleton_csv=args.fixed_assets_skeleton_csv,
         fixed_assets_skeleton_start_row=args.fixed_assets_skeleton_start_row,
+        mp_saisan_complete_v1=args.mp_saisan_complete_v1,
     )
