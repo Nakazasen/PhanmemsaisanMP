@@ -105,6 +105,31 @@ def test_sort_output_groups_by_file_order():
 def test_no_writer_integration_yet():
     hub_builder = Path("src/engine/hub_builder.py").read_text(encoding="utf-8")
 
-    assert "output_mode" not in hub_builder
-    assert "OutputGroupSpec" not in hub_builder
-    assert "OutputMode" not in hub_builder
+    assert "sort_output_groups_by_file_order" not in hub_builder
+    assert "insert_rows" not in hub_builder
+    assert "blank_row_after_group" not in hub_builder
+    assert "_write_file_order" not in hub_builder
+    assert "_write_blank" not in hub_builder
+    assert "self._output_group_specs()" not in hub_builder
+    assert "self._write_fixed_rows(worksheet, target_cc)" in hub_builder
+
+
+def test_hub_builder_exposes_output_group_specs_without_export_integration():
+    from src.engine.hub_builder import HubBuilder
+
+    builder = object.__new__(HubBuilder)
+    specs = builder._output_group_specs()
+
+    assert [spec.group_id for spec in specs] == [
+        "facility",
+        "fixed_assets",
+        "system_cost",
+        "admin_allocation",
+        "birthday",
+        "allocation_master",
+        "nnn_paperwork",
+    ]
+    assert get_group_spec("facility") == specs[0]
+    assert get_group_spec("system_cost") == specs[2]
+    assert specs[0].output_mode == OutputMode.FILE_ORDER_GROUP
+    assert specs[2].output_mode == OutputMode.FILE_ORDER_SINGLE_ROW

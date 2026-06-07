@@ -18,6 +18,7 @@ import unicodedata
 import openpyxl
 from openpyxl.utils import get_column_letter
 
+from src.engine.output_mode import OutputGroupSpec, get_default_output_group_specs
 from src.utils import excel_helpers as helpers
 
 
@@ -133,6 +134,10 @@ class HubBuilder:
         self.fiscal_year = fiscal_year
         self.fy_months = helpers.get_fy_months(fiscal_year)
         self.rule_unit_price_by_source = self._load_rule_unit_price_by_source()
+
+    def _output_group_specs(self) -> tuple[OutputGroupSpec, ...]:
+        """Return canonical output group specs for future row-placement planning."""
+        return get_default_output_group_specs()
 
     def _normalize_text(self, value: object) -> str:
         text = unicodedata.normalize("NFKD", str(value or ""))
