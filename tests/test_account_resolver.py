@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import unittest
 from src.db.schema import create_schema, init_sys_params
@@ -255,6 +256,92 @@ class TestAccountResolver(unittest.TestCase):
         )
         self.assertEqual(result, 6004086651)
         conn.close()
+
+
+class TestSharedAccountResolver(unittest.TestCase):
+    def _mk_file_db(self):
+        import tempfile
+        from pathlib import Path
+        from src.engine.account_resolver import AccountResolutionError
+        fd, path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        db_path = Path(path)
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        create_schema(conn)
+        conn.executemany(
+            """
+            INSERT INTO dim_cost_centers
+            (code, name_jp, seq_no, saisan_type, cost_type, staff_count, worker_count)
+            VALUES (?, ?, 1, ?, ?, 0, 0)
+            """,
+            [
+                ("1412000040", "電気製造技術課", "製造", "製造"),
+                ("1412000099", "一般テスト課", "一般", "一般"),
+                ("1412000100", "販売テスト課", "販売", "販売"),
+            ],
+        )
+        conn.executemany(
+            """
+            INSERT INTO dim_accounts
+            (code, name_jp, name_vn, group_name, group_vn, mfg_code, ga_code, sales_code)
+            VALUES (?, ?, NULL, NULL, NULL, ?, ?, ?)
+            """,
+            [
+                (5000000000, "福利厚生費", 5004086291, 6004086551, 7004086777),
+                (5000000001, "製造のみ", 5001111111, None, None),
+            ],
+        )
+        conn.commit()
+        return db_path, conn, AccountResolutionError
+
+    def test_shared_target_cc_1412000040_resolves_cost_type(self):
+        from src.engine.account_resolver import resolve_cost_type_for_cc
+        db_path, conn, _ = self._mk_file_db()
+        conn.close()
+        self.assertEqual(resolve_cost_type_for_cc(db_path, 1412000040), "製造")
+
+    def test_shared_account_name_resolves_correct_column_by_cost_type(self):
+        from src.engine.account_resolver import resolve_account_code
+        db_path, conn, _ = self._mk_file_db()
+        conn.close()
+        self.assertEqual(resolve_account_code(db_path, 1412000040, "福利厚生費"), 5004086291)
+        self.assertEqual(resolve_account_code(db_path, 1412000099, "福利厚生費"), 6004086551)
+        self.assertEqual(resolve_account_code(db_path, 1412000100, "福利厚生費"), 7004086777)
+
+    def test_shared_missing_cc_fails_clearly(self):
+        from src.engine.account_resolver import resolve_cost_type_for_cc
+        db_path, conn, error_cls = self._mk_file_db()
+        conn.close()
+        with self.assertRaisesRegex(error_cls, "Cost center not found"):
+            resolve_cost_type_for_cc(db_path, 9999999999)
+
+    def test_shared_missing_account_fails_clearly(self):
+        from src.engine.account_resolver import resolve_account_code
+        db_path, conn, error_cls = self._mk_file_db()
+        conn.close()
+        with self.assertRaisesRegex(error_cls, "Account not found"):
+            resolve_account_code(db_path, 1412000040, "存在しない科目")
+
+    def test_shared_resolver_does_not_fallback_to_wrong_column(self):
+        from src.engine.account_resolver import resolve_account_code
+        db_path, conn, error_cls = self._mk_file_db()
+        conn.close()
+        with self.assertRaisesRegex(error_cls, "has no ga_code value"):
+            resolve_account_code(db_path, 1412000099, "製造のみ")
+
+    def test_shared_resolver_matches_manual_event_driver_behavior(self):
+        from src.engine.account_resolver import resolve_account_code
+        from src.parsers.manual_event_drivers import _resolve_account_code as legacy_resolve
+        db_path, conn, _ = self._mk_file_db()
+        try:
+            self.assertEqual(
+                legacy_resolve(conn, "1412000040", "福利厚生費"),
+                resolve_account_code(db_path, "1412000040", "福利厚生費"),
+            )
+        finally:
+            conn.close()
+
 
 if __name__ == "__main__":
     unittest.main()
