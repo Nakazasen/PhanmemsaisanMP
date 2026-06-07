@@ -31,6 +31,7 @@ from src.parsers.it_sim import parse_it_simulation
 from src.parsers.fixed_assets import parse_fixed_assets
 from src.engine.allocator import AllocationEngine
 from src.engine.hub_builder import HubBuilder
+from src.engine.facility_file_order_writer import write_facility_file_order_preview_workbook
 from src.utils.source_manifest import describe_manifest
 
 
@@ -62,7 +63,10 @@ def _default_source_dir() -> str:
 def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str, 
                            exchange_rate: float = 25450.0,
                            target_cc: int = None,
-                           log_callback=None):
+                           log_callback=None,
+                           facility_file_order_preview: bool = False,
+                           facility_preview_output: str | None = None,
+                           facility_preview_start_row: int = 200):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports all 62 CCs.
@@ -208,9 +212,28 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         )
         log_callback(f"Audit report: {audit_result['report_path']}")
         log_callback(f"Missing input CSV: {audit_result['missing_csv_path']}")
+
+        if facility_file_order_preview:
+            facility_source_path = os.path.join(source_dir, "施設課　MPFY2027.xlsx")
+            preview_output = facility_preview_output or os.path.join(
+                BASE_DIR,
+                "dist",
+                "preview",
+                "facility_file_order_preview.xlsx",
+            )
+            preview_cc = target_cc or 1412000040
+            preview_path = write_facility_file_order_preview_workbook(
+                template_path=template_path,
+                facility_source_path=facility_source_path,
+                output_path=preview_output,
+                cost_center=preview_cc,
+                start_row=facility_preview_start_row,
+            )
+            log_callback(f"Facility file-order preview: {preview_path}")
         
         conn.close()
         return True, output_dir
+
 
     except Exception as e:
         log_callback(f"ERROR: {str(e)}")
@@ -225,6 +248,18 @@ if __name__ == '__main__':
     parser.add_argument('--source', type=str, default=_default_source_dir())
     parser.add_argument('--exchange-rate', type=float, default=25450.0)
     parser.add_argument('--target-cc', type=int, default=None)
+    parser.add_argument(
+        '--facility-file-order-preview',
+        action='store_true',
+        help='Explicit opt-in: create Facility file-order preview workbook after the normal pipeline.',
+    )
+    parser.add_argument(
+        '--facility-preview-output',
+        type=str,
+        default=None,
+        help='Output path for Facility preview workbook. Defaults to dist/preview/facility_file_order_preview.xlsx when preview is enabled.',
+    )
+    parser.add_argument('--facility-preview-start-row', type=int, default=200)
     args = parser.parse_args()
     
     run_universal_pipeline(
@@ -232,5 +267,8 @@ if __name__ == '__main__':
         template_path=args.template, 
         source_dir=args.source, 
         exchange_rate=args.exchange_rate,
-        target_cc=args.target_cc
+        target_cc=args.target_cc,
+        facility_file_order_preview=args.facility_file_order_preview,
+        facility_preview_output=args.facility_preview_output,
+        facility_preview_start_row=args.facility_preview_start_row,
     )
