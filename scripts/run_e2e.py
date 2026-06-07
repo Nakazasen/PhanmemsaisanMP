@@ -77,13 +77,22 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            admin_consumables_export: bool = False,
                            admin_consumables_start_row: int = 207,
                            system_cost_export: bool = False,
-                           system_cost_start_row: int = 211):
+                           system_cost_start_row: int = 211,
+                           file_order_export_v1: bool = False):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports all 62 CCs.
     """
     if log_callback is None:
         log_callback = _safe_console_print
+
+    if file_order_export_v1:
+        facility_file_order_export = True
+        facility_file_order_start_row = 200
+        admin_consumables_export = True
+        admin_consumables_start_row = 207
+        system_cost_export = True
+        system_cost_start_row = 211
 
     try:
         log_callback(f"Pipeline FY{fiscal_year} (ExRate: {exchange_rate:,.0f})")
@@ -348,6 +357,11 @@ if __name__ == '__main__':
         help='Explicit opt-in: apply System Cost file-order single row to generated output workbook(s).',
     )
     parser.add_argument('--system-cost-start-row', type=int, default=211)
+    parser.add_argument(
+        '--file-order-export-v1',
+        action='store_true',
+        help='Explicit opt-in: apply Facility, Admin consumables, and System Cost file-order rows with v1 row placement.',
+    )
     args = parser.parse_args()
     
     run_universal_pipeline(
@@ -365,4 +379,5 @@ if __name__ == '__main__':
         admin_consumables_start_row=args.admin_consumables_start_row,
         system_cost_export=args.system_cost_export,
         system_cost_start_row=args.system_cost_start_row,
+        file_order_export_v1=args.file_order_export_v1,
     )
