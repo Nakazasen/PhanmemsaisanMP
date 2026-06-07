@@ -36,6 +36,7 @@ from src.engine.facility_file_order_writer import (
     write_facility_file_order_preview_workbook,
 )
 from src.engine.admin_consumables_writer import apply_admin_consumables_to_workbook
+from src.engine.system_cost_writer import apply_system_cost_to_workbook
 from src.utils.source_manifest import describe_manifest
 
 
@@ -74,7 +75,9 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            facility_file_order_export: bool = False,
                            facility_file_order_start_row: int = 200,
                            admin_consumables_export: bool = False,
-                           admin_consumables_start_row: int = 207):
+                           admin_consumables_start_row: int = 207,
+                           system_cost_export: bool = False,
+                           system_cost_start_row: int = 211):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports all 62 CCs.
@@ -195,6 +198,11 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         facility_source_path = os.path.join(source_dir, "施設課　MPFY2027.xlsx")
         admin_source_path = os.path.join(source_dir, "総務課 FY2027 MP 振替予定.xlsx")
         allocation_source_path = os.path.join(source_dir, "FY2027配賦額一覧 (2025.12.29).xlsx")
+        system_source_paths = [
+            os.path.join(source_dir, "システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls"),
+            os.path.join(source_dir, "システム課金金額(Simulation)_FY2027_July.2026 ~ Dec.2026(Change AMS & PLM price).xls"),
+            os.path.join(source_dir, "システム課金金額(Simulation)_FY2027_Jan.2027 ~ March.2027(Change SAP price).xls"),
+        ]
         if target_cc:
             # Single Export
             log_callback(f"Exporting Single CC: {target_cc}")
@@ -217,6 +225,14 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     start_row=admin_consumables_start_row,
                 )
                 log_callback(f"Admin consumables export applied: {out_path}")
+            if system_cost_export:
+                apply_system_cost_to_workbook(
+                    workbook_path=out_path,
+                    system_source_paths=system_source_paths,
+                    cost_center=target_cc,
+                    start_row=system_cost_start_row,
+                )
+                log_callback(f"System Cost export applied: {out_path}")
             log_callback(f"Done: {output_dir}")
         else:
             # Batch Export
@@ -245,6 +261,14 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             start_row=admin_consumables_start_row,
                         )
                         log_callback(f"Admin consumables export applied: {out_path}")
+                    if system_cost_export and str(cc) == "1412000040":
+                        apply_system_cost_to_workbook(
+                            workbook_path=out_path,
+                            system_source_paths=system_source_paths,
+                            cost_center=cc,
+                            start_row=system_cost_start_row,
+                        )
+                        log_callback(f"System Cost export applied: {out_path}")
                     count += 1
             
             log_callback(f"Successfully exported {count} files to: {output_dir}")
@@ -318,6 +342,12 @@ if __name__ == '__main__':
         help='Explicit opt-in: apply Admin consumables file-order rows to generated output workbook(s).',
     )
     parser.add_argument('--admin-consumables-start-row', type=int, default=207)
+    parser.add_argument(
+        '--system-cost-export',
+        action='store_true',
+        help='Explicit opt-in: apply System Cost file-order single row to generated output workbook(s).',
+    )
+    parser.add_argument('--system-cost-start-row', type=int, default=211)
     args = parser.parse_args()
     
     run_universal_pipeline(
@@ -333,4 +363,6 @@ if __name__ == '__main__':
         facility_file_order_start_row=args.facility_file_order_start_row,
         admin_consumables_export=args.admin_consumables_export,
         admin_consumables_start_row=args.admin_consumables_start_row,
+        system_cost_export=args.system_cost_export,
+        system_cost_start_row=args.system_cost_start_row,
     )
