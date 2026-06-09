@@ -65,3 +65,19 @@ def test_facility_dry_run_contains_building_and_land_interest_separately():
     assert by_id["building_interest"].source_row != by_id["land_interest"].source_row
     assert by_id["building_interest"].formula_policy == "ROUND_USD_BY_B2"
     assert by_id["land_interest"].formula_policy == "ROUND_USD_BY_B2"
+
+
+def test_facility_dry_run_preserves_mixed_cost_center_row_pairs():
+    preview = preview_facility_file_order(SOURCE, cost_center="1412000040")
+    by_id = {item.item_id: item for item in preview.items}
+
+    assert by_id["building_depreciation"].source_row == by_id["land_depreciation"].source_row - 1
+    assert by_id["building_interest"].source_row == by_id["land_interest"].source_row - 1
+    assert by_id["electricity"].source_row == by_id["water"].source_row - 1
+
+    assert by_id["building_depreciation"].monthly_values != by_id["land_depreciation"].monthly_values
+    assert by_id["building_interest"].monthly_values != by_id["land_interest"].monthly_values
+    assert by_id["electricity"].monthly_values != by_id["water"].monthly_values
+
+    assert by_id["electricity"].monthly_values[0] == 1577160
+    assert by_id["water"].monthly_values[0] == 529671

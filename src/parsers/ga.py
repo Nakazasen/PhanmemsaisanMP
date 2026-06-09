@@ -17,6 +17,7 @@ from typing import Any
 import openpyxl
 import pandas as pd
 
+from src.engine.account_resolver import resolve_account_code_for_source
 from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
 from src.utils.source_manifest import resolve_manifest_file
 
@@ -298,6 +299,237 @@ def _parse_ga_headcount_sheet(
     return aggregated
 
 
+ADMIN_SOURCE_NAME = "ga_admin_allocation"
+ADMIN_FORM_ROW_BY_TOKEN = (
+    (46, ("gas", "食堂燃料", "nhiên liệu", "nhien lieu"), ()),
+    (48, ("手洗い洗剤", "nước rửa tay", "nuoc rua tay", "soap"), ()),
+    (51, ("清掃", "làm sạch", "lam sach", "cleaning"), ()),
+    (54, ("決起コンパ", "tiệc khuấy động", "tiec khuay dong"), ()),
+    (56, ("社内販売", "company sale", "bán nội bộ", "ban noi bo"), ()),
+    (58, ("khám sức khỏe khi tuyển dụng", "kham suc khoe khi tuyen dung", "người mới", "nguoi moi", "new hire health"), ()),
+    (97, ("sổ tay nhân viên", "so tay nhan vien", "staff notebook", "nhân viên mới", "nhan vien moi"), ("worker", "cong nhan", "công nhân")),
+    (98, ("sổ tay công nhân", "so tay cong nhan", "worker notebook", "công nhân mới", "cong nhan moi"), ("staff", "nhan vien", "nhân viên")),
+)
+ADMIN_BASE_ACCOUNT_BY_ROW = {
+    46: 5005056281,
+    48: 5005016372,
+    51: 5005246286,
+    54: 5004086291,
+    56: 5004086291,
+    58: 5004086291,
+    97: 5005246288,
+    98: 5005246288,
+}
+ADMIN_DEFAULT_UNIT_PRICE_BY_ROW = {97: 130000, 98: 40000}
+
+
+def _admin_match_form_row(text: str) -> int | None:
+    normalized = _normalize_text(text)
+    for row_index, tokens, exclude_tokens in ADMIN_FORM_ROW_BY_TOKEN:
+        if any(_normalize_text(token) in normalized for token in exclude_tokens):
+            continue
+        if any(_normalize_text(token) in normalized for token in tokens):
+            return row_index
+    return None
+
+
+def _admin_header_key(value: Any) -> str:
+    text = _normalize_text(value)
+    if not text:
+        return ""
+    if any(token in text for token in ("account", "tài khoản", "tai khoan", "勘定科目")):
+        return "account_code"
+    if any(token in text for token in ("cc", "costcenter", "cost center", "code phòng", "code phong", "部門")):
+        return "cc_code"
+    if any(token in text for token in ("form_row", "form row", "row", "dòng", "dong")):
+        return "form_row"
+    if any(token in text for token in ("period", "month", "tháng", "thang", "月")):
+        return "period"
+    if any(token in text for token in ("amount", "số tiền", "so tien", "金額")):
+        return "amount"
+    if any(token in text for token in ("formula", "công thức", "cong thuc")):
+        return "formula"
+    if any(token in text for token in ("quantity", "qty", "số người", "so nguoi", "人数")):
+        return "quantity"
+    if any(token in text for token in ("unit", "đơn giá", "don gia", "単価")):
+        return "unit_price"
+    if any(token in text for token in ("description", "nội dung", "noi dung", "内容")):
+        return "description"
+    return ""
+
+
+def _admin_period_from_value(value: Any, fy_months: list[str]) -> str | None:
+    if value is None:
+        return None
+    if hasattr(value, "year") and hasattr(value, "month"):
+        period = f"{int(value.year)}{int(value.month):02d}"
+        return period if period in fy_months else None
+    text = _normalize_text(value)
+    if not text:
+        return None
+    compact = text.replace("/", "").replace("-", "")
+    match = re.search(r"(20\d{2})(0[1-9]|1[0-2])", compact)
+    if match:
+        period = f"{match.group(1)}{match.group(2)}"
+        return period if period in fy_months else None
+    month_match = re.search(r"(?:thang|tháng|月)\s*(\d{1,2})", text)
+    if not month_match:
+        month_match = re.fullmatch(r"(\d{1,2})", text)
+    if month_match:
+        month = int(month_match.group(1))
+        for period in fy_months:
+            if int(period[-2:]) == month:
+                return period
+    return None
+
+
+def _admin_format_number(value: float) -> str:
+    return str(int(round(value))) if abs(value - round(value)) < 1e-9 else str(value)
+
+
+def _admin_insert_record(
+    cursor: sqlite3.Cursor,
+    *,
+    period: str,
+    cc_code: str,
+    form_row: int,
+    account_code: int | None,
+    amount_vnd: float,
+    description: str,
+    formula_expr: str | None = None,
+) -> int:
+    if amount_vnd <= 0 and not formula_expr:
+        return 0
+    final_account = int(account_code or 0)
+    if final_account <= 0:
+        final_account = resolve_account_code_for_source(
+            cursor.connection,
+            ADMIN_SOURCE_NAME,
+            cc_code,
+            form_row=form_row,
+        )
+    if final_account <= 0:
+        return 0
+    final_description = f"Admin allocation: {description or form_row}"
+    if formula_expr:
+        final_description = f"{final_description}|formula_expr={formula_expr}"
+    cursor.execute(
+        """
+        INSERT INTO fact_input_data
+        (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
+        VALUES (?, ?, ?, ?, ?, ?, 'base', ?)
+        """,
+        (ADMIN_SOURCE_NAME, period, amount_vnd, cc_code, final_account, form_row, final_description),
+    )
+    return 1
+
+
+def _parse_admin_allocation_tables(
+    workbook: openpyxl.Workbook,
+    cursor: sqlite3.Cursor,
+    fy_months: list[str],
+    valid_cc_codes: set[str],
+) -> int:
+    inserted = 0
+    for worksheet in workbook.worksheets:
+        rows = list(worksheet.iter_rows(values_only=True))
+        active_header: dict[str, int] | None = None
+        month_columns: dict[int, str] = {}
+        for row in rows:
+            if not row:
+                continue
+            keys = [_admin_header_key(value) for value in row]
+            header_map = {key: index for index, key in enumerate(keys) if key}
+            detected_months = {
+                index: period
+                for index, value in enumerate(row)
+                if (period := _admin_period_from_value(value, fy_months)) is not None
+            }
+            if "cc_code" in header_map and ("form_row" in header_map or detected_months):
+                active_header = header_map
+                month_columns = detected_months
+                continue
+            if active_header is None:
+                continue
+
+            cc_index = active_header.get("cc_code")
+            if cc_index is None or cc_index >= len(row):
+                continue
+            cc_code = normalize_cc_code(row[cc_index])
+            if not cc_code or cc_code not in valid_cc_codes:
+                continue
+
+            row_text = " ".join(str(value) for value in row if value is not None)
+            form_row = None
+            form_row_index = active_header.get("form_row")
+            if form_row_index is not None and form_row_index < len(row):
+                maybe_row = safe_float(row[form_row_index])
+                if maybe_row > 0:
+                    form_row = int(maybe_row)
+            if form_row is None:
+                form_row = _admin_match_form_row(row_text)
+            if form_row not in ADMIN_BASE_ACCOUNT_BY_ROW:
+                continue
+
+            account_code = None
+            account_index = active_header.get("account_code")
+            if account_index is not None and account_index < len(row):
+                account = safe_float(row[account_index])
+                account_code = int(account) if account > 0 else None
+
+            desc_index = active_header.get("description")
+            description = str(row[desc_index] or "").strip() if desc_index is not None and desc_index < len(row) else row_text
+
+            if month_columns:
+                for month_index, period in month_columns.items():
+                    if month_index >= len(row):
+                        continue
+                    amount = safe_float(row[month_index])
+                    inserted += _admin_insert_record(
+                        cursor,
+                        period=period,
+                        cc_code=cc_code,
+                        form_row=form_row,
+                        account_code=account_code,
+                        amount_vnd=amount,
+                        description=description,
+                    )
+                continue
+
+            period_index = active_header.get("period")
+            period = _admin_period_from_value(row[period_index], fy_months) if period_index is not None and period_index < len(row) else None
+            if period is None:
+                continue
+            formula_index = active_header.get("formula")
+            formula_expr = str(row[formula_index] or "").strip() if formula_index is not None and formula_index < len(row) else ""
+            if formula_expr.startswith("="):
+                formula_expr = formula_expr[1:]
+            amount_index = active_header.get("amount")
+            amount = safe_float(row[amount_index]) if amount_index is not None and amount_index < len(row) else 0.0
+            if not formula_expr:
+                qty_index = active_header.get("quantity")
+                unit_index = active_header.get("unit_price")
+                qty = safe_float(row[qty_index]) if qty_index is not None and qty_index < len(row) else 0.0
+                unit = safe_float(row[unit_index]) if unit_index is not None and unit_index < len(row) else 0.0
+                if qty > 0:
+                    if unit <= 0:
+                        unit = float(ADMIN_DEFAULT_UNIT_PRICE_BY_ROW.get(form_row, 0))
+                    if unit > 0:
+                        formula_expr = f"{_admin_format_number(qty)}*{_admin_format_number(unit)}"
+                        amount = qty * unit
+            inserted += _admin_insert_record(
+                cursor,
+                period=period,
+                cc_code=cc_code,
+                form_row=form_row,
+                account_code=account_code,
+                amount_vnd=amount,
+                description=description,
+                formula_expr=formula_expr or None,
+            )
+    return inserted
+
+
 def parse_ga(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[str, int]:
     """Main entry for GA parsing."""
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
@@ -306,10 +538,11 @@ def parse_ga(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[st
 
     path = _find_ga_file(source_dir, fiscal_year)
     if not path or not os.path.exists(path):
-        return {"total": 0, "working_days": 0, "headcount": 0}
+        return {"total": 0, "working_days": 0, "headcount": 0, "admin_allocation": 0}
 
     cursor = conn.cursor()
     cursor.execute("DELETE FROM fact_input_data WHERE source = 'ga_unit_price'")
+    cursor.execute("DELETE FROM fact_input_data WHERE source = ?", (ADMIN_SOURCE_NAME,))
     cursor.execute("DELETE FROM fact_monthly_headcount WHERE source = 'ga'")
 
     excel_file = pd.ExcelFile(path, engine="openpyxl")
@@ -351,6 +584,7 @@ def parse_ga(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[st
     )
     workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
     try:
+        admin_inserted = _parse_admin_allocation_tables(workbook, cursor, fy_months, valid_cc_codes)
         for sheet_name in calc_sheet_names:
             sheet_data = _parse_ga_headcount_sheet(workbook, sheet_name, fy_months, valid_cc_codes)
             for key, values in sheet_data.items():
@@ -375,4 +609,9 @@ def parse_ga(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[st
         )
 
     conn.commit()
-    return {"total": len(unit_price_records), "working_days": working_days_written, "headcount": len(aggregated_headcount)}
+    return {
+        "total": len(unit_price_records),
+        "working_days": working_days_written,
+        "headcount": len(aggregated_headcount),
+        "admin_allocation": admin_inserted,
+    }

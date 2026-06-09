@@ -37,6 +37,19 @@ def _mk_conn():
             (5000000001, "製造のみ", 5001111111, None, None),
         ],
     )
+    conn.executemany(
+        """
+        INSERT INTO map_allocation_rules
+        (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
+         posting_month, unit_price, unit, driver_type, driver_raw)
+        VALUES ('総務課', ?, '福利厚生費', 5004086291, 6004086551, 7004086777, ?, ?, '人', 'headcount_all', '人数')
+        """,
+        [
+            ("月餅", "9月", 56000),
+            ("お年玉", "2月", 100000),
+            ("マイエピソード ～フィロソフィの実践～参加賞", "7月", 3000),
+        ],
+    )
     conn.commit()
     return conn
 
@@ -80,7 +93,7 @@ def test_manual_event_driver_resolves_account_name_by_cost_type(tmp_path):
         [
             {
                 "cc_code": "1412000040",
-                "period": "202704",
+                "period": "202604",
                 "event_name": "birthday",
                 "count": "2",
                 "unit_price": "1000",
@@ -104,7 +117,7 @@ def test_manual_event_driver_missing_account_reports_clear_error(tmp_path):
         [
             {
                 "cc_code": "1412000040",
-                "period": "202704",
+                "period": "202604",
                 "event_name": "missing_account",
                 "count": "1",
                 "unit_price": "1000",
@@ -127,7 +140,7 @@ def test_manual_event_driver_does_not_fallback_to_wrong_account_column(tmp_path)
         [
             {
                 "cc_code": "1412000099",
-                "period": "202704",
+                "period": "202604",
                 "event_name": "wrong_column_guard",
                 "count": "1",
                 "unit_price": "1000",
@@ -140,4 +153,59 @@ def test_manual_event_driver_does_not_fallback_to_wrong_account_column(tmp_path)
     assert result["inserted"] == 0
     assert result["errors"] == 1
     assert "has no ga_code value" in result["error_message"]
+    conn.close()
+
+
+def test_manual_event_driver_applies_reference_defaults_for_known_event(tmp_path):
+    conn = _mk_conn()
+    _write_event_csv(
+        tmp_path,
+        [
+            {
+                "cc_code": "1412000040",
+                "event_name": "月餅 Bánh Trung Thu",
+                "count": "3",
+                "account_jp_name": ACCOUNT_WELFARE,
+            }
+        ],
+    )
+    result = parse_manual_event_drivers(conn, source_dir=str(tmp_path))
+    assert result["inserted"] == 1
+    row = conn.execute(
+        """
+        SELECT period, account_code, form_row, amount_vnd, description
+        FROM fact_input_data
+        WHERE source='manual_event_driver'
+        """
+    ).fetchone()
+    assert row["period"] == "202609"
+    assert row["account_code"] == 5004086291
+    assert row["form_row"] == 71
+    assert row["amount_vnd"] == 168000
+    assert "formula_expr=3*56000" in row["description"]
+    conn.close()
+
+
+def test_manual_event_driver_keeps_separate_count_explicit(tmp_path):
+    conn = _mk_conn()
+    _write_event_csv(
+        tmp_path,
+        [
+            {
+                "cc_code": "1412000040",
+                "event_name": "マイエピソード ～フィロソフィの実践～参加賞",
+                "count": "2",
+                "account_jp_name": ACCOUNT_WELFARE,
+            }
+        ],
+    )
+    result = parse_manual_event_drivers(conn, source_dir=str(tmp_path))
+    assert result["inserted"] == 1
+    row = conn.execute(
+        "SELECT period, form_row, amount_vnd, description FROM fact_input_data WHERE source='manual_event_driver'"
+    ).fetchone()
+    assert row["period"] == "202607"
+    assert row["form_row"] == 81
+    assert row["amount_vnd"] == 6000
+    assert "formula_expr=2*3000" in row["description"]
     conn.close()

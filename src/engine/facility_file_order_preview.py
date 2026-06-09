@@ -33,6 +33,12 @@ FACILITY_ITEMS = (
 )
 
 
+SOURCE_MONTH_START_COL = 4  # D
+SOURCE_MONTH_END_COL = 15  # O
+OUTPUT_MONTH_START_COL = 6  # F
+OUTPUT_MONTH_END_COL = 17  # Q
+
+
 @dataclass(frozen=True)
 class FacilityPreviewItem:
     item_id: str
@@ -40,12 +46,19 @@ class FacilityPreviewItem:
     source_sheet: str
     source_row: int | None
     source_formula_evidence: str | None
-    source_amount_sample_apr: Any
-    source_amount_sample_mar: Any
+    monthly_values: tuple[Any, ...]
     formula_policy: str
     planned_row: int
     confidence: str
     note: str
+
+    @property
+    def source_amount_sample_apr(self) -> Any:
+        return self.monthly_values[0] if self.monthly_values else None
+
+    @property
+    def source_amount_sample_mar(self) -> Any:
+        return self.monthly_values[-1] if self.monthly_values else None
 
 
 @dataclass(frozen=True)
@@ -66,13 +79,15 @@ def _find_cost_center_row(worksheet, cost_center: str) -> int | None:
     return None
 
 
-def _row_samples(value_ws, formula_ws, row_index: int | None) -> tuple[Any, Any, str | None]:
+def _row_month_values(value_ws, formula_ws, row_index: int | None) -> tuple[tuple[Any, ...], str | None]:
     if row_index is None or row_index < 1:
-        return None, None, None
-    apr = value_ws.cell(row=row_index, column=4).value
-    mar = value_ws.cell(row=row_index, column=15).value
-    formula = formula_ws.cell(row=row_index, column=4).value
-    return apr, mar, str(formula) if formula is not None else None
+        return tuple(), None
+    values = tuple(
+        value_ws.cell(row=row_index, column=column_index).value
+        for column_index in range(SOURCE_MONTH_START_COL, SOURCE_MONTH_END_COL + 1)
+    )
+    formula = formula_ws.cell(row=row_index, column=SOURCE_MONTH_START_COL).value
+    return values, str(formula) if formula is not None else None
 
 
 def preview_facility_file_order(
@@ -96,8 +111,8 @@ def preview_facility_file_order(
             formula_ws = formula_wb[sheet_name]
             cc_row = _find_cost_center_row(value_ws, cc_key)
             source_row = cc_row + row_offset if cc_row is not None else None
-            apr, mar, formula = _row_samples(value_ws, formula_ws, source_row)
-            confidence = "HIGH" if source_row and apr is not None and mar is not None else "UNKNOWN"
+            monthly_values, formula = _row_month_values(value_ws, formula_ws, source_row)
+            confidence = "HIGH" if source_row and len(monthly_values) == 12 and all(value is not None for value in monthly_values) else "UNKNOWN"
             note = "matched cost-center row with paired building/electric row above" if row_offset < 0 else "matched cost-center row"
             if confidence == "UNKNOWN":
                 note = "NEED_SOURCE_HEADER_CLARIFICATION"
@@ -108,8 +123,7 @@ def preview_facility_file_order(
                     source_sheet=sheet_name,
                     source_row=source_row,
                     source_formula_evidence=formula,
-                    source_amount_sample_apr=apr,
-                    source_amount_sample_mar=mar,
+                    monthly_values=monthly_values,
                     formula_policy=formula_policy,
                     planned_row=int(planned_rows[item_id]) if item_id in planned_rows else start_row + len(items),
                     confidence=confidence,

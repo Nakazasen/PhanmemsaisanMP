@@ -13,7 +13,7 @@ HUB_SHEET_CANDIDATES = ('内訳ﾘｽﾄ(4～3月)', '内訳リスト(4～3月)'
 
 def get_month_mapping(fiscal_year: int = 2027) -> dict:
     """Returns a mapping of month Index (0-11) to Period String (YYYYMM)."""
-    start_year = fiscal_year
+    start_year = fiscal_year - 1
     mapping = {}
     for i in range(4, 13):
         month_idx = i - 4

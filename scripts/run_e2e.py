@@ -5,7 +5,6 @@ Supports Single CC and Batch Export.
 import sqlite3
 import csv
 import os
-import shutil
 import sys
 import traceback
 
@@ -40,6 +39,7 @@ from src.engine.admin_consumables_writer import apply_admin_consumables_to_workb
 from src.engine.system_cost_writer import apply_system_cost_to_workbook
 from src.engine.reference_assisted_fill import apply_reference_assisted_fill_to_workbook
 from src.engine.fixed_assets_reference_skeleton import apply_fixed_assets_reference_skeleton_to_workbook
+from src.engine.complete_v1_source_order_writer import apply_complete_v1_source_order_to_workbook
 from src.engine.mp_saisan_complete_export import apply_mp_saisan_complete_v1
 from src.utils.source_manifest import describe_manifest
 
@@ -171,11 +171,11 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
 
     if file_order_export_v1:
         facility_file_order_export = True
-        facility_file_order_start_row = 200
+        facility_file_order_start_row = 168
         admin_consumables_export = True
-        admin_consumables_start_row = 207
+        admin_consumables_start_row = 175
         system_cost_export = True
-        system_cost_start_row = 211
+        system_cost_start_row = 179
 
     try:
         log_callback(f"Pipeline FY{fiscal_year} (ExRate: {exchange_rate:,.0f})")
@@ -185,9 +185,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         
         # Output Directory
         output_dir = os.path.join(os.getcwd(), f"OUTPUT_FY{fiscal_year}")
-        if os.path.exists(output_dir):
-            shutil.rmtree(output_dir)
-        os.makedirs(output_dir)
+        os.makedirs(output_dir, exist_ok=True)
         
         # 2. Database & Loading
         conn = get_connection(db_path)
@@ -325,6 +323,9 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     start_row=system_cost_start_row,
                 )
                 log_callback(f"System Cost export applied: {out_path}")
+            if mp_saisan_complete_v1:
+                source_order_result = apply_complete_v1_source_order_to_workbook(out_path, start_row=168, clear_until_row=199)
+                log_callback(f"Complete-v1 source-order writer applied: {source_order_result}")
             if primary_reference_fill:
                 primary_path = _resolve_primary_reference_path(
                     target_cc=target_cc,
@@ -407,6 +408,9 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             start_row=system_cost_start_row,
                         )
                         log_callback(f"System Cost export applied: {out_path}")
+                    if mp_saisan_complete_v1 and str(cc) == "1412000040":
+                        source_order_result = apply_complete_v1_source_order_to_workbook(out_path, start_row=168, clear_until_row=199)
+                        log_callback(f"Complete-v1 source-order writer applied: {source_order_result}")
                     if primary_reference_fill and str(cc) == "1412000040":
                         primary_path = _resolve_primary_reference_path(
                             target_cc=cc,

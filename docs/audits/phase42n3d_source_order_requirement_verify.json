@@ -1,0 +1,195 @@
+{
+  "output": "dist\\phase42n3d_source_order_requirement_verify\\OUTPUT_FY2027\\MP_CC_1412000040.xlsx",
+  "business_row_count_observed": 242,
+  "legacy_rows_with_business_values": [],
+  "source_marker_rows": [
+    {
+      "row": 168,
+      "source": "施設課　MPFY2027.xlsx"
+    },
+    {
+      "row": 169,
+      "source": "施設課　MPFY2027.xlsx"
+    },
+    {
+      "row": 170,
+      "source": "施設課　MPFY2027.xlsx"
+    },
+    {
+      "row": 171,
+      "source": "施設課　MPFY2027.xlsx"
+    },
+    {
+      "row": 172,
+      "source": "施設課　MPFY2027.xlsx"
+    },
+    {
+      "row": 173,
+      "source": "施設課　MPFY2027.xlsx"
+    },
+    {
+      "row": 175,
+      "source": "固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx"
+    },
+    {
+      "row": 176,
+      "source": "固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx"
+    },
+    {
+      "row": 178,
+      "source": "システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls"
+    },
+    {
+      "row": 180,
+      "source": "総務課 FY2027 MP 振替予定.xlsx"
+    },
+    {
+      "row": 181,
+      "source": "総務課 FY2027 MP 振替予定.xlsx"
+    },
+    {
+      "row": 182,
+      "source": "総務課 FY2027 MP 振替予定.xlsx"
+    },
+    {
+      "row": 184,
+      "source": "Sinh nhật MP FY2027.xlsx"
+    },
+    {
+      "row": 186,
+      "source": "FY2027配賦額一覧 (2025.12.29).xlsx"
+    },
+    {
+      "row": 187,
+      "source": "FY2027配賦額一覧 (2025.12.29).xlsx"
+    },
+    {
+      "row": 188,
+      "source": "FY2027配賦額一覧 (2025.12.29).xlsx"
+    },
+    {
+      "row": 189,
+      "source": "FY2027配賦額一覧 (2025.12.29).xlsx"
+    },
+    {
+      "row": 191,
+      "source": "Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx"
+    }
+  ],
+  "observed_source_blocks": [
+    "施設課　MPFY2027.xlsx",
+    "固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx",
+    "システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls",
+    "総務課 FY2027 MP 振替予定.xlsx",
+    "Sinh nhật MP FY2027.xlsx",
+    "FY2027配賦額一覧 (2025.12.29).xlsx",
+    "Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx"
+  ],
+  "source_order_non_decreasing": true,
+  "blank_separator_rows_detected": [
+    6,
+    30,
+    35,
+    38,
+    39,
+    42,
+    43,
+    47,
+    50,
+    52,
+    58,
+    59,
+    64,
+    65,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    76,
+    77,
+    78,
+    79,
+    80,
+    81,
+    83,
+    84,
+    85,
+    86,
+    89,
+    92,
+    93,
+    94,
+    97,
+    98,
+    99,
+    103,
+    104,
+    106,
+    107,
+    108,
+    110,
+    112,
+    113,
+    122,
+    124,
+    125,
+    126,
+    132,
+    134,
+    135,
+    136,
+    137,
+    138,
+    139,
+    140,
+    141,
+    142,
+    143,
+    144,
+    145,
+    146,
+    147,
+    148,
+    153,
+    154,
+    160,
+    161,
+    162,
+    163,
+    164,
+    165,
+    167,
+    174,
+    177,
+    179,
+    183,
+    185,
+    190,
+    192,
+    193,
+    194,
+    195,
+    196,
+    197,
+    198,
+    199,
+    200,
+    201,
+    202,
+    203,
+    204,
+    205,
+    206,
+    207,
+    208,
+    209,
+    210,
+    211,
+    212
+  ],
+  "blank_separator_count_detected": 103
+}

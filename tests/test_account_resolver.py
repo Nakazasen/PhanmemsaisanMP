@@ -295,6 +295,43 @@ class TestSharedAccountResolver(unittest.TestCase):
         conn.commit()
         return db_path, conn, AccountResolutionError
 
+    def _mk_split_variant_db(self):
+        import tempfile
+        from pathlib import Path
+
+        fd, path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        db_path = Path(path)
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        create_schema(conn)
+        conn.executemany(
+            """
+            INSERT INTO dim_cost_centers
+            (code, name_jp, seq_no, saisan_type, cost_type, staff_count, worker_count)
+            VALUES (?, ?, 1, ?, ?, 0, 0)
+            """,
+            [
+                ("1412000040", "製造課", "製造", "製造"),
+                ("1412000099", "一般課", "一般", "一般"),
+                ("1412000100", "販売課", "販売", "販売"),
+            ],
+        )
+        conn.executemany(
+            """
+            INSERT INTO dim_accounts
+            (code, name_jp, name_vn, group_name, group_vn, mfg_code, ga_code, sales_code)
+            VALUES (?, ?, NULL, ?, NULL, ?, ?, ?)
+            """,
+            [
+                (5004086291, "福利厚生費（製）", "福利厚生費", 5004086291, None, None),
+                (6004086651, "福利厚生費（一般）", "福利厚生費", None, 6004086651, None),
+                (6004086551, "福利厚生費（販売）", "福利厚生費", None, None, 6004086551),
+            ],
+        )
+        conn.commit()
+        return db_path, conn
+
     def test_shared_target_cc_1412000040_resolves_cost_type(self):
         from src.engine.account_resolver import resolve_cost_type_for_cc
         db_path, conn, _ = self._mk_file_db()
@@ -308,6 +345,65 @@ class TestSharedAccountResolver(unittest.TestCase):
         self.assertEqual(resolve_account_code(db_path, 1412000040, "福利厚生費"), 5004086291)
         self.assertEqual(resolve_account_code(db_path, 1412000099, "福利厚生費"), 6004086551)
         self.assertEqual(resolve_account_code(db_path, 1412000100, "福利厚生費"), 7004086777)
+
+    def test_source_policy_resolves_birthday_account_by_cc_cost_type(self):
+        from src.engine.account_resolver import resolve_account_code_for_source
+
+        db_path, conn, _ = self._mk_file_db()
+        try:
+            self.assertEqual(resolve_account_code_for_source(conn, "birthday_workbook", "1412000040"), 5004086291)
+            self.assertEqual(resolve_account_code_for_source(conn, "birthday_workbook", "1412000099"), 6004086551)
+            self.assertEqual(resolve_account_code_for_source(conn, "birthday_workbook", "1412000100"), 7004086777)
+        finally:
+            conn.close()
+
+    def test_source_policy_resolves_split_variant_rows_like_form_filtering(self):
+        from src.engine.account_resolver import resolve_account_code_for_source
+
+        db_path, conn = self._mk_split_variant_db()
+        try:
+            self.assertEqual(resolve_account_code_for_source(conn, "birthday_workbook", "1412000040"), 5004086291)
+            self.assertEqual(resolve_account_code_for_source(conn, "birthday_workbook", "1412000099"), 6004086651)
+            self.assertEqual(resolve_account_code_for_source(conn, "birthday_workbook", "1412000100"), 6004086551)
+        finally:
+            conn.close()
+
+    def test_group_name_lookup_resolves_split_variant_rows_like_form_filtering(self):
+        from src.engine.account_resolver import resolve_account_code
+
+        db_path, conn = self._mk_split_variant_db()
+        conn.close()
+        self.assertEqual(resolve_account_code(db_path, "1412000040", "福利厚生費"), 5004086291)
+        self.assertEqual(resolve_account_code(db_path, "1412000099", "福利厚生費"), 6004086651)
+        self.assertEqual(resolve_account_code(db_path, "1412000100", "福利厚生費"), 6004086551)
+
+    def test_source_policy_resolves_ga_admin_form_row_by_cc_cost_type(self):
+        from src.engine.account_resolver import resolve_account_code_for_source
+
+        db_path, conn, _ = self._mk_file_db()
+        try:
+            conn.execute(
+                """
+                INSERT INTO dim_accounts
+                (code, name_jp, name_vn, group_name, group_vn, mfg_code, ga_code, sales_code)
+                VALUES (5005246288, '事務用消耗品費', NULL, NULL, NULL, 5005246288, 6005246288, 7005246288)
+                """
+            )
+            conn.commit()
+            self.assertEqual(
+                resolve_account_code_for_source(conn, "ga_admin_allocation", "1412000040", form_row=97),
+                5005246288,
+            )
+            self.assertEqual(
+                resolve_account_code_for_source(conn, "ga_admin_allocation", "1412000099", form_row=97),
+                6005246288,
+            )
+            self.assertEqual(
+                resolve_account_code_for_source(conn, "ga_admin_allocation", "1412000100", form_row=97),
+                7005246288,
+            )
+        finally:
+            conn.close()
 
     def test_shared_missing_cc_fails_clearly(self):
         from src.engine.account_resolver import resolve_cost_type_for_cc
@@ -329,6 +425,15 @@ class TestSharedAccountResolver(unittest.TestCase):
         conn.close()
         with self.assertRaisesRegex(error_cls, "has no ga_code value"):
             resolve_account_code(db_path, 1412000099, "製造のみ")
+
+    def test_shared_numeric_variant_key_resolves_back_to_master_row(self):
+        from src.engine.account_resolver import resolve_account_code
+
+        db_path, conn, _ = self._mk_file_db()
+        conn.close()
+        self.assertEqual(resolve_account_code(db_path, 1412000040, 5004086291), 5004086291)
+        self.assertEqual(resolve_account_code(db_path, 1412000099, 5004086291), 6004086551)
+        self.assertEqual(resolve_account_code(db_path, 1412000100, 5004086291), 7004086777)
 
     def test_manual_event_driver_uses_shared_connection_resolver(self):
         from unittest.mock import patch

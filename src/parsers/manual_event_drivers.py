@@ -13,6 +13,100 @@ from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
 
 TEMPLATE_FILENAME = "event_drivers_manual.csv"
 SOURCE_NAME = "manual_event_driver"
+
+EVENT_DEFAULTS = (
+    {
+        "tokens": ("部門方針発表会後の決起コンパ", "phương châm bộ phận", "phuong cham bo phan"),
+        "period": "202604",
+        "form_row": 54,
+        "unit_price_key": "FY2027部門方針発表会後の決起コンパ",
+        "separate_count": True,
+    },
+    {
+        "tokens": ("tiệc khuấy động năm tài chính", "決起コンパ"),
+        "period": "202605",
+        "form_row": 54,
+        "unit_price_key": "Tiệc khuấy động năm tài chính決起コンパ",
+        "separate_count": False,
+    },
+    {
+        "tokens": ("社員旅行不参加", "không thể tham gia du lịch", "khong the tham gia du lich"),
+        "period": "202606",
+        "form_row": 66,
+        "unit_price_key": "社員旅行不参加対象者へのギフト贈呈",
+        "separate_count": True,
+    },
+    {
+        "tokens": ("マイエピソード", "cảm nghĩ về triết lý kinh doanh", "cam nghi ve triet ly kinh doanh"),
+        "period": "202607",
+        "form_row": 81,
+        "unit_price_key": "マイエピソード ～フィロソフィの実践～参加賞",
+        "separate_count": True,
+    },
+    {
+        "tokens": ("京セラフェスティバル", "lễ hội kyocera", "le hoi kyocera"),
+        "period": "202609",
+        "form_row": 66,
+        "unit_price_key": "京セラフェスティバル",
+        "separate_count": False,
+    },
+    {
+        "tokens": ("月餅", "bánh trung thu", "banh trung thu"),
+        "period": "202609",
+        "form_row": 71,
+        "unit_price_key": "月餅",
+        "separate_count": False,
+    },
+    {
+        "tokens": ("10年勤続記念コンパ", "tiệc kỷ niệm 10 năm", "tiec ky niem 10 nam"),
+        "period": "202610",
+        "form_row": 64,
+        "unit_price_key": "10年勤続記念コンパ",
+        "separate_count": True,
+    },
+    {
+        "tokens": ("10年勤続記念品", "quà kỷ niệm", "qua ky niem"),
+        "period": "202610",
+        "form_row": 65,
+        "unit_price_key": "10年勤続記念品",
+        "separate_count": True,
+    },
+    {
+        "tokens": ("会社設立記念", "sự kiện tri ân", "su kien tri an"),
+        "period": "202610",
+        "form_row": 68,
+        "unit_price_key": "会社設立記念 感謝イベント",
+        "separate_count": False,
+    },
+    {
+        "tokens": ("ポケットカレンダー", "lịch bỏ túi", "lich bo tui"),
+        "period": "202611",
+        "form_row": 82,
+        "unit_price_key": "ポケットカレンダー",
+        "separate_count": False,
+    },
+    {
+        "tokens": ("運動会", "đại hội thể thao", "dai hoi the thao"),
+        "period": "202611",
+        "form_row": 67,
+        "unit_price_key": "運動会",
+        "separate_count": False,
+    },
+    {
+        "tokens": ("忘年会補助金", "hỗ trợ tiệc tất niên", "ho tro tiec tat nien"),
+        "period": "202702",
+        "form_row": 70,
+        "unit_price_key": "忘年会補助金",
+        "separate_count": False,
+    },
+    {
+        "tokens": ("お年玉", "tiền lì xì", "tien li xi"),
+        "period": "202702",
+        "form_row": 63,
+        "unit_price_key": "お年玉",
+        "separate_count": False,
+    },
+)
 ALLOWED_EVENT_TYPES = {"", "manual_amount", "manual_count_unit_price", "month_specific_driver"}
 REQUIRED_COLUMNS = ("cc_code", "event_name")
 OPTIONAL_COLUMNS = (
@@ -175,6 +269,20 @@ def _normalize_unit_price_key(value: Any) -> str:
     return " ".join(text.split())
 
 
+def _event_match_text(value: Any) -> str:
+    return _normalize_unit_price_key(value).lower()
+
+
+def _event_default_for_name(event_name: Any) -> dict[str, Any] | None:
+    text = _event_match_text(event_name)
+    if not text:
+        return None
+    for default in EVENT_DEFAULTS:
+        if any(_event_match_text(token) in text for token in default["tokens"]):
+            return default
+    return None
+
+
 def _resolve_unit_price(conn: sqlite3.Connection, unit_price_key: str) -> float | None:
     normalized_key = _normalize_unit_price_key(unit_price_key)
     if not normalized_key:
@@ -251,6 +359,14 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                 skipped += 1
                 continue
 
+            cc_code = normalize_cc_code(row.get("cc_code"))
+            event_name = str(row.get("event_name", "") or "").strip()
+            event_default = _event_default_for_name(event_name)
+            if event_default and not any(str(row.get(col, "") or "").strip() for col in ("period", "target_month", "source_month", "posting_rule", "target_month_rule")):
+                row["period"] = event_default["period"]
+            if event_default and not str(row.get("form_row", "") or "").strip() and not str(row.get("row", "") or "").strip():
+                row["form_row"] = str(event_default["form_row"])
+
             target_periods, repeat_all_months, shift_metadata, period_error = _target_periods_from_rule(
                 row, fy_months, valid_periods
             )
@@ -259,8 +375,6 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                 error_messages.append(period_error)
                 continue
 
-            cc_code = normalize_cc_code(row.get("cc_code"))
-            event_name = str(row.get("event_name", "") or "").strip()
             event_type = str(row.get("event_type", "") or "").strip()
             description = str(row.get("description", "") or "").strip()
             note = str(row.get("note", "") or "").strip()
@@ -322,6 +436,8 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                 if not unit_price_key_ok:
                     errors += 1
                     continue
+                if not unit_price_key and event_default:
+                    unit_price_key = str(event_default.get("unit_price_key", "") or "")
                 if unit_price_key:
                     resolved_unit_price = _resolve_unit_price(conn, unit_price_key)
                     if resolved_unit_price is None:

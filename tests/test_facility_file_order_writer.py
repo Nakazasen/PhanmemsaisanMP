@@ -41,8 +41,16 @@ def test_writer_writes_facility_rows_200_to_205(tmp_path):
             "electricity",
             "water",
         ]
-        assert sheet.cell(row=200, column=6).value == 293.02
-        assert sheet.cell(row=205, column=17).value == 637935
+        expected_months_by_row = {
+            200: ["=ROUND(293.02*$B$2,0)", "=ROUND(294.07*$B$2,0)", "=ROUND(296.68*$B$2,0)", "=ROUND(293.7*$B$2,0)", "=ROUND(287.07*$B$2,0)", "=ROUND(289.74*$B$2,0)", "=ROUND(294.29*$B$2,0)", "=ROUND(292.36*$B$2,0)", "=ROUND(291.13*$B$2,0)", "=ROUND(285.32*$B$2,0)", "=ROUND(273.97*$B$2,0)", "=ROUND(289.03*$B$2,0)"],
+            201: ["=ROUND(19.78*$B$2,0)", "=ROUND(19.85*$B$2,0)", "=ROUND(20.03*$B$2,0)", "=ROUND(19.82*$B$2,0)", "=ROUND(19.38*$B$2,0)", "=ROUND(19.56*$B$2,0)", "=ROUND(19.86*$B$2,0)", "=ROUND(19.73*$B$2,0)", "=ROUND(19.65*$B$2,0)", "=ROUND(19.26*$B$2,0)", "=ROUND(18.49*$B$2,0)", "=ROUND(19.51*$B$2,0)"],
+            202: ["=ROUND(188.35*$B$2,0)", "=ROUND(178.43*$B$2,0)", "=ROUND(180.02*$B$2,0)", "=ROUND(178.21*$B$2,0)", "=ROUND(174.19*$B$2,0)", "=ROUND(175.81*$B$2,0)", "=ROUND(178.57*$B$2,0)", "=ROUND(177.4*$B$2,0)", "=ROUND(176.65*$B$2,0)", "=ROUND(173.13*$B$2,0)", "=ROUND(166.24*$B$2,0)", "=ROUND(175.38*$B$2,0)"],
+            203: ["=ROUND(23.88*$B$2,0)", "=ROUND(23.25*$B$2,0)", "=ROUND(23.46*$B$2,0)", "=ROUND(23.22*$B$2,0)", "=ROUND(22.7*$B$2,0)", "=ROUND(22.91*$B$2,0)", "=ROUND(23.27*$B$2,0)", "=ROUND(23.12*$B$2,0)", "=ROUND(23.02*$B$2,0)", "=ROUND(22.56*$B$2,0)", "=ROUND(21.66*$B$2,0)", "=ROUND(22.85*$B$2,0)"],
+            204: [1577160, 2053287, 2791574, 3290266, 3419370, 3270194, 2959172, 2460327, 1758044, 1450135, 1247404, 1203521],
+            205: [529671, 577177, 682783, 1015039, 859650, 874634, 861265, 646887, 635220, 566871, 438313, 637935],
+        }
+        for row_index, expected_months in expected_months_by_row.items():
+            assert [sheet.cell(row=row_index, column=column_index).value for column_index in range(6, 18)] == expected_months
     finally:
         workbook.close()
 

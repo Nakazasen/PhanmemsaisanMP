@@ -10,6 +10,7 @@ import re
 import sqlite3
 import unicodedata
 
+from src.engine.account_resolver import AccountResolutionError, resolve_account_code_for_source
 from src.utils import excel_helpers as helpers
 
 HEALTH_CHECK_KEYWORDS = ("kham suc khoe", "khám sức khỏe", "健康診断")
@@ -255,82 +256,30 @@ class AllocationEngine:
         self.conn.commit()
         return {"status": "success"}
 
-    def _find_account_row(self, keywords: tuple[str, ...]):
-        rows = self.conn.execute("SELECT * FROM dim_accounts").fetchall()
-        for row in rows:
-            name = f"{row['name_jp'] or ''} {row['name_vn'] or ''}".lower()
-            if any(k.lower() in name for k in keywords):
-                return row
-        return None
-
-    def _find_account_by_code(self, account_code: int):
-        return self.conn.execute("SELECT * FROM dim_accounts WHERE code = ?", (account_code,)).fetchone()
-
-    def _row_to_target_acc(self, row, cost_type: str) -> int | None:
-        if not row:
-            return None
-        acc_code = self._get_account_for_cc(
-            cost_type,
-            row["mfg_code"],
-            row["ga_code"],
-            row["sales_code"],
-        )
-        if acc_code:
-            return int(acc_code)
-        if row["code"]:
-            return int(row["code"])
-        return None
-
     def _map_direct_costs(self):
         cursor = self.conn.cursor()
         raw_rows = cursor.execute(
             """
-            SELECT id, source, cc_code, description
+            SELECT id, source, cc_code, description, form_row
             FROM fact_input_data
             WHERE account_code IS NULL OR account_code = 0
             """
         ).fetchall()
 
-        acc_depr_building = self._find_account_by_code(5006016260)
-        acc_depr_land = self._find_account_by_code(5006016261)
-        acc_depr_equipment = self._find_account_by_code(5006016244)
-        acc_interest = self._find_account_by_code(9114120007) or self._find_account_row(("金利", "lãi", "interest"))
-        acc_electric = self._find_account_row(("電気", "electric", "điện"))
-        acc_water = self._find_account_row(("水道", "water", "nước"))
-        acc_it = self._find_account_by_code(5005246282) or self._find_account_row(("software", "system", "it", "通信"))
-        acc_ga = self._find_account_row(("福利", "gas", "vệ sinh", "ga"))
-        default_acc = self._find_account_row(("消耗", "chi phí")) or acc_ga
-
         updates: list[tuple[int, int]] = []
 
         for row in raw_rows:
-            source = str(row["source"] or "")
-            desc = str(row["description"] or "").lower()
-            cc = next((c for c in self.cost_centers if str(c["code"]).strip() == str(row["cc_code"]).strip()), None)
-            cost_type = str(cc["cost_type"]) if cc else ""
-
-            target_row = None
-            if source == "facility":
-                if "depreciation_building" in desc:
-                    target_row = acc_depr_building
-                elif "depreciation_land" in desc:
-                    target_row = acc_depr_land
-                elif "interest" in desc:
-                    target_row = acc_interest
-                elif "electric" in desc:
-                    target_row = acc_electric
-                elif "water" in desc:
-                    target_row = acc_water
-            elif source == "fixed_assets":
-                target_row = acc_interest if "interest" in desc else acc_depr_equipment
-            elif source == "it_sim":
-                target_row = acc_it
-            elif "ga" in source:
-                target_row = acc_ga
-
-            target_code = self._row_to_target_acc(target_row or default_acc, cost_type)
-            if target_code:
-                updates.append((target_code, int(row["id"])))
+            try:
+                target_code = resolve_account_code_for_source(
+                    self.conn,
+                    str(row["source"] or ""),
+                    row["cc_code"],
+                    description=row["description"],
+                    form_row=row["form_row"],
+                )
+            except AccountResolutionError:
+                continue
+            updates.append((target_code, int(row["id"])))
 
         if updates:
             cursor.executemany("UPDATE fact_input_data SET account_code = ? WHERE id = ?", updates)

@@ -25,10 +25,12 @@ ITEM_ID_COL = 5  # E
 def _preview_value(item: FacilityPreviewItem, month_column: int) -> Any:
     if item.confidence != "HIGH":
         return "UNKNOWN"
-    if month_column == VISIBLE_MONTH_START_COL:
-        return item.source_amount_sample_apr
-    if month_column == VISIBLE_MONTH_END_COL:
-        return item.source_amount_sample_mar
+    month_index = month_column - VISIBLE_MONTH_START_COL
+    if 0 <= month_index < len(item.monthly_values):
+        source_value = item.monthly_values[month_index]
+        if item.formula_policy == "ROUND_USD_BY_B2":
+            return f"=ROUND({source_value}*$B$2,0)"
+        return source_value
     return None
 
 
@@ -48,8 +50,8 @@ def _write_facility_preview_rows(worksheet, facility_source_path: str | Path, co
         worksheet.cell(row=row_index, column=ITEM_ID_COL, value=item.item_id)
         worksheet.cell(row=row_index, column=DESCRIPTION_COL, value=item.display_name)
         worksheet.cell(row=row_index, column=NOTE_COL, value=item.note if item.confidence != "HIGH" else item.formula_policy)
-        worksheet.cell(row=row_index, column=VISIBLE_MONTH_START_COL, value=_preview_value(item, VISIBLE_MONTH_START_COL))
-        worksheet.cell(row=row_index, column=VISIBLE_MONTH_END_COL, value=_preview_value(item, VISIBLE_MONTH_END_COL))
+        for column_index in range(VISIBLE_MONTH_START_COL, VISIBLE_MONTH_END_COL + 1):
+            worksheet.cell(row=row_index, column=column_index, value=_preview_value(item, column_index))
 
     if preview.blank_row_after is not None:
         _clear_preview_row(worksheet, preview.blank_row_after)

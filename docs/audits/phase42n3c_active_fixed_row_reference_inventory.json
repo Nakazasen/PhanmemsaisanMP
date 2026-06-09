@@ -1,0 +1,1322 @@
+[
+  {
+    "file": "src\\universal_app.py",
+    "line": 289,
+    "token": "row 137",
+    "text": "- VISA/Passport/GPLD/NNN nếu phải ghi vào row khác row 137."
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 300,
+    "token": "form_row",
+    "text": "Bước 9: Nếu biết row FORM cần ghi, nhập row/form_row, ví dụ 66 cho 社員旅行."
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 312,
+    "token": "row 137",
+    "text": "- Passport/VISA/GPLD cần row khác row 137."
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 315,
+    "token": "form_row",
+    "text": "Không nhập form_row nếu chưa chắc row đích."
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1236,
+    "token": "form_row",
+    "text": "\"row/form_row = dòng FORM cần ghi, ví dụ 66 cho 社員旅行.  \""
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1261,
+    "token": "form_row",
+    "text": "form_row_var = tk.StringVar()"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1320,
+    "token": "form_row",
+    "text": "add_label_entry(5, 4, \"Dòng FORM\", form_row_var, width=12)"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1341,
+    "token": "form_row",
+    "text": "(\"form_row\", 75, \"Form row\"),"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1376,
+    "token": "form_row",
+    "text": "form_row_var,"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1392,
+    "token": "form_row",
+    "text": "value = str(row.get(\"form_row\", \"\") or \"\").strip()"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1420,
+    "token": "form_row",
+    "text": "form_row = validate_numeric(form_row_var.get(), \"dòng FORM\")"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1445,
+    "token": "form_row",
+    "text": "\"form_row\": form_row,"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1446,
+    "token": "form_row",
+    "text": "\"row\": form_row,"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1479,
+    "token": "form_row",
+    "text": "form_row_var.set(row_data.get(\"row\") or row_data.get(\"form_row\", \"\"))"
+  },
+  {
+    "file": "src\\audit\\pipeline_audit.py",
+    "line": 173,
+    "token": "row 137",
+    "text": "\"nnn_paperwork\": \"Workbook NNN/VISA/GPLD/Passport FY2027 vào row 137.\","
+  },
+  {
+    "file": "src\\audit\\pipeline_audit.py",
+    "line": 174,
+    "token": "row 59",
+    "text": "\"birthday_workbook\": \"Workbook sinh nhật vào row 59, công thức count*152000.\","
+  },
+  {
+    "file": "src\\audit\\pipeline_audit.py",
+    "line": 175,
+    "token": "form_row",
+    "text": "\"manual_special_cost\": \"Override thủ công theo form_row.\","
+  },
+  {
+    "file": "src\\db\\schema.py",
+    "line": 91,
+    "token": "form_row",
+    "text": "account_code INTEGER NOT NULL, form_row INTEGER DEFAULT NULL,"
+  },
+  {
+    "file": "src\\db\\schema.py",
+    "line": 116,
+    "token": "form_row",
+    "text": "if not _column_exists(conn, \"fact_input_data\", \"form_row\"):"
+  },
+  {
+    "file": "src\\db\\schema.py",
+    "line": 117,
+    "token": "form_row",
+    "text": "cursor.execute(\"ALTER TABLE fact_input_data ADD COLUMN form_row INTEGER DEFAULT NULL\")"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 21,
+    "token": "form_row",
+    "text": "ACCOUNT_STRATEGY_FORM_ROW_BASE_ACCOUNT = \"form_row_base_account\""
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 32,
+    "token": "form_row",
+    "text": "fixed_form_row: int | None = None"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 34,
+    "token": "form_row",
+    "text": "base_account_by_form_row: Mapping[int, int] = field(default_factory=dict)"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 58,
+    "token": "form_row",
+    "text": "fixed_form_row=59,"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 64,
+    "token": "form_row",
+    "text": "base_account_by_form_row={"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 74,
+    "token": "form_row",
+    "text": "notes=\"GA admin rows choose a logical base account by form_row, then resolve by CC cost_type.\","
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 220,
+    "token": "form_row",
+    "text": "form_row: int | None = None,"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 229,
+    "token": "form_row",
+    "text": "if policy.base_account_by_form_row:"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 230,
+    "token": "form_row",
+    "text": "if form_row is None:"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 231,
+    "token": "form_row",
+    "text": "raise AccountResolutionError(f\"Missing form_row for source account policy: {source}\")"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 232,
+    "token": "form_row",
+    "text": "account_code = policy.base_account_by_form_row.get(int(form_row))"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 234,
+    "token": "form_row",
+    "text": "raise AccountResolutionError(f\"Unsupported form_row for source account policy: {source}:{form_row}\")"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 309,
+    "token": "form_row",
+    "text": "form_row: int | None = None,"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 317,
+    "token": "form_row",
+    "text": "form_row=form_row,"
+  },
+  {
+    "file": "src\\engine\\allocator.py",
+    "line": 263,
+    "token": "form_row",
+    "text": "SELECT id, source, cc_code, description, form_row"
+  },
+  {
+    "file": "src\\engine\\allocator.py",
+    "line": 278,
+    "token": "form_row",
+    "text": "form_row=row[\"form_row\"],"
+  },
+  {
+    "file": "src\\engine\\complete_v1_source_order_writer.py",
+    "line": 94,
+    "token": "target_row",
+    "text": "def _write_staged_row(ws, target_row: int, staged: StagedWorkbookRow) -> None:"
+  },
+  {
+    "file": "src\\engine\\complete_v1_source_order_writer.py",
+    "line": 96,
+    "token": "target_row",
+    "text": "cell = ws.cell(target_row, col)"
+  },
+  {
+    "file": "src\\engine\\complete_v1_source_order_writer.py",
+    "line": 104,
+    "token": "target_row",
+    "text": "note = _norm(ws.cell(target_row, NOTE_COL).value)"
+  },
+  {
+    "file": "src\\engine\\complete_v1_source_order_writer.py",
+    "line": 106,
+    "token": "target_row",
+    "text": "ws.cell(target_row, NOTE_COL).value = f\"{note} | {source_note}\" if note else source_note"
+  },
+  {
+    "file": "src\\engine\\fixed_assets_reference_skeleton.py",
+    "line": 112,
+    "token": "target_row",
+    "text": "target_row = _next_empty_row(ws, resolved_start)"
+  },
+  {
+    "file": "src\\engine\\fixed_assets_reference_skeleton.py",
+    "line": 120,
+    "token": "target_row",
+    "text": "if _business_row_present(ws, target_row):"
+  },
+  {
+    "file": "src\\engine\\fixed_assets_reference_skeleton.py",
+    "line": 122,
+    "token": "target_row",
+    "text": "target_row = _next_empty_row(ws, target_row + 1)"
+  },
+  {
+    "file": "src\\engine\\fixed_assets_reference_skeleton.py",
+    "line": 123,
+    "token": "target_row",
+    "text": "_write_candidate(ws, target_row, candidate)"
+  },
+  {
+    "file": "src\\engine\\fixed_assets_reference_skeleton.py",
+    "line": 125,
+    "token": "target_row",
+    "text": "target_row = _next_empty_row(ws, target_row + 1)"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 230,
+    "token": "target_row",
+    "text": "def _copy_row_style(self, worksheet, source_row: int, target_row: int) -> None:"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 231,
+    "token": "target_row",
+    "text": "worksheet.row_dimensions[target_row].height = worksheet.row_dimensions[source_row].height"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 234,
+    "token": "target_row",
+    "text": "target_cell = worksheet.cell(row=target_row, column=column_index)"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 603,
+    "token": "form_row",
+    "text": "def _load_explicit_form_rows(self, cc_code: int) -> list[dict[str, object]]:"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 606,
+    "token": "form_row",
+    "text": "SELECT form_row, account_code, description, period, SUM(amount_vnd) AS amount"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 610,
+    "token": "form_row",
+    "text": "AND form_row IS NOT NULL"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 611,
+    "token": "form_row",
+    "text": "GROUP BY form_row, account_code, description, period"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 612,
+    "token": "form_row",
+    "text": "ORDER BY form_row, account_code, description, period"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 619,
+    "token": "form_row",
+    "text": "row_index = int(row[\"form_row\"] or 0)"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 625,
+    "token": "form_row",
+    "text": "\"form_row\": row_index,"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 695,
+    "token": "form_row",
+    "text": "def _write_explicit_form_rows(self, worksheet, cc_code: int) -> None:"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 696,
+    "token": "form_row",
+    "text": "for row in self._load_explicit_form_rows(cc_code):"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 697,
+    "token": "form_row",
+    "text": "row_index = int(row[\"form_row\"])"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 889,
+    "token": "form_row",
+    "text": "self._write_explicit_form_rows(worksheet, cc_code)"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 1046,
+    "token": "form_row",
+    "text": "self._write_explicit_form_rows(worksheet, cc_code)"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 1055,
+    "token": "form_row",
+    "text": "AND form_row IS NULL"
+  },
+  {
+    "file": "src\\engine\\output_mode.py",
+    "line": 119,
+    "token": "row 137",
+    "text": "notes=\"Source-file-order row; legacy FORM row 137 is not a placement target.\","
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 94,
+    "token": "target_row",
+    "text": "def _copy_business_row(primary_ws, target_ws, primary_row: int, target_row: int) -> None:"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 97,
+    "token": "target_row",
+    "text": "dest = target_ws.cell(target_row, col)"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 103,
+    "token": "target_row",
+    "text": "note_cell = target_ws.cell(target_row, 20)"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 124,
+    "token": "target_row",
+    "text": "target_row = _next_safe_row(target_ws, start_row)"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 127,
+    "token": "target_row",
+    "text": "if target_row < 213:"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 128,
+    "token": "target_row",
+    "text": "target_row = 213"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 129,
+    "token": "target_row",
+    "text": "_copy_business_row(primary_ws, target_ws, item[\"primary_row\"], target_row)"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 131,
+    "token": "target_row",
+    "text": "target_row += 1"
+  },
+  {
+    "file": "src\\parsers\\birthday.py",
+    "line": 34,
+    "token": "row 59",
+    "text": "\"\"\"Load birthday workbook amounts into explicit FORM row 59.\"\"\""
+  },
+  {
+    "file": "src\\parsers\\birthday.py",
+    "line": 76,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 326,
+    "token": "form_row",
+    "text": "def _admin_match_form_row(text: str) -> int | None:"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 344,
+    "token": "form_row",
+    "text": "if any(token in text for token in (\"form_row\", \"form row\", \"row\", \"dòng\", \"dong\")):"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 345,
+    "token": "form_row",
+    "text": "return \"form_row\""
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 395,
+    "token": "form_row",
+    "text": "form_row: int,"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 409,
+    "token": "form_row",
+    "text": "form_row=form_row,"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 413,
+    "token": "form_row",
+    "text": "final_description = f\"Admin allocation: {description or form_row}\""
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 419,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 422,
+    "token": "form_row",
+    "text": "(ADMIN_SOURCE_NAME, period, amount_vnd, cc_code, final_account, form_row, final_description),"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 448,
+    "token": "form_row",
+    "text": "if \"cc_code\" in header_map and (\"form_row\" in header_map or detected_months):"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 463,
+    "token": "form_row",
+    "text": "form_row = None"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 464,
+    "token": "form_row",
+    "text": "form_row_index = active_header.get(\"form_row\")"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 465,
+    "token": "form_row",
+    "text": "if form_row_index is not None and form_row_index < len(row):"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 466,
+    "token": "form_row",
+    "text": "maybe_row = safe_float(row[form_row_index])"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 468,
+    "token": "form_row",
+    "text": "form_row = int(maybe_row)"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 469,
+    "token": "form_row",
+    "text": "if form_row is None:"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 470,
+    "token": "form_row",
+    "text": "form_row = _admin_match_form_row(row_text)"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 471,
+    "token": "form_row",
+    "text": "if form_row not in ADMIN_BASE_ACCOUNT_BY_ROW:"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 492,
+    "token": "form_row",
+    "text": "form_row=form_row,"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 516,
+    "token": "form_row",
+    "text": "unit = float(ADMIN_DEFAULT_UNIT_PRICE_BY_ROW.get(form_row, 0))"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 524,
+    "token": "form_row",
+    "text": "form_row=form_row,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 21,
+    "token": "form_row",
+    "text": "\"form_row\": 54,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 28,
+    "token": "form_row",
+    "text": "\"form_row\": 54,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 35,
+    "token": "form_row",
+    "text": "\"form_row\": 66,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 42,
+    "token": "form_row",
+    "text": "\"form_row\": 81,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 49,
+    "token": "form_row",
+    "text": "\"form_row\": 66,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 56,
+    "token": "form_row",
+    "text": "\"form_row\": 71,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 63,
+    "token": "form_row",
+    "text": "\"form_row\": 64,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 70,
+    "token": "form_row",
+    "text": "\"form_row\": 65,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 77,
+    "token": "form_row",
+    "text": "\"form_row\": 68,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 84,
+    "token": "form_row",
+    "text": "\"form_row\": 82,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 91,
+    "token": "form_row",
+    "text": "\"form_row\": 67,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 98,
+    "token": "form_row",
+    "text": "\"form_row\": 70,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 105,
+    "token": "form_row",
+    "text": "\"form_row\": 63,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 128,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 151,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 367,
+    "token": "form_row",
+    "text": "if event_default and not str(row.get(\"form_row\", \"\") or \"\").strip() and not str(row.get(\"row\", \"\") or \"\").strip():"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 368,
+    "token": "form_row",
+    "text": "row[\"form_row\"] = str(event_default[\"form_row\"])"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 411,
+    "token": "form_row",
+    "text": "form_row_text, form_row_ok = _merged_value(row, \"form_row\", \"row\")"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 412,
+    "token": "form_row",
+    "text": "if not form_row_ok:"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 419,
+    "token": "form_row",
+    "text": "form_row = None"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 420,
+    "token": "form_row",
+    "text": "if form_row_text:"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 422,
+    "token": "form_row",
+    "text": "form_row = int(float(form_row_text))"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 426,
+    "token": "form_row",
+    "text": "if form_row <= 0:"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 464,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 468,
+    "token": "form_row",
+    "text": "(SOURCE_NAME, period, amount_vnd, cc_code, account_code, form_row, final_description)"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 24,
+    "token": "form_row",
+    "text": "REQUIRED_COLUMNS = (\"cc_code\", \"period\", \"form_row\", \"account_code\", \"amount_vnd\", \"description\")"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 48,
+    "token": "form_row",
+    "text": "writer.writerow([\"cc_code\", \"period\", \"form_row\", \"account_code\", \"amount_vnd\", \"description\"])"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 88,
+    "token": "form_row",
+    "text": "raw_form_row = str(row.get(\"form_row\", \"\")).strip()"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 97,
+    "token": "form_row",
+    "text": "if not raw_cc and not str(raw_period).strip() and not raw_form_row and not raw_account_code and not str(raw_amount).strip():"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 103,
+    "token": "form_row",
+    "text": "form_row = int(float(raw_form_row))"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 109,
+    "token": "form_row",
+    "text": "if cc_code not in valid_cc_codes or form_row <= 0 or account_code <= 0:"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 126,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 129,
+    "token": "form_row",
+    "text": "(period, amount_vnd, cc_code, account_code, form_row, description),"
+  },
+  {
+    "file": "src\\parsers\\nnn_paperwork.py",
+    "line": 146,
+    "token": "row 137",
+    "text": "\"\"\"Load NNN/VISA/GPLD/Passport paperwork workbook into explicit FORM row 137.\"\"\""
+  },
+  {
+    "file": "src\\parsers\\nnn_paperwork.py",
+    "line": 260,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "tests\\test_account_resolver.py",
+    "line": 380,
+    "token": "form_row",
+    "text": "def test_source_policy_resolves_ga_admin_form_row_by_cc_cost_type(self):"
+  },
+  {
+    "file": "tests\\test_account_resolver.py",
+    "line": 394,
+    "token": "form_row",
+    "text": "resolve_account_code_for_source(conn, \"ga_admin_allocation\", \"1412000040\", form_row=97),"
+  },
+  {
+    "file": "tests\\test_account_resolver.py",
+    "line": 398,
+    "token": "form_row",
+    "text": "resolve_account_code_for_source(conn, \"ga_admin_allocation\", \"1412000099\", form_row=97),"
+  },
+  {
+    "file": "tests\\test_account_resolver.py",
+    "line": 402,
+    "token": "form_row",
+    "text": "resolve_account_code_for_source(conn, \"ga_admin_allocation\", \"1412000100\", form_row=97),"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 290,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 304,
+    "token": "form_row",
+    "text": "\"form_row\": \"137\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 378,
+    "token": "form_row",
+    "text": "SELECT source, period, cc_code, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 387,
+    "token": "form_row",
+    "text": "self.assertEqual(int(fact_row[\"form_row\"]), 66)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 447,
+    "token": "row 97",
+    "text": "\"note\": \"Staff notebook row 97 test\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 457,
+    "token": "form_row",
+    "text": "SELECT period, cc_code, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 466,
+    "token": "form_row",
+    "text": "self.assertEqual(int(fact_row[\"form_row\"]), 97)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 480,
+    "token": "F97",
+    "text": "self.assertEqual(ws[\"R97\"].value, \"=SUM(F97:Q97)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 481,
+    "token": "F97",
+    "text": "other_month_cells = [\"F97\", \"H97\", \"I97\", \"J97\", \"K97\", \"L97\", \"M97\", \"N97\", \"O97\", \"P97\", \"Q97\"]"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 527,
+    "token": "row 98",
+    "text": "\"note\": \"Worker notebook row 98 test\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 537,
+    "token": "form_row",
+    "text": "SELECT period, cc_code, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 546,
+    "token": "form_row",
+    "text": "self.assertEqual(int(fact_row[\"form_row\"]), 98)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 560,
+    "token": "F98",
+    "text": "self.assertEqual(ws[\"R98\"].value, \"=SUM(F98:Q98)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 561,
+    "token": "F98",
+    "text": "other_month_cells = [\"F98\", \"H98\", \"I98\", \"J98\", \"K98\", \"L98\", \"M98\", \"N98\", \"O98\", \"P98\", \"Q98\"]"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 618,
+    "token": "form_row",
+    "text": "SELECT period, cc_code, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 627,
+    "token": "form_row",
+    "text": "self.assertEqual(int(fact_row[\"form_row\"]), 58)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 645,
+    "token": "F58",
+    "text": "self.assertEqual(ws[\"R58\"].value, \"=SUM(F58:Q58)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 701,
+    "token": "form_row",
+    "text": "\"SELECT COUNT(*) FROM fact_input_data WHERE source = 'manual_event_driver' AND form_row = 58\""
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 767,
+    "token": "form_row",
+    "text": "SELECT period, cc_code, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 776,
+    "token": "form_row",
+    "text": "self.assertEqual(int(fact_row[\"form_row\"]), 66)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1089,
+    "token": "form_row",
+    "text": "SELECT source, period, cc_code, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1099,
+    "token": "form_row",
+    "text": "self.assertIsNone(fact_row[\"form_row\"])"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1150,
+    "token": "form_row",
+    "text": "SELECT period, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1159,
+    "token": "form_row",
+    "text": "self.assertEqual(int(row[\"form_row\"]), 53)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1225,
+    "token": "form_row",
+    "text": "SELECT period, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1234,
+    "token": "form_row",
+    "text": "self.assertEqual(int(row[\"form_row\"]), 54)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1367,
+    "token": "form_row",
+    "text": "def test_manual_event_driver_without_form_row_appends_with_formula(self):"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1390,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1404,
+    "token": "form_row",
+    "text": "\"form_row\": \"\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1462,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1520,
+    "token": "form_row",
+    "text": "SELECT period, amount_vnd, form_row, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1528,
+    "token": "form_row",
+    "text": "self.assertEqual(int(row[\"form_row\"]), 137)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1557,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1571,
+    "token": "form_row",
+    "text": "\"form_row\": \"46\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1584,
+    "token": "form_row",
+    "text": "\"form_row\": \"46\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1685,
+    "token": "F137",
+    "text": "self.assertEqual(ws[\"F137\"].value, \"=1000\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1732,
+    "token": "F59",
+    "text": "self.assertEqual(ws[\"F59\"].value, \"=3*152000\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1740,
+    "token": "form_row",
+    "text": "def test_manual_special_cost_parser_and_export_to_explicit_form_row(self):"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1751,
+    "token": "form_row",
+    "text": "fieldnames=[\"cc_code\", \"period\", \"form_row\", \"account_code\", \"amount_vnd\", \"description\"],"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1758,
+    "token": "form_row",
+    "text": "\"form_row\": \"113\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1894,
+    "token": "form_row",
+    "text": "def test_export_routes_fixed_items_to_form_rows_and_clears_sample_rows(self):"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1958,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, amount_usd, cc_code, account_code, form_row, description)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2033,
+    "token": "F38",
+    "text": "self.assertEqual(ws[\"F38\"].value, \"=ROUND(3.5*$B$2,0)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2036,
+    "token": "F42",
+    "text": "self.assertEqual(ws[\"F42\"].value, \"=ROUND(6.5*$B$2,0)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2044,
+    "token": "F58",
+    "text": "self.assertEqual(ws[\"F58\"].value, \"=800\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2045,
+    "token": "F59",
+    "text": "self.assertEqual(ws[\"F59\"].value, \"=900\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2048,
+    "token": "F97",
+    "text": "self.assertEqual(ws[\"F97\"].value, \"=1000\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2049,
+    "token": "F98",
+    "text": "self.assertEqual(ws[\"F98\"].value, \"=1100\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2050,
+    "token": "F137",
+    "text": "self.assertEqual(ws[\"F137\"].value, \"=1200\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2090,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2173,
+    "token": "form_row",
+    "text": "ws.append([\"cc_code\", \"form_row\", \"account_code\", \"description\", *months])"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2182,
+    "token": "form_row",
+    "text": "ws.append([\"cc_code\", \"form_row\", \"account_code\", \"description\", \"period\", \"quantity\", \"unit_price\", \"amount\"])"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2211,
+    "token": "F97",
+    "text": "self.assertEqual(ws[\"R97\"].value, \"=SUM(F97:Q97)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2212,
+    "token": "F98",
+    "text": "self.assertEqual(ws[\"R98\"].value, \"=SUM(F98:Q98)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2213,
+    "token": "F58",
+    "text": "self.assertEqual(ws[\"R58\"].value, \"=SUM(F58:Q58)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2279,
+    "token": "F38",
+    "text": "self.assertEqual(ws[\"R38\"].value, \"=SUM(F38:Q38)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2280,
+    "token": "F42",
+    "text": "self.assertEqual(ws[\"R42\"].value, \"=SUM(F42:Q42)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2399,
+    "token": "form_row",
+    "text": "ws.append([\"cc_code\", \"form_row\", \"account_code\", \"description\", *months])"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2412,
+    "token": "form_row",
+    "text": "SELECT account_code, form_row"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2420,
+    "token": "form_row",
+    "text": "self.assertEqual(int(row[\"form_row\"]), 54)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2695,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2716,
+    "token": "F137",
+    "text": "self.assertEqual(ws[\"F137\"].value, \"=1000000\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2718,
+    "token": "Q137",
+    "text": "self.assertEqual(ws[\"Q137\"].value, \"=12000000\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2719,
+    "token": "F137",
+    "text": "self.assertEqual(ws[\"R137\"].value, \"=SUM(F137:Q137)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2736,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2756,
+    "token": "F137",
+    "text": "self.assertEqual(ws[\"F137\"].value, \"=1000000+2000*3\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2771,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2783,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2801,
+    "token": "F137",
+    "text": "self.assertIsNone(ws[\"F137\"].value)"
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 76,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 101,
+    "token": "form_row",
+    "text": "\"form_row\": \"59\","
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 125,
+    "token": "form_row",
+    "text": "\"form_row\": \"59\","
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 148,
+    "token": "form_row",
+    "text": "\"form_row\": \"59\","
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 176,
+    "token": "form_row",
+    "text": "SELECT period, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 183,
+    "token": "form_row",
+    "text": "assert row[\"form_row\"] == 71"
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 205,
+    "token": "form_row",
+    "text": "\"SELECT period, form_row, amount_vnd, description FROM fact_input_data WHERE source='manual_event_driver'\""
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 208,
+    "token": "form_row",
+    "text": "assert row[\"form_row\"] == 81"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 103,
+    "token": "form_row",
+    "text": "SELECT period, amount_vnd, cc_code, account_code, form_row, description"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 117,
+    "token": "form_row",
+    "text": "self.assertEqual(rows[0][\"form_row\"], 137)"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 125,
+    "token": "form_row",
+    "text": "self.assertEqual(rows[1][\"form_row\"], 137)"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 157,
+    "token": "form_row",
+    "text": "SELECT period, amount_vnd, cc_code, account_code, form_row"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 171,
+    "token": "form_row",
+    "text": "self.assertEqual(rows[0][\"form_row\"], 137)"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 178,
+    "token": "form_row",
+    "text": "self.assertEqual(rows[1][\"form_row\"], 137)"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 210,
+    "token": "form_row",
+    "text": "SELECT period, amount_vnd, cc_code, account_code, form_row, description"
+  },
+  {
+    "file": "tests\\test_output_mode.py",
+    "line": 89,
+    "token": "row 137",
+    "text": "assert \"legacy FORM row 137\" in spec.notes"
+  },
+  {
+    "file": "tests\\test_output_placement.py",
+    "line": 99,
+    "token": "row 137",
+    "text": "assert \"legacy FORM row 137\" in planned[\"nnn_paperwork\"].notes"
+  },
+  {
+    "file": "tests\\test_primary_reference_compare.py",
+    "line": 394,
+    "token": "F59",
+    "text": "\"F59\": \"=2*152000\","
+  },
+  {
+    "file": "tests\\test_primary_reference_compare.py",
+    "line": 399,
+    "token": "F59",
+    "text": "\"F59\": \"=6*2150000\","
+  },
+  {
+    "file": "tests\\test_source_order_output.py",
+    "line": 46,
+    "token": "form_row",
+    "text": "def test_no_fixed_form_rows_are_required_by_policy():"
+  }
+]

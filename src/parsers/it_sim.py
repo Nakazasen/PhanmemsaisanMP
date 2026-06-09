@@ -156,6 +156,16 @@ def _parse_summary_sheet(
         header_row = 1
 
     cc_col = _find_header_index_any(df, header_row, (("原価センター",), ("cost", "center")))
+    account_code_col = _find_header_index_any(
+        df,
+        header_row,
+        (
+            ("勘定科目",),
+            ("account", "code"),
+            ("account",),
+            ("ma", "tai", "khoan"),
+        ),
+    )
     total_vnd_col = _find_header_index_any(
         df,
         header_row,
@@ -172,6 +182,7 @@ def _parse_summary_sheet(
         if not cc_code:
             continue
 
+        account_code = int(safe_float(df.iloc[row_index, account_code_col])) if account_code_col is not None else 0
         amount_vnd = safe_float(df.iloc[row_index, total_vnd_col])
         if amount_vnd <= 0:
             continue
@@ -183,6 +194,7 @@ def _parse_summary_sheet(
                     "period": month,
                     "amount_vnd": amount_vnd,
                     "amount_usd": 0.0,
+                    "account_code": account_code,
                     "source": "it_sim",
                     "description": _join_description(
                         "it_sim",
@@ -196,6 +208,21 @@ def _parse_summary_sheet(
                 }
             )
     return records
+
+
+def _summary_account_code_by_cc(records: list[dict[str, object]]) -> dict[int, int]:
+    accounts_by_cc: dict[int, set[int]] = defaultdict(set)
+    for record in records:
+        cc_code = int(record.get("cc_code") or 0)
+        account_code = int(record.get("account_code") or 0)
+        if cc_code > 0 and account_code > 0:
+            accounts_by_cc[cc_code].add(account_code)
+
+    return {
+        cc_code: next(iter(account_codes))
+        for cc_code, account_codes in accounts_by_cc.items()
+        if len(account_codes) == 1
+    }
 
 
 def _parse_component_sheet(
@@ -293,17 +320,19 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
         return records
 
     try:
+        summary_records: list[dict[str, object]] = []
         summary_sheet = _find_matching_sheet(excel_file.sheet_names, ("サマリー", "vnd"))
         if summary_sheet:
             summary_df = pd.read_excel(path, sheet_name=summary_sheet, header=None, engine="xlrd")
-            records.extend(
-                _parse_summary_sheet(
-                    summary_df,
-                    target_months,
-                    source_file=os.path.basename(path),
-                    source_sheet=summary_sheet,
-                )
+            summary_records = _parse_summary_sheet(
+                summary_df,
+                target_months,
+                source_file=os.path.basename(path),
+                source_sheet=summary_sheet,
             )
+            records.extend(summary_records)
+
+        account_code_by_cc = _summary_account_code_by_cc(summary_records)
 
         for component_key, tokens in COMPONENT_SHEETS.items():
             sheet_name = _find_matching_sheet(excel_file.sheet_names, tokens)
@@ -322,6 +351,7 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
                             "period": month,
                             "amount_vnd": amounts["amount_vnd"],
                             "amount_usd": amounts["amount_usd"],
+                            "account_code": account_code_by_cc.get(cc_code, 0),
                             "source": "it_sim",
                             "description": _join_description(
                                 "it_sim",
@@ -345,6 +375,7 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
                                 "period": month,
                                 "amount_vnd": 0.0,
                                 "amount_usd": term["quantity"] * term["unit_price_usd"],
+                                "account_code": account_code_by_cc.get(cc_code, 0),
                                 "source": "it_sim",
                                 "description": _join_description(
                                     "it_sim",
@@ -410,13 +441,14 @@ def parse_it_simulation(conn: sqlite3.Connection, source_dir: str | None = None)
                 """
                 INSERT INTO fact_input_data
                 (source, period, amount_vnd, amount_usd, cc_code, account_code, scenario_id, description)
-                VALUES ('it_sim', ?, ?, ?, ?, 0, 'base', ?)
+                VALUES ('it_sim', ?, ?, ?, ?, ?, 'base', ?)
                 """,
                 (
                     record["period"],
                     record["amount_vnd"],
                     record["amount_usd"],
                     record["cc_code"],
+                    int(record.get("account_code") or 0),
                     record["description"],
                 ),
             )

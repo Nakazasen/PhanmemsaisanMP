@@ -1,0 +1,161 @@
+{
+  "output": "dist\\phase42n3c_source_order_complete_v1\\OUTPUT_FY2027\\MP_CC_1412000040.xlsx",
+  "business_rows": 242,
+  "primary_reference_rows": 134,
+  "source_order_rows": [
+    {
+      "row": 168,
+      "account": 5006016260,
+      "description": "減価償却費（建物）/Khấu hao (Nhà)",
+      "note": "source_file=施設課　MPFY2027.xlsx; original_row=36; source-order-complete-v1"
+    },
+    {
+      "row": 169,
+      "account": 5006016261,
+      "description": "減価償却費（土地）/Khấu hao (Đất)",
+      "note": "source_file=施設課　MPFY2027.xlsx; original_row=37; source-order-complete-v1"
+    },
+    {
+      "row": 170,
+      "account": 9114120007,
+      "description": "固定資産金利（建物）/Lãi (Nhà)",
+      "note": "source_file=施設課　MPFY2027.xlsx; original_row=40; source-order-complete-v1"
+    },
+    {
+      "row": 171,
+      "account": 9114120007,
+      "description": "固定資産金利（土地）/Lãi (Đất)",
+      "note": "source_file=施設課　MPFY2027.xlsx; original_row=41; source-order-complete-v1"
+    },
+    {
+      "row": 172,
+      "account": 5005066281,
+      "description": "電気代/Tiền điện",
+      "note": "source_file=施設課　MPFY2027.xlsx; original_row=44; source-order-complete-v1"
+    },
+    {
+      "row": 173,
+      "account": 5005066282,
+      "description": "水道代/Tiền nước",
+      "note": "source_file=施設課　MPFY2027.xlsx; original_row=45; source-order-complete-v1"
+    },
+    {
+      "row": 175,
+      "account": 5006016244,
+      "description": "減価償却費（設備）/Khấu hao (Thiết bị)",
+      "note": "source_file=固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx; original_row=38; source-order-complete-v1"
+    },
+    {
+      "row": 176,
+      "account": 9114120007,
+      "description": "固定資産金利（設備）/Lãi (Thiết bị)",
+      "note": "source_file=固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx; original_row=42; source-order-complete-v1"
+    },
+    {
+      "row": 178,
+      "account": null,
+      "description": "System Cost / システム課金",
+      "note": "COPY_SUMMARY_VND_TOTAL_BY_PERIOD | source_file=システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls; original_row=179; source-order-complete-v1"
+    },
+    {
+      "row": 180,
+      "account": null,
+      "description": "トイレットペーパー",
+      "note": "COPY_SOURCE_MONTH_SAMPLE | source_file=総務課 FY2027 MP 振替予定.xlsx; original_row=175; source-order-complete-v1"
+    },
+    {
+      "row": 181,
+      "account": null,
+      "description": "手洗い洗剤",
+      "note": "COPY_SOURCE_MONTH_SAMPLE | source_file=総務課 FY2027 MP 振替予定.xlsx; original_row=176; source-order-complete-v1"
+    },
+    {
+      "row": 182,
+      "account": null,
+      "description": "アルコール消毒",
+      "note": "UNKNOWN | source_file=総務課 FY2027 MP 振替予定.xlsx; original_row=177; source-order-complete-v1"
+    },
+    {
+      "row": 184,
+      "account": 5004086291,
+      "description": "誕生日会/Tiền sinh nhật",
+      "note": "source_file=Sinh nhật MP FY2027.xlsx; original_row=59; source-order-complete-v1"
+    },
+    {
+      "row": 186,
+      "account": null,
+      "description": "定年の健康診断費/Chi phí khám sức khỏe hàng năm",
+      "note": "source_file=FY2027配賦額一覧 (2025.12.29).xlsx; original_row=57; source-order-complete-v1"
+    },
+    {
+      "row": 187,
+      "account": null,
+      "description": "採用の健康診断費/Chi phí khám sức khỏe tuyển dụng",
+      "note": "source_file=FY2027配賦額一覧 (2025.12.29).xlsx; original_row=58; source-order-complete-v1"
+    },
+    {
+      "row": 188,
+      "account": null,
+      "description": "新入社員：ノート（スタッフ用）/Người mới: Sổ tay (Dùng cho nhân viên)",
+      "note": "source_file=FY2027配賦額一覧 (2025.12.29).xlsx; original_row=97; source-order-complete-v1"
+    },
+    {
+      "row": 189,
+      "account": null,
+      "description": "新入社員：ノート (G7社員用）/Người mới: Sổ tay (Dùng cho công nhân)",
+      "note": "source_file=FY2027配賦額一覧 (2025.12.29).xlsx; original_row=98; source-order-complete-v1"
+    },
+    {
+      "row": 191,
+      "account": 5005246286,
+      "description": "出向者の書類申請費/Chi phí làm giấy tờ cho người biệt phái",
+      "note": "source_file=Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx; original_row=137; source-order-complete-v1"
+    }
+  ],
+  "source_order_row_count": 18,
+  "blank_rows_168_191": [
+    174,
+    177,
+    179,
+    183,
+    185,
+    190
+  ],
+  "forbidden_legacy_rows": {
+    "38": {
+      "account": null,
+      "description": null,
+      "months": []
+    },
+    "42": {
+      "account": null,
+      "description": null,
+      "months": []
+    },
+    "58": {
+      "account": null,
+      "description": null,
+      "months": []
+    },
+    "59": {
+      "account": null,
+      "description": null,
+      "months": []
+    },
+    "97": {
+      "account": null,
+      "description": null,
+      "months": []
+    },
+    "98": {
+      "account": null,
+      "description": null,
+      "months": []
+    },
+    "137": {
+      "account": null,
+      "description": null,
+      "months": []
+    }
+  }
+}

@@ -56,30 +56,37 @@ def test_system_cost_is_file_order_single_row():
     assert is_file_order_mode(spec)
 
 
-def test_fixed_assets_is_mixed_transition_with_rows_38_42():
+def test_fixed_assets_is_source_order_group_without_fixed_rows():
     spec = get_group_spec("fixed_assets")
 
-    assert spec.output_mode == OutputMode.MIXED_TRANSITION
-    assert spec.fixed_rows == (38, 42)
-    assert is_fixed_row_compatible(spec)
-    assert not is_file_order_mode(spec)
+    assert spec.output_mode == OutputMode.FILE_ORDER_GROUP
+    assert spec.cost_items == ("fixed_asset_depreciation", "fixed_asset_interest")
+    assert spec.fixed_rows == ()
+    assert not is_fixed_row_compatible(spec)
+    assert is_file_order_mode(spec)
+    assert "legacy FORM rows 38/42" in spec.notes
 
 
-def test_birthday_keeps_row_59_63_compatibility_risk():
+def test_birthday_is_source_order_row_without_fixed_rows():
     spec = get_group_spec("birthday")
 
-    assert spec.output_mode == OutputMode.ROW_COMPAT_OR_FILE_ORDER_PENDING
-    assert spec.fixed_rows == (59, 63)
-    assert is_fixed_row_compatible(spec)
-    assert "59/63" in spec.notes
+    assert spec.output_mode == OutputMode.FILE_ORDER_SINGLE_ROW
+    assert spec.cost_items == ("birthday",)
+    assert spec.fixed_rows == ()
+    assert not is_fixed_row_compatible(spec)
+    assert is_file_order_mode(spec)
+    assert "legacy FORM rows 59/63" in spec.notes
 
 
-def test_nnn_keeps_row_137_compatibility():
+def test_nnn_is_source_order_row_without_fixed_rows():
     spec = get_group_spec("nnn_paperwork")
 
-    assert spec.output_mode == OutputMode.ROW_COMPAT_OR_FILE_ORDER_PENDING
-    assert spec.fixed_rows == (137,)
-    assert is_fixed_row_compatible(spec)
+    assert spec.output_mode == OutputMode.FILE_ORDER_SINGLE_ROW
+    assert spec.cost_items == ("nnn_paperwork",)
+    assert spec.fixed_rows == ()
+    assert not is_fixed_row_compatible(spec)
+    assert is_file_order_mode(spec)
+    assert "legacy FORM row 137" in spec.notes
 
 
 def test_all_default_groups_have_blank_row_after_group():

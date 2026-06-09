@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 import scripts.run_e2e as run_e2e
 
@@ -13,11 +13,11 @@ def test_file_order_export_v1_enables_facility_admin_system():
     text = Path('scripts/run_e2e.py').read_text(encoding='utf-8')
     assert 'if file_order_export_v1:' in text
     assert 'facility_file_order_export = True' in text
-    assert 'facility_file_order_start_row = 200' in text
+    assert 'facility_file_order_start_row = 168' in text
     assert 'admin_consumables_export = True' in text
-    assert 'admin_consumables_start_row = 207' in text
+    assert 'admin_consumables_start_row = 175' in text
     assert 'system_cost_export = True' in text
-    assert 'system_cost_start_row = 211' in text
+    assert 'system_cost_start_row = 179' in text
 
 
 def test_individual_flags_still_exist():

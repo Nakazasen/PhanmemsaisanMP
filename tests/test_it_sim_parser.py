@@ -1,13 +1,21 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
+
+import sqlite3
 
 import pandas as pd
 
+from src.db.schema import create_schema, init_sys_params
 from src.engine.hub_builder import HubBuilder
 from src.parsers.it_sim import (
     _join_description,
     _metadata_parts,
     _parse_summary_sheet,
+    _summary_account_code_by_cc,
     classify_it_summary_variance,
+    parse_it_simulation,
 )
 
 
@@ -105,6 +113,57 @@ class TestItSimParserAuditMetadata(unittest.TestCase):
                 self.assertTrue(description.startswith("it_sim|system_usage_total"))
                 self.assertIn(f"audit_status={expected_status}", description)
                 self.assertIn(f"audit_diff_vnd={expected_diff}", description)
+
+
+class TestItSimAccountCodeMapping(unittest.TestCase):
+    def test_summary_sheet_extracts_account_code_per_cc(self):
+        df = pd.DataFrame(
+            [
+                [None, None, None],
+                ["原価センター", "勘定科目", "課金金額 VND"],
+                ["1412000006", "5005246282", 120399176],
+            ]
+        )
+
+        records = _parse_summary_sheet(df, ["202604"])
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["cc_code"], "1412000006")
+        self.assertEqual(records[0]["account_code"], 5005246282)
+        self.assertEqual(_summary_account_code_by_cc(records), {1412000006: 5005246282})
+
+    def test_parse_it_simulation_persists_account_code_from_parser_records(self):
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        create_schema(conn)
+        init_sys_params(conn, exchange_rate=26273, fiscal_year=2027)
+
+        with TemporaryDirectory() as temp_dir:
+            source_path = Path(temp_dir) / "システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls"
+            source_path.write_bytes(b"placeholder")
+
+            with patch(
+                "src.parsers.it_sim.parse_it_sim_file",
+                return_value=[
+                    {
+                        "period": "202604",
+                        "amount_vnd": 120399176,
+                        "amount_usd": 0.0,
+                        "cc_code": 1412000006,
+                        "account_code": 5005246282,
+                        "description": "it_sim|system_usage_total",
+                    }
+                ],
+            ):
+                result = parse_it_simulation(conn, temp_dir)
+
+        row = conn.execute(
+            "SELECT cc_code, account_code, amount_vnd FROM fact_input_data WHERE source = 'it_sim'"
+        ).fetchone()
+        self.assertEqual(result["total"], 1)
+        self.assertEqual(int(row["cc_code"]), 1412000006)
+        self.assertEqual(int(row["account_code"]), 5005246282)
+        self.assertEqual(float(row["amount_vnd"]), 120399176)
 
 
 if __name__ == "__main__":

@@ -30,8 +30,13 @@ WBS_COL = 20                  # T
 LOOKUP_NAME_COL = 3           # C
 LOOKUP_GROUP_COL = 4          # D
 APPEND_TEMPLATE_ROW = 29
-APPEND_START_ROW = 200
+MIN_APPEND_START_ROW = 168
+APPEND_START_ROW = MIN_APPEND_START_ROW
 MIN_APPEND_LAST_ROW = 1000
+TEMPLATE_ACCOUNT_CLEAR_START_ROW = 30
+APPEND_LEFT_FILL = "CCFFFF"
+APPEND_MONTH_FILL = "CCFFFF"
+APPEND_NOTE_FILL = "CCFFFF"
 IT_COMPONENT_ORDER = ("vpn", "mail", "r3", "mes", "plm", "qlik_sense", "vps", "ams")
 IT_SYSTEM_ACCOUNT_CODES = {5005246282, 6005146628, 6005146542}
 IT_SYSTEM_ACCOUNT_BY_COST_TYPE = {
@@ -63,7 +68,7 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
         "exclude_tokens": ("staff", "nhan vien"),
     },
     54: {
-        "tokens": ("決起コンパ", "tiệc khuấy động năm tài chính"),
+        "tokens": ("決起コンパ", "tiệc khuấy động năm tài chính", "phương châm bộ phận", "phuong cham bo phan"),
         "exclude_tokens": (),
     },
     63: {
@@ -71,8 +76,8 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
         "exclude_tokens": (),
     },
     66: {
-        "tokens": ("社員旅行 du lịch công ty", "社員旅行", "京セラフェスティバル", "lễ hội kyocera"),
-        "exclude_tokens": ("不参加", "gift", "quà tặng"),
+        "tokens": ("社員旅行 du lịch công ty", "社員旅行", "社員旅行不参加", "京セラフェスティバル", "lễ hội kyocera"),
+        "exclude_tokens": (),
     },
     67: {
         "tokens": ("運動会", "đại hội thể thao"),
@@ -88,6 +93,18 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
     },
     71: {
         "tokens": ("月餅", "bánh trung thu"),
+        "exclude_tokens": (),
+    },
+    64: {
+        "tokens": ("10年勤続記念コンパ", "tiệc kỷ niệm 10 năm", "tiec ky niem 10 nam"),
+        "exclude_tokens": (),
+    },
+    65: {
+        "tokens": ("10年勤続記念品", "quà kỷ niệm", "qua ky niem"),
+        "exclude_tokens": (),
+    },
+    68: {
+        "tokens": ("会社設立記念", "sự kiện tri ân", "su kien tri an"),
         "exclude_tokens": (),
     },
     79: {
@@ -158,6 +175,18 @@ class HubBuilder:
             return int(float(str(value).strip()))
         except (TypeError, ValueError):
             return None
+
+    def _series_has_output(self, values: dict[str, float]) -> bool:
+        return any(abs(float(amount or 0.0)) > 1e-9 for amount in values.values())
+
+    def _formula_series_has_output(
+        self,
+        terms_by_period: dict[str, list[str]],
+        numeric_values: dict[str, float] | None = None,
+    ) -> bool:
+        if any(terms for terms in terms_by_period.values()):
+            return True
+        return self._series_has_output(numeric_values or {})
 
     def _find_it_system_total_row(self, worksheet) -> int:
         candidates: list[tuple[int, int]] = []
@@ -240,6 +269,14 @@ class HubBuilder:
     def _prepare_append_row(self, worksheet, row_index: int) -> None:
         self._copy_row_style(worksheet, APPEND_TEMPLATE_ROW, row_index)
         self._write_lookup_formulas(worksheet, row_index)
+        for column_index in range(1, WBS_COL + 1):
+            cell = worksheet.cell(row=row_index, column=column_index)
+            if VISIBLE_MONTH_START_COL <= column_index <= TOTAL_COL:
+                cell.fill = openpyxl.styles.PatternFill("solid", fgColor=APPEND_MONTH_FILL)
+            elif column_index in (DESCRIPTION_COL, WBS_COL):
+                cell.fill = openpyxl.styles.PatternFill("solid", fgColor=APPEND_NOTE_FILL)
+            else:
+                cell.fill = openpyxl.styles.PatternFill("solid", fgColor=APPEND_LEFT_FILL)
         worksheet.cell(row=row_index, column=5).value = None
         worksheet.cell(row=row_index, column=ACCOUNT_COL).value = None
         worksheet.cell(row=row_index, column=DESCRIPTION_COL).value = None
@@ -252,6 +289,55 @@ class HubBuilder:
 
     def _append_last_row(self, worksheet) -> int:
         return max(int(worksheet.max_row or 0), MIN_APPEND_LAST_ROW)
+
+    def _clear_template_account_column(
+        self,
+        worksheet,
+        start_row: int = TEMPLATE_ACCOUNT_CLEAR_START_ROW,
+    ) -> None:
+        for row_index in range(max(int(start_row or 1), 1), self._append_last_row(worksheet) + 1):
+            worksheet.cell(row=row_index, column=ACCOUNT_COL).value = None
+
+    def _cell_has_user_visible_value(self, worksheet, row_index: int, column_index: int) -> bool:
+        value = worksheet.cell(row=row_index, column=column_index).value
+        if value is None:
+            return False
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return False
+            # Template lookup/total formulas are pre-filled in many blank rows.
+            # They should not make a row count as occupied.
+            if text.startswith("="):
+                return False
+            return True
+        if isinstance(value, (int, float)):
+            return abs(float(value)) > 1e-9
+        return True
+
+    def _resolve_append_start_row(self, worksheet, requested_start_row: int) -> int:
+        """Find the first safe append row for this CC's generated workbook.
+
+        ``requested_start_row`` is a minimum, not a hard-coded destination.
+        Different CCs can have different final occupied rows, so append output
+        starts after the last row that contains visible business data.
+        """
+        minimum_start = max(int(requested_start_row or MIN_APPEND_START_ROW), MIN_APPEND_START_ROW)
+        meaningful_columns = (
+            ACCOUNT_COL,
+            5,
+            *range(VISIBLE_MONTH_START_COL, TOTAL_COL + 1),
+            DESCRIPTION_COL,
+            WBS_COL,
+        )
+        last_occupied = minimum_start - 1
+        for row_index in range(1, self._append_last_row(worksheet) + 1):
+            if any(
+                self._cell_has_user_visible_value(worksheet, row_index, column_index)
+                for column_index in meaningful_columns
+            ):
+                last_occupied = max(last_occupied, row_index)
+        return max(minimum_start, last_occupied + 1)
 
     def _input_rows_for_cc(self, cc_code: object, source: str | None = None) -> list[sqlite3.Row]:
         cc_key = str(cc_code)
@@ -684,7 +770,7 @@ class HubBuilder:
             cell.value = int(round(total_amount)) if total_amount else None
         worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
 
-    def _write_fixed_rows(self, worksheet, cc_code: int) -> None:
+    def _write_fixed_rows_legacy(self, worksheet, cc_code: int) -> None:
         fixed_account_codes = {
             36: 5006016260,
             37: 5006016261,
@@ -802,6 +888,163 @@ class HubBuilder:
 
         self._write_explicit_form_rows(worksheet, cc_code)
 
+    def _write_fixed_rows(self, worksheet, cc_code: int) -> None:
+        fixed_account_codes = {
+            36: 5006016260,
+            37: 5006016261,
+            38: 5006016244,
+            40: 9114120007,
+            41: 9114120007,
+            42: 9114120007,
+            44: 5005066281,
+            45: 5005066282,
+            46: 5005056281,
+            48: 5005016372,
+            49: 5005016372,
+            51: 5005246286,
+            57: 5004086291,
+            58: 5004086291,
+            59: 5004086291,
+            97: 5005246288,
+            98: 5005246288,
+            137: 5005246286,
+        }
+        for row_index in MANAGED_FIXED_ROWS:
+            self._clear_visible_months(worksheet, row_index)
+
+        def _set_fixed_account(row_index: int) -> None:
+            account_code = fixed_account_codes.get(row_index)
+            if account_code:
+                worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
+
+        electric_series = self._month_series(cc_code, source="facility", description="electric")
+        if self._series_has_output(electric_series):
+            _set_fixed_account(44)
+            self._write_numeric_series(worksheet, 44, electric_series)
+
+        water_series = self._month_series(cc_code, source="facility", description="water")
+        if self._series_has_output(water_series):
+            _set_fixed_account(45)
+            self._write_numeric_series(worksheet, 45, water_series)
+
+        gas_series = self._ga_unit_price_series(("gas|headcount_per_person", "食堂燃料費"))
+        if self._series_has_output(gas_series):
+            _set_fixed_account(46)
+            self._write_prev_month_headcount_formula_series(worksheet, 46, gas_series)
+
+        legacy_cleaning_series = self._ga_unit_price_series(("清掃費", "chi ph\u00ed l\u00e0m s\u1ea1ch|headcount_per_person"))
+        if self._series_has_output(legacy_cleaning_series):
+            _set_fixed_account(51)
+            self._write_prev_month_headcount_formula_series(worksheet, 51, legacy_cleaning_series)
+
+        cleaning_series = self._ga_unit_price_series(("cleaning|headcount_per_person",))
+        if self._series_has_output(cleaning_series):
+            _set_fixed_account(51)
+            self._write_prev_month_headcount_formula_series(worksheet, 51, cleaning_series)
+
+        handwash_series = self._ga_unit_price_series(
+            ("手洗い洗剤", "nuoc rua tay|headcount_per_person", "nước rửa tay|headcount_per_person")
+        )
+        if self._series_has_output(handwash_series):
+            _set_fixed_account(48)
+            self._write_prev_month_headcount_formula_series(worksheet, 48, handwash_series)
+
+        toilet_paper_series = self._ga_unit_price_series(
+            ("トイレットペーパー", "giay ve sinh|headcount_per_person", "giấy vệ sinh|headcount_per_person")
+        )
+        if self._series_has_output(toilet_paper_series):
+            _set_fixed_account(49)
+            self._write_prev_month_headcount_formula_series(worksheet, 49, toilet_paper_series)
+
+        building_depr_series = self._month_series(
+            cc_code,
+            source="facility",
+            description="depreciation_building",
+            value_column="amount_usd",
+        )
+        if self._series_has_output(building_depr_series):
+            _set_fixed_account(36)
+            self._write_fx_formula_series(worksheet, 36, building_depr_series)
+
+        land_depr_series = self._month_series(
+            cc_code,
+            source="facility",
+            description="depreciation_land",
+            value_column="amount_usd",
+        )
+        if self._series_has_output(land_depr_series):
+            _set_fixed_account(37)
+            self._write_fx_formula_series(worksheet, 37, land_depr_series)
+
+        equipment_depr_series = self._month_series(
+            cc_code,
+            source="fixed_assets",
+            description_like="fixed_assets_depr|%",
+            value_column="amount_usd",
+        )
+        if self._series_has_output(equipment_depr_series):
+            _set_fixed_account(38)
+            self._write_fx_formula_series(worksheet, 38, equipment_depr_series)
+
+        building_interest_series = self._month_series(
+            cc_code,
+            source="facility",
+            description="interest_building",
+            value_column="amount_usd",
+        )
+        if self._series_has_output(building_interest_series):
+            _set_fixed_account(40)
+            self._write_fx_formula_series(worksheet, 40, building_interest_series)
+
+        land_interest_series = self._month_series(
+            cc_code,
+            source="facility",
+            description="interest_land",
+            value_column="amount_usd",
+        )
+        if self._series_has_output(land_interest_series):
+            _set_fixed_account(41)
+            self._write_fx_formula_series(worksheet, 41, land_interest_series)
+
+        equipment_interest_series = self._month_series(
+            cc_code,
+            source="fixed_assets",
+            description_like="fixed_assets_interest|%",
+            value_column="amount_usd",
+        )
+        if self._series_has_output(equipment_interest_series):
+            _set_fixed_account(42)
+            self._write_fx_formula_series(worksheet, 42, equipment_interest_series)
+
+        self._write_it_system_total_row(worksheet, cc_code)
+
+        for row_index, matcher in FIXED_ALLOCATION_ROW_MATCHERS.items():
+            series = self._series_from_tokens(
+                cc_code,
+                tokens=matcher["tokens"],
+                exclude_tokens=matcher["exclude_tokens"],
+            )
+            if not series:
+                continue
+            account_code = self._account_code_from_tokens(
+                cc_code,
+                tokens=matcher["tokens"],
+                exclude_tokens=matcher["exclude_tokens"],
+            )
+            if account_code:
+                worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
+            terms_by_period, numeric_values = self._alloc_formula_series_from_tokens(
+                cc_code,
+                tokens=matcher["tokens"],
+                exclude_tokens=matcher["exclude_tokens"],
+            )
+            if self._formula_series_has_output(terms_by_period, numeric_values):
+                self._write_formula_series(worksheet, row_index, terms_by_period, numeric_values)
+            else:
+                self._write_numeric_series(worksheet, row_index, series)
+
+        self._write_explicit_form_rows(worksheet, cc_code)
+
     def _load_append_rows(self, cc_code: int) -> list[dict[str, object]]:
         rows = self.conn.execute(
             """
@@ -878,11 +1121,13 @@ class HubBuilder:
                 column=ACCOUNT_COL,
                 value=int(target_cc) if target_cc.isdigit() else target_cc,
             )
+            self._clear_template_account_column(worksheet)
             self._write_fixed_rows(worksheet, target_cc)
 
-            self._clear_append_area(worksheet, start_row)
+            append_start_row = self._resolve_append_start_row(worksheet, start_row)
+            self._clear_append_area(worksheet, append_start_row)
             max_data_row = self._append_last_row(worksheet)
-            current_row = start_row
+            current_row = append_start_row
             for row in self._load_append_rows(target_cc):
                 if current_row > max_data_row:
                     raise ValueError("FORM detail sheet does not have enough append rows prepared.")

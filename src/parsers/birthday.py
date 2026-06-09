@@ -7,13 +7,13 @@ from pathlib import Path
 
 import openpyxl
 
+from src.engine.account_resolver import resolve_account_code_for_source
 from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
 from src.utils.source_manifest import resolve_manifest_file
 
 
 SOURCE_NAME = "birthday_workbook"
 FORM_ROW = 59
-ACCOUNT_CODE = 5004086291
 UNIT_PRICE_VND = 152000
 
 
@@ -81,7 +81,7 @@ def parse_birthday_workbook(conn: sqlite3.Connection, source_dir: str | None = N
                         period,
                         amount,
                         cc_code,
-                        ACCOUNT_CODE,
+                        resolve_account_code_for_source(conn, SOURCE_NAME, cc_code),
                         FORM_ROW,
                         f"Birthday workbook: {cc_name}|formula_expr={count_text}*{UNIT_PRICE_VND}",
                     ),
