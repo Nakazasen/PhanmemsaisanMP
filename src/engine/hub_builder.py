@@ -83,10 +83,6 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
         "tokens": ("運動会", "đại hội thể thao"),
         "exclude_tokens": (),
     },
-    69: {
-        "tokens": ("khám sức khỏe (cho cnv nam)", "khám sức khỏe (cho cnv nữ)", "健康診断（ローカル）"),
-        "exclude_tokens": ("gplđ", "gpld", "労働許可証"),
-    },
     70: {
         "tokens": ("忘年会補助金", "hỗ trợ tiệc tất niên"),
         "exclude_tokens": (),

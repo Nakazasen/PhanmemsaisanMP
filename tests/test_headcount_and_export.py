@@ -2374,6 +2374,65 @@ class TestHubBuilderExport(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_health_check_export_deduplicates_periodic_and_hiring_business_items(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        period = get_fy_months(2027)[8]
+        conn.executemany(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, amount_usd, cc_code, account_code, form_row, description)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (
+                    "alloc_health_male",
+                    period,
+                    700,
+                    0,
+                    cc_code,
+                    5004086291,
+                    None,
+                    "Alloc: Khám sức khỏe (cho CNV nam)",
+                ),
+                (
+                    "alloc_health_hiring",
+                    period,
+                    800,
+                    0,
+                    cc_code,
+                    5004086291,
+                    None,
+                    "Alloc: Khám sức khỏe khi tuyển dụng",
+                ),
+            ],
+        )
+        conn.commit()
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        tmpdir = _mk_tmpdir()
+        try:
+            output_path = tmpdir / "out_health_check_dedup.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws["N57"].value, "=700")
+                self.assertEqual(ws["N58"].value, "=800")
+                self.assertTrue(
+                    all(ws.cell(row=69, column=column_index).value is None for column_index in range(6, 18))
+                )
+                self.assertEqual(ws["R57"].value, "=SUM(F57:Q57)")
+                self.assertEqual(ws["R58"].value, "=SUM(F58:Q58)")
+                self.assertEqual(ws["R69"].value, "=SUM(F69:Q69)")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_ga_admin_allocation_default_account_resolves_by_cc_cost_type(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
