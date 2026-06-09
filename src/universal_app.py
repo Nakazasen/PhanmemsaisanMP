@@ -1247,6 +1247,8 @@ class MPManagerApp:
         unit_price_var = tk.StringVar()
         unit_price_key_var = tk.StringVar()
         amount_var = tk.StringVar()
+        bus_expat_people_var = tk.StringVar(value="0")
+        bus_vietnamese_people_var = tk.StringVar(value="0")
         account_var = tk.StringVar()
         account_jp_name_var = tk.StringVar()
         form_row_var = tk.StringVar()
@@ -1306,11 +1308,13 @@ class MPManagerApp:
         add_label_entry(4, 2, "Đơn giá nhập tay", unit_price_var, width=16)
         add_label_entry(4, 4, "Key đơn giá", unit_price_key_var, width=24)
         add_label_entry(4, 6, "Số tiền trực tiếp", amount_var, width=18)
-        add_label_entry(5, 0, "Mã tài khoản", account_var, width=16)
-        add_label_entry(5, 2, "Tên TK Nhật", account_jp_name_var, width=18)
-        add_label_entry(5, 4, "Dòng FORM", form_row_var, width=12)
-        ttk.Label(frame, text="Ghi chú").grid(row=5, column=6, sticky="w", padx=(0, 4), pady=3)
-        ttk.Entry(frame, textvariable=desc_var, width=32).grid(row=5, column=7, sticky="w", pady=3)
+        add_label_entry(5, 0, "Người biệt phái đi xe bus", bus_expat_people_var, width=16)
+        add_label_entry(5, 2, "Người Việt Nam đi xe bus", bus_vietnamese_people_var, width=16)
+        add_label_entry(6, 0, "Mã tài khoản", account_var, width=16)
+        add_label_entry(6, 2, "Tên TK Nhật", account_jp_name_var, width=18)
+        add_label_entry(6, 4, "Dòng FORM", form_row_var, width=12)
+        ttk.Label(frame, text="Ghi chú").grid(row=6, column=6, sticky="w", padx=(0, 4), pady=3)
+        ttk.Entry(frame, textvariable=desc_var, width=32).grid(row=6, column=7, sticky="w", pady=3)
 
         columns = tuple(TEMPLATE_COLUMNS)
         tree = ttk.Treeview(frame, columns=columns, show="headings", height=20)
@@ -1325,6 +1329,8 @@ class MPManagerApp:
             ("unit_price_key", 120, "Key đơn giá"),
             ("allocation_content", 130, "Nội dung phân bổ"),
             ("amount_vnd", 115, "Số tiền"),
+            ("bus_expat_people", 115, "Bus biệt phái"),
+            ("bus_vietnamese_people", 115, "Bus Việt Nam"),
             ("account_code", 95, "Mã TK"),
             ("account_jp_name", 120, "Tên TK Nhật"),
             ("account_name", 120, "Alias TK"),
@@ -1339,11 +1345,11 @@ class MPManagerApp:
         for col, width, text in headings:
             tree.heading(col, text=text)
             tree.column(col, width=width, anchor="w")
-        tree.grid(row=7, column=0, columnspan=8, sticky="nsew", pady=(12, 0))
+        tree.grid(row=8, column=0, columnspan=8, sticky="nsew", pady=(12, 0))
         scroll = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
         tree.configure(yscrollcommand=scroll.set)
-        scroll.grid(row=7, column=8, sticky="ns", pady=(12, 0))
-        frame.rowconfigure(7, weight=1)
+        scroll.grid(row=8, column=8, sticky="ns", pady=(12, 0))
+        frame.rowconfigure(8, weight=1)
         frame.columnconfigure(7, weight=1)
 
         def parse_cc_code(text: str) -> str:
@@ -1362,6 +1368,8 @@ class MPManagerApp:
                 unit_price_var,
                 unit_price_key_var,
                 amount_var,
+                bus_expat_people_var,
+                bus_vietnamese_people_var,
                 account_var,
                 account_jp_name_var,
                 form_row_var,
@@ -1369,6 +1377,8 @@ class MPManagerApp:
             ):
                 variable.set("")
             event_type_var.set("month_specific_driver")
+            bus_expat_people_var.set("0")
+            bus_vietnamese_people_var.set("0")
 
         def load_rows():
             for item in tree.get_children():
@@ -1395,6 +1405,14 @@ class MPManagerApp:
             float(text)
             return text
 
+        def validate_non_negative_int(raw, label):
+            text = str(raw or "").strip()
+            if not text:
+                return "0"
+            if not text.isdecimal():
+                raise ValueError(f"{label} phải là số nguyên không âm.")
+            return str(int(text))
+
         def add_or_update():
             cc_code = parse_cc_code(cc_var.get())
             period = period_var.get().strip()
@@ -1406,6 +1424,12 @@ class MPManagerApp:
                 unit_price = validate_numeric(unit_price_var.get(), "đơn giá")
                 unit_price_key = unit_price_key_var.get().strip()
                 amount_vnd = validate_numeric(amount_var.get(), "số tiền")
+                bus_expat_people = validate_non_negative_int(
+                    bus_expat_people_var.get(), "Người biệt phái đi xe bus"
+                )
+                bus_vietnamese_people = validate_non_negative_int(
+                    bus_vietnamese_people_var.get(), "Người Việt Nam đi xe bus"
+                )
                 account_code = validate_numeric(account_var.get(), "mã tài khoản")
                 account_jp_name = account_jp_name_var.get().strip()
                 form_row = validate_numeric(form_row_var.get(), "dòng FORM")
@@ -1430,6 +1454,8 @@ class MPManagerApp:
                     "unit_price_key": unit_price_key,
                     "allocation_content": unit_price_key,
                     "amount_vnd": amount_vnd,
+                    "bus_expat_people": bus_expat_people,
+                    "bus_vietnamese_people": bus_vietnamese_people,
                     "account_code": account_code,
                     "account_jp_name": account_jp_name,
                     "account_name": account_jp_name,
@@ -1465,6 +1491,8 @@ class MPManagerApp:
             unit_price_var.set(row_data.get("unit_price", ""))
             unit_price_key_var.set(row_data.get("unit_price_key") or row_data.get("allocation_content", ""))
             amount_var.set(row_data.get("amount_vnd", ""))
+            bus_expat_people_var.set(row_data.get("bus_expat_people", "") or "0")
+            bus_vietnamese_people_var.set(row_data.get("bus_vietnamese_people", "") or "0")
             account_var.set(row_data.get("account_code", ""))
             account_jp_name_var.set(row_data.get("account_jp_name") or row_data.get("account_name", ""))
             form_row_var.set(row_data.get("row") or row_data.get("form_row", ""))
@@ -1480,7 +1508,7 @@ class MPManagerApp:
             messagebox.showinfo("Đã lưu", f"Đã lưu {len(rows)} dòng sự kiện.")
 
         button_row = ttk.Frame(frame)
-        button_row.grid(row=6, column=0, columnspan=8, sticky="w", pady=(10, 0))
+        button_row.grid(row=7, column=0, columnspan=8, sticky="w", pady=(10, 0))
         ttk.Button(button_row, text="Thêm/Cập nhật", command=add_or_update).grid(row=0, column=0, padx=(0, 6))
         ttk.Button(button_row, text="Xóa đã chọn", command=remove_selected).grid(row=0, column=1, padx=(0, 6))
         ttk.Button(button_row, text="Lưu tệp", command=save_file).grid(row=0, column=2, padx=(0, 6))
