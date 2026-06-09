@@ -1,4 +1,8 @@
-﻿# Phase 42R0 - Canonical Requirement Reconciliation
+# Phase 42N3H Historical Audit Notice
+
+This audit is historical. Current requirement source has moved to `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`. Do not use the `04.06.2026.xlsx` workbook or `04.06.2026_ảnh.xlsx` visual workbook named below as the current source of truth.
+
+# Phase 42R0 - Canonical Requirement Reconciliation
 
 ## Scope
 

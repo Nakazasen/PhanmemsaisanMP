@@ -1,3 +1,7 @@
+# Phase 42N3H Source Notice
+
+Current requirement source: `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`. This notice supersedes older wording in this derived document that names `04.06.2026.xlsx` as current/canonical. The workbook `Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026_ảnh.xlsx` is legacy only and must not be used as the current source of truth. Refresh/verify any requirement details from 09.06.2026 before using this document for new decisions.
+
 # Cải tiến nhập dữ liệu chung vào file MPnew.xlsx — bản kế hoạch đã kiểm tra, sửa và bổ sung
 
 > Tài liệu này được viết lại từ file phân tích `cai_tien_nhap_du_lieu_chung.md` do Gemini Flash tạo, dựa trên đối chiếu với file yêu cầu gốc **`Cải tiến nhập dữ liệu chung vào file MPnew.xlsx`**.

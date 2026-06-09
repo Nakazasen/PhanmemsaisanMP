@@ -1,3 +1,7 @@
+# Phase 42N3H Source Notice
+
+Current requirement source: `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`. If a raw-root copy exists at `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`, it may be used as the same current requirement. Any `04.06.2026.xlsx` workbook is legacy only, and `04.06.2026_ảnh.xlsx` must not be used as the current source of truth.
+
 # MP Saisan Business Knowledge Base
 
 Tài liệu này là bản kiến thức nghiệp vụ cô đọng để upload lên NotebookLM. Mục tiêu là giúp hệ thống hiểu đúng cách dự án MP2027 đang sinh file MP Saisan FY2027, phân biệt nguồn dữ liệu thật, file tham khảo, skeleton, và các kết luận gap.

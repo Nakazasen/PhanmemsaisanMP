@@ -1,3 +1,7 @@
+# Phase 42N3H Source Notice
+
+Current requirement source: `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`. This supersedes the source hierarchy rows below that name `04.06.2026.xlsx` or `04.06.2026_ảnh.xlsx`; those files are historical/legacy only and are not current source-of-truth inputs.
+
 # MP Saisan Business Knowledge Base v2 - Full Business Specification
 
 ## 1. Purpose and current truth
