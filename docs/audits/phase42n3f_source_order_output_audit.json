@@ -1,0 +1,184 @@
+{
+  "workbook": "dist\\phase42n3f_source_order_audit\\OUTPUT_FY2027\\MP_CC_1412000040.xlsx",
+  "sheet": "内訳ﾘｽﾄ(4～3月)",
+  "observed_marker_count": 18,
+  "observed_block_count": 7,
+  "observed_blocks": [
+    {
+      "source_file_raw": "施設課　MPFY2027.xlsx",
+      "start_row": 168,
+      "end_row": 173,
+      "rows": [
+        168,
+        169,
+        170,
+        171,
+        172,
+        173
+      ]
+    },
+    {
+      "source_file_raw": "固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx",
+      "start_row": 175,
+      "end_row": 176,
+      "rows": [
+        175,
+        176
+      ]
+    },
+    {
+      "source_file_raw": "システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls",
+      "start_row": 178,
+      "end_row": 178,
+      "rows": [
+        178
+      ]
+    },
+    {
+      "source_file_raw": "総務課 FY2027 MP 振替予定.xlsx",
+      "start_row": 180,
+      "end_row": 182,
+      "rows": [
+        180,
+        181,
+        182
+      ]
+    },
+    {
+      "source_file_raw": "Sinh nhật MP FY2027.xlsx",
+      "start_row": 184,
+      "end_row": 184,
+      "rows": [
+        184
+      ]
+    },
+    {
+      "source_file_raw": "FY2027配賦額一覧 (2025.12.29).xlsx",
+      "start_row": 186,
+      "end_row": 189,
+      "rows": [
+        186,
+        187,
+        188,
+        189
+      ]
+    },
+    {
+      "source_file_raw": "Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx",
+      "start_row": 191,
+      "end_row": 191,
+      "rows": [
+        191
+      ]
+    }
+  ],
+  "separator_rows": [
+    {
+      "after_source_file_raw": "施設課　MPFY2027.xlsx",
+      "before_source_file_raw": "固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx",
+      "rows_between": [
+        174
+      ],
+      "blank_rows_between": [
+        174
+      ],
+      "nonblank_business_rows_between": []
+    },
+    {
+      "after_source_file_raw": "固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx",
+      "before_source_file_raw": "システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls",
+      "rows_between": [
+        177
+      ],
+      "blank_rows_between": [
+        177
+      ],
+      "nonblank_business_rows_between": []
+    },
+    {
+      "after_source_file_raw": "システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls",
+      "before_source_file_raw": "総務課 FY2027 MP 振替予定.xlsx",
+      "rows_between": [
+        179
+      ],
+      "blank_rows_between": [
+        179
+      ],
+      "nonblank_business_rows_between": []
+    },
+    {
+      "after_source_file_raw": "総務課 FY2027 MP 振替予定.xlsx",
+      "before_source_file_raw": "Sinh nhật MP FY2027.xlsx",
+      "rows_between": [
+        183
+      ],
+      "blank_rows_between": [
+        183
+      ],
+      "nonblank_business_rows_between": []
+    },
+    {
+      "after_source_file_raw": "Sinh nhật MP FY2027.xlsx",
+      "before_source_file_raw": "FY2027配賦額一覧 (2025.12.29).xlsx",
+      "rows_between": [
+        185
+      ],
+      "blank_rows_between": [
+        185
+      ],
+      "nonblank_business_rows_between": []
+    },
+    {
+      "after_source_file_raw": "FY2027配賦額一覧 (2025.12.29).xlsx",
+      "before_source_file_raw": "Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx",
+      "rows_between": [
+        190
+      ],
+      "blank_rows_between": [
+        190
+      ],
+      "nonblank_business_rows_between": []
+    }
+  ],
+  "separator_failure_count": 0,
+  "separator_failures": [],
+  "legacy_fixed_rows": [
+    {
+      "row": 38,
+      "has_business_value": false,
+      "business_values": {}
+    },
+    {
+      "row": 42,
+      "has_business_value": false,
+      "business_values": {}
+    },
+    {
+      "row": 58,
+      "has_business_value": false,
+      "business_values": {}
+    },
+    {
+      "row": 59,
+      "has_business_value": false,
+      "business_values": {}
+    },
+    {
+      "row": 97,
+      "has_business_value": false,
+      "business_values": {}
+    },
+    {
+      "row": 98,
+      "has_business_value": false,
+      "business_values": {}
+    },
+    {
+      "row": 137,
+      "has_business_value": false,
+      "business_values": {}
+    }
+  ],
+  "legacy_business_rows": [],
+  "all_legacy_business_rows_clear": true
+}
