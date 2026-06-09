@@ -329,6 +329,12 @@ def load_allocation_rules(
     cursor.execute("DELETE FROM map_allocation_rules")
     count = 0
     current_dept = None
+    current_item = None
+    current_account_name = None
+    current_mfg_acc = None
+    current_ga_acc = None
+    current_sales_acc = None
+    current_posting_month = None
 
     for _, row in df.iterrows():
         # Column mapping from master data:
@@ -344,12 +350,12 @@ def load_allocation_rules(
         # 9: 計上基準 (driver/criteria)
 
         dept = row.iloc[0] if not pd.isna(row.iloc[0]) else current_dept
-        item = row.iloc[1] if len(row) > 1 and not pd.isna(row.iloc[1]) else None
-        if not item:
-            continue
+        raw_item = row.iloc[1] if len(row) > 1 and not pd.isna(row.iloc[1]) else None
 
         # Skip header rows
-        item_str = str(item)
+        item_str = str(raw_item or current_item or "")
+        if not item_str:
+            continue
         if '内　容' in item_str or 'Nội dung' in item_str:
             continue
 
@@ -365,8 +371,6 @@ def load_allocation_rules(
             continue
         unit_price = _apply_mp2026_reference_unit_price(item_str, unit_price)
 
-        account_name = str(row.iloc[2]).strip() if len(row) > 2 and not pd.isna(row.iloc[2]) else None
-
         def _safe_int(val):
             """Convert value to int, handling '-', empty strings, etc."""
             if pd.isna(val):
@@ -376,10 +380,27 @@ def load_allocation_rules(
             except (ValueError, TypeError):
                 return None
 
-        mfg_acc = _safe_int(row.iloc[3]) if len(row) > 3 else None
-        ga_acc = _safe_int(row.iloc[4]) if len(row) > 4 else None
-        sales_acc = _safe_int(row.iloc[5]) if len(row) > 5 else None
-        posting_month = str(row.iloc[6]).strip() if len(row) > 6 and not pd.isna(row.iloc[6]) else None
+        if raw_item is not None:
+            current_item = item_str.strip()
+            current_account_name = str(row.iloc[2]).strip() if len(row) > 2 and not pd.isna(row.iloc[2]) else None
+            current_mfg_acc = _safe_int(row.iloc[3]) if len(row) > 3 else None
+            current_ga_acc = _safe_int(row.iloc[4]) if len(row) > 4 else None
+            current_sales_acc = _safe_int(row.iloc[5]) if len(row) > 5 else None
+            current_posting_month = str(row.iloc[6]).strip() if len(row) > 6 and not pd.isna(row.iloc[6]) else None
+
+        account_name = (
+            str(row.iloc[2]).strip()
+            if len(row) > 2 and not pd.isna(row.iloc[2])
+            else current_account_name
+        )
+        mfg_acc = _safe_int(row.iloc[3]) if len(row) > 3 and not pd.isna(row.iloc[3]) else current_mfg_acc
+        ga_acc = _safe_int(row.iloc[4]) if len(row) > 4 and not pd.isna(row.iloc[4]) else current_ga_acc
+        sales_acc = _safe_int(row.iloc[5]) if len(row) > 5 and not pd.isna(row.iloc[5]) else current_sales_acc
+        posting_month = (
+            str(row.iloc[6]).strip()
+            if len(row) > 6 and not pd.isna(row.iloc[6])
+            else current_posting_month
+        )
         unit = str(row.iloc[8]).strip() if len(row) > 8 and not pd.isna(row.iloc[8]) else None
         driver_raw = str(row.iloc[9]).strip() if len(row) > 9 and not pd.isna(row.iloc[9]) else None
 

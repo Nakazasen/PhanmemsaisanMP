@@ -7,7 +7,7 @@ import uuid
 
 import openpyxl
 
-from src.db.loader import _apply_mp2026_reference_unit_price, _parse_unit_price
+from src.db.loader import _apply_mp2026_reference_unit_price, _parse_unit_price, load_allocation_rules
 from src.db.schema import create_schema, init_sys_params
 from src.engine.allocator import AllocationEngine
 from src.engine.hub_builder import HubBuilder
@@ -230,6 +230,103 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
         self.assertEqual(_apply_mp2026_reference_unit_price("月餅 Bánh Trung Thu", 0), 56000.0)
         self.assertEqual(_apply_mp2026_reference_unit_price("運動会 Đại hội thể thao", 0), 107000.0)
         self.assertEqual(_apply_mp2026_reference_unit_price("運動会 Đại hội thể thao", 123), 123.0)
+
+    def test_allocation_loader_keeps_new_hire_notebook_staff_continuation_row(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        tmpdir = _mk_tmpdir()
+        try:
+            source_path = tmpdir / "FY2027配賦額一覧 (2025.12.29).xlsx"
+            workbook = openpyxl.Workbook()
+            ws = workbook.active
+            ws.title = "配賦額一覧"
+            ws.append(["配布元", "内容", "科目名称", "製造コード", "間接コード", "販売コード", "計上月", "単価", "単位", "計上基準"])
+            ws.append(
+                [
+                    "人事課",
+                    "ノート Sổ",
+                    "事務用品費",
+                    5005246288,
+                    6005126423,
+                    6005246544,
+                    "入社月",
+                    4000,
+                    "/冊",
+                    "G7社員の配属人数で入社月に振替 Phân bổ theo số công nhân vào trong tháng",
+                ]
+            )
+            ws.append(
+                [
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    9100,
+                    "/冊",
+                    "スタッフの配属人数で入社月に振替 Phân bổ theo số nhân viên vào trong tháng",
+                ]
+            )
+            workbook.save(source_path)
+            workbook.close()
+
+            loaded = load_allocation_rules(conn, alloc_path=str(source_path), fiscal_year=2027)
+            self.assertEqual(loaded, 2)
+            rules = conn.execute(
+                """
+                SELECT item_name, posting_month, unit_price, driver_type, mfg_account, ga_account, sales_account
+                FROM map_allocation_rules
+                ORDER BY unit_price
+                """
+            ).fetchall()
+            self.assertEqual([float(row["unit_price"]) for row in rules], [4000.0, 9100.0])
+            self.assertEqual([row["driver_type"] for row in rules], ["headcount_worker", "headcount_staff"])
+            self.assertTrue(all(row["item_name"] == "ノート Sổ" for row in rules))
+            self.assertTrue(all(row["posting_month"] == "入社月" for row in rules))
+            self.assertTrue(all(int(row["mfg_account"]) == 5005246288 for row in rules))
+
+            conn.executemany(
+                """
+                INSERT INTO fact_monthly_headcount
+                (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
+                VALUES (?, ?, ?, ?, ?, 'manual', 'new hire delta test')
+                """,
+                [
+                    (periods[0], cc_code, 22, 22, 0),
+                    (periods[1], cc_code, 22, 22, 0),
+                    (periods[2], cc_code, 29, 26, 3),
+                    (periods[3], cc_code, 30, 27, 3),
+                ],
+            )
+            conn.commit()
+
+            AllocationEngine(conn)._process_allocation_rules()
+            rows = conn.execute(
+                """
+                SELECT period, amount_vnd, description
+                FROM fact_input_data
+                WHERE description LIKE 'Alloc: ノート Sổ%'
+                ORDER BY period, amount_vnd
+                """
+            ).fetchall()
+            observed = [(row["period"], float(row["amount_vnd"])) for row in rows]
+            self.assertEqual(
+                observed,
+                [
+                    (periods[2], 12000.0),
+                    (periods[2], 36400.0),
+                    (periods[3], 9100.0),
+                ],
+            )
+            self.assertNotIn(periods[8], {row["period"] for row in rows})
+            self.assertNotIn(26 * 9100.0, {float(row["amount_vnd"]) for row in rows})
+            self.assertNotIn(3 * 9100.0, {float(row["amount_vnd"]) for row in rows})
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     def test_acquisition_month_rules_are_skipped_until_manual_event_data_exists(self):
         conn = _mk_conn()
