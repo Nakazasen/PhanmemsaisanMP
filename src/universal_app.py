@@ -30,6 +30,7 @@ else:
 if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
 from scripts.run_e2e import run_universal_pipeline
+from src.config import EXCHANGE_RATE_USD_VND
 from src.db.loader import load_all
 from src.db.schema import get_connection
 from src.parsers.manual_event_drivers import TEMPLATE_COLUMNS, ensure_manual_event_drivers_template
@@ -110,8 +111,6 @@ HƯỚNG DẪN SỬ DỤNG CHI TIẾT - MP2027 MANAGER
 2. CÁC TRƯỜNG TRÊN MÀN HÌNH CHÍNH
 - Năm tài chính:
   Nhập năm cần chạy, ví dụ 2027.
-- Tỷ giá (USD/VND):
-  Tỷ giá được đọc từ FORM khi chạy. Có thể sửa trước khi chạy nếu cần kiểm tra nhanh.
 - Trung tâm chi phí:
   Để trống nếu muốn xuất toàn bộ.
   Chọn 1 dòng trong danh sách nếu chỉ muốn chạy cho một CC.
@@ -123,7 +122,7 @@ HƯỚNG DẪN SỬ DỤNG CHI TIẾT - MP2027 MANAGER
 3. QUY TRÌNH CHẠY ĐỀ XUẤT
 Bước 1: Kiểm tra tệp mẫu là docs/MP2027/FORM.xlsx, không dùng FORM_old.xlsx.
 Bước 2: Chọn đúng Thư mục nguồn chứa các tệp nghiệp vụ.
-Bước 3: Nhập Năm tài chính và Tỷ giá.
+Bước 3: Nhập Năm tài chính.
 Bước 4: Nếu cần, nhập bổ sung nhân sự bằng nút "Nhập nhân sự thủ công".
 Bước 5: Nếu có khoản chương trình không thể tự biết, bấm "Nhập sự kiện thiếu dữ liệu".
 Bước 6: Nếu chạy riêng, chọn 1 Trung tâm chi phí. Nếu không, để trống.
@@ -217,10 +216,6 @@ MP2027_App/
 3. CÁC TRƯỜNG TRÊN MÀN HÌNH CHÍNH
 - Năm tài chính:
   Nhập năm cần chạy, ví dụ 2027.
-
-- Tỷ giá (USD/VND):
-  Khi chạy, chương trình ưu tiên đọc tỷ giá từ FORM.xlsx ô B2.
-  Ô trên màn hình chỉ dùng để kiểm tra nhanh.
 
 - Trung tâm chi phí:
   Để trống nếu muốn xuất toàn bộ CC có dữ liệu.
@@ -374,7 +369,6 @@ class MPManagerApp:
         self.root.geometry("980x720")
 
         self.fiscal_year = tk.StringVar(value="2027")
-        self.exchange_rate = tk.StringVar(value="25450")
         self.cc_code_filter = tk.StringVar(value="")
         self.template_path = tk.StringVar(value=_default_template_path())
         self.source_dir = tk.StringVar(value=_default_source_dir())
@@ -413,12 +407,9 @@ class MPManagerApp:
         ttk.Label(container, text="Năm tài chính").grid(row=1, column=0, sticky="w", pady=4)
         ttk.Entry(container, textvariable=self.fiscal_year, width=20).grid(row=1, column=1, sticky="w")
 
-        ttk.Label(container, text="Tỷ giá (USD/VND)").grid(row=2, column=0, sticky="w", pady=4)
-        ttk.Entry(container, textvariable=self.exchange_rate, width=20).grid(row=2, column=1, sticky="w")
-
-        ttk.Label(container, text="Trung tâm chi phí (Tùy chọn)").grid(row=3, column=0, sticky="w", pady=4)
+        ttk.Label(container, text="Trung tâm chi phí (Tùy chọn)").grid(row=2, column=0, sticky="w", pady=4)
         cc_frame = ttk.Frame(container)
-        cc_frame.grid(row=3, column=1, sticky="w")
+        cc_frame.grid(row=2, column=1, sticky="w")
         
         self.cc_combo = ttk.Combobox(cc_frame, textvariable=self.cc_code_filter, width=40, state="readonly")
         self.cc_combo.pack(side="left")
@@ -426,41 +417,41 @@ class MPManagerApp:
         self.refresh_btn = ttk.Button(cc_frame, text="🔄", width=3, command=self.auto_init_master_data)
         self.refresh_btn.pack(side="left", padx=2)
         
-        ttk.Label(container, text="Để trống để xuất toàn bộ").grid(row=3, column=2, sticky="w", padx=8)
+        ttk.Label(container, text="Để trống để xuất toàn bộ").grid(row=2, column=2, sticky="w", padx=8)
 
-        ttk.Label(container, text="Tệp mẫu FORM").grid(row=4, column=0, sticky="w", pady=(14, 4))
-        ttk.Entry(container, textvariable=self.template_path, width=70).grid(row=4, column=1, sticky="w")
-        ttk.Button(container, text="Chọn...", command=self.browse_template).grid(row=4, column=2, sticky="w")
+        ttk.Label(container, text="Tệp mẫu FORM").grid(row=3, column=0, sticky="w", pady=(14, 4))
+        ttk.Entry(container, textvariable=self.template_path, width=70).grid(row=3, column=1, sticky="w")
+        ttk.Button(container, text="Chọn...", command=self.browse_template).grid(row=3, column=2, sticky="w")
 
-        ttk.Label(container, text="Thư mục nguồn").grid(row=5, column=0, sticky="w", pady=4)
-        ttk.Entry(container, textvariable=self.source_dir, width=70).grid(row=5, column=1, sticky="w")
-        ttk.Button(container, text="Chọn...", command=self.browse_source_dir).grid(row=5, column=2, sticky="w")
+        ttk.Label(container, text="Thư mục nguồn").grid(row=4, column=0, sticky="w", pady=4)
+        ttk.Entry(container, textvariable=self.source_dir, width=70).grid(row=4, column=1, sticky="w")
+        ttk.Button(container, text="Chọn...", command=self.browse_source_dir).grid(row=4, column=2, sticky="w")
 
         ttk.Button(
             container,
             text="Nhập nhân sự thủ công",
             command=self.open_headcount_editor_v2,
-        ).grid(row=6, column=1, sticky="w", pady=(8, 0))
+        ).grid(row=5, column=1, sticky="w", pady=(8, 0))
 
         ttk.Button(
             container,
             text="Nhập sự kiện thiếu dữ liệu",
             command=self.open_event_driver_editor,
-        ).grid(row=6, column=1, sticky="w", padx=(170, 0), pady=(8, 0))
+        ).grid(row=5, column=1, sticky="w", padx=(170, 0), pady=(8, 0))
 
         ttk.Button(
             container,
             text="Thứ tự file nguồn",
             command=self.open_source_order_editor,
-        ).grid(row=6, column=1, sticky="w", padx=(340, 0), pady=(8, 0))
+        ).grid(row=5, column=1, sticky="w", padx=(340, 0), pady=(8, 0))
 
         ttk.Button(
             container,
             text="Hướng dẫn sử dụng chi tiết",
             command=self.open_user_guide,
-        ).grid(row=6, column=2, sticky="w", pady=(8, 0))
+        ).grid(row=5, column=2, sticky="w", pady=(8, 0))
 
-        ttk.Separator(container, orient=tk.HORIZONTAL).grid(row=7, column=0, columnspan=3, sticky="ew", pady=16)
+        ttk.Separator(container, orient=tk.HORIZONTAL).grid(row=6, column=0, columnspan=3, sticky="ew", pady=16)
 
         self.start_btn = ttk.Button(
             container,
@@ -468,7 +459,7 @@ class MPManagerApp:
             style="Primary.TButton",
             command=self.start_pipeline,
         )
-        self.start_btn.grid(row=8, column=0, columnspan=3, sticky="w")
+        self.start_btn.grid(row=7, column=0, columnspan=3, sticky="w")
         ttk.Button(
             container,
             text="Dashboard kiểm toán",
@@ -1797,7 +1788,7 @@ class MPManagerApp:
     def start_pipeline(self):
         try:
             fiscal_year = int(self.fiscal_year.get())
-            exchange_rate = float(self.exchange_rate.get().replace(",", ""))
+            exchange_rate = float(EXCHANGE_RATE_USD_VND)
 
             cc_raw = self.cc_code_filter.get().strip()
             target_cc = None
