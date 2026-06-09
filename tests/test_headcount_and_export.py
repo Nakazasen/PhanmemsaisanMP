@@ -1158,6 +1158,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                         "event_name",
                         "event_type",
                         "count",
+                        "unit_price",
                         "unit_price_key",
                         "account_jp_name",
                         "note",
@@ -1167,10 +1168,11 @@ class TestManualSpecialCosts(unittest.TestCase):
                 writer.writerow(
                     {
                         "cc_code": str(cc_code),
-                        "target_month": "202706",
+                        "target_month": "202606",
                         "event_name": event_name,
                         "event_type": "month_specific_driver",
                         "count": "7",
+                        "unit_price": "1312500",
                         "unit_price_key": unit_price_key,
                         "account_jp_name": "福利厚生費",
                         "note": "Sample: travel absent gift June driver",
@@ -1190,7 +1192,7 @@ class TestManualSpecialCosts(unittest.TestCase):
             ).fetchone()
             self.assertIsNotNone(fact_row)
             self.assertEqual(fact_row["source"], "manual_event_driver")
-            self.assertEqual(fact_row["period"], "202706")
+            self.assertEqual(fact_row["period"], "202606")
             self.assertEqual(str(fact_row["cc_code"]), str(cc_code))
             self.assertEqual(int(fact_row["account_code"]), 5004086291)
             self.assertIsNone(fact_row["form_row"])
@@ -2193,7 +2195,6 @@ class TestHubBuilderExport(unittest.TestCase):
             cases = [
                 ("FY2027部門方針発表会後の決起コンパ", 2, 1000, "F54", "=2*1000"),
                 ("Tiệc khuấy động năm tài chính決起コンパ", 3, 1000, "G54", "=3*1000"),
-                ("社員旅行不参加対象者へのギフト贈呈", 4, 1000, "H66", "=4*1000"),
                 ("マイエピソード ～フィロソフィの実践～参加賞", 5, 1000, "I81", "=5*1000"),
                 ("京セラフェスティバル", 6, 1000, "K66", "=6*1000"),
                 ("月餅 Bánh Trung Thu", 7, 1000, "K71", "=7*1000"),
@@ -2220,6 +2221,15 @@ class TestHubBuilderExport(unittest.TestCase):
                     )
                 writer.writerow(
                     {
+                        "cc_code": cc_code,
+                        "event_name": "社員旅行不参加対象者へのギフト贈呈",
+                        "count": 4,
+                        "unit_price": 1000,
+                        "account_code": 5004086291,
+                    }
+                )
+                writer.writerow(
+                    {
                         "cc_code": other_cc,
                         "event_name": "月餅 Bánh Trung Thu",
                         "count": 99,
@@ -2229,7 +2239,7 @@ class TestHubBuilderExport(unittest.TestCase):
                 )
 
             result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
-            self.assertEqual(result["inserted"], len(cases) + 1)
+            self.assertEqual(result["inserted"], len(cases) + 2)
 
             template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
             output_path = tmpdir / "out_manual_events.xlsx"
@@ -2241,6 +2251,14 @@ class TestHubBuilderExport(unittest.TestCase):
                 ws = workbook[find_hub_sheet_name(workbook)]
                 for _event_name, _count, _unit_price, cell, formula in cases:
                     self.assertEqual(ws[cell].value, formula)
+                self.assertIsNone(ws["H66"].value)
+                appended_gift_rows = [
+                    row_index
+                    for row_index in range(168, ws.max_row + 1)
+                    if "社員旅行不参加対象者へのギフト贈呈" in str(ws.cell(row=row_index, column=19).value or "")
+                ]
+                self.assertEqual(len(appended_gift_rows), 1)
+                self.assertEqual(ws.cell(row=appended_gift_rows[0], column=8).value, "=4*1000")
                 for row_index in (54, 63, 64, 65, 66, 67, 68, 70, 71, 81, 82):
                     self.assertEqual(ws.cell(row=row_index, column=18).value, f"=SUM(F{row_index}:Q{row_index})")
                 self.assertNotEqual(ws["K71"].value, "=99*1000")

@@ -76,8 +76,8 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
         "exclude_tokens": (),
     },
     66: {
-        "tokens": ("社員旅行 du lịch công ty", "社員旅行", "社員旅行不参加", "京セラフェスティバル", "lễ hội kyocera"),
-        "exclude_tokens": (),
+        "tokens": ("社員旅行 du lịch công ty", "社員旅行", "京セラフェスティバル", "lễ hội kyocera"),
+        "exclude_tokens": ("不参加", "gift", "quà tặng", "qua tang"),
     },
     67: {
         "tokens": ("運動会", "đại hội thể thao"),

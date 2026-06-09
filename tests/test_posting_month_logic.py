@@ -133,6 +133,37 @@ class TestPostingMonthLogic(unittest.TestCase):
         self.assertNotIn(months[1], periods)
         conn.close()
 
+    def test_separate_count_admin_events_require_manual_event_source(self):
+        separate_count_items = [
+            "FY2027部門方針発表会後の決起コンパ",
+            "社員旅行不参加対象者へのギフト贈呈 Quà tặng cho CNV không thể tham gia du lịch",
+            "マイエピソード ～フィロソフィの実践～参加賞",
+            "10年勤続記念コンパ",
+            "10年勤続記念品",
+        ]
+        for item_name in separate_count_items:
+            conn = _mk_conn()
+            cc = _seed_cc(conn)
+            _seed_hc(conn, cc, [10] * 12)
+            rid = _insert_rule(conn, "6月", "headcount_all", unit_price=100, rid_label=item_name)
+
+            AllocationEngine(conn)._process_allocation_rules()
+
+            periods = _alloc_periods(conn, rid)
+            self.assertEqual(periods, {}, item_name)
+            conn.close()
+
+    def test_new_hire_medical_requires_manual_or_explicit_source_price(self):
+        conn = _mk_conn()
+        cc = _seed_cc(conn)
+        _seed_hc(conn, cc, [10, 12, 12, 15, 15, 15, 15, 15, 15, 15, 15, 15])
+        rid = _insert_rule(conn, "入社月の翌月", "headcount_all", unit_price=1, rid_label="採用時健診")
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        self.assertEqual(_alloc_periods(conn, rid), {})
+        conn.close()
+
     def test_working_days_driver_uses_sys_params(self):
         conn = _mk_conn()
         _seed_cc(conn)

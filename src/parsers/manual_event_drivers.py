@@ -32,7 +32,7 @@ EVENT_DEFAULTS = (
     {
         "tokens": ("社員旅行不参加", "không thể tham gia du lịch", "khong the tham gia du lich"),
         "period": "202606",
-        "form_row": 66,
+        "form_row": None,
         "unit_price_key": "社員旅行不参加対象者へのギフト贈呈",
         "separate_count": True,
     },
@@ -368,7 +368,12 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
             event_default = _event_default_for_name(event_name)
             if event_default and not any(str(row.get(col, "") or "").strip() for col in ("period", "target_month", "source_month", "posting_rule", "target_month_rule")):
                 row["period"] = event_default["period"]
-            if event_default and not str(row.get("form_row", "") or "").strip() and not str(row.get("row", "") or "").strip():
+            if (
+                event_default
+                and event_default.get("form_row") is not None
+                and not str(row.get("form_row", "") or "").strip()
+                and not str(row.get("row", "") or "").strip()
+            ):
                 row["form_row"] = str(event_default["form_row"])
 
             target_periods, repeat_all_months, shift_metadata, period_error = _target_periods_from_rule(
