@@ -10,7 +10,7 @@ import openpyxl
 from src.db.loader import _apply_mp2026_reference_unit_price, _parse_unit_price, load_allocation_rules
 from src.db.schema import create_schema, init_sys_params
 from src.engine.allocator import AllocationEngine
-from src.engine.hub_builder import HubBuilder
+from src.engine.hub_builder import ExportIntegrityError, HubBuilder
 from src.parsers.birthday import parse_birthday_workbook
 from src.parsers.fixed_assets import parse_fixed_assets
 from src.parsers.ga import parse_ga
@@ -63,6 +63,112 @@ def _find_system_cost_rows(ws):
         if "system cost" in row_text:
             rows.append(row_index)
     return rows
+
+
+class TestExportIntegrityGuard(unittest.TestCase):
+    def test_malformed_one_cell_template_fails_without_overwriting_output(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            malformed_template = tmpdir / "FORM_1x1.xlsx"
+            workbook = openpyxl.Workbook()
+            worksheet = workbook.active
+            worksheet.title = "内訳ﾘｽﾄ(4～3月)"
+            workbook.save(malformed_template)
+            workbook.close()
+
+            conn.execute(
+                """
+                INSERT INTO fact_input_data
+                (source, period, amount_vnd, cc_code, account_code, description)
+                VALUES ('manual_special', '202604', 1000, ?, 5005136291, 'manual cost')
+                """,
+                (cc_code,),
+            )
+            conn.commit()
+
+            output_path = tmpdir / "MP_CC_bad.xlsx"
+            output_path.write_text("existing output", encoding="utf-8")
+
+            with self.assertRaises(ExportIntegrityError):
+                HubBuilder(conn, fiscal_year=2027).export_to_template(
+                    str(malformed_template),
+                    str(output_path),
+                    cc_code=cc_code,
+                )
+
+            self.assertEqual(output_path.read_text(encoding="utf-8"), "existing output")
+            self.assertFalse(output_path.with_name(f"{output_path.stem}.tmp_export{output_path.suffix}").exists())
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_missing_template_fails_without_creating_output(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            conn.execute(
+                """
+                INSERT INTO fact_input_data
+                (source, period, amount_vnd, cc_code, account_code, description)
+                VALUES ('manual_special', '202604', 1000, ?, 5005136291, 'manual cost')
+                """,
+                (cc_code,),
+            )
+            conn.commit()
+
+            output_path = tmpdir / "MP_CC_missing_template.xlsx"
+            with self.assertRaises(FileNotFoundError):
+                HubBuilder(conn, fiscal_year=2027).export_to_template(
+                    str(tmpdir / "missing_FORM.xlsx"),
+                    str(output_path),
+                    cc_code=cc_code,
+                )
+
+            self.assertFalse(output_path.exists())
+            self.assertFalse(output_path.with_name(f"{output_path.stem}.tmp_export{output_path.suffix}").exists())
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_successful_export_has_business_rows(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            conn.execute(
+                """
+                INSERT INTO fact_input_data
+                (source, period, amount_vnd, cc_code, account_code, description)
+                VALUES ('manual_special', '202604', 1000, ?, 5005136291, 'manual cost')
+                """,
+                (cc_code,),
+            )
+            conn.commit()
+
+            template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+            output_path = tmpdir / "MP_CC_good.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(
+                str(template_path),
+                str(output_path),
+                cc_code=cc_code,
+            )
+
+            self.assertTrue(ok)
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                worksheet = workbook[find_hub_sheet_name(workbook)]
+                business_rows = HubBuilder(conn, fiscal_year=2027)._business_row_count(worksheet)
+                self.assertGreater(business_rows, 0)
+                self.assertGreaterEqual(worksheet.max_row, 30)
+                self.assertGreaterEqual(worksheet.max_column, 19)
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 class TestManualHeadcountGenderSplit(unittest.TestCase):

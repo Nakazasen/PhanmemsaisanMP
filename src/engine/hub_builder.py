@@ -141,6 +141,10 @@ MANAGED_FIXED_ROWS = tuple(
 )
 
 
+class ExportIntegrityError(RuntimeError):
+    """Raised when an export would create a malformed or empty MP workbook."""
+
+
 class HubBuilder:
     def __init__(self, conn: sqlite3.Connection, fiscal_year: int = 2027):
         self.conn = conn
@@ -310,6 +314,59 @@ class HubBuilder:
         if isinstance(value, (int, float)):
             return abs(float(value)) > 1e-9
         return True
+
+    def _business_row_count(self, worksheet) -> int:
+        business_rows = 0
+        for row_index in range(TEMPLATE_ACCOUNT_CLEAR_START_ROW, worksheet.max_row + 1):
+            account = worksheet.cell(row=row_index, column=ACCOUNT_COL).value
+            months = [
+                worksheet.cell(row=row_index, column=column_index).value
+                for column_index in range(VISIBLE_MONTH_START_COL, TOTAL_COL)
+            ]
+            if self._cell_has_user_visible_value(worksheet, row_index, ACCOUNT_COL):
+                business_rows += 1
+                continue
+            if any(value not in (None, "") for value in months):
+                business_rows += 1
+        return business_rows
+
+    def _fact_count_for_cc(self, cc_code: object) -> int:
+        row = self.conn.execute(
+            "SELECT COUNT(*) AS count FROM fact_input_data WHERE cc_code = ?",
+            (str(cc_code),),
+        ).fetchone()
+        return int(row["count"] if row else 0)
+
+    def _validate_template_workbook(self, workbook, template_path: str) -> str:
+        try:
+            hub_sheet_name = helpers.find_hub_sheet_name(workbook)
+        except ValueError as exc:
+            raise ExportIntegrityError(f"FORM template is missing the MP detail sheet: {template_path}") from exc
+
+        worksheet = workbook[hub_sheet_name]
+        if worksheet.max_row < TEMPLATE_ACCOUNT_CLEAR_START_ROW or worksheet.max_column < DESCRIPTION_COL:
+            raise ExportIntegrityError(
+                "FORM template is malformed or empty: "
+                f"{template_path} has sheet={hub_sheet_name!r}, "
+                f"max_row={worksheet.max_row}, max_column={worksheet.max_column}"
+            )
+        return hub_sheet_name
+
+    def _validate_exported_workbook(self, workbook, output_path: str, cc_code: object, fact_count: int) -> int:
+        try:
+            hub_sheet_name = self._validate_template_workbook(workbook, output_path)
+        except ExportIntegrityError as exc:
+            raise ExportIntegrityError(f"Exported workbook failed integrity check for CC {cc_code}: {exc}") from exc
+
+        worksheet = workbook[hub_sheet_name]
+        business_rows = self._business_row_count(worksheet)
+        if fact_count > 0 and business_rows <= 0:
+            raise ExportIntegrityError(
+                "Exported workbook has no business rows although DB facts exist: "
+                f"cc={cc_code}, facts={fact_count}, output={output_path}, "
+                f"sheet={hub_sheet_name}, max_row={worksheet.max_row}, max_column={worksheet.max_column}"
+            )
+        return business_rows
 
     def _resolve_append_start_row(self, worksheet, requested_start_row: int) -> int:
         """Find the first safe append row for this CC's generated workbook.
@@ -1096,52 +1153,70 @@ class HubBuilder:
         if target_cc is None:
             return False
 
-        fact_exists = self.conn.execute(
-            "SELECT 1 FROM fact_input_data WHERE cc_code = ? LIMIT 1",
-            (target_cc,),
-        ).fetchone()
-        if not fact_exists:
+        fact_count = self._fact_count_for_cc(target_cc)
+        if fact_count <= 0:
             return False
 
-        if os.path.exists(output_path):
-            os.remove(output_path)
-        shutil.copy2(template_path, output_path)
+        if not os.path.exists(template_path):
+            raise FileNotFoundError(f"FORM template not found: {template_path}")
 
-        workbook = openpyxl.load_workbook(output_path)
+        template_workbook = openpyxl.load_workbook(template_path, read_only=True, data_only=False)
         try:
-            hub_sheet_name = sheet_name if sheet_name and sheet_name in workbook.sheetnames else helpers.find_hub_sheet_name(workbook)
-            worksheet = workbook[hub_sheet_name]
-
-            worksheet.cell(
-                row=5,
-                column=ACCOUNT_COL,
-                value=int(target_cc) if target_cc.isdigit() else target_cc,
-            )
-            self._clear_template_account_column(worksheet)
-            self._write_fixed_rows(worksheet, target_cc)
-
-            append_start_row = self._resolve_append_start_row(worksheet, start_row)
-            self._clear_append_area(worksheet, append_start_row)
-            max_data_row = self._append_last_row(worksheet)
-            current_row = append_start_row
-            for row in self._load_append_rows(target_cc):
-                if current_row > max_data_row:
-                    raise ValueError("FORM detail sheet does not have enough append rows prepared.")
-                self._prepare_append_row(worksheet, current_row)
-                worksheet.cell(row=current_row, column=ACCOUNT_COL, value=int(row["account_code"]))
-                worksheet.cell(row=current_row, column=DESCRIPTION_COL, value=row["description"])
-                if row["terms"]:
-                    self._write_formula_series(
-                        worksheet,
-                        current_row,
-                        dict(row["terms"]),
-                        dict(row["numeric_months"]),
-                    )
-                else:
-                    self._write_numeric_series(worksheet, current_row, row["months"])
-                current_row += 1
-
-            workbook.save(output_path)
-            return True
+            self._validate_template_workbook(template_workbook, template_path)
         finally:
-            workbook.close()
+            template_workbook.close()
+
+        output_dir = os.path.dirname(os.path.abspath(output_path))
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+        root, extension = os.path.splitext(output_path)
+        temp_output_path = f"{root}.tmp_export{extension or '.xlsx'}"
+        if os.path.exists(temp_output_path):
+            os.remove(temp_output_path)
+        shutil.copy2(template_path, temp_output_path)
+
+        workbook = openpyxl.load_workbook(temp_output_path)
+        try:
+            try:
+                hub_sheet_name = sheet_name if sheet_name and sheet_name in workbook.sheetnames else helpers.find_hub_sheet_name(workbook)
+                worksheet = workbook[hub_sheet_name]
+
+                worksheet.cell(
+                    row=5,
+                    column=ACCOUNT_COL,
+                    value=int(target_cc) if target_cc.isdigit() else target_cc,
+                )
+                self._clear_template_account_column(worksheet)
+                self._write_fixed_rows(worksheet, target_cc)
+
+                append_start_row = self._resolve_append_start_row(worksheet, start_row)
+                self._clear_append_area(worksheet, append_start_row)
+                max_data_row = self._append_last_row(worksheet)
+                current_row = append_start_row
+                for row in self._load_append_rows(target_cc):
+                    if current_row > max_data_row:
+                        raise ValueError("FORM detail sheet does not have enough append rows prepared.")
+                    self._prepare_append_row(worksheet, current_row)
+                    worksheet.cell(row=current_row, column=ACCOUNT_COL, value=int(row["account_code"]))
+                    worksheet.cell(row=current_row, column=DESCRIPTION_COL, value=row["description"])
+                    if row["terms"]:
+                        self._write_formula_series(
+                            worksheet,
+                            current_row,
+                            dict(row["terms"]),
+                            dict(row["numeric_months"]),
+                        )
+                    else:
+                        self._write_numeric_series(worksheet, current_row, row["months"])
+                    current_row += 1
+
+                workbook.save(temp_output_path)
+                self._validate_exported_workbook(workbook, temp_output_path, target_cc, fact_count)
+            finally:
+                workbook.close()
+            os.replace(temp_output_path, output_path)
+            return True
+        except Exception:
+            if os.path.exists(temp_output_path):
+                os.remove(temp_output_path)
+            raise
