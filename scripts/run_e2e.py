@@ -298,6 +298,13 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             # Single Export
             log_callback(f"Exporting Single CC: {target_cc}")
             out_path = os.path.join(output_dir, f"MP_CC_{target_cc}.xlsx")
+            complete_v1_primary_path = None
+            if mp_saisan_complete_v1:
+                complete_v1_primary_path = _resolve_primary_reference_path(
+                    target_cc=target_cc,
+                    primary_reference_path=primary_reference_path,
+                    reference_map_path=reference_map_path,
+                )
             builder.export_to_template(template_path, out_path, cc_code=target_cc)
             if facility_file_order_export:
                 apply_facility_file_order_to_workbook(
@@ -350,7 +357,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 complete_result = apply_mp_saisan_complete_v1(
                     workbook_path=out_path,
                     target_cc=target_cc,
-                    primary_reference_path=primary_reference_path,
+                    primary_reference_path=complete_v1_primary_path,
                     reference_map_path=reference_map_path or _default_reference_map_path(),
                     fixed_assets_skeleton_csv=fixed_assets_skeleton_csv or _default_fixed_assets_skeleton_csv_path(),
                     invariant_csv_path=os.path.join(

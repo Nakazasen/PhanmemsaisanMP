@@ -36,7 +36,7 @@ def _csv(path: Path, descriptions):
     path.write_text(
         "classification,account,description,pattern_signature,month_F_sample,month_Q_sample\n"
         + "".join(
-            f"REFERENCE_ASSISTED_FILL_CANDIDATE,5005026371,{desc},sig{i},,\n"
+            f"REFERENCE_ASSISTED_FILL_CANDIDATE,5005026371,{desc},sig{i},1,\n"
             for i, desc in enumerate(descriptions)
         ),
         encoding="utf-8",
@@ -115,3 +115,70 @@ def test_no_overwrite_rows_200_212(tmp_path):
     assert ws.cell(200, 2).value == "KEEP"
     assert ws.cell(213, 2).value == "5005026371"
     wb.close()
+
+
+def test_complete_v1_missing_reference_map_fails_before_workbook_export(monkeypatch, tmp_path):
+    import scripts.run_e2e as run_e2e
+
+    export_calls = []
+
+    class Cursor:
+        def execute(self, *args):
+            return None
+
+    class Conn:
+        def cursor(self):
+            return Cursor()
+
+        def commit(self):
+            return None
+
+        def close(self):
+            return None
+
+    class Builder:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def export_to_template(self, *args, **kwargs):
+            export_calls.append((args, kwargs))
+            return True
+
+    class Engine:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def run_allocation(self):
+            return None
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(run_e2e, "get_connection", lambda path: Conn())
+    monkeypatch.setattr(run_e2e, "create_schema", lambda conn: None)
+    monkeypatch.setattr(run_e2e, "init_sys_params", lambda conn, exchange_rate, fiscal_year: None)
+    monkeypatch.setattr(run_e2e, "load_all", lambda **kwargs: None)
+    monkeypatch.setattr(run_e2e, "describe_manifest", lambda source_dir: [])
+    monkeypatch.setattr(run_e2e, "parse_facility", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_fixed_assets", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_it_simulation", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_ga", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_birthday_workbook", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_manual_headcount", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_manual_special_costs", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_manual_event_drivers", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_nnn_paperwork", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "AllocationEngine", Engine)
+    monkeypatch.setattr(run_e2e, "HubBuilder", Builder)
+
+    ok, message = run_e2e.run_universal_pipeline(
+        2027,
+        str(tmp_path / "template.xlsx"),
+        str(tmp_path),
+        target_cc=1412000006,
+        mp_saisan_complete_v1=True,
+        reference_map_path=str(tmp_path / "missing-map.csv"),
+    )
+
+    assert ok is False
+    assert "requires --primary-reference-path" in message
+    assert export_calls == []
+    assert not (tmp_path / "OUTPUT_FY2027" / "MP_CC_1412000006.xlsx").exists()

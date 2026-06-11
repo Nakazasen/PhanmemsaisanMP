@@ -12,14 +12,15 @@ from typing import Any
 
 from openpyxl import load_workbook
 
-from src.engine.column_s_normalizer import normalize_output_description_column_s
+from src.engine.column_s_normalizer import cell_has_month_cost, normalize_output_description_column_s
 
 SHEET_NAME = "内訳ﾘｽﾄ(4～3月)"
 TARGET_ACCOUNT = "5005026371"
 CANDIDATE_CLASSIFICATION = "REFERENCE_ASSISTED_FILL_CANDIDATE"
 PROVENANCE_LABEL = (
     "REFERENCE_ASSISTED_SECONDARY_SKELETON; "
-    "account=5005026371; not source-derived"
+    "account=5005026371; scoped-reference-fill; "
+    "reason=phase42n2e_reference_assisted_fill_candidate; not source-derived"
 )
 BUSINESS_CHECK_COLUMNS = (2, 19, *range(6, 18), 20)
 MONTH_SAMPLE_COLUMNS = {
@@ -83,9 +84,9 @@ def load_fixed_assets_skeleton_candidates(csv_path: str | Path) -> list[dict[str
 def _has_usable_skeleton(candidate: dict[str, str]) -> bool:
     if _norm(candidate.get("account")) != TARGET_ACCOUNT:
         return False
-    # Description may legitimately be blank in the 42N2E candidate set. The row
-    # is still a useful account/order skeleton as long as the account exists.
-    return True
+    if not _norm(candidate.get("description")):
+        return False
+    return any(cell_has_month_cost(candidate.get(column)) for column in MONTH_SAMPLE_COLUMNS)
 
 
 def _write_candidate(ws, row_index: int, candidate: dict[str, str]) -> None:

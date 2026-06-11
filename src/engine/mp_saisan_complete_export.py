@@ -12,7 +12,7 @@ from typing import Any
 
 from openpyxl import load_workbook
 
-from src.engine.column_s_normalizer import normalize_output_description_column_s
+from src.engine.column_s_normalizer import cell_has_month_cost, normalize_output_description_column_s
 from src.engine.fixed_assets_reference_skeleton import (
     PROVENANCE_LABEL as SECONDARY_SKELETON_PROVENANCE,
     TARGET_ACCOUNT,
@@ -195,7 +195,13 @@ def _append_secondary_skeleton_deduped(
         skipped_incomplete = 0
         for candidate in candidates:
             account = norm(candidate.get("account"))
-            if account != TARGET_ACCOUNT:
+            f_value = norm(candidate.get("month_F_sample"))
+            q_value = norm(candidate.get("month_Q_sample"))
+            if (
+                account != TARGET_ACCOUNT
+                or not norm(candidate.get("description"))
+                or not any(cell_has_month_cost(value) for value in (f_value, q_value))
+            ):
                 skipped_incomplete += 1
                 continue
             key = row_identity_key(
@@ -212,8 +218,6 @@ def _append_secondary_skeleton_deduped(
             row = next_empty_row(ws, row)
             ws.cell(row, 2).value = account
             ws.cell(row, 19).value = norm(candidate.get("description")) or None
-            f_value = norm(candidate.get("month_F_sample"))
-            q_value = norm(candidate.get("month_Q_sample"))
             if f_value:
                 ws.cell(row, 6).value = f_value
             if q_value:
@@ -292,6 +296,7 @@ def apply_mp_saisan_complete_v1(
     return {
         "source_rows": before,
         "primary_reference_rows_written": primary_after - primary_before,
+        "primary_reference_rows_quarantined": int(primary_result.get("quarantined", 0)),
         "fixed_assets_skeleton_rows_written": secondary_result["written"],
         "skipped_duplicate": secondary_result["skipped_duplicate"],
         "skipped_incomplete": secondary_result["skipped_incomplete"],

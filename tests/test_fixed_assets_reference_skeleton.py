@@ -123,10 +123,12 @@ def test_does_not_invent_missing_values(tmp_path):
             }
         ],
     )
-    apply_fixed_assets_reference_skeleton_to_workbook(workbook, csvp, start_row=3)
+    summary = apply_fixed_assets_reference_skeleton_to_workbook(workbook, csvp, start_row=3)
+    assert summary["written"] == 0
+    assert summary["skipped_incomplete"] == 1
     wb = load_workbook(workbook)
     ws = wb[SHEET_NAME]
-    assert ws.cell(3, 2).value == "5005026371"
+    assert ws.cell(3, 2).value is None
     assert ws.cell(3, 19).value is None
     assert ws.cell(3, 6).value is None
     assert ws.cell(3, 17).value is None
@@ -141,7 +143,7 @@ def test_start_row_none_appends_after_last_business_row(tmp_path):
             {
                 "account": "5005026371",
                 "description": "Append",
-                "month_F_sample": "",
+                "month_F_sample": "1",
                 "month_Q_sample": "",
                 "pattern_signature": "B|B",
                 "classification": "REFERENCE_ASSISTED_FILL_CANDIDATE",
