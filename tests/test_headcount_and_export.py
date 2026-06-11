@@ -10,6 +10,7 @@ import openpyxl
 from src.db.loader import _apply_mp2026_reference_unit_price, _parse_unit_price, load_allocation_rules
 from src.db.schema import create_schema, init_sys_params
 from src.engine.allocator import AllocationEngine
+from src.engine.complete_v1_source_order_writer import apply_complete_v1_source_order_to_workbook
 from src.engine.hub_builder import ExportIntegrityError, HubBuilder
 from src.parsers.birthday import parse_birthday_workbook
 from src.parsers.fixed_assets import parse_fixed_assets
@@ -451,6 +452,181 @@ class TestEventDeltaHeadcountFailClosed(unittest.TestCase):
         self.assertEqual([(row["period"], float(row["amount_vnd"])) for row in rows], [(period, 500.0) for period in periods])
         self.assertEqual(self._missing_rows(conn), [])
         conn.close()
+
+
+class TestNewHireAllocationIdentityDedupe(unittest.TestCase):
+    def _insert_notebook_rule(self, conn, *, unit_price=9100, driver_type="headcount_staff"):
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO map_allocation_rules
+            (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
+             posting_month, unit_price, unit, driver_type, driver_raw)
+            VALUES ('GA', 'notebook source', 'Office supplies',
+                    5005246288, 5005246288, 5005246288,
+                    ?, ?, '/person', ?, ?)
+            """,
+            ("\u5165\u793e\u6708", float(unit_price), driver_type, "\u5165\u793e\u6708"),
+        )
+        conn.commit()
+        return cursor.lastrowid
+
+    def _insert_full_headcount_series(self, conn, cc_code, *, staff_values, worker_values):
+        rows = []
+        for period in ["202603", *get_fy_months(2027)]:
+            staff = float(staff_values.get(period, 0.0))
+            worker = float(worker_values.get(period, 0.0))
+            rows.append((period, cc_code, staff + worker, staff, worker))
+        conn.executemany(
+            """
+            INSERT INTO fact_monthly_headcount
+            (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
+            VALUES (?, ?, ?, ?, ?, 'manual', 'new hire identity test')
+            """,
+            rows,
+        )
+        conn.commit()
+
+    def _export(self, conn, cc_code, output_name):
+        tmpdir = _mk_tmpdir()
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        output_path = tmpdir / output_name
+        ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+        self.assertTrue(ok)
+        return tmpdir, output_path
+
+    def test_staff_notebook_allocation_maps_only_to_staff_notebook_row(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        jan_col = 6 + periods.index("202701")
+        staff_values = {period: 27 for period in ["202603", *periods]}
+        staff_values.update({period: 28 for period in periods[9:]})
+        self._insert_full_headcount_series(conn, cc_code, staff_values=staff_values, worker_values={})
+        rule_id = self._insert_notebook_rule(conn, unit_price=9100, driver_type="headcount_staff")
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        rows = conn.execute(
+            "SELECT period, amount_vnd FROM fact_input_data WHERE source = ? ORDER BY period",
+            (f"alloc_{rule_id}",),
+        ).fetchall()
+        self.assertEqual([(row["period"], float(row["amount_vnd"])) for row in rows], [("202701", 9100.0)])
+
+        tmpdir, output_path = self._export(conn, cc_code, "out_staff_notebook_identity.xlsx")
+        try:
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws.cell(97, jan_col).value, "=1*9100")
+                self.assertIsNone(ws.cell(98, jan_col).value)
+                self.assertIsNone(ws.cell(90, jan_col).value)
+            finally:
+                workbook.close()
+
+            apply_complete_v1_source_order_to_workbook(output_path, start_row=168, clear_until_row=212)
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                matching_rows = [
+                    row_index
+                    for row_index in range(30, 213)
+                    if ws.cell(row_index, jan_col).value == "=1*9100"
+                ]
+                self.assertEqual(len(matching_rows), 1)
+                self.assertNotIn(90, matching_rows)
+                self.assertNotIn(97, matching_rows)
+                self.assertNotIn(98, matching_rows)
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_worker_notebook_allocation_maps_only_to_worker_notebook_row(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        jan_col = 6 + periods.index("202701")
+        worker_values = {period: 8 for period in ["202603", *periods]}
+        worker_values.update({period: 9 for period in periods[9:]})
+        self._insert_full_headcount_series(conn, cc_code, staff_values={}, worker_values=worker_values)
+        self._insert_notebook_rule(conn, unit_price=4000, driver_type="headcount_worker")
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        tmpdir, output_path = self._export(conn, cc_code, "out_worker_notebook_identity.xlsx")
+        try:
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws.cell(98, jan_col).value, "=1*4000")
+                self.assertIsNone(ws.cell(97, jan_col).value)
+                self.assertIsNone(ws.cell(90, jan_col).value)
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_same_amount_staff_and_worker_notebooks_are_not_over_deduped(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        jan_col = 6 + periods.index("202701")
+        staff_values = {period: 10 for period in ["202603", *periods]}
+        staff_values.update({period: 11 for period in periods[9:]})
+        worker_values = {period: 20 for period in ["202603", *periods]}
+        worker_values.update({period: 21 for period in periods[9:]})
+        self._insert_full_headcount_series(conn, cc_code, staff_values=staff_values, worker_values=worker_values)
+        self._insert_notebook_rule(conn, unit_price=9100, driver_type="headcount_staff")
+        self._insert_notebook_rule(conn, unit_price=9100, driver_type="headcount_worker")
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        tmpdir, output_path = self._export(conn, cc_code, "out_staff_worker_same_amount.xlsx")
+        try:
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws.cell(97, jan_col).value, "=1*9100")
+                self.assertEqual(ws.cell(98, jan_col).value, "=1*9100")
+                self.assertIsNone(ws.cell(90, jan_col).value)
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_duplicate_same_source_identity_is_written_once(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        jan_col = 6 + periods.index("202701")
+        rule_id = self._insert_notebook_rule(conn, unit_price=9100, driver_type="headcount_staff")
+        conn.executemany(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, amount_usd, cc_code, account_code, form_row, description)
+            VALUES (?, '202701', 9100, 0, ?, 5005246288, NULL, 'Alloc: notebook source')
+            """,
+            [(f"alloc_{rule_id}", cc_code), (f"alloc_{rule_id}", cc_code)],
+        )
+        conn.commit()
+
+        tmpdir, output_path = self._export(conn, cc_code, "out_duplicate_source_identity.xlsx")
+        try:
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws.cell(97, jan_col).value, "=1*9100")
+                self.assertNotEqual(ws.cell(97, jan_col).value, "=1*9100+1*9100")
+                self.assertIsNone(ws.cell(90, jan_col).value)
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):

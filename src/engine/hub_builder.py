@@ -62,10 +62,14 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
     97: {
         "tokens": ("ノート", "note", "notebook"),
         "exclude_tokens": ("g7", "worker", "cong nhan"),
+        "account_codes": (5005246288,),
+        "driver_types": ("headcount_staff",),
     },
     98: {
         "tokens": ("ノート", "note", "notebook"),
         "exclude_tokens": ("staff", "nhan vien"),
+        "account_codes": (5005246288,),
+        "driver_types": ("headcount_worker",),
     },
     54: {
         "tokens": ("決起コンパ", "tiệc khuấy động năm tài chính", "phương châm bộ phận", "phuong cham bo phan"),
@@ -130,6 +134,7 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
     90: {
         "tokens": ("alloc: ノート", "ノート sổ"),
         "exclude_tokens": (),
+        "driver_types": ("__disabled_row_90_notebook_legacy__",),
     },
 }
 MANAGED_FIXED_ROWS = tuple(
@@ -151,6 +156,7 @@ class HubBuilder:
         self.fiscal_year = fiscal_year
         self.fy_months = helpers.get_fy_months(fiscal_year)
         self.rule_unit_price_by_source = self._load_rule_unit_price_by_source()
+        self.rule_identity_by_source = self._load_rule_identity_by_source()
 
     def _output_group_specs(self) -> tuple[OutputGroupSpec, ...]:
         """Return canonical output group specs for future row-placement planning."""
@@ -226,6 +232,30 @@ class HubBuilder:
     def _load_rule_unit_price_by_source(self) -> dict[str, float]:
         rows = self.conn.execute("SELECT id, unit_price FROM map_allocation_rules").fetchall()
         return {f"alloc_{int(row['id'])}": float(row["unit_price"] or 0.0) for row in rows}
+
+    def _load_rule_identity_by_source(self) -> dict[str, dict[str, object]]:
+        rows = self.conn.execute(
+            """
+            SELECT id, item_name, account_name, mfg_account, ga_account, sales_account,
+                   posting_month, unit_price, unit, driver_type, driver_raw
+            FROM map_allocation_rules
+            """
+        ).fetchall()
+        return {
+            f"alloc_{int(row['id'])}": {
+                "item_name": row["item_name"],
+                "account_name": row["account_name"],
+                "mfg_account": row["mfg_account"],
+                "ga_account": row["ga_account"],
+                "sales_account": row["sales_account"],
+                "posting_month": row["posting_month"],
+                "unit_price": float(row["unit_price"] or 0.0),
+                "unit": row["unit"],
+                "driver_type": row["driver_type"],
+                "driver_raw": row["driver_raw"],
+            }
+            for row in rows
+        }
 
     def _copy_row_style(self, worksheet, source_row: int, target_row: int) -> None:
         worksheet.row_dimensions[target_row].height = worksheet.row_dimensions[source_row].height
@@ -568,22 +598,88 @@ class HubBuilder:
             token in normalized_description for token in normalized_excludes
         )
 
+    def _infer_driver_type_from_description(self, description: str) -> str:
+        normalized_description = self._normalize_text(description)
+        if any(token in normalized_description for token in ("worker", "cong nhan", "g7")):
+            return "headcount_worker"
+        if any(token in normalized_description for token in ("staff", "nhan vien")):
+            return "headcount_staff"
+        return ""
+
+    def _driver_type_for_input_row(self, row: sqlite3.Row) -> str:
+        source = str(row["source"] or "")
+        identity = self.rule_identity_by_source.get(source) or {}
+        driver_type = str(identity.get("driver_type") or "").strip()
+        if driver_type:
+            return driver_type
+        return self._infer_driver_type_from_description(str(row["description"] or ""))
+
+    def _row_matches_allocation_matcher(
+        self,
+        row: sqlite3.Row,
+        *,
+        tokens: tuple[str, ...],
+        exclude_tokens: tuple[str, ...] = (),
+        account_codes: tuple[int, ...] = (),
+        driver_types: tuple[str, ...] = (),
+    ) -> bool:
+        if not self._match_description(str(row["description"] or ""), tokens, exclude_tokens):
+            return False
+
+        if account_codes:
+            row_account_code = int(row["account_code"] or 0)
+            if row_account_code not in {int(code) for code in account_codes}:
+                return False
+
+        if driver_types:
+            driver_type = self._driver_type_for_input_row(row)
+            if driver_type not in set(driver_types):
+                return False
+
+        return True
+
+    def _allocation_output_identity(self, row: sqlite3.Row) -> tuple[object, ...]:
+        source = str(row["source"] or "")
+        identity = self.rule_identity_by_source.get(source) or {}
+        unit_price = float(identity.get("unit_price") or self.rule_unit_price_by_source.get(source, 0.0) or 0.0)
+        return (
+            source,
+            str(row["period"]),
+            int(row["account_code"] or 0),
+            self._normalize_text(row["description"] or ""),
+            self._driver_type_for_input_row(row),
+            self._format_number(unit_price),
+        )
+
     def _series_from_tokens(
         self,
         cc_code: int,
         *,
         tokens: tuple[str, ...],
         exclude_tokens: tuple[str, ...] = (),
+        account_codes: tuple[int, ...] = (),
+        driver_types: tuple[str, ...] = (),
         source_prefix: str = "alloc_",
         value_column: str = "amount_vnd",
     ) -> dict[str, float]:
         result: dict[str, float] = defaultdict(float)
+        seen_identities: set[tuple[object, ...]] = set()
         for row in self._input_rows_for_cc(cc_code):
             source = str(row["source"] or "")
             if source_prefix and not source.startswith(source_prefix):
                 continue
-            if not self._match_description(str(row["description"] or ""), tokens, exclude_tokens):
+            if not self._row_matches_allocation_matcher(
+                row,
+                tokens=tokens,
+                exclude_tokens=exclude_tokens,
+                account_codes=account_codes,
+                driver_types=driver_types,
+            ):
                 continue
+            row_identity = self._allocation_output_identity(row)
+            if row_identity in seen_identities:
+                continue
+            seen_identities.add(row_identity)
             result[str(row["period"])] += float(row[value_column] or 0.0)
         return dict(result)
 
@@ -608,16 +704,29 @@ class HubBuilder:
         *,
         tokens: tuple[str, ...],
         exclude_tokens: tuple[str, ...] = (),
+        account_codes: tuple[int, ...] = (),
+        driver_types: tuple[str, ...] = (),
         source_prefix: str = "alloc_",
     ) -> tuple[dict[str, list[str]], dict[str, float]]:
         terms_by_period: dict[str, list[str]] = defaultdict(list)
         numeric_values: dict[str, float] = defaultdict(float)
+        seen_identities: set[tuple[object, ...]] = set()
         for row in self._input_rows_for_cc(cc_code):
             source = str(row["source"] or "")
             if source_prefix and not source.startswith(source_prefix):
                 continue
-            if not self._match_description(str(row["description"] or ""), tokens, exclude_tokens):
+            if not self._row_matches_allocation_matcher(
+                row,
+                tokens=tokens,
+                exclude_tokens=exclude_tokens,
+                account_codes=account_codes,
+                driver_types=driver_types,
+            ):
                 continue
+            row_identity = self._allocation_output_identity(row)
+            if row_identity in seen_identities:
+                continue
+            seen_identities.add(row_identity)
             term = self._alloc_formula_term_from_row(row)
             if term:
                 terms_by_period[str(row["period"])].append(term)
@@ -631,20 +740,28 @@ class HubBuilder:
         *,
         tokens: tuple[str, ...],
         exclude_tokens: tuple[str, ...] = (),
+        account_codes: tuple[int, ...] = (),
+        driver_types: tuple[str, ...] = (),
         source_prefix: str = "alloc_",
     ) -> int | None:
-        account_codes: set[int] = set()
+        matched_account_codes: set[int] = set()
         for row in self._input_rows_for_cc(cc_code):
             source = str(row["source"] or "")
             if source_prefix and not source.startswith(source_prefix):
                 continue
-            if not self._match_description(str(row["description"] or ""), tokens, exclude_tokens):
+            if not self._row_matches_allocation_matcher(
+                row,
+                tokens=tokens,
+                exclude_tokens=exclude_tokens,
+                account_codes=account_codes,
+                driver_types=driver_types,
+            ):
                 continue
             code = int(row["account_code"] or 0)
             if code > 0:
-                account_codes.add(code)
-        if len(account_codes) == 1:
-            return next(iter(account_codes))
+                matched_account_codes.add(code)
+        if len(matched_account_codes) == 1:
+            return next(iter(matched_account_codes))
         return None
 
     def _fixed_row_for_description(self, description: str) -> int | None:
@@ -919,6 +1036,8 @@ class HubBuilder:
                 cc_code,
                 tokens=matcher["tokens"],
                 exclude_tokens=matcher["exclude_tokens"],
+                account_codes=matcher.get("account_codes", ()),
+                driver_types=matcher.get("driver_types", ()),
             )
             if not series:
                 continue
@@ -926,6 +1045,8 @@ class HubBuilder:
                 cc_code,
                 tokens=matcher["tokens"],
                 exclude_tokens=matcher["exclude_tokens"],
+                account_codes=matcher.get("account_codes", ()),
+                driver_types=matcher.get("driver_types", ()),
             )
             if account_code:
                 worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
@@ -933,6 +1054,8 @@ class HubBuilder:
                 cc_code,
                 tokens=matcher["tokens"],
                 exclude_tokens=matcher["exclude_tokens"],
+                account_codes=matcher.get("account_codes", ()),
+                driver_types=matcher.get("driver_types", ()),
             )
             if terms_by_period:
                 self._write_formula_series(worksheet, row_index, terms_by_period, numeric_values)
@@ -1076,6 +1199,8 @@ class HubBuilder:
                 cc_code,
                 tokens=matcher["tokens"],
                 exclude_tokens=matcher["exclude_tokens"],
+                account_codes=matcher.get("account_codes", ()),
+                driver_types=matcher.get("driver_types", ()),
             )
             if not series:
                 continue
@@ -1083,6 +1208,8 @@ class HubBuilder:
                 cc_code,
                 tokens=matcher["tokens"],
                 exclude_tokens=matcher["exclude_tokens"],
+                account_codes=matcher.get("account_codes", ()),
+                driver_types=matcher.get("driver_types", ()),
             )
             if account_code:
                 worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
@@ -1090,6 +1217,8 @@ class HubBuilder:
                 cc_code,
                 tokens=matcher["tokens"],
                 exclude_tokens=matcher["exclude_tokens"],
+                account_codes=matcher.get("account_codes", ()),
+                driver_types=matcher.get("driver_types", ()),
             )
             if self._formula_series_has_output(terms_by_period, numeric_values):
                 self._write_formula_series(worksheet, row_index, terms_by_period, numeric_values)
