@@ -92,6 +92,7 @@ class AllocationEngine:
         self.fy_months = helpers.get_fy_months(int(fy_str.replace("FY", "")))
         self.period_index = {p: i for i, p in enumerate(self.fy_months)}
         self.hc_cache = self._load_headcount_cache()
+        self._missing_input_keys: set[tuple[str, str, str, str]] = set()
 
     def _normalize_text(self, value: str) -> str:
         text = unicodedata.normalize("NFKD", str(value or ""))
@@ -155,7 +156,10 @@ class AllocationEngine:
         cc_key = str(cc_code).strip()
         row = self.hc_cache.get((cc_key, period))
         if row:
-            return float(row.get(driver_type, row.get("headcount_all", 0.0)))
+            value = row.get(driver_type)
+            if value is None:
+                value = row.get("headcount_all", 0.0)
+            return float(value or 0.0)
 
         cc = next((x for x in self.cost_centers if str(x["code"]).strip() == cc_key), None)
         if not cc:
@@ -168,11 +172,30 @@ class AllocationEngine:
             return 0.0
         return float((cc["staff_count"] or 0) + (cc["worker_count"] or 0))
 
+    def _get_canonical_monthly_hc(self, cc_code: object, period: str, driver_type: str) -> float | None:
+        cc_key = str(cc_code).strip()
+        row = self.hc_cache.get((cc_key, period))
+        if row is None:
+            return None
+        value = row.get(driver_type)
+        if value is None:
+            value = row.get("headcount_all", 0.0)
+        return float(value or 0.0)
+
     def _get_prev_period(self, period: str) -> str | None:
         idx = self.period_index.get(period)
-        if idx is None or idx == 0:
+        if idx is not None and idx > 0:
+            return self.fy_months[idx - 1]
+        text = str(period or "").strip()
+        if len(text) != 6 or not text.isdigit():
             return None
-        return self.fy_months[idx - 1]
+        year = int(text[:4])
+        month = int(text[4:])
+        if month < 1 or month > 12:
+            return None
+        if month == 1:
+            return f"{year - 1}12"
+        return f"{year}{month - 1:02d}"
 
     def _get_working_days(self, period: str) -> float:
         raw = self.sys_params.get(f"working_days_{period}")
@@ -232,12 +255,73 @@ class AllocationEngine:
             token in lower_text for token in NEXT_EVENT_MONTH_TOKENS
         )
 
-    def _get_event_delta(self, cc_code: object, period: str, driver_type: str) -> float:
+    def _clear_allocator_missing_inputs(self) -> None:
+        self.conn.execute("DELETE FROM fact_missing_inputs WHERE source = 'allocator'")
+
+    def _record_event_delta_missing(
+        self,
+        cc_code: object,
+        period: str,
+        prev_period: str | None,
+        driver_type: str,
+        rule,
+        missing_parts: tuple[str, ...],
+    ) -> None:
+        cc_key = str(cc_code).strip()
+        rule_id = int(rule["id"]) if rule is not None and rule["id"] is not None else None
+        prev_text = prev_period or ""
+        key = (cc_key, period, prev_text, driver_type)
+        if key in self._missing_input_keys:
+            return
+        self._missing_input_keys.add(key)
+
+        missing_text = ",".join(missing_parts) if missing_parts else "unknown"
+        message = (
+            "Missing complete monthly headcount driver for event-delta allocation: "
+            f"cc={cc_key}, month={period}, previous_month={prev_text}, missing={missing_text}"
+        )
+        action = (
+            "Provide monthly headcount for both the event month and previous month "
+            "before using event-delta allocation."
+        )
+        self.conn.execute(
+            """
+            INSERT INTO fact_missing_inputs
+            (severity, cc_code, period, area, message, action, source, rule_id)
+            VALUES ('action', ?, ?, 'headcount_event_delta', ?, ?, 'allocator', ?)
+            """,
+            (cc_key, period, message, action, rule_id),
+        )
+
+    def _get_event_delta(self, cc_code: object, period: str, driver_type: str, rule=None) -> float:
         prev_period = self._get_prev_period(period)
         if not prev_period:
+            self._record_event_delta_missing(
+                cc_code,
+                period,
+                prev_period,
+                driver_type,
+                rule,
+                ("previous",),
+            )
             return 0.0
-        current = self._get_monthly_hc(cc_code, period, driver_type)
-        prev = self._get_monthly_hc(cc_code, prev_period, driver_type)
+        current = self._get_canonical_monthly_hc(cc_code, period, driver_type)
+        prev = self._get_canonical_monthly_hc(cc_code, prev_period, driver_type)
+        missing_parts: list[str] = []
+        if current is None:
+            missing_parts.append("current")
+        if prev is None:
+            missing_parts.append("previous")
+        if missing_parts:
+            self._record_event_delta_missing(
+                cc_code,
+                period,
+                prev_period,
+                driver_type,
+                rule,
+                tuple(missing_parts),
+            )
+            return 0.0
         delta = current - prev
         return delta if delta > 0 else 0.0
 
@@ -309,6 +393,8 @@ class AllocationEngine:
             print(f"Mapped {len(updates)} direct cost records.")
 
     def _process_allocation_rules(self):
+        self._missing_input_keys.clear()
+        self._clear_allocator_missing_inputs()
         rules = self.conn.execute("SELECT * FROM map_allocation_rules").fetchall()
         cursor = self.conn.cursor()
 
@@ -335,9 +421,9 @@ class AllocationEngine:
                             prev_period = self._get_prev_period(period)
                             if not prev_period:
                                 continue
-                            driver_val = self._get_event_delta(cc["code"], prev_period, driver_type)
+                            driver_val = self._get_event_delta(cc["code"], prev_period, driver_type, rule=rule)
                         elif self._is_event_month_rule(posting_month):
-                            driver_val = self._get_event_delta(cc["code"], period, driver_type)
+                            driver_val = self._get_event_delta(cc["code"], period, driver_type, rule=rule)
                         else:
                             driver_val = self._get_monthly_hc(cc["code"], period, driver_type)
 

@@ -196,6 +196,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         cursor = conn.cursor()
         cursor.execute("DELETE FROM fact_input_data")
         cursor.execute("DELETE FROM fact_allocation_log")
+        cursor.execute("DELETE FROM fact_missing_inputs")
         conn.commit()
         
         log_callback("Loading master data...")

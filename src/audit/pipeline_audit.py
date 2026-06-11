@@ -67,6 +67,27 @@ def _target_ccs(conn: sqlite3.Connection, target_cc: object | None) -> list[str]
     ]
 
 
+def _recorded_missing_inputs(conn: sqlite3.Connection) -> list[dict[str, str]]:
+    rows = conn.execute(
+        """
+        SELECT severity, cc_code, period, area, message, action
+        FROM fact_missing_inputs
+        ORDER BY id
+        """
+    ).fetchall()
+    return [
+        {
+            "severity": str(row["severity"] or "action"),
+            "cc_code": str(row["cc_code"] or ""),
+            "period": str(row["period"] or ""),
+            "area": str(row["area"] or ""),
+            "message": str(row["message"] or ""),
+            "action": str(row["action"] or ""),
+        }
+        for row in rows
+    ]
+
+
 def write_pipeline_audit_report(
     *,
     conn: sqlite3.Connection,
@@ -132,6 +153,8 @@ def write_pipeline_audit_report(
                 ),
             }
         )
+
+    missing_rows.extend(_recorded_missing_inputs(conn))
 
     source_summary = {
         "manual_event_driver": _count_rows(conn, "manual_event_driver"),

@@ -325,6 +325,134 @@ class TestPostingMonthOverride(unittest.TestCase):
         conn.close()
 
 
+class TestEventDeltaHeadcountFailClosed(unittest.TestCase):
+    def _insert_rule(
+        self,
+        conn,
+        *,
+        posting_month="\u5165\u793e\u6708",
+        item_name="new hire stationery",
+        unit_price=9100,
+        driver_type="headcount_all",
+    ):
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO map_allocation_rules
+            (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
+             posting_month, unit_price, unit, driver_type, driver_raw)
+            VALUES ('GA', ?, 'Stationery', 5005246288, 6005246288, 7005246288, ?, ?, '/person', ?, ?)
+            """,
+            (item_name, posting_month, float(unit_price), driver_type, posting_month),
+        )
+        conn.commit()
+        return cursor.lastrowid
+
+    def _insert_headcount(self, conn, cc_code, period_values):
+        conn.executemany(
+            """
+            INSERT INTO fact_monthly_headcount
+            (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
+            VALUES (?, ?, ?, ?, 0, 'manual', 'event delta test')
+            """,
+            [(period, cc_code, value, value) for period, value in period_values],
+        )
+        conn.commit()
+
+    def _alloc_rows(self, conn, rule_id):
+        return conn.execute(
+            """
+            SELECT period, amount_vnd
+            FROM fact_input_data
+            WHERE source = ?
+            ORDER BY period
+            """,
+            (f"alloc_{rule_id}",),
+        ).fetchall()
+
+    def _missing_rows(self, conn):
+        return conn.execute(
+            """
+            SELECT period, message
+            FROM fact_missing_inputs
+            WHERE source = 'allocator'
+            ORDER BY id
+            """
+        ).fetchall()
+
+    def test_complete_series_uses_real_month_delta_not_total_headcount(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        self._insert_headcount(
+            conn,
+            cc_code,
+            [("202603", 27), *[(period, 27) for period in periods[:9]], *[(period, 28) for period in periods[9:]]],
+        )
+        rule_id = self._insert_rule(conn)
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        rows = self._alloc_rows(conn, rule_id)
+        self.assertEqual([(row["period"], float(row["amount_vnd"])) for row in rows], [(periods[9], 9100.0)])
+        self.assertNotIn(28 * 9100.0, {float(row["amount_vnd"]) for row in rows})
+        self.assertEqual(self._missing_rows(conn), [])
+        conn.close()
+
+    def test_missing_previous_month_fails_closed_without_fake_first_delta(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        self._insert_headcount(conn, cc_code, [(periods[9], 28), (periods[10], 28), (periods[11], 28)])
+        rule_id = self._insert_rule(conn)
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        rows = self._alloc_rows(conn, rule_id)
+        self.assertEqual(rows, [])
+        missing_messages = [row["message"] for row in self._missing_rows(conn)]
+        self.assertTrue(any(f"cc={cc_code}, month={periods[9]}, previous_month={periods[8]}" in msg for msg in missing_messages))
+        self.assertFalse(any("amount_vnd" in str(row) and str(28 * 9100) in str(row) for row in rows))
+        conn.close()
+
+    def test_missing_all_monthly_headcount_records_missing_input_without_amount(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn, code=1412000040)
+        rule_id = self._insert_rule(conn)
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        self.assertEqual(self._alloc_rows(conn, rule_id), [])
+        missing_messages = [row["message"] for row in self._missing_rows(conn)]
+        self.assertTrue(any(f"cc={cc_code}" in msg for msg in missing_messages))
+        self.assertTrue(any("Missing complete monthly headcount driver" in msg for msg in missing_messages))
+        conn.close()
+
+    def test_non_event_headcount_allocation_still_uses_master_fallback(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        conn.execute(
+            "UPDATE dim_cost_centers SET staff_count = 2, worker_count = 3 WHERE code = ?",
+            (str(cc_code),),
+        )
+        conn.commit()
+        periods = get_fy_months(2027)
+        rule_id = self._insert_rule(
+            conn,
+            posting_month="every month",
+            item_name="recurring non-event allocation",
+            unit_price=100,
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        rows = self._alloc_rows(conn, rule_id)
+        self.assertEqual(len(rows), 12)
+        self.assertEqual([(row["period"], float(row["amount_vnd"])) for row in rows], [(period, 500.0) for period in periods])
+        self.assertEqual(self._missing_rows(conn), [])
+        conn.close()
+
+
 class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
     def test_parse_unit_price_supports_currency_suffix(self):
         self.assertEqual(_parse_unit_price("145$"), 145.0)

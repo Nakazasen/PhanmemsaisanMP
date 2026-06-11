@@ -102,12 +102,26 @@ def create_schema(conn: sqlite3.Connection) -> None:
             FOREIGN KEY (dest_cc) REFERENCES dim_cost_centers(code)
         )""")
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS fact_missing_inputs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            severity TEXT NOT NULL DEFAULT 'action',
+            cc_code TEXT,
+            period TEXT,
+            area TEXT NOT NULL,
+            message TEXT NOT NULL,
+            action TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'system',
+            rule_id INTEGER DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS sys_params (
             key TEXT PRIMARY KEY, value TEXT NOT NULL, description TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
 
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_input_period ON fact_input_data(period)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_hc_period_cc ON fact_monthly_headcount(period, cc_code)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_missing_inputs_source ON fact_missing_inputs(source, cc_code, period)")
 
     if not _column_exists(conn, "fact_monthly_headcount", "headcount_male"):
         cursor.execute("ALTER TABLE fact_monthly_headcount ADD COLUMN headcount_male REAL DEFAULT 0")
