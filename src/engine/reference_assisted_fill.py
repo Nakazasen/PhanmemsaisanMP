@@ -12,6 +12,8 @@ from typing import Any
 
 from openpyxl import load_workbook
 
+from src.engine.column_s_normalizer import normalize_output_description_column_s
+
 SHEET_NAME = "内訳ﾘｽﾄ(4～3月)"
 PROVENANCE_LABEL = "REFERENCE_FILLED_FROM_PRIMARY"
 FALSE_GAP_CLASS = "ALREADY_GENERATED_FALSE_GAP"
@@ -129,6 +131,7 @@ def apply_reference_assisted_fill_to_workbook(
             _copy_business_row(primary_ws, target_ws, item["primary_row"], target_row)
             written += 1
             target_row += 1
+        normalize_output_description_column_s(target_ws)
         target_wb.save(workbook_path)
         return {"selected": len(selected), "written": written, "start_row": start_row}
     finally:

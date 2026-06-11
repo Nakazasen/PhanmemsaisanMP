@@ -18,6 +18,7 @@ import unicodedata
 import openpyxl
 from openpyxl.utils import get_column_letter
 
+from src.engine.column_s_normalizer import normalize_output_description_column_s
 from src.engine.output_mode import OutputGroupSpec, get_default_output_group_specs
 from src.utils import excel_helpers as helpers
 
@@ -1339,6 +1340,7 @@ class HubBuilder:
                         self._write_numeric_series(worksheet, current_row, row["months"])
                     current_row += 1
 
+                normalize_output_description_column_s(worksheet)
                 workbook.save(temp_output_path)
                 self._validate_exported_workbook(workbook, temp_output_path, target_cc, fact_count)
             finally:

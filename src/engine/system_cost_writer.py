@@ -2,6 +2,7 @@
 from __future__ import annotations
 from pathlib import Path
 from openpyxl import load_workbook
+from src.engine.column_s_normalizer import normalize_output_description_column_s
 from src.engine.system_cost_preview import preview_system_cost_file_order
 from src.utils import excel_helpers as helpers
 
@@ -35,6 +36,7 @@ def apply_system_cost_to_workbook(workbook_path, system_source_paths, cost_cente
             for offset,value in enumerate(item.month_values):
                 ws.cell(row=item.planned_row,column=MONTH_START_COL+offset,value=value)
         _clear_row(ws,preview.blank_row_after)
+        normalize_output_description_column_s(ws)
         wb.save(workbook_file)
     finally:
         wb.close()

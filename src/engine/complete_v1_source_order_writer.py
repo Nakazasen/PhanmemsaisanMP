@@ -15,6 +15,7 @@ from typing import Iterable
 
 from openpyxl import load_workbook
 
+from src.engine.column_s_normalizer import normalize_output_description_column_s
 from src.engine.source_order_output import CANONICAL_SOURCE_FILE_ORDER
 from src.utils import excel_helpers as helpers
 
@@ -155,6 +156,7 @@ def apply_complete_v1_source_order_to_workbook(
                 current_row += 1
             source_blocks_written += 1
 
+        normalize_output_description_column_s(ws)
         wb.save(workbook_file)
         return {
             "source_blocks_written": source_blocks_written,

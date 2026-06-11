@@ -12,6 +12,8 @@ from typing import Any
 
 from openpyxl import load_workbook
 
+from src.engine.column_s_normalizer import normalize_output_description_column_s
+
 SHEET_NAME = "内訳ﾘｽﾄ(4～3月)"
 TARGET_ACCOUNT = "5005026371"
 CANDIDATE_CLASSIFICATION = "REFERENCE_ASSISTED_FILL_CANDIDATE"
@@ -123,6 +125,7 @@ def apply_fixed_assets_reference_skeleton_to_workbook(
             _write_candidate(ws, target_row, candidate)
             written += 1
             target_row = _next_empty_row(ws, target_row + 1)
+        normalize_output_description_column_s(ws)
         wb.save(workbook_path)
         return {
             "selected": len(candidates),

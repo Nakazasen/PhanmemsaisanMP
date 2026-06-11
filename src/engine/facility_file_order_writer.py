@@ -12,6 +12,7 @@ from typing import Any
 
 from openpyxl import load_workbook
 
+from src.engine.column_s_normalizer import normalize_output_description_column_s
 from src.engine.facility_file_order_preview import FacilityPreviewItem, preview_facility_file_order
 from src.utils import excel_helpers as helpers
 
@@ -75,6 +76,7 @@ def apply_facility_file_order_to_workbook(
     try:
         worksheet = workbook[helpers.find_hub_sheet_name(workbook)]
         _write_facility_preview_rows(worksheet, facility_source, cost_center, start_row)
+        normalize_output_description_column_s(worksheet)
         workbook.save(workbook_file)
     finally:
         workbook.close()

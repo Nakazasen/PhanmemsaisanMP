@@ -8,6 +8,7 @@ from typing import Any
 from openpyxl import load_workbook
 
 from src.engine.admin_consumables_preview import AdminConsumablePreviewItem, preview_admin_consumables_file_order
+from src.engine.column_s_normalizer import normalize_output_description_column_s
 from src.utils import excel_helpers as helpers
 
 VISIBLE_MONTH_START_COL = 6
@@ -66,6 +67,7 @@ def apply_admin_consumables_to_workbook(
             worksheet.cell(row=item.planned_row, column=VISIBLE_MONTH_START_COL, value=_preview_value(item, VISIBLE_MONTH_START_COL))
             worksheet.cell(row=item.planned_row, column=VISIBLE_MONTH_END_COL, value=_preview_value(item, VISIBLE_MONTH_END_COL))
         _clear_preview_row(worksheet, preview.blank_row_after)
+        normalize_output_description_column_s(worksheet)
         workbook.save(workbook_file)
     finally:
         workbook.close()

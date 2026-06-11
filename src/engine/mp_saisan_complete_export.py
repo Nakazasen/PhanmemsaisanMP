@@ -12,6 +12,7 @@ from typing import Any
 
 from openpyxl import load_workbook
 
+from src.engine.column_s_normalizer import normalize_output_description_column_s
 from src.engine.fixed_assets_reference_skeleton import (
     PROVENANCE_LABEL as SECONDARY_SKELETON_PROVENANCE,
     TARGET_ACCOUNT,
@@ -221,6 +222,7 @@ def _append_secondary_skeleton_deduped(
             identities.add(logical)
             written += 1
             row += 1
+        normalize_output_description_column_s(ws)
         wb.save(workbook_path)
         return {
             "selected": len(candidates),
