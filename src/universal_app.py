@@ -41,6 +41,7 @@ from src.parsers.manual_headcount import (
     get_required_headcount_periods,
     parse_manual_headcount,
     resolve_manual_headcount_source_dir,
+    validate_manual_headcount_rows,
 )
 from src.utils.excel_helpers import get_fy_months
 from src.utils.source_manifest import (
@@ -50,6 +51,178 @@ from src.utils.source_manifest import (
     read_source_manifest,
     write_source_manifest_xlsx,
 )
+
+
+def _headcount_save_error(period: str, field: str, raw_value: str, validation_rule: str, reason: str) -> dict:
+    return {
+        "period": period,
+        "field": field,
+        "raw_value": raw_value,
+        "validation_rule": validation_rule,
+        "reason": reason,
+        "csv_row_written": False,
+        "db_row_inserted": False,
+    }
+
+
+def _parse_required_save_int(period: str, field: str, raw_value: str, label: str) -> tuple[str | None, dict | None]:
+    text = str(raw_value or "").strip()
+    if text == "":
+        return None, _headcount_save_error(period, field, text, "REQUIRED", f"Missing {label} value")
+    if not text.isdecimal():
+        return None, _headcount_save_error(period, field, text, "INTEGER_GTE_0", f"{label.capitalize()} must be an integer >= 0")
+    return str(int(text)), None
+
+
+def _parse_optional_save_int(period: str, field: str, raw_value: str, label: str) -> tuple[str, dict | None]:
+    text = str(raw_value or "").strip()
+    if text == "":
+        return "", None
+    if not text.isdecimal():
+        return "", _headcount_save_error(period, field, text, "INTEGER_GTE_0", f"{label.capitalize()} must be an integer >= 0")
+    return str(int(text)), None
+
+
+def validate_headcount_save_period_rows(periods, month_values, label_by_period=None):
+    """Validate GUI headcount inputs for an atomic full-series save."""
+    label_by_period = label_by_period or {}
+    rows = []
+    errors = []
+    for period in periods:
+        values = month_values.get(period, {})
+        label = label_by_period.get(period, period)
+        row_error_count = len(errors)
+
+        staff, staff_error = _parse_required_save_int(
+            period,
+            "headcount_staff",
+            values.get("staff", ""),
+            f"staff at {label}",
+        )
+        worker, worker_error = _parse_required_save_int(
+            period,
+            "headcount_worker",
+            values.get("worker", ""),
+            f"worker at {label}",
+        )
+        if staff_error:
+            errors.append(staff_error)
+        if worker_error:
+            errors.append(worker_error)
+
+        male = ""
+        female = ""
+        if str(period).endswith("12"):
+            male, male_error = _parse_optional_save_int(
+                period,
+                "headcount_male",
+                values.get("male", ""),
+                f"male headcount at {label}",
+            )
+            female, female_error = _parse_optional_save_int(
+                period,
+                "headcount_female",
+                values.get("female", ""),
+                f"female headcount at {label}",
+            )
+            if male_error:
+                errors.append(male_error)
+            if female_error:
+                errors.append(female_error)
+
+        if len(errors) != row_error_count:
+            continue
+
+        staff_int = int(staff or "0")
+        worker_int = int(worker or "0")
+        male_int = int(male or "0")
+        female_int = int(female or "0")
+        if male_int + female_int > staff_int + worker_int:
+            errors.append(
+                _headcount_save_error(
+                    period,
+                    "headcount_male/headcount_female",
+                    f"{values.get('male', '')}/{values.get('female', '')}",
+                    "SUM_LE_TOTAL",
+                    f"Male + female exceeds staff + worker at {label}",
+                )
+            )
+            continue
+
+        rows.append(
+            {
+                "period": period,
+                "headcount_staff": staff,
+                "headcount_worker": worker,
+                "headcount_male": male,
+                "headcount_female": female,
+                "description": str(values.get("description", "") or "").strip(),
+            }
+        )
+    return rows, errors
+
+
+def format_headcount_save_errors(errors) -> str:
+    lines = []
+    for error in errors:
+        period = str(error.get("period", "") or "-")
+        field = str(error.get("field", "") or "-")
+        raw_value = str(error.get("raw_value", ""))
+        raw_display = "blank" if raw_value == "" else raw_value
+        rule = str(error.get("validation_rule", "") or "-")
+        reason = str(error.get("reason", "") or "-")
+        csv_written = error.get("csv_row_written", False)
+        db_inserted = error.get("db_row_inserted", False)
+        lines.append(
+            f"{period} | {field} | {raw_display} | {rule} | {reason} | CSV written={csv_written} | DB inserted={db_inserted}"
+        )
+    return "\n".join(lines)
+
+
+def validate_bus_headcount_save_rows(rows, valid_cc_codes) -> list[dict]:
+    errors = []
+    seen_cc = set()
+    for row_number, row in enumerate(rows, start=2):
+        cc_code = str(row.get("cc_code", "") or "").strip()
+        expat_count = str(row.get("bus_expat_count", "") or "").strip()
+        vietnamese_count = str(row.get("bus_vietnamese_count", "") or "").strip()
+        description = str(row.get("description", "") or "").strip()
+        if not any([cc_code, expat_count, vietnamese_count, description]):
+            continue
+        if not cc_code or cc_code not in valid_cc_codes:
+            error = _headcount_save_error("bus", "cc_code", cc_code, "VALID_CC", "Bus driver cost center is invalid")
+            error["csv_row"] = row_number
+            errors.append(error)
+            continue
+        if cc_code in seen_cc:
+            error = _headcount_save_error("bus", "cc_code", cc_code, "UNIQUE_CC", "Duplicate bus driver cost center")
+            error["csv_row"] = row_number
+            errors.append(error)
+            continue
+        if not expat_count.isdecimal():
+            error = _headcount_save_error(
+                "bus",
+                "bus_expat_count",
+                expat_count,
+                "INTEGER_GTE_0",
+                "Bus expat count must be an integer >= 0",
+            )
+            error["csv_row"] = row_number
+            errors.append(error)
+            continue
+        if not vietnamese_count.isdecimal():
+            error = _headcount_save_error(
+                "bus",
+                "bus_vietnamese_count",
+                vietnamese_count,
+                "INTEGER_GTE_0",
+                "Bus Vietnamese count must be an integer >= 0",
+            )
+            error["csv_row"] = row_number
+            errors.append(error)
+            continue
+        seen_cc.add(cc_code)
+    return errors
 
 
 def _default_template_path() -> str:
@@ -1174,7 +1347,7 @@ class MPManagerApp:
         def validate_non_negative_int(raw, label):
             text = str(raw or "").strip()
             if not text:
-                return "0"
+                raise ValueError(f"{label} ph\u1ea3i l\u00e0 s\u1ed1 nguy\u00ean kh\u00f4ng \u00e2m.")
             if not text.isdecimal():
                 raise ValueError(f"{label} ph\u1ea3i l\u00e0 s\u1ed1 nguy\u00ean kh\u00f4ng \u00e2m.")
             return str(int(text))
@@ -1215,19 +1388,61 @@ class MPManagerApp:
 
             try:
                 int(float(cc_code))
+            except Exception:
+                messagebox.showerror("Lỗi", "Mã CC không hợp lệ.")
+                return
+
+            def show_save_errors(errors):
+                details = format_headcount_save_errors(errors)
+                if details:
+                    details = "\n\n" + details
+                message = f"Lưu chưa hoàn tất cho CC {cc_code}. Không có thay đổi nào được áp dụng.{details}"
+                self.log(message)
+                messagebox.showerror("Lưu chưa hoàn tất", message)
+
+            try:
                 bus_expat_count = validate_non_negative_int(
                     bus_expat_count_var.get(), "Ng\u01b0\u1eddi bi\u1ec7t ph\u00e1i \u0111i xe bus"
                 )
                 bus_vietnamese_count = validate_non_negative_int(
                     bus_vietnamese_count_var.get(), "Ng\u01b0\u1eddi Vi\u1ec7t Nam \u0111i xe bus"
                 )
-            except Exception:
-                messagebox.showerror("Lỗi", "Mã CC không hợp lệ.")
+            except ValueError as exc:
+                show_save_errors(
+                    [
+                        _headcount_save_error(
+                            "bus",
+                            "bus_expat_count/bus_vietnamese_count",
+                            f"{bus_expat_count_var.get()}/{bus_vietnamese_count_var.get()}",
+                            "INTEGER_GTE_0",
+                            str(exc),
+                        )
+                    ]
+                )
                 return
 
             existing_rows = self._read_manual_headcount_rows(csv_path)
-            new_rows = [row for row in existing_rows if str(row.get("cc_code", "")).strip() != cc_code]
             existing_bus_rows = self._read_manual_bus_headcount_rows(bus_csv_path)
+            month_inputs = {
+                period: {
+                    "staff": month_vars[period]["staff"].get(),
+                    "worker": month_vars[period]["worker"].get(),
+                    "male": month_vars[period]["male"].get() if period.endswith("12") else "",
+                    "female": month_vars[period]["female"].get() if period.endswith("12") else "",
+                    "description": month_vars[period]["description"].get(),
+                }
+                for period in periods
+            }
+            period_rows, validation_errors = validate_headcount_save_period_rows(
+                periods,
+                month_inputs,
+                label_by_period,
+            )
+            if validation_errors:
+                show_save_errors(validation_errors)
+                return
+
+            new_rows = [row for row in existing_rows if str(row.get("cc_code", "")).strip() != cc_code]
             new_bus_rows = [row for row in existing_bus_rows if str(row.get("cc_code", "")).strip() != cc_code]
             new_bus_rows.append(
                 {
@@ -1237,49 +1452,39 @@ class MPManagerApp:
                     "description": bus_description_var.get().strip(),
                 }
             )
-            saved_count = 0
+            saved_count = len(period_rows)
 
-            for period in periods:
-                staff_text = month_vars[period]["staff"].get().strip() or "0"
-                worker_text = month_vars[period]["worker"].get().strip() or "0"
-                male_text = month_vars[period]["male"].get().strip() if period.endswith("12") else ""
-                female_text = month_vars[period]["female"].get().strip() if period.endswith("12") else ""
-                desc_text = month_vars[period]["description"].get().strip()
-
-                if not any([staff_text.strip("0"), worker_text.strip("0"), male_text.strip("0"), female_text.strip("0"), desc_text]):
-                    continue
-
-                try:
-                    staff_val = float(staff_text)
-                    worker_val = float(worker_text)
-                    male_val = float(male_text) if male_text else 0.0
-                    female_val = float(female_text) if female_text else 0.0
-                except Exception:
-                    messagebox.showerror("Lỗi", f"Giá trị số không hợp lệ tại {label_by_period[period]}.")
-                    return
-
-                if min(staff_val, worker_val, male_val, female_val) < 0:
-                    messagebox.showerror("Lỗi", f"Không được nhập số âm tại {label_by_period[period]}.")
-                    return
-                if male_val + female_val > staff_val + worker_val:
-                    messagebox.showerror("Lỗi", f"Số Nam + Nữ vượt tổng nhân sự tại {label_by_period[period]}.")
-                    return
-
+            for row in period_rows:
                 new_rows.append(
                     {
                         "cc_code": cc_code,
-                        "period": period,
-                        "headcount_staff": str(int(staff_val) if staff_val.is_integer() else staff_val),
-                        "headcount_worker": str(int(worker_val) if worker_val.is_integer() else worker_val),
-                        "headcount_male": str(int(male_val) if male_val.is_integer() else male_val) if period.endswith("12") else "",
-                        "headcount_female": str(int(female_val) if female_val.is_integer() else female_val) if period.endswith("12") else "",
-                        "description": desc_text,
+                        "period": row["period"],
+                        "headcount_staff": row["headcount_staff"],
+                        "headcount_worker": row["headcount_worker"],
+                        "headcount_male": row["headcount_male"],
+                        "headcount_female": row["headcount_female"],
+                        "description": row["description"],
                     }
                 )
-                saved_count += 1
 
             new_rows.sort(key=lambda row: (str(row.get("cc_code", "")), str(row.get("period", ""))))
             new_bus_rows.sort(key=lambda row: str(row.get("cc_code", "")))
+
+            valid_cc_codes = {parse_cc_code(choice) for choice in cc_choices if parse_cc_code(choice)}
+            candidate_rows = []
+            for row_number, row in enumerate(new_rows, start=2):
+                candidate = dict(row)
+                candidate["_csv_row"] = row_number
+                candidate_rows.append(candidate)
+            import_validation = validate_manual_headcount_rows(candidate_rows, valid_cc_codes, fiscal_year)
+            if import_validation.get("errors", 0):
+                show_save_errors(import_validation.get("error_details", []))
+                return
+            bus_validation_errors = validate_bus_headcount_save_rows(new_bus_rows, valid_cc_codes)
+            if bus_validation_errors:
+                show_save_errors(bus_validation_errors)
+                return
+
             self._write_manual_headcount_rows(csv_path, new_rows)
             self._write_manual_bus_headcount_rows(bus_csv_path, new_bus_rows)
             db_path = os.path.join(BASE_DIR, "mp2027.db")
@@ -1300,14 +1505,16 @@ class MPManagerApp:
                     errors=result.get("errors", 0),
                 )
             )
+            if result.get("errors", 0):
+                show_save_errors(result.get("error_details", []))
+                return
             messagebox.showinfo(
                 "Đã lưu",
-                "Đã lưu {rows} dòng cho CC {cc}. DB inserted={inserted}, bus_inserted={bus_inserted}, errors={errors}.".format(
+                "Đã lưu đầy đủ {rows} kỳ cho CC {cc}.\nCSV rows written={rows}; DB rows imported={inserted}; bus drivers written={bus_inserted}; errors=0.".format(
                     rows=saved_count,
                     cc=cc_code,
                     inserted=result.get("inserted", 0),
                     bus_inserted=result.get("bus_inserted", 0),
-                    errors=result.get("errors", 0),
                 ),
             )
 

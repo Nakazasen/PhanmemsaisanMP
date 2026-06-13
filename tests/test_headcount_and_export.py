@@ -708,6 +708,200 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_manual_parser_accepts_zero_staff_and_worker_as_explicit_values(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "headcount_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "period",
+                        "headcount_staff",
+                        "headcount_worker",
+                        "headcount_male",
+                        "headcount_female",
+                        "description",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "period": "202603",
+                        "headcount_staff": "0",
+                        "headcount_worker": "0",
+                        "headcount_male": "",
+                        "headcount_female": "",
+                        "description": "explicit zero baseline",
+                    }
+                )
+
+            result = parse_manual_headcount(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 1)
+            self.assertEqual(result["errors"], 0)
+            row = conn.execute(
+                """
+                SELECT headcount_all, headcount_staff, headcount_worker
+                FROM fact_monthly_headcount
+                WHERE cc_code=? AND period='202603' AND source='manual'
+                """,
+                (cc_code,),
+            ).fetchone()
+            self.assertIsNotNone(row)
+            self.assertEqual(float(row["headcount_all"]), 0.0)
+            self.assertEqual(float(row["headcount_staff"]), 0.0)
+            self.assertEqual(float(row["headcount_worker"]), 0.0)
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_parser_fail_closed_preserves_existing_db_on_any_csv_error(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            conn.execute(
+                """
+                INSERT INTO fact_monthly_headcount
+                (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
+                VALUES ('202603', ?, 7, 7, 0, 'manual', 'preexisting')
+                """,
+                (cc_code,),
+            )
+            conn.execute(
+                """
+                INSERT INTO fact_bus_headcount_drivers
+                (cc_code, bus_expat_count, bus_vietnamese_count, source, description)
+                VALUES (?, 1, 2, 'manual', 'preexisting bus')
+                """,
+                (str(cc_code),),
+            )
+            conn.commit()
+
+            csv_path = tmpdir / "headcount_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "period",
+                        "headcount_staff",
+                        "headcount_worker",
+                        "description",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "period": "202603",
+                        "headcount_staff": "8",
+                        "headcount_worker": "",
+                        "description": "invalid new import",
+                    }
+                )
+            bus_path = tmpdir / "bus_headcount_manual.csv"
+            with bus_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=["cc_code", "bus_expat_count", "bus_vietnamese_count", "description"],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "bus_expat_count": "0",
+                        "bus_vietnamese_count": "0",
+                        "description": "new bus",
+                    }
+                )
+
+            result = parse_manual_headcount(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 0)
+            self.assertEqual(result["errors"], 1)
+            self.assertEqual(result["error_details"][0]["period"], "202603")
+            self.assertEqual(result["error_details"][0]["field"], "headcount_worker")
+            self.assertEqual(result["error_details"][0]["validation_rule"], "REQUIRED")
+
+            row = conn.execute(
+                """
+                SELECT headcount_staff, headcount_worker, description
+                FROM fact_monthly_headcount
+                WHERE cc_code=? AND period='202603' AND source='manual'
+                """,
+                (cc_code,),
+            ).fetchone()
+            self.assertEqual(float(row["headcount_staff"]), 7.0)
+            self.assertEqual(float(row["headcount_worker"]), 0.0)
+            self.assertEqual(row["description"], "preexisting")
+
+            bus_row = conn.execute(
+                """
+                SELECT bus_expat_count, bus_vietnamese_count, description
+                FROM fact_bus_headcount_drivers
+                WHERE cc_code=?
+                """,
+                (str(cc_code),),
+            ).fetchone()
+            self.assertEqual(float(bus_row["bus_expat_count"]), 1.0)
+            self.assertEqual(float(bus_row["bus_vietnamese_count"]), 2.0)
+            self.assertEqual(bus_row["description"], "preexisting bus")
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_parser_rejects_duplicate_cc_period_without_partial_write(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "headcount_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "period",
+                        "headcount_staff",
+                        "headcount_worker",
+                        "description",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "period": "202603",
+                        "headcount_staff": "1",
+                        "headcount_worker": "0",
+                        "description": "first",
+                    }
+                )
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "period": "202603",
+                        "headcount_staff": "2",
+                        "headcount_worker": "0",
+                        "description": "duplicate",
+                    }
+                )
+
+            result = parse_manual_headcount(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 0)
+            self.assertEqual(result["errors"], 1)
+            self.assertEqual(result["error_details"][0]["field"], "cc_code/period")
+            self.assertEqual(result["error_details"][0]["validation_rule"], "UNIQUE_CC_PERIOD")
+            count = conn.execute("SELECT COUNT(*) FROM fact_monthly_headcount").fetchone()[0]
+            self.assertEqual(count, 0)
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_manual_parser_reads_optional_gender_columns(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)

@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
+from src.utils.excel_helpers import get_fy_months, normalize_cc_code
 
 TEMPLATE_FILENAME = "headcount_manual.csv"
 BUS_DRIVER_FILENAME = "bus_headcount_manual.csv"
@@ -89,6 +89,321 @@ def _parse_non_negative_int(value: Any) -> int | None:
         return None
     parsed = int(text)
     return parsed if parsed >= 0 else None
+
+
+def _make_validation_error(
+    row_number: int | None,
+    cc_code: Any,
+    period: Any,
+    field: str,
+    raw_value: Any,
+    validation_rule: str,
+    reason: str,
+) -> dict[str, Any]:
+    return {
+        "csv_row": row_number,
+        "cc_code": str(cc_code or "").strip(),
+        "period": str(period or "").strip(),
+        "field": field,
+        "raw_value": "" if raw_value is None else str(raw_value),
+        "validation_rule": validation_rule,
+        "reason": reason,
+        "csv_row_written": True,
+        "db_row_inserted": False,
+    }
+
+
+def _parse_required_headcount_int(
+    row_number: int | None,
+    row: dict[str, Any],
+    field: str,
+    reason_label: str,
+) -> tuple[int | None, dict[str, Any] | None]:
+    raw_value = row.get(field, "")
+    if not _has_value(raw_value):
+        return None, _make_validation_error(
+            row_number,
+            row.get("cc_code"),
+            row.get("period"),
+            field,
+            raw_value,
+            "REQUIRED",
+            f"Missing {reason_label} value",
+        )
+    parsed = _parse_non_negative_int(raw_value)
+    if parsed is None:
+        return None, _make_validation_error(
+            row_number,
+            row.get("cc_code"),
+            row.get("period"),
+            field,
+            raw_value,
+            "INTEGER_GTE_0",
+            f"{reason_label.capitalize()} must be an integer >= 0",
+        )
+    return parsed, None
+
+
+def _parse_optional_headcount_int(
+    row_number: int | None,
+    row: dict[str, Any],
+    field: str,
+    reason_label: str,
+) -> tuple[int, dict[str, Any] | None]:
+    raw_value = row.get(field, "")
+    if not _has_value(raw_value):
+        return 0, None
+    parsed = _parse_non_negative_int(raw_value)
+    if parsed is None:
+        return 0, _make_validation_error(
+            row_number,
+            row.get("cc_code"),
+            row.get("period"),
+            field,
+            raw_value,
+            "INTEGER_GTE_0",
+            f"{reason_label.capitalize()} must be an integer >= 0",
+        )
+    return parsed, None
+
+
+def validate_manual_headcount_rows(
+    rows: list[dict[str, Any]],
+    valid_cc_codes: set[str],
+    fiscal_year: int = 2027,
+) -> dict[str, Any]:
+    """Validate manual headcount rows without mutating CSV or DB."""
+    fiscal_months = get_fy_months(fiscal_year)
+    valid_periods = set(get_required_headcount_periods(fiscal_year))
+    valid_rows: list[dict[str, Any]] = []
+    skipped = 0
+    error_details: list[dict[str, Any]] = []
+    seen_keys: set[tuple[str, str]] = set()
+
+    for index, row in enumerate(rows, start=2):
+        row_number = row.get("_csv_row", index)
+        try:
+            row_number = int(row_number)
+        except (TypeError, ValueError):
+            row_number = index
+
+        raw_cc = str(row.get("cc_code", "")).strip()
+        raw_period = row.get("period", "")
+        raw_staff = row.get("headcount_staff", "")
+        raw_worker = row.get("headcount_worker", "")
+        raw_male = row.get("headcount_male", "")
+        raw_female = row.get("headcount_female", "")
+        description = str(row.get("description", "") or "").strip()
+
+        # Allow blank rows in template.
+        if (
+            not raw_cc
+            and not str(raw_period).strip()
+            and not str(raw_staff).strip()
+            and not str(raw_worker).strip()
+            and not str(raw_male).strip()
+            and not str(raw_female).strip()
+        ):
+            skipped += 1
+            continue
+
+        cc_code = normalize_cc_code(raw_cc)
+        if not cc_code:
+            error_details.append(
+                _make_validation_error(row_number, raw_cc, raw_period, "cc_code", raw_cc, "VALID_CC", "Cost center is blank or invalid")
+            )
+            continue
+        if cc_code not in valid_cc_codes:
+            error_details.append(
+                _make_validation_error(
+                    row_number,
+                    raw_cc,
+                    raw_period,
+                    "cc_code",
+                    raw_cc,
+                    "VALID_CC",
+                    "Cost center is not in dim_cost_centers",
+                )
+            )
+            continue
+
+        period = _normalize_period(raw_period, valid_periods, fiscal_months)
+        if period is None:
+            error_details.append(
+                _make_validation_error(
+                    row_number,
+                    raw_cc,
+                    raw_period,
+                    "period",
+                    raw_period,
+                    "VALID_PERIOD",
+                    "Period is not in required fiscal-year period set",
+                )
+            )
+            continue
+        key = (cc_code, period)
+        if key in seen_keys:
+            error_details.append(
+                _make_validation_error(
+                    row_number,
+                    raw_cc,
+                    raw_period,
+                    "cc_code/period",
+                    f"{raw_cc}/{raw_period}",
+                    "UNIQUE_CC_PERIOD",
+                    "Duplicate manual headcount cost center and period",
+                )
+            )
+            continue
+        seen_keys.add(key)
+
+        staff, staff_error = _parse_required_headcount_int(row_number, row, "headcount_staff", "staff")
+        worker, worker_error = _parse_required_headcount_int(row_number, row, "headcount_worker", "worker")
+        male, male_error = _parse_optional_headcount_int(row_number, row, "headcount_male", "male")
+        female, female_error = _parse_optional_headcount_int(row_number, row, "headcount_female", "female")
+        row_errors = [error for error in (staff_error, worker_error, male_error, female_error) if error]
+        if row_errors:
+            error_details.extend(row_errors)
+            continue
+
+        assert staff is not None
+        assert worker is not None
+        headcount_all = staff + worker
+        if male + female > headcount_all:
+            error_details.append(
+                _make_validation_error(
+                    row_number,
+                    raw_cc,
+                    raw_period,
+                    "headcount_male/headcount_female",
+                    f"{raw_male}/{raw_female}",
+                    "SUM_LE_TOTAL",
+                    "Male + female exceeds staff + worker",
+                )
+            )
+            continue
+
+        valid_rows.append(
+            {
+                "period": period,
+                "cc_code": cc_code,
+                "headcount_all": float(headcount_all),
+                "headcount_staff": float(staff),
+                "headcount_worker": float(worker),
+                "headcount_male": float(male),
+                "headcount_female": float(female),
+                "description": description,
+            }
+        )
+
+    return {
+        "valid_rows": valid_rows,
+        "skipped": skipped,
+        "errors": len(error_details),
+        "error_details": error_details,
+    }
+
+
+def validate_manual_bus_headcount_rows(
+    rows: list[dict[str, Any]],
+    valid_cc_codes: set[str],
+) -> dict[str, Any]:
+    """Validate scalar bus passenger rows without mutating DB."""
+    valid_rows: list[dict[str, Any]] = []
+    skipped = 0
+    errors = 0
+    error_details: list[dict[str, Any]] = []
+    seen_cc: set[str] = set()
+
+    for index, row in enumerate(rows, start=2):
+        row_number = row.get("_csv_row", index)
+        try:
+            row_number = int(row_number)
+        except (TypeError, ValueError):
+            row_number = index
+        raw_values = [str(row.get(col, "") or "").strip() for col in BUS_DRIVER_COLUMNS]
+        if not any(raw_values):
+            skipped += 1
+            continue
+
+        cc_code = normalize_cc_code(row.get("cc_code"))
+        if not cc_code or cc_code not in valid_cc_codes:
+            error_details.append(
+                _make_validation_error(
+                    row_number,
+                    row.get("cc_code"),
+                    "",
+                    "cc_code",
+                    row.get("cc_code"),
+                    "VALID_CC",
+                    "Bus driver cost center is invalid or not in dim_cost_centers",
+                )
+            )
+            errors += 1
+            continue
+        if cc_code in seen_cc:
+            error_details.append(
+                _make_validation_error(
+                    row_number,
+                    row.get("cc_code"),
+                    "",
+                    "cc_code",
+                    row.get("cc_code"),
+                    "UNIQUE_CC",
+                    "Duplicate bus driver cost center",
+                )
+            )
+            errors += 1
+            continue
+
+        expat_count = _parse_non_negative_int(row.get("bus_expat_count"))
+        vietnamese_count = _parse_non_negative_int(row.get("bus_vietnamese_count"))
+        if expat_count is None:
+            error_details.append(
+                _make_validation_error(
+                    row_number,
+                    row.get("cc_code"),
+                    "",
+                    "bus_expat_count",
+                    row.get("bus_expat_count"),
+                    "INTEGER_GTE_0",
+                    "Bus expat count must be an integer >= 0",
+                )
+            )
+            errors += 1
+            continue
+        if vietnamese_count is None:
+            error_details.append(
+                _make_validation_error(
+                    row_number,
+                    row.get("cc_code"),
+                    "",
+                    "bus_vietnamese_count",
+                    row.get("bus_vietnamese_count"),
+                    "INTEGER_GTE_0",
+                    "Bus Vietnamese count must be an integer >= 0",
+                )
+            )
+            errors += 1
+            continue
+
+        description = str(row.get("description", "") or "").strip()
+        valid_rows.append(
+            {
+                "cc_code": cc_code,
+                "bus_expat_count": float(expat_count),
+                "bus_vietnamese_count": float(vietnamese_count),
+                "description": description,
+            }
+        )
+        seen_cc.add(cc_code)
+
+    return {
+        "valid_rows": valid_rows,
+        "skipped": skipped,
+        "errors": errors,
+        "error_details": error_details,
+    }
 
 
 def _normalize_period(raw_period: Any, valid_periods: set[str], fiscal_months: list[str]) -> str | None:
@@ -245,69 +560,6 @@ def quarantine_manual_headcount_rows(
     }
 
 
-def _parse_manual_bus_headcount(conn: sqlite3.Connection, source_dir: str, valid_cc_codes: set[str]) -> dict[str, int | str]:
-    """Load scalar per-CC bus passenger counts used by the allocation engine."""
-    path = ensure_manual_bus_headcount_template(source_dir)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM fact_bus_headcount_drivers WHERE source = 'manual'")
-
-    inserted = 0
-    skipped = 0
-    errors = 0
-
-    with open(path, "r", encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        if reader.fieldnames is None:
-            return {"inserted": 0, "skipped": 0, "errors": 1, "template_path": path}
-
-        missing_cols = [c for c in BUS_DRIVER_COLUMNS if c not in reader.fieldnames]
-        if missing_cols:
-            return {
-                "inserted": 0,
-                "skipped": 0,
-                "errors": 1,
-                "template_path": path,
-                "error_message": f"Missing required columns: {', '.join(missing_cols)}",
-            }
-
-        seen_cc: set[str] = set()
-        for row in reader:
-            raw_values = [str(row.get(col, "") or "").strip() for col in BUS_DRIVER_COLUMNS]
-            if not any(raw_values):
-                skipped += 1
-                continue
-
-            cc_code = normalize_cc_code(row.get("cc_code"))
-            if not cc_code or cc_code not in valid_cc_codes or cc_code in seen_cc:
-                errors += 1
-                continue
-
-            expat_count = _parse_non_negative_int(row.get("bus_expat_count"))
-            vietnamese_count = _parse_non_negative_int(row.get("bus_vietnamese_count"))
-            if expat_count is None or vietnamese_count is None:
-                errors += 1
-                continue
-
-            description = str(row.get("description", "") or "").strip()
-            cursor.execute(
-                """
-                INSERT INTO fact_bus_headcount_drivers
-                (cc_code, bus_expat_count, bus_vietnamese_count, source, description)
-                VALUES (?, ?, ?, 'manual', ?)
-                ON CONFLICT(cc_code) DO UPDATE SET
-                    bus_expat_count = excluded.bus_expat_count,
-                    bus_vietnamese_count = excluded.bus_vietnamese_count,
-                    source = excluded.source,
-                    description = excluded.description
-                """,
-                (cc_code, float(expat_count), float(vietnamese_count), description),
-            )
-            seen_cc.add(cc_code)
-            inserted += 1
-
-    return {"inserted": inserted, "skipped": skipped, "errors": errors, "template_path": path}
-
-
 def parse_manual_headcount(
     conn: sqlite3.Connection,
     source_dir: str | None = None,
@@ -316,8 +568,6 @@ def parse_manual_headcount(
     """Load manual headcount from CSV and write to fact_monthly_headcount source='manual'."""
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
     fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip()) if fy_row else 2027
-    fiscal_months = get_fy_months(fiscal_year)
-    valid_periods = set(get_required_headcount_periods(fiscal_year))
 
     search_dir = resolve_manual_headcount_source_dir(source_dir, base_dir=base_dir)
     os.makedirs(search_dir, exist_ok=True)
@@ -326,18 +576,20 @@ def parse_manual_headcount(
         return {"inserted": 0, "skipped": 0, "errors": 0, "template_path": template_path}
 
     valid_cc_codes = {str(row[0]).strip() for row in conn.execute("SELECT code FROM dim_cost_centers").fetchall() if row[0] is not None}
-    bus_result = _parse_manual_bus_headcount(conn, search_dir, valid_cc_codes)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM fact_monthly_headcount WHERE source = 'manual'")
-
-    inserted = 0
-    skipped = 0
-    errors = 0
+    bus_template_path = ensure_manual_bus_headcount_template(search_dir)
 
     with open(template_path, "r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         if reader.fieldnames is None:
-            return {"inserted": 0, "skipped": 0, "errors": 1, "template_path": template_path}
+            return {
+                "inserted": 0,
+                "skipped": 0,
+                "errors": 1,
+                "template_path": template_path,
+                "error_details": [
+                    _make_validation_error(None, "", "", "header", "", "REQUIRED_COLUMNS", "Missing manual headcount header")
+                ],
+            }
 
         missing_cols = [c for c in REQUIRED_COLUMNS if c not in reader.fieldnames]
         if missing_cols:
@@ -347,88 +599,144 @@ def parse_manual_headcount(
                 "errors": 1,
                 "template_path": template_path,
                 "error_message": f"Missing required columns: {', '.join(missing_cols)}",
+                "error_details": [
+                    _make_validation_error(
+                        None,
+                        "",
+                        "",
+                        "header",
+                        ", ".join(missing_cols),
+                        "REQUIRED_COLUMNS",
+                        f"Missing required columns: {', '.join(missing_cols)}",
+                    )
+                ],
             }
 
-        for row in reader:
-            raw_cc = str(row.get("cc_code", "")).strip()
-            raw_period = row.get("period", "")
-            raw_staff = row.get("headcount_staff", "")
-            raw_worker = row.get("headcount_worker", "")
-            raw_male = row.get("headcount_male", "")
-            raw_female = row.get("headcount_female", "")
-            description = str(row.get("description", "") or "").strip()
+        csv_rows: list[dict[str, Any]] = []
+        for row_number, row in enumerate(reader, start=2):
+            row["_csv_row"] = row_number
+            csv_rows.append(row)
 
-            # Allow blank rows in template.
-            if (
-                not raw_cc
-                and not str(raw_period).strip()
-                and not str(raw_staff).strip()
-                and not str(raw_worker).strip()
-                and not str(raw_male).strip()
-                and not str(raw_female).strip()
-            ):
-                skipped += 1
-                continue
+    with open(bus_template_path, "r", encoding="utf-8-sig", newline="") as f:
+        bus_reader = csv.DictReader(f)
+        if bus_reader.fieldnames is None:
+            return {
+                "inserted": 0,
+                "skipped": 0,
+                "errors": 1,
+                "template_path": template_path,
+                "error_details": [
+                    _make_validation_error(None, "", "", "header", "", "REQUIRED_COLUMNS", "Missing bus driver header")
+                ],
+                "bus_inserted": 0,
+                "bus_errors": 1,
+                "bus_template_path": bus_template_path,
+            }
+        missing_bus_cols = [c for c in BUS_DRIVER_COLUMNS if c not in bus_reader.fieldnames]
+        if missing_bus_cols:
+            return {
+                "inserted": 0,
+                "skipped": 0,
+                "errors": 1,
+                "template_path": template_path,
+                "error_message": f"Missing required columns: {', '.join(missing_bus_cols)}",
+                "error_details": [
+                    _make_validation_error(
+                        None,
+                        "",
+                        "",
+                        "header",
+                        ", ".join(missing_bus_cols),
+                        "REQUIRED_COLUMNS",
+                        f"Missing required columns: {', '.join(missing_bus_cols)}",
+                    )
+                ],
+                "bus_inserted": 0,
+                "bus_errors": 1,
+                "bus_template_path": bus_template_path,
+            }
+        bus_rows: list[dict[str, Any]] = []
+        for row_number, row in enumerate(bus_reader, start=2):
+            row["_csv_row"] = row_number
+            bus_rows.append(row)
 
-            cc_code = normalize_cc_code(raw_cc)
-            if not cc_code:
-                errors += 1
-                continue
-            if cc_code not in valid_cc_codes:
-                errors += 1
-                continue
+    validation = validate_manual_headcount_rows(csv_rows, valid_cc_codes, fiscal_year)
+    bus_result = validate_manual_bus_headcount_rows(bus_rows, valid_cc_codes)
+    error_details = list(validation.get("error_details", []))
+    error_details.extend(bus_result.get("error_details", []))
+    total_errors = int(validation.get("errors", 0)) + int(bus_result.get("errors", 0))
+    if total_errors:
+        return {
+            "inserted": 0,
+            "skipped": int(validation.get("skipped", 0)),
+            "errors": total_errors,
+            "template_path": template_path,
+            "error_details": error_details,
+            "bus_inserted": 0,
+            "bus_errors": int(bus_result.get("errors", 0)),
+            "bus_template_path": str(bus_template_path),
+        }
 
-            period = _normalize_period(raw_period, valid_periods, fiscal_months)
-            if period is None:
-                errors += 1
-                continue
-            if not _has_value(raw_staff) or not _has_value(raw_worker):
-                errors += 1
-                continue
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM fact_monthly_headcount WHERE source = 'manual'")
+    cursor.execute("DELETE FROM fact_bus_headcount_drivers WHERE source = 'manual'")
 
-            staff = safe_float(raw_staff)
-            worker = safe_float(raw_worker)
-            male = safe_float(raw_male)
-            female = safe_float(raw_female)
-            if staff < 0 or worker < 0 or male < 0 or female < 0:
-                errors += 1
-                continue
-
-            headcount_all = staff + worker
-            if headcount_all <= 0:
-                skipped += 1
-                continue
-            if male + female > headcount_all:
-                errors += 1
-                continue
-
-            cursor.execute(
-                """
-                INSERT INTO fact_monthly_headcount
-                (
-                    period, cc_code, headcount_all, headcount_staff, headcount_worker,
-                    headcount_male, headcount_female, source, description
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', ?)
-                ON CONFLICT(period, cc_code, source) DO UPDATE SET
-                    headcount_all = excluded.headcount_all,
-                    headcount_staff = excluded.headcount_staff,
-                    headcount_worker = excluded.headcount_worker,
-                    headcount_male = excluded.headcount_male,
-                    headcount_female = excluded.headcount_female,
-                    description = excluded.description
-                """,
-                (period, cc_code, headcount_all, staff, worker, male, female, description),
+    inserted = 0
+    for row in validation["valid_rows"]:
+        cursor.execute(
+            """
+            INSERT INTO fact_monthly_headcount
+            (
+                period, cc_code, headcount_all, headcount_staff, headcount_worker,
+                headcount_male, headcount_female, source, description
             )
-            inserted += 1
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', ?)
+            ON CONFLICT(period, cc_code, source) DO UPDATE SET
+                headcount_all = excluded.headcount_all,
+                headcount_staff = excluded.headcount_staff,
+                headcount_worker = excluded.headcount_worker,
+                headcount_male = excluded.headcount_male,
+                headcount_female = excluded.headcount_female,
+                description = excluded.description
+            """,
+            (
+                row["period"],
+                row["cc_code"],
+                row["headcount_all"],
+                row["headcount_staff"],
+                row["headcount_worker"],
+                row["headcount_male"],
+                row["headcount_female"],
+                row["description"],
+            ),
+        )
+        inserted += 1
+
+    bus_inserted = 0
+    for row in bus_result["valid_rows"]:
+        cursor.execute(
+            """
+            INSERT INTO fact_bus_headcount_drivers
+            (cc_code, bus_expat_count, bus_vietnamese_count, source, description)
+            VALUES (?, ?, ?, 'manual', ?)
+            ON CONFLICT(cc_code) DO UPDATE SET
+                bus_expat_count = excluded.bus_expat_count,
+                bus_vietnamese_count = excluded.bus_vietnamese_count,
+                source = excluded.source,
+                description = excluded.description
+            """,
+            (row["cc_code"], row["bus_expat_count"], row["bus_vietnamese_count"], row["description"]),
+        )
+        bus_inserted += 1
 
     conn.commit()
     return {
         "inserted": inserted,
-        "skipped": skipped,
-        "errors": errors + int(bus_result.get("errors", 0)),
+        "skipped": int(validation.get("skipped", 0)),
+        "errors": 0,
         "template_path": template_path,
-        "bus_inserted": int(bus_result.get("inserted", 0)),
-        "bus_errors": int(bus_result.get("errors", 0)),
-        "bus_template_path": str(bus_result.get("template_path", "")),
+        "error_details": error_details,
+        "bus_inserted": bus_inserted,
+        "bus_errors": 0,
+        "bus_template_path": str(bus_template_path),
     }

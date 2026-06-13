@@ -1,7 +1,12 @@
 from pathlib import Path
 
 from src.parsers.manual_event_drivers import OPTIONAL_COLUMNS, TEMPLATE_COLUMNS
-from src.parsers.manual_headcount import BUS_DRIVER_COLUMNS, BUS_DRIVER_FILENAME
+from src.parsers.manual_headcount import BUS_DRIVER_COLUMNS, BUS_DRIVER_FILENAME, get_required_headcount_periods
+from src.universal_app import (
+    format_headcount_save_errors,
+    validate_bus_headcount_save_rows,
+    validate_headcount_save_period_rows,
+)
 
 
 def test_event_driver_gui_has_dedicated_bus_passenger_inputs():
@@ -60,3 +65,106 @@ def test_bus_passenger_counts_are_not_formula_mapped_without_unit_cost_source():
     assert "safe_float(row.get(\"count\"))" in parser_source
     assert "safe_float(row.get(\"bus_expat_people\"))" not in parser_source
     assert "safe_float(row.get(\"bus_vietnamese_people\"))" not in parser_source
+
+
+def _full_period_values(staff="1", worker="0"):
+    return {
+        period: {"staff": staff, "worker": worker, "male": "", "female": "", "description": ""}
+        for period in get_required_headcount_periods(2027)
+    }
+
+
+def test_headcount_save_requires_full_13_period_series_before_write():
+    periods = get_required_headcount_periods(2027)
+    values = _full_period_values()
+    rows, errors = validate_headcount_save_period_rows(periods, values, {period: period for period in periods})
+
+    assert len(rows) == 13
+    assert errors == []
+    assert rows[0]["period"] == "202603"
+
+
+def test_headcount_save_missing_baseline_is_exact_error_and_no_success_title_source():
+    periods = get_required_headcount_periods(2027)
+    values = _full_period_values()
+    values["202603"]["staff"] = ""
+    rows, errors = validate_headcount_save_period_rows(periods, values, {period: period for period in periods})
+
+    assert rows
+    assert errors[0]["period"] == "202603"
+    assert errors[0]["field"] == "headcount_staff"
+    assert errors[0]["validation_rule"] == "REQUIRED"
+    assert errors[0]["csv_row_written"] is False
+    assert errors[0]["db_row_inserted"] is False
+    formatted = format_headcount_save_errors(errors)
+    assert "202603 | headcount_staff | blank | REQUIRED" in formatted
+
+    source = Path("src/universal_app.py").read_text(encoding="utf-8")
+    assert "Lưu chưa hoàn tất cho CC {cc_code}. Không có thay đổi nào được áp dụng." in source
+    assert "Đã lưu đầy đủ {rows} kỳ cho CC {cc}." in source
+    assert "staff_text = month_vars[period][\"staff\"].get().strip() or \"0\"" not in source
+
+
+def test_headcount_save_missing_worker_and_invalid_numbers_are_exact_errors():
+    periods = get_required_headcount_periods(2027)
+    values = _full_period_values()
+    values["202604"]["worker"] = ""
+    values["202605"]["staff"] = "-1"
+    values["202606"]["staff"] = "1.5"
+    values["202607"]["worker"] = "abc"
+
+    _, errors = validate_headcount_save_period_rows(periods, values, {period: period for period in periods})
+    observed = {(error["period"], error["field"], error["raw_value"], error["validation_rule"]) for error in errors}
+
+    assert ("202604", "headcount_worker", "", "REQUIRED") in observed
+    assert ("202605", "headcount_staff", "-1", "INTEGER_GTE_0") in observed
+    assert ("202606", "headcount_staff", "1.5", "INTEGER_GTE_0") in observed
+    assert ("202607", "headcount_worker", "abc", "INTEGER_GTE_0") in observed
+
+
+def test_headcount_save_zero_values_and_optional_gender_blanks_are_valid():
+    periods = get_required_headcount_periods(2027)
+    values = _full_period_values(staff="0", worker="0")
+
+    rows, errors = validate_headcount_save_period_rows(periods, values, {period: period for period in periods})
+
+    assert errors == []
+    assert len(rows) == 13
+    assert all(row["headcount_staff"] == "0" for row in rows)
+    assert all(row["headcount_worker"] == "0" for row in rows)
+    december = next(row for row in rows if row["period"] == "202612")
+    assert december["headcount_male"] == ""
+    assert december["headcount_female"] == ""
+
+
+def test_headcount_save_rejects_gender_split_over_total():
+    periods = get_required_headcount_periods(2027)
+    values = _full_period_values(staff="1", worker="0")
+    values["202612"]["male"] = "2"
+
+    _, errors = validate_headcount_save_period_rows(periods, values, {period: period for period in periods})
+
+    assert any(error["period"] == "202612" and error["validation_rule"] == "SUM_LE_TOTAL" for error in errors)
+
+
+def test_bus_zero_rows_validate_and_invalid_bus_row_is_exact_error():
+    errors = validate_bus_headcount_save_rows(
+        [{"cc_code": "1412000006", "bus_expat_count": "0", "bus_vietnamese_count": "0", "description": ""}],
+        {"1412000006"},
+    )
+    assert errors == []
+
+    bad_errors = validate_bus_headcount_save_rows(
+        [{"cc_code": "1412000006", "bus_expat_count": "1.5", "bus_vietnamese_count": "0", "description": ""}],
+        {"1412000006"},
+    )
+    assert bad_errors[0]["period"] == "bus"
+    assert bad_errors[0]["field"] == "bus_expat_count"
+    assert bad_errors[0]["validation_rule"] == "INTEGER_GTE_0"
+
+    blank_errors = validate_bus_headcount_save_rows(
+        [{"cc_code": "1412000006", "bus_expat_count": "", "bus_vietnamese_count": "0", "description": ""}],
+        {"1412000006"},
+    )
+    assert blank_errors[0]["field"] == "bus_expat_count"
+    assert blank_errors[0]["validation_rule"] == "INTEGER_GTE_0"
