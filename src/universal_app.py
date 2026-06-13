@@ -215,9 +215,10 @@ MP2027_App/
     MP2027/
       FORM.xlsx
       source_file_order.xlsx
-      headcount_manual.csv
       event_drivers_manual.csv
       special_costs_manual.csv
+  raw/
+    headcount_manual.csv
       các file Excel nguồn khác
 
 3. CÁC TRƯỜNG TRÊN MÀN HÌNH CHÍNH
@@ -275,7 +276,7 @@ Bước 5: Bấm "Lưu 12 tháng".
 Bước 6: Chạy tính toán lại.
 
 Tệp lưu dữ liệu:
-docs/MP2027/headcount_manual.csv
+raw/headcount_manual.csv
 
 Lưu ý:
 - Nếu sửa số người trực tiếp trong FORM, lần chạy sau có thể bị ghi đè.

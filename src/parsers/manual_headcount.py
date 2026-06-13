@@ -1,8 +1,8 @@
 """
 Manual headcount parser.
 
-Users can provide monthly staff/worker headcount by CC in:
-  source_dir/headcount_manual.csv
+Users can provide monthly staff/worker headcount by CC in the active input:
+  raw/headcount_manual.csv
 
 CSV columns:
   cc_code,period,headcount_staff,headcount_worker,description
@@ -11,6 +11,7 @@ CSV columns:
 import csv
 import os
 import sqlite3
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -19,10 +20,19 @@ from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
 
 TEMPLATE_FILENAME = "headcount_manual.csv"
 BUS_DRIVER_FILENAME = "bus_headcount_manual.csv"
+LEGACY_HEADCOUNT_SOURCE_WARNING = "LEGACY_HEADCOUNT_SOURCE_IGNORED"
 REQUIRED_COLUMNS = ("cc_code", "period", "headcount_staff", "headcount_worker")
 OPTIONAL_COLUMNS = ("headcount_male", "headcount_female")
 MANUAL_HEADCOUNT_COLUMNS = (*REQUIRED_COLUMNS, *OPTIONAL_COLUMNS, "description")
 BUS_DRIVER_COLUMNS = ("cc_code", "bus_expat_count", "bus_vietnamese_count", "description")
+
+
+def _warn_legacy_headcount_source(requested: Path, raw_dir: Path) -> None:
+    warnings.warn(
+        f"{LEGACY_HEADCOUNT_SOURCE_WARNING}: {requested} is not active; using {raw_dir}",
+        RuntimeWarning,
+        stacklevel=3,
+    )
 
 
 def resolve_manual_headcount_source_dir(source_dir: str | None = None, base_dir: str | None = None) -> str:
@@ -47,8 +57,18 @@ def resolve_manual_headcount_source_dir(source_dir: str | None = None, base_dir:
 
     raw_dir = project_root / "raw"
     docs_dir = project_root / "docs" / "MP2027"
-    if requested in {project_root, docs_dir}:
+    if requested == project_root:
         return str(raw_dir)
+    if requested == docs_dir:
+        _warn_legacy_headcount_source(requested, raw_dir)
+        return str(raw_dir)
+    if requested.name == TEMPLATE_FILENAME:
+        if requested.parent == docs_dir:
+            _warn_legacy_headcount_source(requested, raw_dir)
+            return str(raw_dir)
+        if requested.parent == raw_dir:
+            return str(raw_dir)
+        return str(requested.parent)
     return str(requested)
 
 

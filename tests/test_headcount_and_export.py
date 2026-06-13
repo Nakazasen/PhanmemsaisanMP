@@ -1,6 +1,7 @@
 import csv
 import sqlite3
 import unittest
+import warnings
 from pathlib import Path
 import shutil
 import uuid
@@ -20,6 +21,7 @@ from src.parsers.manual_event_drivers import parse_manual_event_drivers
 from src.parsers.manual_headcount import (
     ensure_manual_headcount_template,
     get_required_headcount_periods,
+    LEGACY_HEADCOUNT_SOURCE_WARNING,
     parse_manual_headcount,
     quarantine_manual_headcount_rows,
     resolve_manual_headcount_source_dir,
@@ -261,10 +263,16 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
                         }
                     )
 
-            resolved = resolve_manual_headcount_source_dir(str(docs_dir), base_dir=str(project_root))
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                resolved = resolve_manual_headcount_source_dir(str(docs_dir), base_dir=str(project_root))
             self.assertEqual(Path(resolved).resolve(), raw_dir.resolve())
+            self.assertTrue(any(LEGACY_HEADCOUNT_SOURCE_WARNING in str(w.message) for w in caught))
 
-            result = parse_manual_headcount(conn, source_dir=str(docs_dir), base_dir=str(project_root))
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                result = parse_manual_headcount(conn, source_dir=str(docs_dir), base_dir=str(project_root))
+            self.assertTrue(any(LEGACY_HEADCOUNT_SOURCE_WARNING in str(w.message) for w in caught))
 
             self.assertEqual(Path(str(result["template_path"])).resolve(), (raw_dir / "headcount_manual.csv").resolve())
             self.assertEqual(result["inserted"], 1)
@@ -280,6 +288,80 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
             self.assertEqual(float(row["headcount_staff"]), 7.0)
             self.assertEqual(float(row["headcount_worker"]), 1.0)
             self.assertEqual(row["description"], "canonical raw row")
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_explicit_docs_legacy_file_path_warns_and_does_not_import_rows(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            project_root = tmpdir / "project"
+            docs_dir = project_root / "docs" / "MP2027"
+            raw_dir = project_root / "raw"
+            docs_dir.mkdir(parents=True)
+            raw_dir.mkdir(parents=True)
+            fieldnames = [
+                "cc_code",
+                "period",
+                "headcount_staff",
+                "headcount_worker",
+                "headcount_male",
+                "headcount_female",
+                "description",
+            ]
+            docs_path = docs_dir / "headcount_manual.csv"
+            with docs_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "period": "202701",
+                        "headcount_staff": "99",
+                        "headcount_worker": "0",
+                        "headcount_male": "",
+                        "headcount_female": "",
+                        "description": "legacy file path must not import",
+                    }
+                )
+            with (raw_dir / "headcount_manual.csv").open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                result = parse_manual_headcount(conn, source_dir=str(docs_path), base_dir=str(project_root))
+
+            self.assertTrue(any(LEGACY_HEADCOUNT_SOURCE_WARNING in str(w.message) for w in caught))
+            self.assertEqual(Path(str(result["template_path"])).resolve(), (raw_dir / "headcount_manual.csv").resolve())
+            self.assertEqual(result["inserted"], 0)
+            count = conn.execute("SELECT COUNT(*) FROM fact_monthly_headcount").fetchone()[0]
+            self.assertEqual(count, 0)
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_docs_source_creates_new_headcount_template_only_in_raw(self):
+        conn = _mk_conn()
+        _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            project_root = tmpdir / "project"
+            docs_dir = project_root / "docs" / "MP2027"
+            docs_dir.mkdir(parents=True)
+
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                result = parse_manual_headcount(conn, source_dir=str(docs_dir), base_dir=str(project_root))
+
+            self.assertTrue(any(LEGACY_HEADCOUNT_SOURCE_WARNING in str(w.message) for w in caught))
+            raw_path = project_root / "raw" / "headcount_manual.csv"
+            self.assertEqual(Path(str(result["template_path"])).resolve(), raw_path.resolve())
+            self.assertTrue(raw_path.exists())
+            self.assertFalse((docs_dir / "headcount_manual.csv").exists())
+            self.assertEqual(result["inserted"], 0)
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
