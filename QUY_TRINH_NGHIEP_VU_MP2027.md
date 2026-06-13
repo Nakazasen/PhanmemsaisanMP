@@ -3,9 +3,10 @@
 Ngày cập nhật: `2026-06-13`
 
 `IMPLEMENTATION_VERIFIED_AT_COMMIT=12d92325a0fffa9b03b6251d27210dbb69e032d0`
-`DOCUMENT_LAST_UPDATED_AT_COMMIT=2b87fadbed00b8fe99d371435d8e5bfc43fa9d31`
+`HANDOVER_CONTENT_BASE_COMMIT=2b87fadbed00b8fe99d371435d8e5bfc43fa9d31`
+`HANDOVER_METADATA_REVIEWED_AFTER_COMMIT=13815d9b2267fac97e2a020ef5044c94942521df`
 
-Implementation commit là trạng thái code/test được tài liệu này kiểm chứng. Document commit là commit chứa bản handover hiện hành.
+`IMPLEMENTATION_VERIFIED_AT_COMMIT` là trạng thái code/test được handover kiểm chứng. `HANDOVER_CONTENT_BASE_COMMIT` là commit tạo bản reconciliation nội dung handover chính. `HANDOVER_METADATA_REVIEWED_AFTER_COMMIT` là commit gần nhất đã review/chỉnh metadata và thuật ngữ.
 
 Tài liệu này là handover tổng hợp cho dự án MP2027 Manager. Canonical business requirement vẫn là workbook Excel ngày `09.06.2026`; Markdown này không thay thế workbook yêu cầu, ảnh minh họa, audit log, hoặc code/test evidence. Khi có mâu thuẫn, thứ tự ưu tiên là:
 
@@ -355,7 +356,7 @@ P2:
 
 Bạn đang làm trong `D:\Sandbox\MP2027`.
 
-Trạng thái implementation verified tới commit `12d92325a0fffa9b03b6251d27210dbb69e032d0`; bản handover hiện hành được ghi nhận tại document commit `2b87fadbed00b8fe99d371435d8e5bfc43fa9d31`:
+Trạng thái implementation verified tới commit `12d92325a0fffa9b03b6251d27210dbb69e032d0`; nội dung handover chính dựa trên commit `2b87fadbed00b8fe99d371435d8e5bfc43fa9d31`; metadata và thuật ngữ đã được review sau commit `13815d9b2267fac97e2a020ef5044c94942521df`:
 
 - Canonical requirement: `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`.
 - Active source workbook dir: `docs/MP2027`.
