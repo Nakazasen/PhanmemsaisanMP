@@ -1,6 +1,11 @@
 # Phase 42N3H Source Notice
 
-Current requirement source: `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`. This supersedes the source hierarchy rows below that name `04.06.2026.xlsx` or `04.06.2026_ảnh.xlsx`; those files are historical/legacy only and are not current source-of-truth inputs.
+Current canonical requirement: `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`.
+Current visual support: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx`.
+Versioned full-coverage duplicate: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_FULL_COVERAGE.xlsx`, retained only as a byte-identical duplicate and never above the official visual-support path.
+Obsolete incomplete visual: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_LEGACY_INCOMPLETE.xlsx`, retained only for historical comparison and not for active requirement interpretation.
+Obsolete old visual requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026_ảnh.xlsx`; do not use it.
+If there is any conflict, the canonical workbook wins over the visual snapshot, Markdown, audit history, and derived descriptions.
 
 # MP Saisan Business Knowledge Base v2 - Full Business Specification
 
@@ -14,8 +19,10 @@ Physical row-count gap `136` là counting fact giữa generated v1 và primary r
 
 | Source layer | Path | Role | Trust rule |
 | ------------ | ---- | ---- | ---------- |
-| Excel canonical requirement | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026.xlsx` | Source of truth requirement | Thắng derived MD nếu conflict. |
-| Visual/OCR requirement | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026_ảnh.xlsx` | Audit visual/OCR | Dùng để kiểm visual, không thay Excel gốc. |
+| Excel canonical requirement | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx` | Source of truth requirement | Thắng visual snapshot, Markdown, audit history, và derived descriptions nếu conflict. |
+| Official visual support snapshot | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx` | Audit visual support only | Dùng để kiểm visual/layout/ảnh; không thay Excel gốc. Each canonical source drawing is fully contained in at least one capture; overall coverage is 159/159. |
+| Versioned full-coverage duplicate | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_FULL_COVERAGE.xlsx` | Duplicate visual support artifact | Byte-identical duplicate of the official visual-support path; không outrank official path. |
+| Obsolete incomplete visual | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_LEGACY_INCOMPLETE.xlsx` | Historical visual reference only | Incomplete 34-image artifact; not for active requirement interpretation. |
 | Derived MD | `docs/requirements/cai_tien_nhap_du_lieu_chung.md` | Search/helper | Chỉ là bản dẫn xuất. |
 | FORM template | `raw/FORM.xlsx` | Template/output structure | Hướng dẫn target rows/formula style, không tự là amount source. |
 | Primary reference | `reference_outputs/primary/16.KDTVN 電気製造技術課_MP FY2027_各予定(Ver01).xlsx` | Output chuẩn tham khảo | Guide skeleton/formula/order, không là raw amount proof nếu chưa proven. |

@@ -1,6 +1,12 @@
 # Phase 42N3H Source Notice
 
-Current requirement source: `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`. This notice supersedes older wording in this derived document that names `04.06.2026.xlsx` as current/canonical. The workbook `Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026_ảnh.xlsx` is legacy only and must not be used as the current source of truth. Refresh/verify any requirement details from 09.06.2026 before using this document for new decisions.
+Current canonical requirement: `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`.
+Current visual support: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx`.
+Versioned full-coverage duplicate: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_FULL_COVERAGE.xlsx`, retained only as a byte-identical duplicate and never above the official visual-support path.
+Obsolete incomplete visual: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_LEGACY_INCOMPLETE.xlsx`, retained only for historical comparison and not for active requirement interpretation.
+Obsolete old visual requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026_ảnh.xlsx`; do not use it.
+Each canonical source drawing is fully contained in at least one capture; overall coverage is 159/159.
+If there is any conflict, the canonical workbook wins over the visual snapshot, Markdown, audit history, and derived descriptions. Refresh/verify any requirement details from 09.06.2026 before using this document for new decisions.
 
 # Cải tiến nhập dữ liệu chung vào file MPnew.xlsx — bản kế hoạch đã kiểm tra, sửa và bổ sung
 
