@@ -7,6 +7,13 @@ Obsolete incomplete visual: `raw/Cải tiến nhập dữ liệu chung vào file
 Obsolete old visual requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026_ảnh.xlsx`; do not use it.
 If there is any conflict, the canonical workbook wins over the visual snapshot, Markdown, audit history, and derived descriptions.
 
+Current source hierarchy last verified:
+
+- `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8`
+- Canonical requirement date: `09.06.2026`
+- Implementation status last verified against code/audits at the same commit unless a row says `STATUS_REQUIRES_CURRENT_CODE_AUDIT`.
+- Historical content must not override current audits, code, or the canonical 09.06.2026 workbook.
+
 # MP Saisan Business Knowledge Base
 
 Tài liệu này là bản kiến thức nghiệp vụ cô đọng để upload lên NotebookLM. Mục tiêu là giúp hệ thống hiểu đúng cách dự án MP2027 đang sinh file MP Saisan FY2027, phân biệt nguồn dữ liệu thật, file tham khảo, skeleton, và các kết luận gap.

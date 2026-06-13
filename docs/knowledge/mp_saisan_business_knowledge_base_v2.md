@@ -7,6 +7,13 @@ Obsolete incomplete visual: `raw/Cải tiến nhập dữ liệu chung vào file
 Obsolete old visual requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026_ảnh.xlsx`; do not use it.
 If there is any conflict, the canonical workbook wins over the visual snapshot, Markdown, audit history, and derived descriptions.
 
+Current source hierarchy last verified:
+
+- `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8`
+- Canonical requirement date: `09.06.2026`
+- Implementation status last verified against code/audits at the same commit unless a row says `STATUS_REQUIRES_CURRENT_CODE_AUDIT`.
+- Historical content must not override current audits, code, or the canonical 09.06.2026 workbook.
+
 # MP Saisan Business Knowledge Base v2 - Full Business Specification
 
 ## 1. Purpose and current truth
@@ -60,38 +67,40 @@ Requirement states:
 
 Therefore, file-order mode may generate rows by source-file order rather than primary row numbers, with blank separator row after a completed source group.
 
+Status freshness: `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8`. Recent audits verify Column S normalization, new-hire fail-closed behavior, duplicate new-hire suppression, reference-fill quarantine/scope, and one-blank-row spacing for the source-order blocks that were written. They do not certify every module as complete; rows marked `STATUS_REQUIRES_CURRENT_CODE_AUDIT` need a fresh code/output audit before implementation claims are reused.
+
 | Source order | File | Role | Current handling | Status |
 | -----------: | ---- | ---- | ---------------- | ------ |
-| 1 | `施設課　MPFY2027.xlsx` | Facility utilities/building/land | Facility writer rows 200-205 plus separator | IMPLEMENTED_V1 |
-| 2 | `固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx` | Fixed assets master/reference | Evidence exists; no one-to-one monthly mapping yet | NEEDS_MAPPING |
-| 3 | `システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls` | System cost Q1 | Combined system cost row | IMPLEMENTED_V1 |
-| 4 | `システム課金金額(Simulation)_FY2027 July.2026 ~ Dec.2026(Change AMS & PLM price).xls` | System cost Q2-Q3 | Combined system cost row | IMPLEMENTED_V1 |
-| 5 | `システム課金金額(Simulation)_FY2027 Jan.2027 ~ March.2027(Change SAP price).xls` | System cost Q4 | Combined system cost row | IMPLEMENTED_V1 |
-| 6 | `総務課 FY2027 MP 振替予定.xlsx` | Admin/GA consumables/allocation | Consumables implemented; allocation needs provenance | PARTIAL |
-| 7 | `Sinh nhật MP FY2027.xlsx` | Birthday | Not implemented in v1 | UNHANDLED |
-| 8 | `FY2027配賦額一覧 (2025.12.29).xlsx` | Allocation/travel | Needs exact mapping | NEEDS_MAPPING |
-| 9 | `Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx` | NNN paperwork | Not implemented in v1 | UNHANDLED |
-| 10 | `event_drivers_manual.csv` | Manual event input | Channel exists | MANUAL_INPUT_CHANNEL |
-| 11 | `special_costs_manual.csv` | Manual special costs | Channel exists | MANUAL_INPUT_CHANNEL |
-| 12 | `headcount_manual.csv` | Manual headcount | Channel exists | MANUAL_INPUT_CHANNEL |
+| 1 | `施設課　MPFY2027.xlsx` | Facility utilities/building/land | Written source-order block observed in 42N3Y acceptance; historical fixed rows 200-205 require fresh row audit | PARTIAL_PASS_FOR_WRITTEN_BLOCKS; `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8` |
+| 2 | `固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx` | Fixed assets master/reference | Written source-order block observed, but source-derived completeness is not certified | STATUS_REQUIRES_CURRENT_CODE_AUDIT |
+| 3 | `システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls` | System cost Q1 | Written source-order block observed, but historical combined-row implementation needs fresh audit | STATUS_REQUIRES_CURRENT_CODE_AUDIT |
+| 4 | `システム課金金額(Simulation)_FY2027 July.2026 ~ Dec.2026(Change AMS & PLM price).xls` | System cost Q2-Q3 | Period-specific completeness not certified by the latest acceptance audit | STATUS_REQUIRES_CURRENT_CODE_AUDIT |
+| 5 | `システム課金金額(Simulation)_FY2027 Jan.2027 ~ March.2027(Change SAP price).xls` | System cost Q4 | Period-specific completeness not certified by the latest acceptance audit | STATUS_REQUIRES_CURRENT_CODE_AUDIT |
+| 6 | `総務課 FY2027 MP 振替予定.xlsx` | Admin/GA consumables/allocation | Written source-order block observed; new-hire allocation is fail-closed because target headcount drivers are missing | PASS_FAIL_CLOSED_FOR_NEW_HIRE; STATUS_REQUIRES_CURRENT_CODE_AUDIT_FOR_REMAINDER |
+| 7 | `Sinh nhật MP FY2027.xlsx` | Birthday | Written source-order block observed, but source-derived completeness is not certified | STATUS_REQUIRES_CURRENT_CODE_AUDIT |
+| 8 | `FY2027配賦額一覧 (2025.12.29).xlsx` | Allocation/travel | Allocation/headcount block was suppressed by fail-closed missing-driver checks | BLOCKED_BY_MISSING_DRIVER_DATA |
+| 9 | `Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx` | NNN paperwork | Written source-order block observed, but source-derived completeness is not certified | STATUS_REQUIRES_CURRENT_CODE_AUDIT |
+| 10 | `event_drivers_manual.csv` | Manual event input | Channel exists; target rows require schema-valid data and fresh audit | STATUS_REQUIRES_CURRENT_CODE_AUDIT |
+| 11 | `special_costs_manual.csv` | Manual special costs | Channel exists; target rows require schema-valid data and fresh audit | STATUS_REQUIRES_CURRENT_CODE_AUDIT |
+| 12 | `headcount_manual.csv` | Manual headcount | Channel exists; target CC still lacks complete monthly headcount driver data | BLOCKED_BY_MISSING_DRIVER_DATA |
 
 ## 4. Module detail matrix
 
 | Module | Business purpose | Source workbook/sheet | Target/output rows or range | Main account/CC rules | Formula/month rule | Current implementation status | Remaining blocker |
 | ------ | ---------------- | --------------------- | --------------------------- | --------------------- | ------------------ | ----------------------------- | ----------------- |
-| Facility / 施設課 | Facility cost: building, land, utilities | `raw/施設課　MPFY2027.xlsx`; sheets include depreciation, interest, electric/water | rows 200-205; row 206 blank | Target CC `1412000040`; aliases `電気代`/`水道代` | `ROUND(source_value*$B$2,0)` for 12 months where VND conversion is needed; electricity/water currency handling must preserve source currency/conversion policy | IMPLEMENTED_V1 for 6 rows | Facility details outside rows 200-205 need separate mapping. |
-| Admin / GA consumables | Consumables, allocation, event/month, new employee, hiring medical check | `raw/総務課 FY2027 MP 振替予定.xlsx` | rows 207-209 implemented; known FORM targets include row 58, 97, 98 for some admin/new employee items | CC/account per mapped consumable/allocation rows | driver/headcount/unit price/month allocation; 12-month costs and event/month costs require explicit driver | IMPLEMENTED_V1 for 3 consumables; other admin allocation PARTIAL | Other admin/allocation rows need row-level provenance. |
-| System Cost | IT/system charge across three simulation periods | Three `システム課金金額(Simulation)_FY2027...xls` files | row 211; row 212 blank | Combined system cost for target CC | Month values come from three source files by period; combined row only under explicit flag | IMPLEMENTED_V1 behind explicit flag | Default unchanged; detail splitting only if requirement proves it. |
-| Fixed Assets / 固定資産 | Fixed asset depreciation/interest/detail expense | `raw/固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx` | depreciation row 38 F38:Q38; interest row 42 F42:Q42; no final source-derived target rows yet for detail group | Account `5005026371` has 75 primary rows | Need exact source workbook/sheet/row/cell + Apr-Mar monthly values | NOT_IMPLEMENTED_SOURCE_DERIVED | Master/reference and CC evidence exist, but not enough row/cell/month mapping. Do not code guess. |
-| Birthday / Sinh nhật | Birthday benefit/cost | `raw/Sinh nhật MP FY2027.xlsx` | FORM row 59, F59:Q59; row 63 is intermediate/source area, not final target | Target row/account needs confirmation | `number_of_people * unit_price` by month after source row is confirmed | NOT_IMPLEMENTED_V1 | Resolve source row and Apr-Mar values/formula mapping. |
-| NNN paperwork | Foreigner paperwork cost estimate | `raw/Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx` | FORM row 137, F137:Q137 | Needs CC/account proof | Need source row/cell/month mapping | NOT_IMPLEMENTED_V1 | Source mapping remains open, but target range is known. |
-| Allocation / 配賦 | Allocation/travel/shared costs | `raw/FY2027配賦額一覧 (2025.12.29).xlsx` | no safe final rows yet | Account/CC invariant matching required | Exact F:Q mapping required | PARTIAL / NEEDS_MAPPING | Travel/allocation rows need exact mapping. |
-| Manual CSV channels | Structured manual input | `event_drivers_manual.csv`, `special_costs_manual.csv`, `headcount_manual.csv` | generated only from schema-valid rows | Manual rows must include target identity fields | Values from CSV; provenance `MANUAL_INPUT` | HANDLED_MANUAL_CSV channel exists | Header-only/no target rows must not generate guessed rows. |
-| Primary/secondary reference | Skeleton/formula/order guide | primary and secondary output references | reference-assisted only | Not source-derived without upstream provenance | Can preserve formulas/order | READY_FOR_MAPPING | Needs explicit provenance label if used. |
+| Facility / 施設課 | Facility cost: building, land, utilities | `raw/施設課　MPFY2027.xlsx`; sheets include depreciation, interest, electric/water | historical rows 200-205; latest complete-v1 acceptance used source-order block rows, not a universal fixed-row proof | Target CC `1412000040`; aliases `電気代`/`水道代` | `ROUND(source_value*$B$2,0)` for 12 months where VND conversion is needed; electricity/water currency handling must preserve source currency/conversion policy | PARTIAL_PASS_FOR_WRITTEN_BLOCKS; STATUS_REQUIRES_CURRENT_CODE_AUDIT_FOR_FULL_COMPLETENESS | Facility details and fixed row claims need fresh source/output audit. |
+| Admin / GA consumables | Consumables, allocation, event/month, new employee, hiring medical check | `raw/総務課 FY2027 MP 振替予定.xlsx` | historical rows 207-209; known FORM targets include row 58, 97, 98 for some admin/new employee items | CC/account per mapped consumable/allocation rows | driver/headcount/unit price/month allocation; 12-month costs and event/month costs require explicit driver | PASS_FAIL_CLOSED_FOR_NEW_HIRE; STATUS_REQUIRES_CURRENT_CODE_AUDIT_FOR_REMAINDER | Target CC lacks complete monthly headcount driver data; other admin/allocation rows need row-level provenance. |
+| System Cost | IT/system charge across three simulation periods | Three `システム課金金額(Simulation)_FY2027...xls` files | historical row 211; row 212 blank | Combined system cost for target CC | Month values come from three source files by period; combined row only under explicit flag | STATUS_REQUIRES_CURRENT_CODE_AUDIT | Re-audit combined row behavior against canonical 09.06 before treating it as complete. |
+| Fixed Assets / 固定資産 | Fixed asset depreciation/interest/detail expense | `raw/固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx` | depreciation row 38 F38:Q38; interest row 42 F42:Q42; fresh output had a written block but not certified completeness | Account `5005026371` has 75 primary rows | Need exact source workbook/sheet/row/cell + Apr-Mar monthly values | STATUS_REQUIRES_CURRENT_CODE_AUDIT | Master/reference and CC evidence exist, but not enough current proof to claim complete. Do not code guess. |
+| Birthday / Sinh nhật | Birthday benefit/cost | `raw/Sinh nhật MP FY2027.xlsx` | FORM row 59, F59:Q59; fresh output had a written block but not certified completeness | Target row/account needs confirmation | `number_of_people * unit_price` by month after source row is confirmed | STATUS_REQUIRES_CURRENT_CODE_AUDIT | Resolve source row and Apr-Mar values/formula mapping before any completion claim. |
+| NNN paperwork | Foreigner paperwork cost estimate | `raw/Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx` | FORM row 137, F137:Q137; fresh output had a written block but not certified completeness | Needs CC/account proof | Need source row/cell/month mapping | STATUS_REQUIRES_CURRENT_CODE_AUDIT | Source mapping remains open, but target range is known. |
+| Allocation / 配賦 | Allocation/travel/shared costs | `raw/FY2027配賦額一覧 (2025.12.29).xlsx` | no safe final rows yet | Account/CC invariant matching required | Exact F:Q mapping required | BLOCKED_BY_MISSING_DRIVER_DATA / STATUS_REQUIRES_CURRENT_CODE_AUDIT | Travel/allocation rows need exact mapping and complete target headcount drivers. |
+| Manual CSV channels | Structured manual input | `event_drivers_manual.csv`, `special_costs_manual.csv`, `headcount_manual.csv` | generated only from schema-valid rows | Manual rows must include target identity fields | Values from CSV; provenance `MANUAL_INPUT` | STATUS_REQUIRES_CURRENT_CODE_AUDIT | Header-only/no target rows must not generate guessed rows. |
+| Primary/secondary reference | Skeleton/formula/order guide | primary and secondary output references | reference-assisted only | Not source-derived without upstream provenance | Can preserve formulas/order | PASS_SCOPED_QUARANTINE; `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8` | Unscoped primary reference rows are quarantined, not emitted into the workbook. |
 
 ### 4.1 Facility / 施設課
 
-Known implemented rows: Facility rows `200-205`, blank row `206`.
+Historical fixed-row note: Facility rows `200-205`, blank row `206`. Latest complete-v1 acceptance used source-order rows and does not make these row numbers universal completion proof.
 
 Items:
 
@@ -107,13 +116,13 @@ Aliases:
 - `電気代` maps to generated `electricity`.
 - `水道代` maps to generated `water`.
 
-Status: IMPLEMENTED_V1 for these 6 rows. Remaining Facility details outside this block need separate source mapping.
+Status: PARTIAL_PASS_FOR_WRITTEN_BLOCKS with `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8`. This confirms the written block participated in the latest spacing acceptance, not that every Facility amount or historical fixed row is complete. Remaining Facility details outside this block require `STATUS_REQUIRES_CURRENT_CODE_AUDIT`.
 
 ### 4.2 Admin / GA consumables
 
 Source workbook: `raw/総務課 FY2027 MP 振替予定.xlsx`.
 
-Known generated rows: Admin rows `207-209`, blank row `210`.
+Historical fixed-row note: Admin rows `207-209`, blank row `210`. Treat these as historical implementation references until a fresh code/output audit confirms them.
 
 Items:
 
@@ -121,7 +130,7 @@ Items:
 - `hand_soap`
 - `alcohol_disinfectant`
 
-Status: IMPLEMENTED_V1 for 3 rows. If any sample values are `UNKNOWN`, keep that uncertainty visible; do not hide or guess. Remaining admin/allocation rows need row-level provenance.
+Status: PASS_FAIL_CLOSED_FOR_NEW_HIRE with `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8`; target CC `1412000040` still lacks complete monthly headcount driver data, so real new-hire monthly amounts are not certified. Remaining admin/allocation rows require `STATUS_REQUIRES_CURRENT_CODE_AUDIT` and row-level provenance.
 
 Expanded admin allocation rules:
 
@@ -139,9 +148,9 @@ Source files:
 - `raw/システム課金金額(Simulation)_FY2027 July.2026 ~ Dec.2026(Change AMS & PLM price).xls`
 - `raw/システム課金金額(Simulation)_FY2027 Jan.2027 ~ March.2027(Change SAP price).xls`
 
-Known generated row: row `211`, item_id `system_cost_combined`, blank row `212`.
+Historical fixed-row note: row `211`, item_id `system_cost_combined`, blank row `212`. Treat this as historical implementation context until a fresh code/output audit confirms it.
 
-Status: IMPLEMENTED_V1 as combined system cost row. It is explicit-flag only; default export remains unchanged.
+Status: STATUS_REQUIRES_CURRENT_CODE_AUDIT. Historical notes describe a combined system cost row, but current docs must not treat it as complete until a fresh code/output audit verifies it against canonical 09.06.2026.
 
 System Cost formula policy:
 
@@ -157,7 +166,7 @@ Source workbook: `raw/固定資産情報_Fixed_Assets_Information_2025.11 - Nov.
 
 Known account/group: `5005026371` has 75 primary rows in gap matrix. The fixed asset workbook has master/reference and CC evidence, but not enough one-to-one row/cell/month values for source-derived export.
 
-Current status: NOT_IMPLEMENTED_SOURCE_DERIVED.
+Current status: STATUS_REQUIRES_CURRENT_CODE_AUDIT.
 
 Remaining blocker: need workbook/sheet/row/cell + account + CC + Apr-Mar monthly values. Do not code guess. Secondary may be used as skeleton/reference guide, not raw amount proof.
 
@@ -173,7 +182,7 @@ Source workbook: `raw/Sinh nhật MP FY2027.xlsx`.
 
 Requirement status: Birthday/Tiền sinh nhật image indicates FORM target row `59`, F59:Q59. Old note about row `63` is intermediate/source area, not target row.
 
-Current status: UNHANDLED_SOURCE_ORDER_FILE / NOT_IMPLEMENTED_V1. Remaining blocker: source row and Apr-Mar values/formula mapping must be confirmed.
+Current status: STATUS_REQUIRES_CURRENT_CODE_AUDIT. Remaining blocker: source row and Apr-Mar values/formula mapping must be confirmed before any completion claim.
 
 Birthday formula policy:
 
@@ -186,13 +195,13 @@ Birthday formula policy:
 
 Source workbook: `raw/Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx`.
 
-Current status: UNHANDLED_SOURCE_ORDER_FILE / NOT_IMPLEMENTED_V1. Target range is known: FORM row `137`, range `F137:Q137`. Remaining blocker: source row/cell/month mapping and output order.
+Current status: STATUS_REQUIRES_CURRENT_CODE_AUDIT. Target range is known: FORM row `137`, range `F137:Q137`. Remaining blocker: source row/cell/month mapping and output order.
 
 ### 4.7 Allocation / 配賦
 
 Source workbook: `raw/FY2027配賦額一覧 (2025.12.29).xlsx`.
 
-Current status: PARTIAL / NEEDS_MAPPING. Remaining blocker: travel/allocation rows need exact mapping before output generation.
+Current status: BLOCKED_BY_MISSING_DRIVER_DATA / STATUS_REQUIRES_CURRENT_CODE_AUDIT. Remaining blocker: travel/allocation rows need exact mapping and complete target headcount drivers before output generation.
 
 ### 4.8 Manual CSV channels
 
@@ -202,27 +211,29 @@ Manual input files:
 - `special_costs_manual.csv`
 - `headcount_manual.csv`
 
-Current status: HANDLED_MANUAL_CSV channel exists. If header-only/no target rows, no rows should be generated. Manual rows must be schema-valid and provenance `MANUAL_INPUT`.
+Current status: STATUS_REQUIRES_CURRENT_CODE_AUDIT. If header-only/no target rows, no rows should be generated. Manual rows must be schema-valid and provenance `MANUAL_INPUT`.
 
 ## 5. Target rows / cell ranges known so far
 
+Rows `200-212` below are historical file-order-v1 target references. The latest complete-v1 acceptance for CC `1412000040` used source-order output rows `168-186`; do not treat those row numbers as completion proof without a fresh output audit.
+
 | Area | Target row/range | Columns | Meaning | Status | Evidence/source |
 | ---- | ---------------- | ------- | ------- | ------ | --------------- |
-| Facility | rows 200-205 | F:Q months, identity columns | 6 Facility rows | IMPLEMENTED_V1 | RC/release readiness docs |
-| Facility separator | row 206 | all blank | blank separator row | IMPLEMENTED_V1 | file-order requirement |
-| Admin | rows 207-209 | F:Q months | 3 consumables | IMPLEMENTED_V1 | RC/release readiness docs |
-| Admin separator | row 210 | all blank | blank separator row | IMPLEMENTED_V1 | file-order requirement |
-| System Cost | row 211 | F:Q months | combined system cost | IMPLEMENTED_V1 | RC/release readiness docs |
-| System separator | row 212 | all blank | blank separator row | IMPLEMENTED_V1 | file-order requirement |
-| Hiring medical check | row 58 | F58:Q58 | hiring medical check target | NEEDS_MAPPING | admin allocation/user rule |
-| Birthday | row 59 | F59:Q59 | Birthday target row | NEEDS_MAPPING | visual requirement; row 63 is not final target |
-| New employee notebook staff | row 97 | F97:Q97 | new employee notebook/staff | NEEDS_MAPPING | admin allocation/user rule |
-| New employee notebook worker | row 98 | F98:Q98 | new employee notebook/worker | NEEDS_MAPPING | admin allocation/user rule |
-| NNN paperwork | row 137 | F137:Q137 | NNN paperwork target | NEEDS_MAPPING | user rule; source mapping still open |
-| Fixed asset depreciation | row 38 | F38:Q38 | fixed asset depreciation target | NEEDS_MAPPING | FORM/source trace docs |
-| Fixed asset interest | row 42 | F42:Q42 | fixed asset interest target | NEEDS_MAPPING | FORM/source trace docs |
+| Facility | rows 200-205 | F:Q months, identity columns | 6 Facility rows | STATUS_REQUIRES_CURRENT_CODE_AUDIT | historical RC/release readiness docs |
+| Facility separator | row 206 | all blank | blank separator row | STATUS_REQUIRES_CURRENT_CODE_AUDIT | file-order requirement |
+| Admin | rows 207-209 | F:Q months | 3 consumables | STATUS_REQUIRES_CURRENT_CODE_AUDIT | historical RC/release readiness docs |
+| Admin separator | row 210 | all blank | blank separator row | STATUS_REQUIRES_CURRENT_CODE_AUDIT | file-order requirement |
+| System Cost | row 211 | F:Q months | combined system cost | STATUS_REQUIRES_CURRENT_CODE_AUDIT | historical RC/release readiness docs |
+| System separator | row 212 | all blank | blank separator row | STATUS_REQUIRES_CURRENT_CODE_AUDIT | file-order requirement |
+| Hiring medical check | row 58 | F58:Q58 | hiring medical check target | BLOCKED_BY_MISSING_DRIVER_DATA | admin allocation/user rule |
+| Birthday | row 59 | F59:Q59 | Birthday target row | STATUS_REQUIRES_CURRENT_CODE_AUDIT | visual requirement; row 63 is not final target |
+| New employee notebook staff | row 97 | F97:Q97 | new employee notebook/staff | BLOCKED_BY_MISSING_DRIVER_DATA | admin allocation/user rule |
+| New employee notebook worker | row 98 | F98:Q98 | new employee notebook/worker | BLOCKED_BY_MISSING_DRIVER_DATA | admin allocation/user rule |
+| NNN paperwork | row 137 | F137:Q137 | NNN paperwork target | STATUS_REQUIRES_CURRENT_CODE_AUDIT | user rule; source mapping still open |
+| Fixed asset depreciation | row 38 | F38:Q38 | fixed asset depreciation target | STATUS_REQUIRES_CURRENT_CODE_AUDIT | FORM/source trace docs |
+| Fixed asset interest | row 42 | F42:Q42 | fixed asset interest target | STATUS_REQUIRES_CURRENT_CODE_AUDIT | FORM/source trace docs |
 | Rows 38/40/42 caution | rows 38/40/42 | output-mode dependent | do not patch row 40 directly | NEEDS_OUTPUT_MODE_DECISION | source trace architecture docs |
-| Fixed assets detail | no final target yet | F:Q unknown | account `5005026371` details | BLOCKED_NEEDS_PROVENANCE | 42N2C blocker |
+| Fixed assets detail | no final target yet | F:Q unknown | account `5005026371` details | STATUS_REQUIRES_CURRENT_CODE_AUDIT / BLOCKED_NEEDS_PROVENANCE | historical 42N2C blocker |
 
 ## 6. Account code and Cost Center rules
 
@@ -303,17 +314,18 @@ Reference-assisted output must carry label like `REFERENCE_FILLED_FROM_PRIMARY` 
 
 | Capability | Flag / module | Status | Rows affected | Notes |
 | ---------- | ------------- | ------ | ------------- | ----- |
-| default export unchanged | default mode | DONE_V1 | all default outputs | No new rows without explicit flag. |
-| file-order export v1 | `--file-order-export-v1` | DONE_V1 | Facility/Admin/System v1 rows | Master flag. |
-| Facility writer | Facility module | DONE_V1 | rows 200-205 + 206 blank | Handles six Facility rows. |
-| Admin consumables writer | Admin/GA module | DONE_V1 | rows 207-209 + 210 blank | Three consumables. |
-| System cost writer | System Cost module | DONE_V1 | row 211 + 212 blank | Combined system cost. |
-| Fixed assets detail writer | Fixed Assets module | BLOCKED_NEEDS_PROVENANCE | account `5005026371` 75 primary rows | Need source row/cell/month mapping. |
-| Birthday writer | Birthday module | NOT_STARTED | FORM row 59 target | Needs source mapping. |
-| NNN writer | NNN paperwork module | NOT_STARTED | unknown target | Needs source mapping. |
-| Allocation writer | Allocation module | READY_FOR_MAPPING | allocation/travel rows | Needs exact mapping. |
-| reference-assisted fill v2 | explicit future flag | RECOMMENDED_NEXT | physical gap candidates | Must label provenance. |
-| secondary skeleton extraction | analysis workflow | READY_FOR_MAPPING | account `5005026371` candidates | Use as guide only. |
+| default export unchanged | default mode | STATUS_REQUIRES_CURRENT_CODE_AUDIT | all default outputs | Re-audit before using as a current completion claim. |
+| file-order / complete-v1 spacing | `--mp-saisan-complete-v1` | PARTIAL_PASS_FOR_WRITTEN_BLOCKS; `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8` | 6 written source-order blocks in latest target output | All written block gaps had exactly one blank row; seven-block acceptance remains blocked by missing driver data. |
+| Facility writer | Facility module | STATUS_REQUIRES_CURRENT_CODE_AUDIT | historical rows 200-205 + 206 blank | Latest audit verified block presence/spacing, not full amount completeness. |
+| Admin consumables/new-hire writer | Admin/GA module | PASS_FAIL_CLOSED_FOR_NEW_HIRE; STATUS_REQUIRES_CURRENT_CODE_AUDIT_FOR_REMAINDER | rows 58/97/98 and admin source-order rows | Target CC lacks complete monthly headcount driver data; real new-hire monthly amounts are not certified. |
+| System cost writer | System Cost module | STATUS_REQUIRES_CURRENT_CODE_AUDIT | historical row 211 + 212 blank | Combined system cost behavior needs fresh audit against canonical 09.06. |
+| Fixed assets detail writer | Fixed Assets module | STATUS_REQUIRES_CURRENT_CODE_AUDIT / BLOCKED_NEEDS_PROVENANCE | account `5005026371` 75 primary rows | Need source row/cell/month mapping before completion claim. |
+| Birthday writer | Birthday module | STATUS_REQUIRES_CURRENT_CODE_AUDIT | FORM row 59 target | Needs source mapping and current output proof. |
+| NNN writer | NNN paperwork module | STATUS_REQUIRES_CURRENT_CODE_AUDIT | FORM row 137 target | Needs source mapping and current output proof. |
+| Allocation writer | Allocation module | BLOCKED_BY_MISSING_DRIVER_DATA / STATUS_REQUIRES_CURRENT_CODE_AUDIT | allocation/travel rows | Needs exact mapping and complete headcount drivers. |
+| Column S cost-row rule | output normalizer | PASS; `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8` | month-cost rows from row 30 onward | Latest audit found cost+blank S = 0 and no-cost+nonblank S = 0. |
+| reference-assisted fill scope | complete-v1/reference assist | PASS_SCOPED_QUARANTINE; `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8` | primary reference candidates | Latest audit found 0 reference-filled workbook rows and 130 quarantined unscoped rows. |
+| secondary skeleton extraction | analysis workflow | STATUS_REQUIRES_CURRENT_CODE_AUDIT | account `5005026371` candidates | Use as guide only; not raw amount proof. |
 
 ## 11. Recommended next phases
 
