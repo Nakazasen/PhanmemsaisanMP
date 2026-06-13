@@ -35,6 +35,8 @@ from src.db.loader import load_all
 from src.db.schema import create_schema, get_connection
 from src.parsers.manual_event_drivers import TEMPLATE_COLUMNS, ensure_manual_event_drivers_template
 from src.parsers.manual_headcount import (
+    BUS_DRIVER_COLUMNS,
+    ensure_manual_bus_headcount_template,
     ensure_manual_headcount_template,
     get_required_headcount_periods,
     parse_manual_headcount,
@@ -801,6 +803,16 @@ class MPManagerApp:
             writer.writeheader()
             writer.writerows(rows)
 
+    def _read_manual_bus_headcount_rows(self, csv_path: str):
+        rows = self._read_csv_rows(csv_path)
+        return [
+            {column: str(row.get(column, "") or "").strip() for column in BUS_DRIVER_COLUMNS}
+            for row in rows
+        ]
+
+    def _write_manual_bus_headcount_rows(self, csv_path: str, rows):
+        self._write_csv_rows(csv_path, BUS_DRIVER_COLUMNS, rows)
+
     def open_user_guide(self):
         guide = tk.Toplevel(self.root)
         guide.title("Hướng dẫn sử dụng chi tiết")
@@ -1036,10 +1048,11 @@ class MPManagerApp:
         source_dir = self.source_dir.get() or BASE_DIR
         os.makedirs(source_dir, exist_ok=True)
         csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)
+        bus_csv_path = ensure_manual_bus_headcount_template(source_dir)
 
         editor = tk.Toplevel(self.root)
         editor.title("Nh\u1eadp li\u1ec7u nh\u00e2n s\u1ef1 12 th\u00e1ng")
-        editor.geometry("1120x700")
+        editor.geometry("1120x760")
 
         frame = ttk.Frame(editor, padding=10)
         frame.pack(fill=tk.BOTH, expand=True)
@@ -1056,6 +1069,9 @@ class MPManagerApp:
         ).grid(row=1, column=0, columnspan=8, sticky="w", pady=(4, 10))
 
         cc_var = tk.StringVar()
+        bus_expat_count_var = tk.StringVar(value="0")
+        bus_vietnamese_count_var = tk.StringVar(value="0")
+        bus_description_var = tk.StringVar()
         cc_choices = self._get_cc_choices()
         periods = get_required_headcount_periods(fiscal_year)
         fiscal_months = set(get_fy_months(fiscal_year))
@@ -1072,9 +1088,34 @@ class MPManagerApp:
         cc_combo = ttk.Combobox(frame, textvariable=cc_var, values=cc_choices, width=42, state="readonly")
         cc_combo.grid(row=2, column=1, sticky="w", pady=(0, 8))
 
+        bus_frame = ttk.LabelFrame(frame, text="Th\u00f4ng tin xe bus - d\u00f9ng chung cho 12 th\u00e1ng")
+        bus_frame.grid(row=3, column=0, columnspan=8, sticky="ew", pady=(0, 10))
+        ttk.Label(bus_frame, text="Ng\u01b0\u1eddi bi\u1ec7t ph\u00e1i \u0111i xe bus").grid(
+            row=0, column=0, sticky="w", padx=(8, 4), pady=(8, 4)
+        )
+        ttk.Entry(bus_frame, textvariable=bus_expat_count_var, width=12).grid(
+            row=0, column=1, sticky="w", padx=(0, 12), pady=(8, 4)
+        )
+        ttk.Label(bus_frame, text="Ng\u01b0\u1eddi Vi\u1ec7t Nam \u0111i xe bus").grid(
+            row=0, column=2, sticky="w", padx=(8, 4), pady=(8, 4)
+        )
+        ttk.Entry(bus_frame, textvariable=bus_vietnamese_count_var, width=12).grid(
+            row=0, column=3, sticky="w", padx=(0, 12), pady=(8, 4)
+        )
+        ttk.Label(bus_frame, text="Ghi ch\u00fa").grid(row=0, column=4, sticky="w", padx=(8, 4), pady=(8, 4))
+        ttk.Entry(bus_frame, textvariable=bus_description_var, width=42).grid(
+            row=0, column=5, sticky="ew", padx=(0, 8), pady=(8, 4)
+        )
+        ttk.Label(
+            bus_frame,
+            text="S\u1ed1 l\u01b0\u1ee3ng n\u00e0y \u0111\u01b0\u1ee3c s\u1eed d\u1ee5ng chung cho 12 th\u00e1ng FY.",
+            font=("Segoe UI", 9, "italic"),
+        ).grid(row=1, column=0, columnspan=6, sticky="w", padx=8, pady=(0, 8))
+        bus_frame.columnconfigure(5, weight=1)
+
         table = ttk.Frame(frame)
-        table.grid(row=3, column=0, columnspan=8, sticky="nsew")
-        frame.rowconfigure(3, weight=1)
+        table.grid(row=4, column=0, columnspan=8, sticky="nsew")
+        frame.rowconfigure(4, weight=1)
         frame.columnconfigure(7, weight=1)
 
         headers = [
@@ -1124,12 +1165,32 @@ class MPManagerApp:
             for vars_for_period in month_vars.values():
                 for field_var in vars_for_period.values():
                     field_var.set("")
+            bus_expat_count_var.set("0")
+            bus_vietnamese_count_var.set("0")
+            bus_description_var.set("")
+
+        def validate_non_negative_int(raw, label):
+            text = str(raw or "").strip()
+            if not text:
+                return "0"
+            if not text.isdecimal():
+                raise ValueError(f"{label} ph\u1ea3i l\u00e0 s\u1ed1 nguy\u00ean kh\u00f4ng \u00e2m.")
+            return str(int(text))
 
         def load_selected_cc(*_args):
             clear_table()
             cc_code = parse_cc_code(cc_var.get())
             if not cc_code:
                 return
+            bus_row_map = {
+                str(row.get("cc_code", "")).strip(): row
+                for row in self._read_manual_bus_headcount_rows(bus_csv_path)
+            }
+            bus_row = bus_row_map.get(cc_code)
+            if bus_row:
+                bus_expat_count_var.set(str(bus_row.get("bus_expat_count", "")).strip() or "0")
+                bus_vietnamese_count_var.set(str(bus_row.get("bus_vietnamese_count", "")).strip() or "0")
+                bus_description_var.set(str(bus_row.get("description", "")).strip())
             row_map = {
                 (str(row.get("cc_code", "")).strip(), str(row.get("period", "")).strip()): row
                 for row in self._read_manual_headcount_rows(csv_path)
@@ -1152,12 +1213,28 @@ class MPManagerApp:
 
             try:
                 int(float(cc_code))
+                bus_expat_count = validate_non_negative_int(
+                    bus_expat_count_var.get(), "Ng\u01b0\u1eddi bi\u1ec7t ph\u00e1i \u0111i xe bus"
+                )
+                bus_vietnamese_count = validate_non_negative_int(
+                    bus_vietnamese_count_var.get(), "Ng\u01b0\u1eddi Vi\u1ec7t Nam \u0111i xe bus"
+                )
             except Exception:
                 messagebox.showerror("Lỗi", "Mã CC không hợp lệ.")
                 return
 
             existing_rows = self._read_manual_headcount_rows(csv_path)
             new_rows = [row for row in existing_rows if str(row.get("cc_code", "")).strip() != cc_code]
+            existing_bus_rows = self._read_manual_bus_headcount_rows(bus_csv_path)
+            new_bus_rows = [row for row in existing_bus_rows if str(row.get("cc_code", "")).strip() != cc_code]
+            new_bus_rows.append(
+                {
+                    "cc_code": cc_code,
+                    "bus_expat_count": bus_expat_count,
+                    "bus_vietnamese_count": bus_vietnamese_count,
+                    "description": bus_description_var.get().strip(),
+                }
+            )
             saved_count = 0
 
             for period in periods:
@@ -1200,7 +1277,9 @@ class MPManagerApp:
                 saved_count += 1
 
             new_rows.sort(key=lambda row: (str(row.get("cc_code", "")), str(row.get("period", ""))))
+            new_bus_rows.sort(key=lambda row: str(row.get("cc_code", "")))
             self._write_manual_headcount_rows(csv_path, new_rows)
+            self._write_manual_bus_headcount_rows(bus_csv_path, new_bus_rows)
             db_path = os.path.join(BASE_DIR, "mp2027.db")
             conn = get_connection(db_path)
             try:
@@ -1209,26 +1288,29 @@ class MPManagerApp:
             finally:
                 conn.close()
             self.log(
-                "Lưu nhân sự theo kỳ: CC={cc}, số dòng={rows}, tệp={path}; DB inserted={inserted}, errors={errors}".format(
+                "Lưu nhân sự theo kỳ: CC={cc}, số dòng={rows}, tệp={path}; bus_file={bus_path}; DB inserted={inserted}, bus_inserted={bus_inserted}, errors={errors}".format(
                     cc=cc_code,
                     rows=saved_count,
                     path=csv_path,
+                    bus_path=bus_csv_path,
                     inserted=result.get("inserted", 0),
+                    bus_inserted=result.get("bus_inserted", 0),
                     errors=result.get("errors", 0),
                 )
             )
             messagebox.showinfo(
                 "Đã lưu",
-                "Đã lưu {rows} dòng cho CC {cc}. DB inserted={inserted}, errors={errors}.".format(
+                "Đã lưu {rows} dòng cho CC {cc}. DB inserted={inserted}, bus_inserted={bus_inserted}, errors={errors}.".format(
                     rows=saved_count,
                     cc=cc_code,
                     inserted=result.get("inserted", 0),
+                    bus_inserted=result.get("bus_inserted", 0),
                     errors=result.get("errors", 0),
                 ),
             )
 
         button_row = ttk.Frame(frame)
-        button_row.grid(row=4, column=0, columnspan=8, sticky="w", pady=(12, 0))
+        button_row.grid(row=5, column=0, columnspan=8, sticky="w", pady=(12, 0))
         ttk.Button(button_row, text="Tải dữ liệu CC", command=load_selected_cc).grid(row=0, column=0, padx=(0, 6))
         ttk.Button(button_row, text="Lưu 12 tháng", command=save_current_cc).grid(row=0, column=1, padx=(0, 6))
         ttk.Button(button_row, text="Đóng", command=editor.destroy).grid(row=0, column=2, padx=(0, 6))

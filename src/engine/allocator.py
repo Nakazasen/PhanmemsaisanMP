@@ -81,6 +81,18 @@ EVENT_MONTH_TOKENS = (
     "thang cap",
 )
 NEXT_EVENT_MONTH_TOKENS = ("\u7fcc\u6708", "thang tiep theo")
+BUS_RULE_SPECS = {
+    "bus_expat_count": {
+        "tokens": ("出向者通勤送迎費", "xe dua don cho nguoi nhat", "xe đưa đón cho người nhật"),
+        "form_row": 53,
+        "label": "expat bus",
+    },
+    "bus_vietnamese_count": {
+        "tokens": ("ローカル通勤送迎費", "xe dua don cho nguoi viet", "xe đưa đón cho người việt"),
+        "form_row": 54,
+        "label": "Vietnamese bus",
+    },
+}
 
 
 class AllocationEngine:
@@ -92,6 +104,7 @@ class AllocationEngine:
         self.fy_months = helpers.get_fy_months(int(fy_str.replace("FY", "")))
         self.period_index = {p: i for i, p in enumerate(self.fy_months)}
         self.hc_cache = self._load_headcount_cache()
+        self.bus_driver_cache = self._load_bus_driver_cache()
         self._missing_input_keys: set[tuple[str, str, str, str]] = set()
 
     def _normalize_text(self, value: str) -> str:
@@ -133,6 +146,22 @@ class AllocationEngine:
                 "headcount_female": float(row["headcount_female"] or 0.0),
             }
         return cache
+
+    def _load_bus_driver_cache(self) -> dict[str, dict[str, float]]:
+        rows = self.conn.execute(
+            """
+            SELECT cc_code, bus_expat_count, bus_vietnamese_count
+            FROM fact_bus_headcount_drivers
+            WHERE source = 'manual'
+            """
+        ).fetchall()
+        return {
+            str(row["cc_code"]).strip(): {
+                "bus_expat_count": float(row["bus_expat_count"] or 0.0),
+                "bus_vietnamese_count": float(row["bus_vietnamese_count"] or 0.0),
+            }
+            for row in rows
+        }
 
     @staticmethod
     def _is_valid_account_code(value) -> bool:
@@ -294,6 +323,45 @@ class AllocationEngine:
             (cc_key, period, message, action, rule_id),
         )
 
+    def _bus_rule_kind(self, rule) -> str | None:
+        item_name = self._normalize_text(rule["item_name"] or "")
+        for driver_key, spec in BUS_RULE_SPECS.items():
+            normalized_tokens = tuple(self._normalize_text(token) for token in spec["tokens"])
+            if any(token in item_name for token in normalized_tokens):
+                return driver_key
+        return None
+
+    def _bus_rule_for_driver(self, driver_key: str):
+        matches = []
+        for rule in self.conn.execute("SELECT * FROM map_allocation_rules").fetchall():
+            if self._bus_rule_kind(rule) == driver_key:
+                matches.append(rule)
+        if len(matches) == 1:
+            return matches[0]
+        return None
+
+    def _record_bus_missing(self, cc_code: object, driver_key: str, missing_input: str, rule=None) -> None:
+        cc_key = str(cc_code).strip()
+        key = (cc_key, "FY", driver_key, missing_input)
+        if key in self._missing_input_keys:
+            return
+        self._missing_input_keys.add(key)
+
+        spec = BUS_RULE_SPECS.get(driver_key, {})
+        rule_id = int(rule["id"]) if rule is not None and rule["id"] is not None else None
+        message = f"Missing bus allocation input: cc={cc_key}, driver_type={driver_key}, missing={missing_input}"
+        action = (
+            f"Provide {missing_input} for {spec.get('label', driver_key)} before bus allocation can be generated."
+        )
+        self.conn.execute(
+            """
+            INSERT INTO fact_missing_inputs
+            (severity, cc_code, period, area, message, action, source, rule_id)
+            VALUES ('action', ?, ?, 'bus_headcount_driver', ?, ?, 'allocator', ?)
+            """,
+            (cc_key, ",".join(self.fy_months), message, action, rule_id),
+        )
+
     def _get_event_delta(self, cc_code: object, period: str, driver_type: str, rule=None) -> float:
         prev_period = self._get_prev_period(period)
         if not prev_period:
@@ -361,6 +429,7 @@ class AllocationEngine:
         print("Starting Refactored Allocation Engine...")
         self._map_direct_costs()
         self._process_allocation_rules()
+        self._process_bus_headcount_drivers()
         self.conn.commit()
         return {"status": "success"}
 
@@ -400,6 +469,8 @@ class AllocationEngine:
         cursor = self.conn.cursor()
 
         for rule in rules:
+            if self._bus_rule_kind(rule) is not None:
+                continue
             if self._requires_manual_event_source(rule):
                 continue
 
@@ -458,3 +529,75 @@ class AllocationEngine:
                             f"Alloc: {rule['item_name']}",
                         ),
                     )
+
+    def _process_bus_headcount_drivers(self) -> None:
+        cursor = self.conn.cursor()
+        for driver_key, spec in BUS_RULE_SPECS.items():
+            rule = self._bus_rule_for_driver(driver_key)
+            for cc in self.cost_centers:
+                cc_code = str(cc["code"]).strip()
+                driver_row = self.bus_driver_cache.get(cc_code)
+                if driver_row is None:
+                    self._record_bus_missing(cc_code, driver_key, driver_key, rule=rule)
+                    continue
+
+                driver_value = float(driver_row.get(driver_key, 0.0) or 0.0)
+                if driver_value <= 0:
+                    continue
+
+                if rule is None:
+                    self._record_bus_missing(cc_code, driver_key, "account mapping", rule=None)
+                    continue
+
+                unit_price = float(rule["unit_price"] or 0.0)
+                if unit_price <= 0:
+                    missing_name = "expat bus unit_price" if driver_key == "bus_expat_count" else "Vietnamese bus unit_price"
+                    self._record_bus_missing(cc_code, driver_key, missing_name, rule=rule)
+                    continue
+
+                target_acc = self._get_account_for_cc(
+                    str(cc["cost_type"]),
+                    rule["mfg_account"],
+                    rule["ga_account"],
+                    rule["sales_account"],
+                )
+                if not target_acc:
+                    self._record_bus_missing(cc_code, driver_key, "account mapping", rule=rule)
+                    continue
+
+                amount_vnd = driver_value * unit_price
+                if amount_vnd <= 0:
+                    continue
+
+                formula = f"{self._format_formula_number(driver_value)}*{self._format_formula_number(unit_price)}"
+                description = (
+                    f"Alloc: {rule['item_name']}|driver_type={driver_key}|driver_value={self._format_formula_number(driver_value)}"
+                    f"|unit_price_key={rule['item_name']}|unit_price={self._format_formula_number(unit_price)}"
+                    f"|formula_expr={formula}|source_workbook=allocation_rules_master|source_sheet=map_allocation_rules"
+                    "|provenance=bus_headcount_manual|status=OK"
+                )
+                cursor.executemany(
+                    """
+                    INSERT INTO fact_input_data
+                    (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
+                    VALUES (?, ?, ?, ?, ?, ?, 'base', ?)
+                    """,
+                    [
+                        (
+                            f"alloc_{int(rule['id'])}",
+                            period,
+                            amount_vnd,
+                            cc_code,
+                            int(target_acc),
+                            int(spec["form_row"]),
+                            description,
+                        )
+                        for period in self.fy_months
+                    ],
+                )
+
+    def _format_formula_number(self, value: float) -> str:
+        number = float(value or 0.0)
+        if abs(number - round(number)) < 1e-9:
+            return str(int(round(number)))
+        return f"{number:.6f}".rstrip("0").rstrip(".")

@@ -174,6 +174,24 @@ class TestExportIntegrityGuard(unittest.TestCase):
 
 
 class TestManualHeadcountGenderSplit(unittest.TestCase):
+    def _write_empty_headcount_csv(self, tmpdir: Path):
+        csv_path = tmpdir / "headcount_manual.csv"
+        with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.DictWriter(
+                f,
+                fieldnames=[
+                    "cc_code",
+                    "period",
+                    "headcount_staff",
+                    "headcount_worker",
+                    "headcount_male",
+                    "headcount_female",
+                    "description",
+                ],
+            )
+            writer.writeheader()
+        return csv_path
+
     def test_manual_parser_accepts_required_baseline_and_is_idempotent(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
@@ -233,6 +251,78 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
             self.assertEqual(float(baseline["headcount_staff"]), 27.0)
             self.assertEqual(float(baseline["headcount_worker"]), 0.0)
             self.assertEqual(baseline["source"], "manual")
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_parser_reads_scalar_bus_headcount_drivers_idempotently(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            self._write_empty_headcount_csv(tmpdir)
+            bus_path = tmpdir / "bus_headcount_manual.csv"
+            with bus_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=["cc_code", "bus_expat_count", "bus_vietnamese_count", "description"],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "bus_expat_count": "3",
+                        "bus_vietnamese_count": "7",
+                        "description": "scalar bus counts",
+                    }
+                )
+
+            first = parse_manual_headcount(conn, source_dir=str(tmpdir))
+            second = parse_manual_headcount(conn, source_dir=str(tmpdir))
+
+            self.assertEqual(first["bus_inserted"], 1)
+            self.assertEqual(second["bus_inserted"], 1)
+            self.assertEqual(first["bus_errors"], 0)
+            self.assertEqual(second["bus_errors"], 0)
+
+            rows = conn.execute("SELECT * FROM fact_bus_headcount_drivers WHERE cc_code=?", (str(cc_code),)).fetchall()
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(float(rows[0]["bus_expat_count"]), 3.0)
+            self.assertEqual(float(rows[0]["bus_vietnamese_count"]), 7.0)
+
+            headcount_rows = conn.execute("SELECT COUNT(*) FROM fact_monthly_headcount").fetchone()[0]
+            self.assertEqual(headcount_rows, 0)
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_parser_rejects_non_integer_bus_driver_counts(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            self._write_empty_headcount_csv(tmpdir)
+            bus_path = tmpdir / "bus_headcount_manual.csv"
+            with bus_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=["cc_code", "bus_expat_count", "bus_vietnamese_count", "description"],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "bus_expat_count": "1.5",
+                        "bus_vietnamese_count": "2",
+                        "description": "bad count",
+                    }
+                )
+
+            result = parse_manual_headcount(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["bus_inserted"], 0)
+            self.assertEqual(result["bus_errors"], 1)
+            count = conn.execute("SELECT COUNT(*) FROM fact_bus_headcount_drivers").fetchone()[0]
+            self.assertEqual(count, 0)
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
@@ -619,6 +709,128 @@ class TestEventDeltaHeadcountFailClosed(unittest.TestCase):
         conn.close()
 
 
+class TestBusHeadcountAllocation(unittest.TestCase):
+    def _insert_bus_rule(self, conn, *, item_name: str, unit_price: float, account: int = 5004086291) -> int:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO map_allocation_rules
+            (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
+             posting_month, unit_price, unit, driver_type, driver_raw)
+            VALUES ('GA', ?, '福利厚生費', ?, ?, ?, '毎月', ?, '/person', 'headcount_all', '人数')
+            """,
+            (item_name, account, account, account, float(unit_price)),
+        )
+        conn.commit()
+        return cursor.lastrowid
+
+    def _insert_bus_counts(self, conn, cc_code, *, expat: int, vietnamese: int):
+        conn.execute(
+            """
+            INSERT INTO fact_bus_headcount_drivers
+            (cc_code, bus_expat_count, bus_vietnamese_count, source, description)
+            VALUES (?, ?, ?, 'manual', 'bus allocation test')
+            """,
+            (str(cc_code), float(expat), float(vietnamese)),
+        )
+        conn.commit()
+
+    def test_bus_drivers_allocate_same_counts_to_all_12_months_and_export_formulas(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        expat_rule_id = self._insert_bus_rule(
+            conn,
+            item_name="出向者通勤送迎費 Xe đưa đón cho người Nhật",
+            unit_price=1000,
+        )
+        vn_rule_id = self._insert_bus_rule(
+            conn,
+            item_name="ローカル通勤送迎費 Xe đưa đón cho người Việt",
+            unit_price=2000,
+        )
+        self._insert_bus_counts(conn, cc_code, expat=3, vietnamese=4)
+        conn.execute(
+            """
+            INSERT INTO fact_monthly_headcount
+            (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
+            VALUES ('202604', ?, 999, 888, 111, 'manual', 'must not drive bus')
+            """,
+            (cc_code,),
+        )
+        conn.commit()
+
+        AllocationEngine(conn).run_allocation()
+
+        expat_rows = conn.execute(
+            "SELECT period, amount_vnd, form_row, description FROM fact_input_data WHERE source=? ORDER BY period",
+            (f"alloc_{expat_rule_id}",),
+        ).fetchall()
+        vn_rows = conn.execute(
+            "SELECT period, amount_vnd, form_row, description FROM fact_input_data WHERE source=? ORDER BY period",
+            (f"alloc_{vn_rule_id}",),
+        ).fetchall()
+
+        self.assertEqual([row["period"] for row in expat_rows], periods)
+        self.assertEqual([row["period"] for row in vn_rows], periods)
+        self.assertTrue(all(float(row["amount_vnd"]) == 3000.0 for row in expat_rows))
+        self.assertTrue(all(float(row["amount_vnd"]) == 8000.0 for row in vn_rows))
+        self.assertTrue(all(int(row["form_row"]) == 53 for row in expat_rows))
+        self.assertTrue(all(int(row["form_row"]) == 54 for row in vn_rows))
+        self.assertTrue(all("driver_type=bus_expat_count" in row["description"] for row in expat_rows))
+        self.assertTrue(all("driver_type=bus_vietnamese_count" in row["description"] for row in vn_rows))
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        tmpdir = _mk_tmpdir()
+        try:
+            output_path = tmpdir / "out_bus_headcount_driver.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                for column in range(6, 18):
+                    self.assertEqual(ws.cell(53, column).value, "=3*1000")
+                    self.assertEqual(ws.cell(54, column).value, "=4*2000")
+                self.assertEqual(ws["R53"].value, "=SUM(F53:Q53)")
+                self.assertEqual(ws["R54"].value, "=SUM(F54:Q54)")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_bus_unit_price_missing_fails_closed(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        expat_rule_id = self._insert_bus_rule(
+            conn,
+            item_name="出向者通勤送迎費 Xe đưa đón cho người Nhật",
+            unit_price=0,
+        )
+        self._insert_bus_counts(conn, cc_code, expat=3, vietnamese=0)
+
+        AllocationEngine(conn).run_allocation()
+
+        fact_count = conn.execute(
+            "SELECT COUNT(*) FROM fact_input_data WHERE source=?",
+            (f"alloc_{expat_rule_id}",),
+        ).fetchone()[0]
+        self.assertEqual(fact_count, 0)
+
+        missing = conn.execute(
+            """
+            SELECT message
+            FROM fact_missing_inputs
+            WHERE area='bus_headcount_driver'
+            ORDER BY id
+            """
+        ).fetchall()
+        self.assertTrue(any("missing=expat bus unit_price" in row["message"] for row in missing))
+        conn.close()
+
+
 class TestNewHireAllocationIdentityDedupe(unittest.TestCase):
     def _insert_notebook_rule(self, conn, *, unit_price=9100, driver_type="headcount_staff"):
         cursor = conn.cursor()
@@ -799,12 +1011,48 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
         self.assertEqual(_parse_unit_price("145$"), 145.0)
         self.assertEqual(_parse_unit_price("1,259,500"), 1259500.0)
         self.assertEqual(_parse_unit_price(3000000), 3000000.0)
+        self.assertIsNone(_parse_unit_price("※1"))
         self.assertIsNone(_parse_unit_price("abc"))
 
     def test_mp2026_reference_unit_price_fills_zero_rule_prices(self):
         self.assertEqual(_apply_mp2026_reference_unit_price("月餅 Bánh Trung Thu", 0), 56000.0)
         self.assertEqual(_apply_mp2026_reference_unit_price("運動会 Đại hội thể thao", 0), 107000.0)
         self.assertEqual(_apply_mp2026_reference_unit_price("運動会 Đại hội thể thao", 123), 123.0)
+
+    def test_allocation_loader_keeps_footnote_unit_price_rules_as_missing_price_metadata(self):
+        conn = _mk_conn()
+        tmpdir = _mk_tmpdir()
+        try:
+            source_path = tmpdir / "FY2027_allocation.xlsx"
+            workbook = openpyxl.Workbook()
+            ws = workbook.active
+            ws.title = "allocation"
+            ws.append(["dept", "item", "account", "mfg", "ga", "sales", "posting", "unit_price", "unit", "driver"])
+            ws.append(
+                [
+                    "GA",
+                    "出向者通勤送迎費 Xe đưa đón cho người Nhật",
+                    "福利厚生費",
+                    5004086291,
+                    6004086651,
+                    6004086551,
+                    "毎月",
+                    "※1",
+                    "/person",
+                    "人数",
+                ]
+            )
+            workbook.save(source_path)
+            workbook.close()
+
+            loaded = load_allocation_rules(conn, alloc_path=str(source_path), fiscal_year=2027)
+            self.assertEqual(loaded, 1)
+            row = conn.execute("SELECT item_name, unit_price FROM map_allocation_rules").fetchone()
+            self.assertIn("出向者通勤送迎費", row["item_name"])
+            self.assertEqual(float(row["unit_price"]), 0.0)
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     def test_allocation_loader_keeps_new_hire_notebook_staff_continuation_row(self):
         conn = _mk_conn()

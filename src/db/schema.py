@@ -82,6 +82,15 @@ def create_schema(conn: sqlite3.Connection) -> None:
             source TEXT DEFAULT "hr", description TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(period, cc_code, source)
         )''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS fact_bus_headcount_drivers (
+            cc_code TEXT PRIMARY KEY,
+            bus_expat_count REAL DEFAULT 0,
+            bus_vietnamese_count REAL DEFAULT 0,
+            source TEXT DEFAULT "manual",
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
 
     # Fact Tables
     cursor.execute("""
@@ -121,6 +130,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
 
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_input_period ON fact_input_data(period)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_hc_period_cc ON fact_monthly_headcount(period, cc_code)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_bus_hc_cc ON fact_bus_headcount_drivers(cc_code)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_missing_inputs_source ON fact_missing_inputs(source, cc_code, period)")
 
     if not _column_exists(conn, "fact_monthly_headcount", "headcount_male"):

@@ -138,6 +138,8 @@ def _parse_unit_price(value) -> float | None:
     text = str(value).strip().replace(",", "")
     if not text:
         return None
+    if re.fullmatch(r"[※*＊]\s*\d+", text):
+        return None
 
     match = re.search(r"[-+]?\d+(?:\.\d+)?", text)
     if not match:
@@ -147,6 +149,12 @@ def _parse_unit_price(value) -> float | None:
         return float(match.group(0))
     except (ValueError, TypeError):
         return None
+
+
+def _is_footnote_unit_price(value) -> bool:
+    if pd.isna(value):
+        return False
+    return re.fullmatch(r"[※*＊]\s*\d+", str(value).strip()) is not None
 
 
 MP2026_REFERENCE_UNIT_PRICES = (
@@ -365,10 +373,15 @@ def load_allocation_rules(
         if not current_dept:
             continue
 
-        # Skip if no unit price or it's not a number
-        unit_price = _parse_unit_price(row.iloc[7] if len(row) > 7 else None)
+        # Keep footnote-only rows as metadata with unit_price=0 so downstream
+        # allocation can fail closed and report the missing unit price.
+        raw_unit_price = row.iloc[7] if len(row) > 7 else None
+        unit_price = _parse_unit_price(raw_unit_price)
         if unit_price is None:
-            continue
+            if _is_footnote_unit_price(raw_unit_price):
+                unit_price = 0.0
+            else:
+                continue
         unit_price = _apply_mp2026_reference_unit_price(item_str, unit_price)
 
         def _safe_int(val):

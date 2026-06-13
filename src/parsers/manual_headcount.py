@@ -16,8 +16,10 @@ from typing import Any
 from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
 
 TEMPLATE_FILENAME = "headcount_manual.csv"
+BUS_DRIVER_FILENAME = "bus_headcount_manual.csv"
 REQUIRED_COLUMNS = ("cc_code", "period", "headcount_staff", "headcount_worker")
 OPTIONAL_COLUMNS = ("headcount_male", "headcount_female")
+BUS_DRIVER_COLUMNS = ("cc_code", "bus_expat_count", "bus_vietnamese_count", "description")
 
 
 def get_required_headcount_periods(fiscal_year: int) -> list[str]:
@@ -27,6 +29,16 @@ def get_required_headcount_periods(fiscal_year: int) -> list[str]:
 
 def _has_value(value: Any) -> bool:
     return value is not None and str(value).strip() != ""
+
+
+def _parse_non_negative_int(value: Any) -> int | None:
+    text = str(value or "").strip()
+    if text == "":
+        return None
+    if not text.isdecimal():
+        return None
+    parsed = int(text)
+    return parsed if parsed >= 0 else None
 
 
 def _normalize_period(raw_period: Any, valid_periods: set[str], fiscal_months: list[str]) -> str | None:
@@ -79,6 +91,81 @@ def ensure_manual_headcount_template(source_dir: str, fiscal_year: int) -> str:
     return path
 
 
+def ensure_manual_bus_headcount_template(source_dir: str) -> str:
+    """Create the scalar bus headcount driver template if not found."""
+    path = os.path.join(source_dir, BUS_DRIVER_FILENAME)
+    if os.path.exists(path):
+        return path
+
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        writer.writerow(BUS_DRIVER_COLUMNS)
+    return path
+
+
+def _parse_manual_bus_headcount(conn: sqlite3.Connection, source_dir: str, valid_cc_codes: set[str]) -> dict[str, int | str]:
+    """Load scalar per-CC bus passenger counts used by the allocation engine."""
+    path = ensure_manual_bus_headcount_template(source_dir)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM fact_bus_headcount_drivers WHERE source = 'manual'")
+
+    inserted = 0
+    skipped = 0
+    errors = 0
+
+    with open(path, "r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        if reader.fieldnames is None:
+            return {"inserted": 0, "skipped": 0, "errors": 1, "template_path": path}
+
+        missing_cols = [c for c in BUS_DRIVER_COLUMNS if c not in reader.fieldnames]
+        if missing_cols:
+            return {
+                "inserted": 0,
+                "skipped": 0,
+                "errors": 1,
+                "template_path": path,
+                "error_message": f"Missing required columns: {', '.join(missing_cols)}",
+            }
+
+        seen_cc: set[str] = set()
+        for row in reader:
+            raw_values = [str(row.get(col, "") or "").strip() for col in BUS_DRIVER_COLUMNS]
+            if not any(raw_values):
+                skipped += 1
+                continue
+
+            cc_code = normalize_cc_code(row.get("cc_code"))
+            if not cc_code or cc_code not in valid_cc_codes or cc_code in seen_cc:
+                errors += 1
+                continue
+
+            expat_count = _parse_non_negative_int(row.get("bus_expat_count"))
+            vietnamese_count = _parse_non_negative_int(row.get("bus_vietnamese_count"))
+            if expat_count is None or vietnamese_count is None:
+                errors += 1
+                continue
+
+            description = str(row.get("description", "") or "").strip()
+            cursor.execute(
+                """
+                INSERT INTO fact_bus_headcount_drivers
+                (cc_code, bus_expat_count, bus_vietnamese_count, source, description)
+                VALUES (?, ?, ?, 'manual', ?)
+                ON CONFLICT(cc_code) DO UPDATE SET
+                    bus_expat_count = excluded.bus_expat_count,
+                    bus_vietnamese_count = excluded.bus_vietnamese_count,
+                    source = excluded.source,
+                    description = excluded.description
+                """,
+                (cc_code, float(expat_count), float(vietnamese_count), description),
+            )
+            seen_cc.add(cc_code)
+            inserted += 1
+
+    return {"inserted": inserted, "skipped": skipped, "errors": errors, "template_path": path}
+
+
 def parse_manual_headcount(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[str, int | str]:
     """Load manual headcount from CSV and write to fact_monthly_headcount source='manual'."""
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
@@ -92,6 +179,7 @@ def parse_manual_headcount(conn: sqlite3.Connection, source_dir: str | None = No
         return {"inserted": 0, "skipped": 0, "errors": 0, "template_path": template_path}
 
     valid_cc_codes = {str(row[0]).strip() for row in conn.execute("SELECT code FROM dim_cost_centers").fetchall() if row[0] is not None}
+    bus_result = _parse_manual_bus_headcount(conn, search_dir, valid_cc_codes)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM fact_monthly_headcount WHERE source = 'manual'")
 
@@ -188,4 +276,12 @@ def parse_manual_headcount(conn: sqlite3.Connection, source_dir: str | None = No
             inserted += 1
 
     conn.commit()
-    return {"inserted": inserted, "skipped": skipped, "errors": errors, "template_path": template_path}
+    return {
+        "inserted": inserted,
+        "skipped": skipped,
+        "errors": errors + int(bus_result.get("errors", 0)),
+        "template_path": template_path,
+        "bus_inserted": int(bus_result.get("inserted", 0)),
+        "bus_errors": int(bus_result.get("errors", 0)),
+        "bus_template_path": str(bus_result.get("template_path", "")),
+    }
