@@ -735,6 +735,21 @@ class TestBusHeadcountAllocation(unittest.TestCase):
         )
         conn.commit()
 
+    def _insert_bus_unit_price_series(self, conn, *, item_name: str, prices: list[int]):
+        periods = get_fy_months(2027)
+        conn.executemany(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, cc_code, account_code, scenario_id, description)
+            VALUES ('ga_unit_price', ?, ?, 0, 0, 'base', ?)
+            """,
+            [
+                (period, float(price), f"{item_name}|headcount_per_person")
+                for period, price in zip(periods, prices)
+            ],
+        )
+        conn.commit()
+
     def test_bus_drivers_allocate_same_counts_to_all_12_months_and_export_formulas(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
@@ -793,6 +808,79 @@ class TestBusHeadcountAllocation(unittest.TestCase):
                 for column in range(6, 18):
                     self.assertEqual(ws.cell(53, column).value, "=3*1000")
                     self.assertEqual(ws.cell(54, column).value, "=4*2000")
+                self.assertEqual(ws["R53"].value, "=SUM(F53:Q53)")
+                self.assertEqual(ws["R54"].value, "=SUM(F54:Q54)")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_bus_drivers_use_monthly_ga_unit_price_source_before_footnote_rule(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        expat_prices = [856107, 894022, 841125, 843756, 840449, 826939, 807491, 851412, 890880, 868440, 823640, 810900]
+        vn_prices = [1031546, 1666547, 1572350, 1523385, 1411084, 1510555, 1530445, 1556432, 1469160, 1461107, 1162654, 1116875]
+        expat_rule_id = self._insert_bus_rule(
+            conn,
+            item_name="出向者通勤送迎費 Xe đưa đón cho người Nhật",
+            unit_price=0,
+        )
+        vn_rule_id = self._insert_bus_rule(
+            conn,
+            item_name="ローカル通勤送迎費 Xe đưa đón cho người Việt",
+            unit_price=0,
+        )
+        self._insert_bus_unit_price_series(
+            conn,
+            item_name="出向者送迎費 Xe đưa đón người Nhật",
+            prices=expat_prices,
+        )
+        self._insert_bus_unit_price_series(
+            conn,
+            item_name="ローカル社員送迎費 Xe đưa đón người Việt",
+            prices=vn_prices,
+        )
+        self._insert_bus_counts(conn, cc_code, expat=3, vietnamese=4)
+
+        AllocationEngine(conn).run_allocation()
+
+        expat_rows = conn.execute(
+            "SELECT period, amount_vnd, description FROM fact_input_data WHERE source=? ORDER BY period",
+            (f"alloc_{expat_rule_id}",),
+        ).fetchall()
+        vn_rows = conn.execute(
+            "SELECT period, amount_vnd, description FROM fact_input_data WHERE source=? ORDER BY period",
+            (f"alloc_{vn_rule_id}",),
+        ).fetchall()
+
+        self.assertEqual([row["period"] for row in expat_rows], periods)
+        self.assertEqual([row["period"] for row in vn_rows], periods)
+        self.assertEqual([float(row["amount_vnd"]) for row in expat_rows], [3.0 * price for price in expat_prices])
+        self.assertEqual([float(row["amount_vnd"]) for row in vn_rows], [4.0 * price for price in vn_prices])
+        self.assertTrue(all("unit_price_source=ga_unit_price" in row["description"] for row in expat_rows))
+        self.assertTrue(all("source_cells=B9:M9" in row["description"] for row in expat_rows))
+        self.assertTrue(all("source_cells=B10:M10" in row["description"] for row in vn_rows))
+        self.assertEqual(
+            conn.execute("SELECT COUNT(*) FROM fact_missing_inputs WHERE area='bus_headcount_driver'").fetchone()[0],
+            0,
+        )
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        tmpdir = _mk_tmpdir()
+        try:
+            output_path = tmpdir / "out_bus_monthly_unit_prices.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                for offset, price in enumerate(expat_prices):
+                    self.assertEqual(ws.cell(53, 6 + offset).value, f"=3*{price}")
+                for offset, price in enumerate(vn_prices):
+                    self.assertEqual(ws.cell(54, 6 + offset).value, f"=4*{price}")
                 self.assertEqual(ws["R53"].value, "=SUM(F53:Q53)")
                 self.assertEqual(ws["R54"].value, "=SUM(F54:Q54)")
             finally:
@@ -3087,6 +3175,58 @@ class TestHubBuilderExport(unittest.TestCase):
                 self.assertNotEqual(ws["K71"].value, "=99*1000")
             finally:
                 workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_ga_parser_loads_bus_unit_price_rows_from_admin_main_sheet(self):
+        conn = _mk_conn()
+        expat_prices = [856107, 894022, 841125, 843756, 840449, 826939, 807491, 851412, 890880, 868440, 823640, 810900]
+        vn_prices = [1031546, 1666547, 1572350, 1523385, 1411084, 1510555, 1530445, 1556432, 1469160, 1461107, 1162654, 1116875]
+        tmpdir = _mk_tmpdir()
+        try:
+            source_path = tmpdir / "総務課 FY2027 MP 振替予定.xlsx"
+            months = get_fy_months(2027)
+            workbook = openpyxl.Workbook()
+            ws = workbook.active
+            ws.title = "FY2027予定"
+            ws.append(["Item FY2027 VND account", *months, None, "Basis VND Yotei", "account"])
+            ws.append(["出向者送迎費\nXe đưa đón người Nhật", *expat_prices, None, "一人当たり", 5004086291])
+            ws.append(["ローカル社員送迎費\nXe đưa đón người Việt", *vn_prices, None, "一人当たり", 5004086291])
+            for _ in range(5):
+                ws.append(["padding", *([0] * 12), None, "headcount", None])
+            workbook.create_sheet("Cách tính phân bổ 振替計算")
+            workbook.save(source_path)
+            workbook.close()
+
+            result = parse_ga(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["total"], 24)
+
+            expat_rows = conn.execute(
+                """
+                SELECT period, amount_vnd, description
+                FROM fact_input_data
+                WHERE source='ga_unit_price'
+                  AND description LIKE '%出向者送迎費%'
+                ORDER BY period
+                """
+            ).fetchall()
+            vn_rows = conn.execute(
+                """
+                SELECT period, amount_vnd, description
+                FROM fact_input_data
+                WHERE source='ga_unit_price'
+                  AND description LIKE '%ローカル社員送迎費%'
+                ORDER BY period
+                """
+            ).fetchall()
+
+            self.assertEqual([row["period"] for row in expat_rows], months)
+            self.assertEqual([float(row["amount_vnd"]) for row in expat_rows], [float(price) for price in expat_prices])
+            self.assertTrue(all(row["description"].endswith("|headcount_per_person") for row in expat_rows))
+            self.assertEqual([row["period"] for row in vn_rows], months)
+            self.assertEqual([float(row["amount_vnd"]) for row in vn_rows], [float(price) for price in vn_prices])
+            self.assertTrue(all(row["description"].endswith("|headcount_per_person") for row in vn_rows))
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)

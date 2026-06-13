@@ -93,6 +93,20 @@ BUS_RULE_SPECS = {
         "label": "Vietnamese bus",
     },
 }
+BUS_UNIT_PRICE_SPECS = {
+    "bus_expat_count": {
+        "tokens": ("出向者送迎費", "xe dua don nguoi nhat", "xe đưa đón người nhật"),
+        "source_workbook": "総務課 FY2027 MP 振替予定.xlsx",
+        "source_sheet": "FY2027予定",
+        "source_cells": "B9:M9",
+    },
+    "bus_vietnamese_count": {
+        "tokens": ("ローカル社員送迎費", "xe dua don nguoi viet", "xe đưa đón người việt"),
+        "source_workbook": "総務課 FY2027 MP 振替予定.xlsx",
+        "source_sheet": "FY2027予定",
+        "source_cells": "B10:M10",
+    },
+}
 
 
 class AllocationEngine:
@@ -105,6 +119,7 @@ class AllocationEngine:
         self.period_index = {p: i for i, p in enumerate(self.fy_months)}
         self.hc_cache = self._load_headcount_cache()
         self.bus_driver_cache = self._load_bus_driver_cache()
+        self.bus_unit_price_cache = self._load_bus_unit_price_cache()
         self._missing_input_keys: set[tuple[str, str, str, str]] = set()
 
     def _normalize_text(self, value: str) -> str:
@@ -162,6 +177,38 @@ class AllocationEngine:
             }
             for row in rows
         }
+
+    def _load_bus_unit_price_cache(self) -> dict[str, dict[str, float]]:
+        rows = self.conn.execute(
+            """
+            SELECT period, description, amount_vnd
+            FROM fact_input_data
+            WHERE source = 'ga_unit_price'
+              AND amount_vnd > 0
+            """
+        ).fetchall()
+        cache: dict[str, dict[str, float]] = {driver_key: {} for driver_key in BUS_UNIT_PRICE_SPECS}
+        ambiguous: set[tuple[str, str]] = set()
+        for row in rows:
+            description = self._normalize_text(row["description"] or "")
+            period = str(row["period"] or "").strip()
+            if period not in self.period_index:
+                continue
+            amount = float(row["amount_vnd"] or 0.0)
+            if amount <= 0:
+                continue
+            for driver_key, spec in BUS_UNIT_PRICE_SPECS.items():
+                tokens = tuple(self._normalize_text(token) for token in spec["tokens"])
+                if not any(token in description for token in tokens):
+                    continue
+                existing = cache[driver_key].get(period)
+                if existing is not None and abs(existing - amount) > 1e-9:
+                    ambiguous.add((driver_key, period))
+                    cache[driver_key].pop(period, None)
+                    continue
+                if (driver_key, period) not in ambiguous:
+                    cache[driver_key][period] = amount
+        return cache
 
     @staticmethod
     def _is_valid_account_code(value) -> bool:
@@ -362,6 +409,33 @@ class AllocationEngine:
             (cc_key, ",".join(self.fy_months), message, action, rule_id),
         )
 
+    def _bus_unit_price_for_period(self, driver_key: str, period: str, rule) -> tuple[float, str]:
+        monthly_price = float(self.bus_unit_price_cache.get(driver_key, {}).get(period, 0.0) or 0.0)
+        if monthly_price > 0:
+            return monthly_price, "ga_unit_price"
+        if rule is None:
+            return 0.0, ""
+        rule_price = float(rule["unit_price"] or 0.0)
+        if rule_price > 0:
+            return rule_price, "allocation_rules_master"
+        return 0.0, ""
+
+    def _bus_unit_price_source_metadata(self, driver_key: str, source_kind: str) -> dict[str, str]:
+        if source_kind == "ga_unit_price":
+            spec = BUS_UNIT_PRICE_SPECS.get(driver_key, {})
+            return {
+                "workbook": spec.get("source_workbook", "総務課 FY2027 MP 振替予定.xlsx"),
+                "sheet": spec.get("source_sheet", "FY2027予定"),
+                "cells": spec.get("source_cells", ""),
+            }
+        if source_kind == "allocation_rules_master":
+            return {
+                "workbook": "allocation_rules_master",
+                "sheet": "map_allocation_rules",
+                "cells": "unit_price",
+            }
+        return {"workbook": "", "sheet": "", "cells": ""}
+
     def _get_event_delta(self, cc_code: object, period: str, driver_type: str, rule=None) -> float:
         prev_period = self._get_prev_period(period)
         if not prev_period:
@@ -549,12 +623,6 @@ class AllocationEngine:
                     self._record_bus_missing(cc_code, driver_key, "account mapping", rule=None)
                     continue
 
-                unit_price = float(rule["unit_price"] or 0.0)
-                if unit_price <= 0:
-                    missing_name = "expat bus unit_price" if driver_key == "bus_expat_count" else "Vietnamese bus unit_price"
-                    self._record_bus_missing(cc_code, driver_key, missing_name, rule=rule)
-                    continue
-
                 target_acc = self._get_account_for_cc(
                     str(cc["cost_type"]),
                     rule["mfg_account"],
@@ -565,24 +633,33 @@ class AllocationEngine:
                     self._record_bus_missing(cc_code, driver_key, "account mapping", rule=rule)
                     continue
 
-                amount_vnd = driver_value * unit_price
-                if amount_vnd <= 0:
-                    continue
+                rows_to_insert = []
+                for period in self.fy_months:
+                    unit_price, source_kind = self._bus_unit_price_for_period(driver_key, period, rule)
+                    if unit_price <= 0:
+                        missing_name = (
+                            "expat bus unit_price"
+                            if driver_key == "bus_expat_count"
+                            else "Vietnamese bus unit_price"
+                        )
+                        self._record_bus_missing(cc_code, driver_key, missing_name, rule=rule)
+                        continue
 
-                formula = f"{self._format_formula_number(driver_value)}*{self._format_formula_number(unit_price)}"
-                description = (
-                    f"Alloc: {rule['item_name']}|driver_type={driver_key}|driver_value={self._format_formula_number(driver_value)}"
-                    f"|unit_price_key={rule['item_name']}|unit_price={self._format_formula_number(unit_price)}"
-                    f"|formula_expr={formula}|source_workbook=allocation_rules_master|source_sheet=map_allocation_rules"
-                    "|provenance=bus_headcount_manual|status=OK"
-                )
-                cursor.executemany(
-                    """
-                    INSERT INTO fact_input_data
-                    (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
-                    VALUES (?, ?, ?, ?, ?, ?, 'base', ?)
-                    """,
-                    [
+                    amount_vnd = driver_value * unit_price
+                    if amount_vnd <= 0:
+                        continue
+
+                    source_meta = self._bus_unit_price_source_metadata(driver_key, source_kind)
+                    formula = f"{self._format_formula_number(driver_value)}*{self._format_formula_number(unit_price)}"
+                    description = (
+                        f"Alloc: {rule['item_name']}|driver_type={driver_key}"
+                        f"|driver_value={self._format_formula_number(driver_value)}"
+                        f"|unit_price_key={rule['item_name']}|unit_price_source={source_kind}"
+                        f"|source_workbook={source_meta['workbook']}|source_sheet={source_meta['sheet']}"
+                        f"|source_cells={source_meta['cells']}|provenance=bus_headcount_manual"
+                        f"|status=OK|formula_expr={formula}"
+                    )
+                    rows_to_insert.append(
                         (
                             f"alloc_{int(rule['id'])}",
                             period,
@@ -592,9 +669,17 @@ class AllocationEngine:
                             int(spec["form_row"]),
                             description,
                         )
-                        for period in self.fy_months
-                    ],
-                )
+                    )
+
+                if rows_to_insert:
+                    cursor.executemany(
+                        """
+                        INSERT INTO fact_input_data
+                        (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
+                        VALUES (?, ?, ?, ?, ?, ?, 'base', ?)
+                        """,
+                        rows_to_insert,
+                    )
 
     def _format_formula_number(self, value: float) -> str:
         number = float(value or 0.0)
