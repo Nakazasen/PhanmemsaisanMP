@@ -11,6 +11,7 @@ CSV columns:
 import csv
 import os
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -110,6 +111,118 @@ def ensure_manual_bus_headcount_template(source_dir: str) -> str:
         writer = csv.writer(f)
         writer.writerow(BUS_DRIVER_COLUMNS)
     return path
+
+
+def quarantine_manual_headcount_rows(
+    conn: sqlite3.Connection,
+    source_dir: str,
+    cc_code: str,
+    periods: list[str],
+    quarantine_path: str,
+    reason: str,
+    quarantined_at: str | None = None,
+    base_dir: str | None = None,
+) -> dict[str, int | str]:
+    """Quarantine and remove explicit manual headcount rows by exact CC/period keys."""
+    search_dir = resolve_manual_headcount_source_dir(source_dir, base_dir=base_dir)
+    csv_path = Path(search_dir) / TEMPLATE_FILENAME
+    period_keys = {str(period).strip() for period in periods if str(period).strip()}
+    cc_key = normalize_cc_code(cc_code)
+    if not cc_key:
+        raise ValueError("cc_code is required")
+    if not period_keys:
+        raise ValueError("periods is required")
+    if not csv_path.exists():
+        raise FileNotFoundError(csv_path)
+
+    timestamp = quarantined_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        fieldnames = list(reader.fieldnames or MANUAL_HEADCOUNT_COLUMNS)
+        rows = list(reader)
+
+    kept_rows: list[dict[str, Any]] = []
+    quarantine_rows: list[dict[str, str]] = []
+    csv_rows_removed = 0
+    for row in rows:
+        row_cc = normalize_cc_code(row.get("cc_code"))
+        row_period = str(row.get("period", "") or "").strip()
+        should_remove = row_cc == cc_key and row_period in period_keys
+        if not should_remove:
+            kept_rows.append(row)
+            continue
+
+        csv_rows_removed += 1
+        description = str(row.get("description", "") or "").strip()
+        for driver_type, column in (
+            ("headcount_staff", "headcount_staff"),
+            ("headcount_worker", "headcount_worker"),
+        ):
+            value = str(row.get(column, "") or "").strip()
+            if not _has_value(value):
+                continue
+            quarantine_rows.append(
+                {
+                    "cost_center": cc_key,
+                    "period": row_period,
+                    "driver_type": driver_type,
+                    "value": value,
+                    "old_source": "manual",
+                    "old_description": description,
+                    "quarantine_reason": reason,
+                    "quarantined_at": timestamp,
+                }
+            )
+
+    if quarantine_rows:
+        quarantine_file = Path(quarantine_path)
+        quarantine_file.parent.mkdir(parents=True, exist_ok=True)
+        quarantine_exists = quarantine_file.exists()
+        with quarantine_file.open("a", encoding="utf-8-sig", newline="") as f:
+            fieldnames_quarantine = [
+                "cost_center",
+                "period",
+                "driver_type",
+                "value",
+                "old_source",
+                "old_description",
+                "quarantine_reason",
+                "quarantined_at",
+            ]
+            writer = csv.DictWriter(f, fieldnames=fieldnames_quarantine)
+            if not quarantine_exists:
+                writer.writeheader()
+            writer.writerows(quarantine_rows)
+
+    if csv_rows_removed:
+        tmp_path = csv_path.with_suffix(csv_path.suffix + ".tmp")
+        with tmp_path.open("w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(kept_rows)
+        tmp_path.replace(csv_path)
+
+    placeholders = ",".join("?" for _ in sorted(period_keys))
+    params = [cc_key, *sorted(period_keys)]
+    cursor = conn.cursor()
+    cursor.execute(
+        f"""
+        DELETE FROM fact_monthly_headcount
+        WHERE source = 'manual'
+          AND CAST(cc_code AS TEXT) = ?
+          AND period IN ({placeholders})
+        """,
+        params,
+    )
+    conn.commit()
+
+    return {
+        "csv_path": str(csv_path),
+        "quarantine_path": quarantine_path,
+        "csv_rows_removed": csv_rows_removed,
+        "logical_values_quarantined": len(quarantine_rows),
+        "db_rows_deleted": int(cursor.rowcount if cursor.rowcount is not None else 0),
+    }
 
 
 def _parse_manual_bus_headcount(conn: sqlite3.Connection, source_dir: str, valid_cc_codes: set[str]) -> dict[str, int | str]:

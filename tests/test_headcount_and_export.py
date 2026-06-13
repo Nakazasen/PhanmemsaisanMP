@@ -21,6 +21,7 @@ from src.parsers.manual_headcount import (
     ensure_manual_headcount_template,
     get_required_headcount_periods,
     parse_manual_headcount,
+    quarantine_manual_headcount_rows,
     resolve_manual_headcount_source_dir,
 )
 from src.parsers.manual_special_costs import parse_manual_special_costs
@@ -279,6 +280,176 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
             self.assertEqual(float(row["headcount_staff"]), 7.0)
             self.assertEqual(float(row["headcount_worker"]), 1.0)
             self.assertEqual(row["description"], "canonical raw row")
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_quarantine_unconfirmed_headcount_removes_exact_keys_without_bus_or_other_cc_loss(self):
+        conn = _mk_conn()
+        target_cc = _seed_cc(conn, code=1412000006)
+        other_cc = _seed_cc(conn, code=1412000004)
+        tmpdir = _mk_tmpdir()
+        periods = ["202701", "202702", "202703"]
+        try:
+            fieldnames = [
+                "cc_code",
+                "period",
+                "headcount_staff",
+                "headcount_worker",
+                "headcount_male",
+                "headcount_female",
+                "description",
+            ]
+            csv_path = tmpdir / "headcount_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                for period in periods:
+                    writer.writerow(
+                        {
+                            "cc_code": str(target_cc),
+                            "period": period,
+                            "headcount_staff": "28",
+                            "headcount_worker": "0",
+                            "headcount_male": "",
+                            "headcount_female": "",
+                            "description": "",
+                        }
+                    )
+                writer.writerow(
+                    {
+                        "cc_code": str(other_cc),
+                        "period": "202701",
+                        "headcount_staff": "3",
+                        "headcount_worker": "2",
+                        "headcount_male": "",
+                        "headcount_female": "",
+                        "description": "other cc must remain",
+                    }
+                )
+
+            bus_path = tmpdir / "bus_headcount_manual.csv"
+            with bus_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=["cc_code", "bus_expat_count", "bus_vietnamese_count", "description"],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(target_cc),
+                        "bus_expat_count": "4",
+                        "bus_vietnamese_count": "5",
+                        "description": "bus survives quarantine",
+                    }
+                )
+
+            conn.executemany(
+                """
+                INSERT INTO fact_monthly_headcount
+                (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
+                VALUES (?, ?, ?, ?, ?, 'manual', ?)
+                """,
+                [(period, target_cc, 28, 28, 0, "") for period in periods]
+                + [("202701", other_cc, 5, 3, 2, "other cc must remain")],
+            )
+            conn.execute(
+                """
+                INSERT INTO fact_bus_headcount_drivers
+                (cc_code, bus_expat_count, bus_vietnamese_count, source, description)
+                VALUES (?, 4, 5, 'manual', 'bus survives quarantine')
+                """,
+                (str(target_cc),),
+            )
+            conn.commit()
+
+            quarantine_path = tmpdir / "quarantine" / "headcount_1412000006_unconfirmed_quarantine.csv"
+            result = quarantine_manual_headcount_rows(
+                conn,
+                source_dir=str(tmpdir),
+                cc_code=str(target_cc),
+                periods=periods,
+                quarantine_path=str(quarantine_path),
+                reason="not confirmed by user",
+                quarantined_at="2026-06-13T00:00:00+00:00",
+            )
+
+            self.assertEqual(result["csv_rows_removed"], 3)
+            self.assertEqual(result["logical_values_quarantined"], 6)
+            self.assertEqual(result["db_rows_deleted"], 3)
+
+            with quarantine_path.open("r", encoding="utf-8-sig", newline="") as f:
+                quarantine_rows = list(csv.DictReader(f))
+            self.assertEqual(len(quarantine_rows), 6)
+            self.assertEqual({row["driver_type"] for row in quarantine_rows}, {"headcount_staff", "headcount_worker"})
+            self.assertEqual({row["value"] for row in quarantine_rows if row["driver_type"] == "headcount_worker"}, {"0"})
+
+            with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+                rows_after = list(csv.DictReader(f))
+            self.assertFalse(
+                any(str(row["cc_code"]) == str(target_cc) and row["period"] in periods for row in rows_after)
+            )
+            self.assertTrue(any(str(row["cc_code"]) == str(other_cc) for row in rows_after))
+
+            target_count = conn.execute(
+                """
+                SELECT COUNT(*) FROM fact_monthly_headcount
+                WHERE CAST(cc_code AS TEXT)=? AND period IN ('202701','202702','202703') AND source='manual'
+                """,
+                (str(target_cc),),
+            ).fetchone()[0]
+            self.assertEqual(target_count, 0)
+            other_count = conn.execute(
+                "SELECT COUNT(*) FROM fact_monthly_headcount WHERE CAST(cc_code AS TEXT)=? AND source='manual'",
+                (str(other_cc),),
+            ).fetchone()[0]
+            self.assertEqual(other_count, 1)
+            bus_count = conn.execute(
+                "SELECT COUNT(*) FROM fact_bus_headcount_drivers WHERE CAST(cc_code AS TEXT)=?",
+                (str(target_cc),),
+            ).fetchone()[0]
+            self.assertEqual(bus_count, 1)
+
+            second = quarantine_manual_headcount_rows(
+                conn,
+                source_dir=str(tmpdir),
+                cc_code=str(target_cc),
+                periods=periods,
+                quarantine_path=str(quarantine_path),
+                reason="not confirmed by user",
+                quarantined_at="2026-06-13T00:00:00+00:00",
+            )
+            self.assertEqual(second["csv_rows_removed"], 0)
+            self.assertEqual(second["logical_values_quarantined"], 0)
+            self.assertEqual(second["db_rows_deleted"], 0)
+
+            parsed = parse_manual_headcount(conn, source_dir=str(tmpdir))
+            self.assertEqual(parsed["errors"], 0)
+            self.assertEqual(parsed["inserted"], 1)
+            target_count_after_parse = conn.execute(
+                """
+                SELECT COUNT(*) FROM fact_monthly_headcount
+                WHERE CAST(cc_code AS TEXT)=? AND period IN ('202701','202702','202703') AND source='manual'
+                """,
+                (str(target_cc),),
+            ).fetchone()[0]
+            self.assertEqual(target_count_after_parse, 0)
+            other_count_after_parse = conn.execute(
+                "SELECT COUNT(*) FROM fact_monthly_headcount WHERE CAST(cc_code AS TEXT)=? AND source='manual'",
+                (str(other_cc),),
+            ).fetchone()[0]
+            self.assertEqual(other_count_after_parse, 1)
+            bus_row = conn.execute(
+                """
+                SELECT bus_expat_count, bus_vietnamese_count
+                FROM fact_bus_headcount_drivers
+                WHERE CAST(cc_code AS TEXT)=?
+                """,
+                (str(target_cc),),
+            ).fetchone()
+            self.assertIsNotNone(bus_row)
+            self.assertEqual(float(bus_row["bus_expat_count"]), 4.0)
+            self.assertEqual(float(bus_row["bus_vietnamese_count"]), 5.0)
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
