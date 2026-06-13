@@ -17,7 +17,12 @@ from src.parsers.birthday import parse_birthday_workbook
 from src.parsers.fixed_assets import parse_fixed_assets
 from src.parsers.ga import parse_ga
 from src.parsers.manual_event_drivers import parse_manual_event_drivers
-from src.parsers.manual_headcount import get_required_headcount_periods, parse_manual_headcount
+from src.parsers.manual_headcount import (
+    ensure_manual_headcount_template,
+    get_required_headcount_periods,
+    parse_manual_headcount,
+    resolve_manual_headcount_source_dir,
+)
 from src.parsers.manual_special_costs import parse_manual_special_costs
 from src.parsers.nnn_paperwork import parse_nnn_paperwork
 from src.utils.excel_helpers import find_hub_sheet_name, get_fy_months
@@ -191,6 +196,92 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
             )
             writer.writeheader()
         return csv_path
+
+    def test_manual_headcount_template_is_header_only(self):
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = Path(ensure_manual_headcount_template(str(tmpdir), 2027))
+            with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+
+            self.assertEqual(
+                reader.fieldnames,
+                [
+                    "cc_code",
+                    "period",
+                    "headcount_staff",
+                    "headcount_worker",
+                    "headcount_male",
+                    "headcount_female",
+                    "description",
+                ],
+            )
+            self.assertEqual(rows, [])
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_parser_resolves_project_docs_source_to_raw_and_ignores_docs_csv(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            project_root = tmpdir / "project"
+            docs_dir = project_root / "docs" / "MP2027"
+            raw_dir = project_root / "raw"
+            docs_dir.mkdir(parents=True)
+            raw_dir.mkdir(parents=True)
+
+            fieldnames = [
+                "cc_code",
+                "period",
+                "headcount_staff",
+                "headcount_worker",
+                "headcount_male",
+                "headcount_female",
+                "description",
+            ]
+            for path, staff, worker, description in [
+                (docs_dir / "headcount_manual.csv", "99", "0", "legacy docs row"),
+                (raw_dir / "headcount_manual.csv", "7", "1", "canonical raw row"),
+            ]:
+                with path.open("w", encoding="utf-8-sig", newline="") as f:
+                    writer = csv.DictWriter(f, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerow(
+                        {
+                            "cc_code": str(cc_code),
+                            "period": "202701",
+                            "headcount_staff": staff,
+                            "headcount_worker": worker,
+                            "headcount_male": "",
+                            "headcount_female": "",
+                            "description": description,
+                        }
+                    )
+
+            resolved = resolve_manual_headcount_source_dir(str(docs_dir), base_dir=str(project_root))
+            self.assertEqual(Path(resolved).resolve(), raw_dir.resolve())
+
+            result = parse_manual_headcount(conn, source_dir=str(docs_dir), base_dir=str(project_root))
+
+            self.assertEqual(Path(str(result["template_path"])).resolve(), (raw_dir / "headcount_manual.csv").resolve())
+            self.assertEqual(result["inserted"], 1)
+            row = conn.execute(
+                """
+                SELECT headcount_staff, headcount_worker, description
+                FROM fact_monthly_headcount
+                WHERE cc_code=? AND period='202701' AND source='manual'
+                """,
+                (cc_code,),
+            ).fetchone()
+            self.assertIsNotNone(row)
+            self.assertEqual(float(row["headcount_staff"]), 7.0)
+            self.assertEqual(float(row["headcount_worker"]), 1.0)
+            self.assertEqual(row["description"], "canonical raw row")
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     def test_manual_parser_accepts_required_baseline_and_is_idempotent(self):
         conn = _mk_conn()

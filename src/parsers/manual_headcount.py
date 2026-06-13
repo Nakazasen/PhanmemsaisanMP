@@ -11,6 +11,7 @@ CSV columns:
 import csv
 import os
 import sqlite3
+from pathlib import Path
 from typing import Any
 
 from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
@@ -19,7 +20,35 @@ TEMPLATE_FILENAME = "headcount_manual.csv"
 BUS_DRIVER_FILENAME = "bus_headcount_manual.csv"
 REQUIRED_COLUMNS = ("cc_code", "period", "headcount_staff", "headcount_worker")
 OPTIONAL_COLUMNS = ("headcount_male", "headcount_female")
+MANUAL_HEADCOUNT_COLUMNS = (*REQUIRED_COLUMNS, *OPTIONAL_COLUMNS, "description")
 BUS_DRIVER_COLUMNS = ("cc_code", "bus_expat_count", "bus_vietnamese_count", "description")
+
+
+def resolve_manual_headcount_source_dir(source_dir: str | None = None, base_dir: str | None = None) -> str:
+    """Resolve the active manual headcount folder.
+
+    In the checked-out project, raw/ is the canonical manual CSV input area.
+    If the user points the general source folder at docs/MP2027, keep business
+    workbook loading there but read/write manual headcount from raw/.
+    Custom source folders are left unchanged.
+    """
+    requested = Path(source_dir or os.getcwd()).expanduser()
+    try:
+        requested = requested.resolve()
+    except OSError:
+        requested = Path(os.path.abspath(str(requested)))
+
+    project_root = Path(base_dir).expanduser() if base_dir else Path(__file__).resolve().parents[2]
+    try:
+        project_root = project_root.resolve()
+    except OSError:
+        project_root = Path(os.path.abspath(str(project_root)))
+
+    raw_dir = project_root / "raw"
+    docs_dir = project_root / "docs" / "MP2027"
+    if requested in {project_root, docs_dir}:
+        return str(raw_dir)
+    return str(requested)
 
 
 def get_required_headcount_periods(fiscal_year: int) -> list[str]:
@@ -65,29 +94,9 @@ def ensure_manual_headcount_template(source_dir: str, fiscal_year: int) -> str:
     if os.path.exists(path):
         return path
 
-    periods = get_required_headcount_periods(fiscal_year)
-    sample_rows = [
-        ["1412000004", periods[0], "21", "180", "", "", "Baseline previous March - update numbers before run"],
-        ["1412000004", periods[1], "21", "180", "", "", "FY April example"],
-        ["1412000004", periods[2], "21", "182", "", "", "Month-by-month update"],
-        ["1412000004", f"{fiscal_year - 1}12", "21", "182", "95", "108", "December health-check split"],
-        ["1412000025", periods[1], "35", "0", "", "", "Admin department example"],
-    ]
-
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
-        writer.writerow(
-            [
-                "cc_code",
-                "period",
-                "headcount_staff",
-                "headcount_worker",
-                "headcount_male",
-                "headcount_female",
-                "description",
-            ]
-        )
-        writer.writerows(sample_rows)
+        writer.writerow(MANUAL_HEADCOUNT_COLUMNS)
     return path
 
 
@@ -166,14 +175,19 @@ def _parse_manual_bus_headcount(conn: sqlite3.Connection, source_dir: str, valid
     return {"inserted": inserted, "skipped": skipped, "errors": errors, "template_path": path}
 
 
-def parse_manual_headcount(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[str, int | str]:
+def parse_manual_headcount(
+    conn: sqlite3.Connection,
+    source_dir: str | None = None,
+    base_dir: str | None = None,
+) -> dict[str, int | str]:
     """Load manual headcount from CSV and write to fact_monthly_headcount source='manual'."""
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
     fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip()) if fy_row else 2027
     fiscal_months = get_fy_months(fiscal_year)
     valid_periods = set(get_required_headcount_periods(fiscal_year))
 
-    search_dir = source_dir or os.getcwd()
+    search_dir = resolve_manual_headcount_source_dir(source_dir, base_dir=base_dir)
+    os.makedirs(search_dir, exist_ok=True)
     template_path = ensure_manual_headcount_template(search_dir, fiscal_year)
     if not os.path.exists(template_path):
         return {"inserted": 0, "skipped": 0, "errors": 0, "template_path": template_path}

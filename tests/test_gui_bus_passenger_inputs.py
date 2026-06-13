@@ -26,6 +26,22 @@ def test_headcount_gui_has_scalar_bus_driver_inputs():
     assert "ensure_manual_bus_headcount_template(source_dir)" in source
 
 
+def test_headcount_gui_uses_canonical_manual_source_and_clears_on_cc_switch():
+    source = Path("src/universal_app.py").read_text(encoding="utf-8")
+
+    assert "resolve_manual_headcount_source_dir(self.source_dir.get() or BASE_DIR, base_dir=BASE_DIR)" in source
+    assert "csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)" in source
+    assert "bus_csv_path = ensure_manual_bus_headcount_template(source_dir)" in source
+    assert "result = parse_manual_headcount(conn, source_dir=source_dir)" in source
+
+    clear_start = source.index("def clear_table")
+    load_start = source.index("def load_selected_cc")
+    clear_call = source.index("clear_table()", load_start)
+    cc_parse = source.index("cc_code = parse_cc_code", load_start)
+    assert clear_call < cc_parse
+    assert 'field_var.set("")' in source[clear_start:load_start]
+
+
 def test_manual_headcount_bus_driver_template_columns_are_scalar_per_cc():
     assert BUS_DRIVER_FILENAME == "bus_headcount_manual.csv"
     assert BUS_DRIVER_COLUMNS == ("cc_code", "bus_expat_count", "bus_vietnamese_count", "description")

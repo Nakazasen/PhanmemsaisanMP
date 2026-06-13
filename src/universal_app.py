@@ -40,6 +40,7 @@ from src.parsers.manual_headcount import (
     ensure_manual_headcount_template,
     get_required_headcount_periods,
     parse_manual_headcount,
+    resolve_manual_headcount_source_dir,
 )
 from src.utils.excel_helpers import get_fy_months
 from src.utils.source_manifest import (
@@ -850,7 +851,7 @@ class MPManagerApp:
         except Exception:
             fiscal_year = 2027
 
-        source_dir = self.source_dir.get() or BASE_DIR
+        source_dir = resolve_manual_headcount_source_dir(self.source_dir.get() or BASE_DIR, base_dir=BASE_DIR)
         os.makedirs(source_dir, exist_ok=True)
         csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)
 
@@ -1045,7 +1046,7 @@ class MPManagerApp:
         except Exception:
             fiscal_year = 2027
 
-        source_dir = self.source_dir.get() or BASE_DIR
+        source_dir = resolve_manual_headcount_source_dir(self.source_dir.get() or BASE_DIR, base_dir=BASE_DIR)
         os.makedirs(source_dir, exist_ok=True)
         csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)
         bus_csv_path = ensure_manual_bus_headcount_template(source_dir)
