@@ -2,7 +2,10 @@
 
 Ngày cập nhật: `2026-06-13`
 
-`LAST_VERIFIED_AT_COMMIT=12d92325a0fffa9b03b6251d27210dbb69e032d0`
+`IMPLEMENTATION_VERIFIED_AT_COMMIT=12d92325a0fffa9b03b6251d27210dbb69e032d0`
+`DOCUMENT_LAST_UPDATED_AT_COMMIT=2b87fadbed00b8fe99d371435d8e5bfc43fa9d31`
+
+Implementation commit là trạng thái code/test được tài liệu này kiểm chứng. Document commit là commit chứa bản handover hiện hành.
 
 Tài liệu này là handover tổng hợp cho dự án MP2027 Manager. Canonical business requirement vẫn là workbook Excel ngày `09.06.2026`; Markdown này không thay thế workbook yêu cầu, ảnh minh họa, audit log, hoặc code/test evidence. Khi có mâu thuẫn, thứ tự ưu tiên là:
 
@@ -111,7 +114,9 @@ Luồng hiện hành:
   - `bus_expat_count`
   - `bus_vietnamese_count`
 - Parser ghi vào `fact_bus_headcount_drivers`.
-- Allocator dùng account/item `通勤送迎費`.
+- Business item/content: `通勤送迎費`.
+- Account JP name: `福利厚生費`.
+- Account code resolution: Cost Center -> `原価センタ` -> `原価区分` -> `勘定科目` (`製造`/`一般`/`販売`) -> `account_code`.
 - Monthly unit price lấy từ GA workbook `docs/MP2027/総務課 FY2027 MP 振替予定.xlsx`.
 - Sheet nguồn: `FY2027予定`.
 - Expat/Japanese bus unit price: `B9:M9`.
@@ -350,7 +355,7 @@ P2:
 
 Bạn đang làm trong `D:\Sandbox\MP2027`.
 
-Trạng thái verified tới commit `12d92325a0fffa9b03b6251d27210dbb69e032d0`:
+Trạng thái implementation verified tới commit `12d92325a0fffa9b03b6251d27210dbb69e032d0`; bản handover hiện hành được ghi nhận tại document commit `2b87fadbed00b8fe99d371435d8e5bfc43fa9d31`:
 
 - Canonical requirement: `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`.
 - Active source workbook dir: `docs/MP2027`.
