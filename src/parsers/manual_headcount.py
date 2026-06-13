@@ -20,17 +20,28 @@ REQUIRED_COLUMNS = ("cc_code", "period", "headcount_staff", "headcount_worker")
 OPTIONAL_COLUMNS = ("headcount_male", "headcount_female")
 
 
-def _normalize_period(raw_period: Any, valid_periods: set[str]) -> str | None:
+def get_required_headcount_periods(fiscal_year: int) -> list[str]:
+    """Return baseline previous March plus the fiscal Apr-Mar months."""
+    return [f"{fiscal_year - 1}03", *get_fy_months(fiscal_year)]
+
+
+def _has_value(value: Any) -> bool:
+    return value is not None and str(value).strip() != ""
+
+
+def _normalize_period(raw_period: Any, valid_periods: set[str], fiscal_months: list[str]) -> str | None:
     if raw_period is None:
         return None
     text = str(raw_period).strip()
     if text in valid_periods:
         return text
 
-    # Accept MM for fiscal month label, map to FY period.
+    # Accept MM for fiscal month label, map only to FY months.
+    # Baseline previous March must be entered explicitly as YYYYMM to avoid
+    # ambiguity with FY March.
     if text.isdigit() and 1 <= int(text) <= 12:
         month = int(text)
-        for period in valid_periods:
+        for period in fiscal_months:
             if int(period[-2:]) == month:
                 return period
     return None
@@ -42,12 +53,13 @@ def ensure_manual_headcount_template(source_dir: str, fiscal_year: int) -> str:
     if os.path.exists(path):
         return path
 
-    periods = get_fy_months(fiscal_year)
+    periods = get_required_headcount_periods(fiscal_year)
     sample_rows = [
-        ["1412000004", periods[0], "21", "180", "", "", "Example row - update numbers before run"],
-        ["1412000004", periods[1], "21", "182", "", "", "Month-by-month update"],
-        ["1412000004", periods[8], "21", "182", "95", "108", "December health-check split"],
-        ["1412000025", periods[0], "35", "0", "", "", "Admin department example"],
+        ["1412000004", periods[0], "21", "180", "", "", "Baseline previous March - update numbers before run"],
+        ["1412000004", periods[1], "21", "180", "", "", "FY April example"],
+        ["1412000004", periods[2], "21", "182", "", "", "Month-by-month update"],
+        ["1412000004", f"{fiscal_year - 1}12", "21", "182", "95", "108", "December health-check split"],
+        ["1412000025", periods[1], "35", "0", "", "", "Admin department example"],
     ]
 
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
@@ -71,7 +83,8 @@ def parse_manual_headcount(conn: sqlite3.Connection, source_dir: str | None = No
     """Load manual headcount from CSV and write to fact_monthly_headcount source='manual'."""
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
     fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip()) if fy_row else 2027
-    valid_periods = set(get_fy_months(fiscal_year))
+    fiscal_months = get_fy_months(fiscal_year)
+    valid_periods = set(get_required_headcount_periods(fiscal_year))
 
     search_dir = source_dir or os.getcwd()
     template_path = ensure_manual_headcount_template(search_dir, fiscal_year)
@@ -130,8 +143,11 @@ def parse_manual_headcount(conn: sqlite3.Connection, source_dir: str | None = No
                 errors += 1
                 continue
 
-            period = _normalize_period(raw_period, valid_periods)
+            period = _normalize_period(raw_period, valid_periods, fiscal_months)
             if period is None:
+                errors += 1
+                continue
+            if not _has_value(raw_staff) or not _has_value(raw_worker):
                 errors += 1
                 continue
 

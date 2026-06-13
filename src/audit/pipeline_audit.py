@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from src.parsers.manual_event_drivers import TEMPLATE_FILENAME as EVENT_DRIVER_FILENAME
+from src.parsers.manual_headcount import get_required_headcount_periods
 from src.utils.excel_helpers import get_fy_months
 
 
@@ -55,6 +56,48 @@ def _manual_health_check_gender_ccs(conn: sqlite3.Connection, fiscal_year: int) 
         ).fetchall()
         if row[0] is not None
     }
+
+
+def _headcount_rows_by_period(conn: sqlite3.Connection, cc_code: str) -> set[str]:
+    return {
+        str(row[0]).strip()
+        for row in conn.execute(
+            "SELECT DISTINCT period FROM fact_monthly_headcount WHERE CAST(cc_code AS TEXT) = ?",
+            (str(cc_code).strip(),),
+        ).fetchall()
+        if row[0] is not None
+    }
+
+
+def _missing_headcount_series_rows(
+    conn: sqlite3.Connection,
+    *,
+    cc_code: str,
+    fiscal_year: int,
+) -> list[dict[str, str]]:
+    existing_periods = _headcount_rows_by_period(conn, cc_code)
+    missing_rows: list[dict[str, str]] = []
+    for period in get_required_headcount_periods(fiscal_year):
+        if period in existing_periods:
+            continue
+        for category in ("headcount_staff", "headcount_worker"):
+            missing_rows.append(
+                {
+                    "severity": "action",
+                    "cc_code": cc_code,
+                    "period": period,
+                    "area": "headcount_series",
+                    "message": (
+                        "Missing canonical monthly headcount category: "
+                        f"cc={cc_code}, period={period}, category={category}"
+                    ),
+                    "action": (
+                        "Provide baseline 202603 and FY monthly headcount for both "
+                        "headcount_staff and headcount_worker in headcount_manual.csv or the GUI."
+                    ),
+                }
+            )
+    return missing_rows
 
 
 def _target_ccs(conn: sqlite3.Connection, target_cc: object | None) -> list[str]:
@@ -115,6 +158,10 @@ def write_pipeline_audit_report(
 
     missing_rows: list[dict[str, str]] = []
     for cc_code in cc_list:
+        missing_rows.extend(
+            _missing_headcount_series_rows(conn, cc_code=cc_code, fiscal_year=fiscal_year)
+        )
+
         if cc_code not in manual_hc_ccs:
             missing_rows.append(
                 {

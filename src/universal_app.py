@@ -32,9 +32,13 @@ if BASE_DIR not in sys.path:
 from scripts.run_e2e import run_universal_pipeline
 from src.config import EXCHANGE_RATE_USD_VND
 from src.db.loader import load_all
-from src.db.schema import get_connection
+from src.db.schema import create_schema, get_connection
 from src.parsers.manual_event_drivers import TEMPLATE_COLUMNS, ensure_manual_event_drivers_template
-from src.parsers.manual_headcount import ensure_manual_headcount_template
+from src.parsers.manual_headcount import (
+    ensure_manual_headcount_template,
+    get_required_headcount_periods,
+    parse_manual_headcount,
+)
 from src.utils.excel_helpers import get_fy_months
 from src.utils.source_manifest import (
     DEFAULT_DESCRIPTIONS,
@@ -856,7 +860,7 @@ class MPManagerApp:
         desc_var = tk.StringVar()
 
         cc_choices = self._get_cc_choices()
-        periods = get_fy_months(fiscal_year)
+        periods = get_required_headcount_periods(fiscal_year)
 
         ttk.Label(frame, text="Mã CC").grid(row=1, column=0, sticky="w", pady=5)
         cc_combo = ttk.Combobox(frame, textvariable=cc_var, values=cc_choices, width=34)
@@ -989,8 +993,29 @@ class MPManagerApp:
                 )
                 writer.writeheader()
                 writer.writerows(rows)
-            self.log(f"Đã lưu nhân sự thủ công: {len(rows)} hàng -> {csv_path}")
-            messagebox.showinfo("Đã lưu", f"Đã lưu {len(rows)} hàng.")
+            db_path = os.path.join(BASE_DIR, "mp2027.db")
+            conn = get_connection(db_path)
+            try:
+                create_schema(conn)
+                result = parse_manual_headcount(conn, source_dir=source_dir)
+            finally:
+                conn.close()
+            self.log(
+                "Đã lưu nhân sự thủ công: {rows} hàng -> {path}; DB inserted={inserted}, errors={errors}".format(
+                    rows=len(rows),
+                    path=csv_path,
+                    inserted=result.get("inserted", 0),
+                    errors=result.get("errors", 0),
+                )
+            )
+            messagebox.showinfo(
+                "Đã lưu",
+                "Đã lưu {rows} hàng. DB inserted={inserted}, errors={errors}.".format(
+                    rows=len(rows),
+                    inserted=result.get("inserted", 0),
+                    errors=result.get("errors", 0),
+                ),
+            )
 
         btn = ttk.Frame(frame)
         btn.grid(row=4, column=0, columnspan=6, sticky="w", pady=(6, 0))
@@ -1032,8 +1057,16 @@ class MPManagerApp:
 
         cc_var = tk.StringVar()
         cc_choices = self._get_cc_choices()
-        periods = get_fy_months(fiscal_year)
-        label_by_period = {period: f"Th\u00e1ng {int(period[-2:])}" for period in periods}
+        periods = get_required_headcount_periods(fiscal_year)
+        fiscal_months = set(get_fy_months(fiscal_year))
+        label_by_period = {
+            period: (
+                f"Baseline T3 ({period})"
+                if period not in fiscal_months
+                else f"Th\u00e1ng {int(period[-2:])}"
+            )
+            for period in periods
+        }
 
         ttk.Label(frame, text="M\u00e3 CC").grid(row=2, column=0, sticky="w", pady=(0, 8))
         cc_combo = ttk.Combobox(frame, textvariable=cc_var, values=cc_choices, width=42, state="readonly")
@@ -1168,8 +1201,31 @@ class MPManagerApp:
 
             new_rows.sort(key=lambda row: (str(row.get("cc_code", "")), str(row.get("period", ""))))
             self._write_manual_headcount_rows(csv_path, new_rows)
-            self.log(f"Lưu nhân sự 12 tháng: CC={cc_code}, số dòng={saved_count}, tệp={csv_path}")
-            messagebox.showinfo("Đã lưu", f"Đã lưu {saved_count} dòng cho CC {cc_code}.")
+            db_path = os.path.join(BASE_DIR, "mp2027.db")
+            conn = get_connection(db_path)
+            try:
+                create_schema(conn)
+                result = parse_manual_headcount(conn, source_dir=source_dir)
+            finally:
+                conn.close()
+            self.log(
+                "Lưu nhân sự theo kỳ: CC={cc}, số dòng={rows}, tệp={path}; DB inserted={inserted}, errors={errors}".format(
+                    cc=cc_code,
+                    rows=saved_count,
+                    path=csv_path,
+                    inserted=result.get("inserted", 0),
+                    errors=result.get("errors", 0),
+                )
+            )
+            messagebox.showinfo(
+                "Đã lưu",
+                "Đã lưu {rows} dòng cho CC {cc}. DB inserted={inserted}, errors={errors}.".format(
+                    rows=saved_count,
+                    cc=cc_code,
+                    inserted=result.get("inserted", 0),
+                    errors=result.get("errors", 0),
+                ),
+            )
 
         button_row = ttk.Frame(frame)
         button_row.grid(row=4, column=0, columnspan=8, sticky="w", pady=(12, 0))

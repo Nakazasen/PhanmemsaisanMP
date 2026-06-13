@@ -7,6 +7,7 @@ import uuid
 
 import openpyxl
 
+from src.audit.pipeline_audit import write_pipeline_audit_report
 from src.db.loader import _apply_mp2026_reference_unit_price, _parse_unit_price, load_allocation_rules
 from src.db.schema import create_schema, init_sys_params
 from src.engine.allocator import AllocationEngine
@@ -16,7 +17,7 @@ from src.parsers.birthday import parse_birthday_workbook
 from src.parsers.fixed_assets import parse_fixed_assets
 from src.parsers.ga import parse_ga
 from src.parsers.manual_event_drivers import parse_manual_event_drivers
-from src.parsers.manual_headcount import parse_manual_headcount
+from src.parsers.manual_headcount import get_required_headcount_periods, parse_manual_headcount
 from src.parsers.manual_special_costs import parse_manual_special_costs
 from src.parsers.nnn_paperwork import parse_nnn_paperwork
 from src.utils.excel_helpers import find_hub_sheet_name, get_fy_months
@@ -173,6 +174,106 @@ class TestExportIntegrityGuard(unittest.TestCase):
 
 
 class TestManualHeadcountGenderSplit(unittest.TestCase):
+    def test_manual_parser_accepts_required_baseline_and_is_idempotent(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_required_headcount_periods(2027)
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "headcount_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "period",
+                        "headcount_staff",
+                        "headcount_worker",
+                        "headcount_male",
+                        "headcount_female",
+                        "description",
+                    ],
+                )
+                writer.writeheader()
+                for idx, period in enumerate(periods):
+                    writer.writerow(
+                        {
+                            "cc_code": str(cc_code),
+                            "period": period,
+                            "headcount_staff": "27" if idx < 10 else "28",
+                            "headcount_worker": "0",
+                            "headcount_male": "",
+                            "headcount_female": "",
+                            "description": "full series",
+                        }
+                    )
+
+            first = parse_manual_headcount(conn, source_dir=str(tmpdir))
+            second = parse_manual_headcount(conn, source_dir=str(tmpdir))
+            self.assertEqual(first["inserted"], 13)
+            self.assertEqual(second["inserted"], 13)
+            self.assertEqual(first["errors"], 0)
+            self.assertEqual(second["errors"], 0)
+
+            count = conn.execute(
+                "SELECT COUNT(*) FROM fact_monthly_headcount WHERE cc_code=? AND source='manual'",
+                (cc_code,),
+            ).fetchone()[0]
+            self.assertEqual(count, 13)
+            baseline = conn.execute(
+                """
+                SELECT headcount_staff, headcount_worker, source, description
+                FROM fact_monthly_headcount
+                WHERE cc_code=? AND period='202603'
+                """,
+                (cc_code,),
+            ).fetchone()
+            self.assertIsNotNone(baseline)
+            self.assertEqual(float(baseline["headcount_staff"]), 27.0)
+            self.assertEqual(float(baseline["headcount_worker"]), 0.0)
+            self.assertEqual(baseline["source"], "manual")
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_parser_requires_staff_and_worker_category_values(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "headcount_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "period",
+                        "headcount_staff",
+                        "headcount_worker",
+                        "description",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "period": "202603",
+                        "headcount_staff": "27",
+                        "headcount_worker": "",
+                        "description": "missing worker category",
+                    }
+                )
+
+            result = parse_manual_headcount(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 0)
+            self.assertEqual(result["errors"], 1)
+            count = conn.execute("SELECT COUNT(*) FROM fact_monthly_headcount").fetchone()[0]
+            self.assertEqual(count, 0)
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_manual_parser_reads_optional_gender_columns(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
@@ -222,6 +323,45 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
             self.assertEqual(float(row["headcount_all"]), 15.0)
             self.assertEqual(float(row["headcount_male"]), 6.0)
             self.assertEqual(float(row["headcount_female"]), 7.0)
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+class TestHeadcountMissingMatrix(unittest.TestCase):
+    def test_pipeline_audit_reports_period_category_matrix_for_missing_target_series(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn, code=1412000040)
+        tmpdir = _mk_tmpdir()
+        try:
+            result = write_pipeline_audit_report(
+                conn=conn,
+                output_dir=str(tmpdir),
+                source_dir=str(tmpdir),
+                fiscal_year=2027,
+                target_cc=cc_code,
+                parser_results={},
+            )
+            rows = []
+            with open(result["missing_csv_path"], "r", encoding="utf-8-sig", newline="") as f:
+                for row in csv.DictReader(f):
+                    if row["area"] == "headcount_series":
+                        rows.append(row)
+
+            expected = [
+                (period, category)
+                for period in get_required_headcount_periods(2027)
+                for category in ("headcount_staff", "headcount_worker")
+            ]
+            observed = [
+                (
+                    row["period"],
+                    "headcount_staff" if "category=headcount_staff" in row["message"] else "headcount_worker",
+                )
+                for row in rows
+            ]
+            self.assertEqual(observed, expected)
+            self.assertTrue(all(row["cc_code"] == str(cc_code) for row in rows))
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
@@ -413,7 +553,32 @@ class TestEventDeltaHeadcountFailClosed(unittest.TestCase):
         self.assertEqual(rows, [])
         missing_messages = [row["message"] for row in self._missing_rows(conn)]
         self.assertTrue(any(f"cc={cc_code}, month={periods[9]}, previous_month={periods[8]}" in msg for msg in missing_messages))
+        self.assertTrue(any("category=headcount_all" in msg for msg in missing_messages))
         self.assertFalse(any("amount_vnd" in str(row) and str(28 * 9100) in str(row) for row in rows))
+        conn.close()
+
+    def test_missing_middle_month_does_not_bridge_delta(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        self._insert_headcount(
+            conn,
+            cc_code,
+            [
+                ("202603", 27),
+                (periods[0], 27),
+                # periods[1] intentionally missing; Jun must not bridge Apr -> Jun.
+                (periods[2], 28),
+            ],
+        )
+        rule_id = self._insert_rule(conn)
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        self.assertEqual(self._alloc_rows(conn, rule_id), [])
+        missing_messages = [row["message"] for row in self._missing_rows(conn)]
+        self.assertTrue(any(f"month={periods[2]}, previous_month={periods[1]}" in msg for msg in missing_messages))
+        self.assertTrue(any("missing=previous" in msg for msg in missing_messages))
         conn.close()
 
     def test_missing_all_monthly_headcount_records_missing_input_without_amount(self):

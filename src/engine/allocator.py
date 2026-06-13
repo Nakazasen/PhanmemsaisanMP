@@ -278,7 +278,8 @@ class AllocationEngine:
         missing_text = ",".join(missing_parts) if missing_parts else "unknown"
         message = (
             "Missing complete monthly headcount driver for event-delta allocation: "
-            f"cc={cc_key}, month={period}, previous_month={prev_text}, missing={missing_text}"
+            f"cc={cc_key}, month={period}, previous_month={prev_text}, "
+            f"category={driver_type}, missing={missing_text}"
         )
         action = (
             "Provide monthly headcount for both the event month and previous month "
