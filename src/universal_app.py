@@ -2205,6 +2205,7 @@ class MPManagerApp:
             exchange_rate=rate,
             target_cc=target_cc,
             log_callback=self.log,
+            mp_saisan_complete_v1=True,
         )
         if success:
             self.log(f"THÀNH CÔNG. Kết quả: {result}")

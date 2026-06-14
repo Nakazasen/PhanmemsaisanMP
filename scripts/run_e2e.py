@@ -145,7 +145,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            fixed_assets_reference_skeleton_export: bool = False,
                            fixed_assets_skeleton_csv: str | None = None,
                            fixed_assets_skeleton_start_row: int | None = None,
-                           mp_saisan_complete_v1: bool = False):
+                           mp_saisan_complete_v1: bool = True):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports all 62 CCs.
@@ -299,12 +299,15 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             log_callback(f"Exporting Single CC: {target_cc}")
             out_path = os.path.join(output_dir, f"MP_CC_{target_cc}.xlsx")
             complete_v1_primary_path = None
-            if mp_saisan_complete_v1:
-                complete_v1_primary_path = _resolve_primary_reference_path(
-                    target_cc=target_cc,
-                    primary_reference_path=primary_reference_path,
-                    reference_map_path=reference_map_path,
-                )
+            if mp_saisan_complete_v1 and (primary_reference_path or reference_map_path):
+                try:
+                    complete_v1_primary_path = _resolve_primary_reference_path(
+                        target_cc=target_cc,
+                        primary_reference_path=primary_reference_path,
+                        reference_map_path=reference_map_path,
+                    )
+                except ValueError:
+                    complete_v1_primary_path = None
             builder.export_to_template(template_path, out_path, cc_code=target_cc)
             if facility_file_order_export:
                 apply_facility_file_order_to_workbook(
@@ -353,7 +356,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     start_row=primary_reference_fill_start_row,
                 )
                 log_callback(f"Reference-assisted primary fill applied: {fill_result}")
-            if mp_saisan_complete_v1:
+            if mp_saisan_complete_v1 and complete_v1_primary_path:
                 complete_result = apply_mp_saisan_complete_v1(
                     workbook_path=out_path,
                     target_cc=target_cc,
@@ -565,9 +568,14 @@ if __name__ == '__main__':
     )
     parser.add_argument('--fixed-assets-skeleton-start-row', type=int, default=None)
     parser.add_argument(
+        '--legacy-export',
+        action='store_true',
+        help='Use legacy fixed-row export instead of canonical complete-v1 source-order export.',
+    )
+    parser.add_argument(
         '--mp-saisan-complete-v1',
         action='store_true',
-        help='Explicit opt-in: apply file-order v1 plus deduped primary and secondary reference-assisted layers.',
+        help=argparse.SUPPRESS,
     )
     args = parser.parse_args()
     
@@ -595,5 +603,5 @@ if __name__ == '__main__':
         fixed_assets_reference_skeleton_export=args.fixed_assets_reference_skeleton_export,
         fixed_assets_skeleton_csv=args.fixed_assets_skeleton_csv,
         fixed_assets_skeleton_start_row=args.fixed_assets_skeleton_start_row,
-        mp_saisan_complete_v1=args.mp_saisan_complete_v1,
+        mp_saisan_complete_v1=not args.legacy_export,
     )
