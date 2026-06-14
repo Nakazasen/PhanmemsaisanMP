@@ -1880,7 +1880,7 @@ class TestManualSpecialCosts(unittest.TestCase):
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
         )
         conn.commit()
-        period = "202705"
+        period = "202605"
 
         tmpdir = _mk_tmpdir()
         try:
@@ -1927,7 +1927,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                 """
             ).fetchone()
             self.assertIsNotNone(fact_row)
-            self.assertEqual(fact_row["period"], "202705")
+            self.assertEqual(fact_row["period"], "202605")
             self.assertEqual(str(fact_row["cc_code"]), "1412000089")
             self.assertEqual(int(fact_row["account_code"]), 5004086291)
             self.assertEqual(int(fact_row["form_row"]), 66)
@@ -1959,7 +1959,7 @@ class TestManualSpecialCosts(unittest.TestCase):
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5005246288, '事務用消耗品費', 'Office supplies')"
         )
         conn.commit()
-        period = "202705"
+        period = "202605"
 
         tmpdir = _mk_tmpdir()
         try:
@@ -2006,7 +2006,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                 """
             ).fetchone()
             self.assertIsNotNone(fact_row)
-            self.assertEqual(fact_row["period"], "202705")
+            self.assertEqual(fact_row["period"], "202605")
             self.assertEqual(str(fact_row["cc_code"]), "1412000089")
             self.assertEqual(int(fact_row["account_code"]), 5005246288)
             self.assertEqual(int(fact_row["form_row"]), 97)
@@ -2039,7 +2039,7 @@ class TestManualSpecialCosts(unittest.TestCase):
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5005246288, '事務用消耗品費', 'Office supplies')"
         )
         conn.commit()
-        period = "202705"
+        period = "202605"
 
         tmpdir = _mk_tmpdir()
         try:
@@ -2086,7 +2086,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                 """
             ).fetchone()
             self.assertIsNotNone(fact_row)
-            self.assertEqual(fact_row["period"], "202705")
+            self.assertEqual(fact_row["period"], "202605")
             self.assertEqual(str(fact_row["cc_code"]), "1412000089")
             self.assertEqual(int(fact_row["account_code"]), 5005246288)
             self.assertEqual(int(fact_row["form_row"]), 98)
@@ -2143,7 +2143,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                 writer.writerow(
                     {
                         "cc_code": str(cc_code),
-                        "source_month": "202706",
+                        "source_month": "202606",
                         "posting_rule": "next_month",
                         "event_name": "採用の健康診断費 Chi phí khám sức khỏe tuyển dụng",
                         "event_type": "manual_count_unit_price",
@@ -2167,15 +2167,15 @@ class TestManualSpecialCosts(unittest.TestCase):
                 """
             ).fetchone()
             self.assertIsNotNone(fact_row)
-            self.assertEqual(fact_row["period"], "202707")
+            self.assertEqual(fact_row["period"], "202607")
             self.assertEqual(str(fact_row["cc_code"]), "1412000089")
             self.assertEqual(int(fact_row["account_code"]), 5004086291)
             self.assertEqual(int(fact_row["form_row"]), 58)
             self.assertEqual(float(fact_row["amount_vnd"]), 246000.0)
             self.assertIn("formula_expr=2*123000", fact_row["description"])
-            self.assertIn("source_month=202706", fact_row["description"])
+            self.assertIn("source_month=202606", fact_row["description"])
             self.assertIn("posting_rule=next_month", fact_row["description"])
-            self.assertIn("shifted_to=202707", fact_row["description"])
+            self.assertIn("shifted_to=202607", fact_row["description"])
 
             template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
             output_path = tmpdir / "out_manual_recruitment_health.xlsx"
@@ -2293,7 +2293,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                 writer.writerow(
                     {
                         "cc_code": str(cc_code),
-                        "target_month": "202705",
+                        "target_month": "202605",
                         "event_name": "社員旅行 Du lịch công ty",
                         "event_type": "month_specific_driver",
                         "count": "111",
@@ -2316,7 +2316,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                 """
             ).fetchone()
             self.assertIsNotNone(fact_row)
-            self.assertEqual(fact_row["period"], "202705")
+            self.assertEqual(fact_row["period"], "202605")
             self.assertEqual(str(fact_row["cc_code"]), "1412000089")
             self.assertEqual(int(fact_row["account_code"]), 5004086291)
             self.assertEqual(int(fact_row["form_row"]), 66)
@@ -2380,7 +2380,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                 writer.writerow(
                     {
                         "cc_code": str(cc_code),
-                        "target_month": "202705",
+                        "target_month": "202605",
                         "event_name": "社員旅行 Du lịch công ty",
                         "event_type": "month_specific_driver",
                         "count": "1",
@@ -2418,7 +2418,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                 writer.writerow(
                     {
                         "cc_code": str(cc_code),
-                        "target_month": "202705",
+                        "target_month": "202605",
                         "event_name": "社員旅行 Du lịch công ty",
                         "count": "1",
                         "unit_price": "100",
@@ -2460,7 +2460,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                 writer.writerow(
                     {
                         "cc_code": str(cc_code),
-                        "target_month": "202705",
+                        "target_month": "202605",
                         "event_name": "社員旅行 Du lịch công ty",
                         "count": "1",
                         "unit_price": "100",
@@ -2536,7 +2536,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                 writer.writerow(
                     {
                         "cc_code": str(cc_code),
-                        "target_month": "202705",
+                        "target_month": "202605",
                         "event_name": "社員旅行 Du lịch công ty",
                         "event_type": "month_specific_driver",
                         "count": "111",
@@ -2820,7 +2820,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                 writer.writerow(
                     {
                         "cc_code": str(cc_code),
-                        "target_month": "202705",
+                        "target_month": "202605",
                         "event_name": "社員旅行 Du lịch công ty",
                         "count": "111",
                         "unit_price": "123",
@@ -2857,7 +2857,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                 writer.writerow(
                     {
                         "cc_code": str(cc_code),
-                        "target_month": "202705",
+                        "target_month": "202605",
                         "event_name": "社員旅行 Du lịch công ty",
                         "count": "111",
                         "unit_price_key": "DOES_NOT_EXIST",
@@ -2894,7 +2894,7 @@ class TestManualSpecialCosts(unittest.TestCase):
                 writer.writerow(
                     {
                         "cc_code": str(cc_code),
-                        "target_month": "202705",
+                        "target_month": "202605",
                         "event_name": "社員旅行 Du lịch công ty",
                         "count": "111",
                         "unit_price_key": "社員旅行",
@@ -3003,6 +3003,8 @@ class TestManualSpecialCosts(unittest.TestCase):
                     "unit_price_key",
                     "allocation_content",
                     "amount_vnd",
+                    "bus_expat_people",
+                    "bus_vietnamese_people",
                     "account_code",
                     "account_jp_name",
                     "account_name",
