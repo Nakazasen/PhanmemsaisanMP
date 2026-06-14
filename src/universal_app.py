@@ -44,6 +44,7 @@ from src.parsers.manual_headcount import (
     validate_manual_headcount_rows,
 )
 from src.utils.excel_helpers import get_fy_months
+from src.utils.fiscal_periods import fiscal_month_labels
 from src.utils.source_manifest import (
     DEFAULT_DESCRIPTIONS,
     MANIFEST_COLUMNS,

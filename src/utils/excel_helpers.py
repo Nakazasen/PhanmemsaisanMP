@@ -4,6 +4,7 @@ Universal helper functions for reading financial workbooks.
 """
 import pandas as pd
 import openpyxl
+from src.utils.fiscal_periods import fiscal_month_order, fiscal_periods
 from datetime import datetime
 from typing import Optional, Any
 from pathlib import Path
@@ -13,27 +14,15 @@ HUB_SHEET_CANDIDATES = ('内訳ﾘｽﾄ(4～3月)', '内訳リスト(4～3月)'
 
 def get_month_mapping(fiscal_year: int = 2027) -> dict:
     """Returns a mapping of month Index (0-11) to Period String (YYYYMM)."""
-    start_year = fiscal_year - 1
-    mapping = {}
-    for i in range(4, 13):
-        month_idx = i - 4
-        mapping[month_idx] = f"{start_year}{i:02d}"
-    for i in range(1, 4):
-        month_idx = i + 8
-        mapping[month_idx] = f"{fiscal_year}{i:02d}"
-    return mapping
+    return {index: period for index, period in enumerate(fiscal_periods(fiscal_year))}
 
 def get_fy_months(fiscal_year: int = 2027) -> list:
     """Returns a list of 12 YYYYMM strings for the given fiscal year."""
-    mapping = get_month_mapping(fiscal_year)
-    return [mapping[i] for i in range(12)]
+    return fiscal_periods(fiscal_year)
 
 def get_fy_month_labels(fiscal_year: int = 2027) -> list:
     """Returns a list of 12 numeric month labels (4, 5, ..., 12, 1, 2, 3)."""
-    months = []
-    for i in range(4, 13): months.append(i)
-    for i in range(1, 4): months.append(i)
-    return months
+    return fiscal_month_order()
 
 def normalize_period(value: Any) -> Optional[str]:
     """Universal period normalizer to YYYYMM format."""

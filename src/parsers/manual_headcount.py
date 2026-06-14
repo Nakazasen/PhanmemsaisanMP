@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from src.utils.excel_helpers import get_fy_months, normalize_cc_code
+from src.utils.fiscal_periods import fiscal_baseline_period
 
 TEMPLATE_FILENAME = "headcount_manual.csv"
 BUS_DRIVER_FILENAME = "bus_headcount_manual.csv"
@@ -74,7 +75,7 @@ def resolve_manual_headcount_source_dir(source_dir: str | None = None, base_dir:
 
 def get_required_headcount_periods(fiscal_year: int) -> list[str]:
     """Return baseline previous March plus the fiscal Apr-Mar months."""
-    return [f"{fiscal_year - 1}03", *get_fy_months(fiscal_year)]
+    return [fiscal_baseline_period(fiscal_year), *get_fy_months(fiscal_year)]
 
 
 def _has_value(value: Any) -> bool:
