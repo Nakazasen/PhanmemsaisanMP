@@ -26,6 +26,7 @@ MONTH_END_COL = 17
 DESCRIPTION_COL = 19
 NOTE_COL = 20
 BUSINESS_COLS = (ACCOUNT_COL, ITEM_ID_COL, *range(MONTH_START_COL, MONTH_END_COL + 1), DESCRIPTION_COL, NOTE_COL)
+MANAGED_CLEAR_COLS = tuple(range(2, 21))  # B:T, values/formulas only; styles are preserved.
 COPY_COLS = tuple(range(1, 21))
 
 
@@ -83,7 +84,7 @@ def _copy_staged_row(ws, source_file: str, row: int) -> StagedWorkbookRow | None
 
 
 def _clear_business_row(ws, row: int) -> None:
-    for col in BUSINESS_COLS:
+    for col in MANAGED_CLEAR_COLS:
         ws.cell(row, col).value = None
 
 
@@ -135,7 +136,9 @@ def apply_complete_v1_source_order_to_workbook(
         staged = _collect_staged_rows(ws)
 
         _clear_rows(ws, range(start_row, clear_until_row + 1))
-        _clear_rows(ws, LEGACY_FIXED_PLACEMENT_ROWS)
+        # Clear legacy staging rows only for rows actually emitted into canonical blocks.
+        # This removes exact legacy/canonical duplicates without clearing unrelated template rows.
+        _clear_rows(ws, {row.original_row for row in staged})
 
         current_row = int(start_row)
         source_blocks_written = 0
