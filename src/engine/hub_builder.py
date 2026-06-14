@@ -83,10 +83,12 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
     66: {
         "tokens": ("社員旅行 du lịch công ty", "社員旅行", "京セラフェスティバル", "lễ hội kyocera"),
         "exclude_tokens": ("不参加", "gift", "quà tặng", "qua tang"),
+        "output_description": "社員旅行; 京セラフェスティバル",
     },
     67: {
         "tokens": ("運動会", "đại hội thể thao"),
         "exclude_tokens": (),
+        "output_description": "運動会",
     },
     70: {
         "tokens": ("忘年会補助金", "hỗ trợ tiệc tất niên"),
@@ -95,6 +97,7 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
     71: {
         "tokens": ("月餅", "bánh trung thu"),
         "exclude_tokens": (),
+        "output_description": "月餅",
     },
     64: {
         "tokens": ("10年勤続記念コンパ", "tiệc kỷ niệm 10 năm", "tiec ky niem 10 nam"),
@@ -111,14 +114,17 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
     79: {
         "tokens": ("社員証（新入社員用・再発行時、写真含む）", "thẻ từ chấm công + ảnh"),
         "exclude_tokens": (),
+        "output_description": "社員証（新入社員用・再発行時、写真含む）",
     },
     80: {
         "tokens": ("社員証用写真のみ", "ảnh của thẻ từ chấm công"),
         "exclude_tokens": (),
+        "output_description": "社員証用写真のみ",
     },
     81: {
         "tokens": ("フィロソフィ手帳1", "フィロソフィ手帳2", "philosophy quyển 1", "philosophy quyển 2"),
         "exclude_tokens": (),
+        "output_description": "フィロソフィ手帳1; フィロソフィ手帳2",
     },
     82: {
         "tokens": ("ポケットカレンダー", "pocket calendar", "lịch bỏ túi"),
@@ -131,6 +137,7 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
     89: {
         "tokens": ("alloc: ペン", "ペン bút"),
         "exclude_tokens": (),
+        "output_description": "ペン Bút",
     },
     90: {
         "tokens": ("alloc: ノート", "ノート sổ"),
@@ -1051,6 +1058,10 @@ class HubBuilder:
             )
             if account_code:
                 worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
+            output_description = matcher.get("output_description")
+            if output_description:
+                worksheet.cell(row=row_index, column=DESCRIPTION_COL, value=output_description)
+                worksheet.cell(row=row_index, column=WBS_COL, value=f"allocation_rule_row={row_index}; exact_identity={output_description}")
             terms_by_period, numeric_values = self._alloc_formula_series_from_tokens(
                 cc_code,
                 tokens=matcher["tokens"],
@@ -1214,6 +1225,10 @@ class HubBuilder:
             )
             if account_code:
                 worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
+            output_description = matcher.get("output_description")
+            if output_description:
+                worksheet.cell(row=row_index, column=DESCRIPTION_COL, value=output_description)
+                worksheet.cell(row=row_index, column=WBS_COL, value=f"allocation_rule_row={row_index}; exact_identity={output_description}")
             terms_by_period, numeric_values = self._alloc_formula_series_from_tokens(
                 cc_code,
                 tokens=matcher["tokens"],
