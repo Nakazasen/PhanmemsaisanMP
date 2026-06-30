@@ -43,8 +43,7 @@ def test_cli_default_and_legacy_export_mapping():
 def test_reference_path_optional_for_canonical_source_order():
     source = _source("scripts/run_e2e.py")
     assert "if mp_saisan_complete_v1 and (primary_reference_path or reference_map_path):" in source
-    assert "except ValueError:" in source
-    assert "complete_v1_primary_path = None" in source
+    assert "complete_v1_primary_path = _resolve_primary_reference_path" in source
     assert "if mp_saisan_complete_v1 and complete_v1_primary_path:" in source
 
 

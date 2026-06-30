@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
 
 # Database
 data/
@@ -24,10 +25,21 @@ data/
 !reference_outputs/secondary/
 !reference_outputs/primary/*.xlsx
 !reference_outputs/secondary/*.zip
+reference_outputs/secondary/FY2027/
 
 # System files
 .DS_Store
 Thumbs.db
+
+# Logs and local runtime artifacts
+*.log
+.tmp*/
+.tmp_test_artifacts/
+
+# Generated output scratch/audit artifacts
+OUTPUT_FY2027/tmp*/
+OUTPUT_FY2027/*QUARANTINE*.csv
+OUTPUT_FY2027/*audit_summary*.json
 
 # PyInstaller & Build
 build/

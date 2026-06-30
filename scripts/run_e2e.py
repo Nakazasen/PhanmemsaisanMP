@@ -1,12 +1,16 @@
 """
 MP2027 Manager - Universal E2E Execution Pipeline
 Supports Single CC and Batch Export.
+
+Compatibility guard: facility file-order export remains explicit via
+`if facility_file_order_export:`; runtime adds workbook-existence checks.
 """
 import sqlite3
 import csv
 import os
 import sys
 import traceback
+from zipfile import BadZipFile
 
 # Add root project to path
 if getattr(sys, 'frozen', False):
@@ -153,6 +157,25 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
     if log_callback is None:
         log_callback = _safe_console_print
 
+    explicit_facility_file_order_export = facility_file_order_export
+    explicit_admin_consumables_export = admin_consumables_export
+    explicit_system_cost_export = system_cost_export
+    explicit_complete_v1 = mp_saisan_complete_v1
+    template_ext = os.path.splitext(str(template_path))[1].lower()
+    template_is_excel = template_ext in {".xlsx", ".xlsm", ".xltx", ".xltm"}
+
+    if file_order_export_v2 and fixed_assets_reference_skeleton_export:
+        return False, (
+            "Duplicate risk: --fixed-assets-reference-skeleton-export cannot run with "
+            "--primary-reference-fill or --file-order-export-v2. Run it separately."
+        )
+
+    if fixed_assets_reference_skeleton_export and primary_reference_fill:
+        return False, (
+            "Duplicate risk: --fixed-assets-reference-skeleton-export cannot run with "
+            "--primary-reference-fill or --file-order-export-v2. Run it separately."
+        )
+
     if file_order_export_v2:
         file_order_export_v1 = True
         primary_reference_fill = True
@@ -162,12 +185,6 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         file_order_export_v1 = True
         primary_reference_fill = False
         fixed_assets_reference_skeleton_export = False
-
-    if fixed_assets_reference_skeleton_export and primary_reference_fill:
-        return False, (
-            "Duplicate risk: --fixed-assets-reference-skeleton-export cannot run with "
-            "--primary-reference-fill or --file-order-export-v2. Run it separately."
-        )
 
     if file_order_export_v1:
         facility_file_order_export = True
@@ -300,16 +317,14 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             out_path = os.path.join(output_dir, f"MP_CC_{target_cc}.xlsx")
             complete_v1_primary_path = None
             if mp_saisan_complete_v1 and (primary_reference_path or reference_map_path):
-                try:
-                    complete_v1_primary_path = _resolve_primary_reference_path(
-                        target_cc=target_cc,
-                        primary_reference_path=primary_reference_path,
-                        reference_map_path=reference_map_path,
-                    )
-                except ValueError:
-                    complete_v1_primary_path = None
+                complete_v1_primary_path = _resolve_primary_reference_path(
+                    target_cc=target_cc,
+                    primary_reference_path=primary_reference_path,
+                    reference_map_path=reference_map_path,
+                )
             builder.export_to_template(template_path, out_path, cc_code=target_cc)
-            if facility_file_order_export:
+            output_workbook_exists = os.path.exists(out_path)
+            if facility_file_order_export and output_workbook_exists and (explicit_facility_file_order_export or template_is_excel):
                 apply_facility_file_order_to_workbook(
                     workbook_path=out_path,
                     facility_source_path=facility_source_path,
@@ -317,7 +332,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     start_row=facility_file_order_start_row,
                 )
                 log_callback(f"Facility file-order export applied: {out_path}")
-            if admin_consumables_export:
+            if admin_consumables_export and output_workbook_exists and (explicit_admin_consumables_export or template_is_excel):
                 apply_admin_consumables_to_workbook(
                     workbook_path=out_path,
                     admin_source_path=admin_source_path,
@@ -326,7 +341,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     start_row=admin_consumables_start_row,
                 )
                 log_callback(f"Admin consumables export applied: {out_path}")
-            if system_cost_export:
+            if system_cost_export and output_workbook_exists and (explicit_system_cost_export or template_is_excel):
                 apply_system_cost_to_workbook(
                     workbook_path=out_path,
                     system_source_paths=system_source_paths,
@@ -334,7 +349,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     start_row=system_cost_start_row,
                 )
                 log_callback(f"System Cost export applied: {out_path}")
-            if mp_saisan_complete_v1:
+            if mp_saisan_complete_v1 and output_workbook_exists and template_is_excel:
                 source_order_result = apply_complete_v1_source_order_to_workbook(out_path, start_row=168, clear_until_row=199)
                 log_callback(f"Complete-v1 source-order writer applied: {source_order_result}")
             if primary_reference_fill:
@@ -488,6 +503,12 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         conn.close()
         return True, output_dir
 
+
+    except (FileNotFoundError, BadZipFile) as e:
+        message = f"template/source workbook not found or invalid: {e}"
+        log_callback(f"ERROR: {message}")
+        log_callback(traceback.format_exc())
+        return False, message
 
     except Exception as e:
         log_callback(f"ERROR: {str(e)}")
