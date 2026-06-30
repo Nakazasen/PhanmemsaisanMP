@@ -1,0 +1,275 @@
+﻿# Machine-readable MP2027 requirement mapping.
+# Canonical rule: raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx wins over all derived Markdown.
+canonical_source_of_truth: "raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx"
+derived_documents:
+  - "docs/requirements/cai_tien_nhap_du_lieu_chung.md"
+  - "QUY_TRINH_NGHIEP_VU_MP2027.md"
+  - "docs/knowledge/mp_saisan_business_knowledge_base_v2.md"
+fail_closed_policy:
+  - "Do not invent data."
+  - "Do not fallback from another Cost Center without explicit evidence."
+  - "Do not convert blank to zero unless canonical source/test proves it."
+  - "Missing or uncertain input must remain blank, be reported as missing input, or require user confirmation."
+
+requirements:
+  - id: facility
+    business_name_vi: "Chi phí facility / facilities"
+    source: "Excel source workbook in docs/MP2027"
+    canonical_reference: "09.06.2026 workbook; derived Markdown only for explanation"
+    source_file_hint: "docs/MP2027/施設課　MPFY2027.xlsx"
+    sheet_hint: "REQUIRES_CURRENT_OUTPUT_AUDIT"
+    filter: "By Cost Center where source provides CC; exact rule requires canonical workbook confirmation"
+    cost_center_field: "cost_center / CC field parsed by src.parsers.facility"
+    account_resolution: "From source/order/export code; do not invent account when missing"
+    target: "FORM export workbook per Cost Center"
+    form_rows: "Source-order export area; exact rows require current output audit"
+    months: "FY2027 months Apr-2026 through Mar-2027 where present in source"
+    calculation: "Parsed source values, then allocated/exported by existing engine"
+    formula_kind: "source-derived"
+    fail_closed_conditions:
+      - "Missing workbook"
+      - "Missing Cost Center"
+      - "Missing month value"
+    audit:
+      expected_trace: "Audit report and missing input CSV must identify missing/uncertain facility input"
+    tests:
+      - "tests for facility/source-order behavior where present"
+    status: "needs_confirmation"
+    implementation_status: "implemented_in_code_existing"
+    evidence:
+      - "src/parsers/facility.py"
+      - "scripts/run_e2e.py"
+
+  - id: fixed_assets
+    business_name_vi: "Tài sản cố định / khấu hao / lãi"
+    source: "Excel source workbook in docs/MP2027"
+    canonical_reference: "09.06.2026 workbook; fixed-asset tests protect schedule behavior"
+    source_file_hint: "docs/MP2027/固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx"
+    sheet_hint: "REQUIRES_CURRENT_OUTPUT_AUDIT"
+    filter: "By asset/account/Cost Center fields parsed by fixed_assets parser"
+    cost_center_field: "Parsed Cost Center field"
+    account_resolution: "From fixed assets parser/export code"
+    target: "FORM export workbook per Cost Center"
+    form_rows: "Source-order/export area; no guessed fixed rows"
+    months: "FY2027 months covered by asset schedules"
+    calculation: "Existing depreciation/interest expansion logic"
+    formula_kind: "schedule_expansion"
+    fail_closed_conditions:
+      - "Missing asset workbook"
+      - "Unparseable period"
+      - "Missing Cost Center/account"
+    audit:
+      expected_trace: "Missing/unparseable fixed asset rows must be auditable"
+    tests:
+      - "tests/test_src_v2_logic.py"
+    status: "documented_from_code_and_tests"
+    implementation_status: "implemented_in_code_existing"
+    evidence:
+      - "src/parsers/fixed_assets.py"
+      - "tests/test_src_v2_logic.py"
+
+  - id: it_system_cost
+    business_name_vi: "IT/System cost"
+    source: "System cost simulation Excel workbooks"
+    canonical_reference: "09.06.2026 workbook; source-order policy in tests"
+    source_file_hint: "docs/MP2027/システム課金金額(Simulation)_FY2027_*.xls"
+    sheet_hint: "Native structure detected by system cost preview"
+    filter: "Combined system cost source rows; exact CC behavior requires source audit"
+    cost_center_field: "REQUIRES_CURRENT_OUTPUT_AUDIT"
+    account_resolution: "System Cost / システム課金 label in writer tests"
+    target: "FORM source-order area"
+    form_rows: "Writer tests expect row 211 and blank row 212 for explicit system-cost writer"
+    months: "12 FY months where source provides values"
+    calculation: "Existing system cost preview/writer aggregation"
+    formula_kind: "source_order_single_row"
+    fail_closed_conditions:
+      - "Missing one or more simulation workbook"
+      - "Unrecognized native structure"
+    audit:
+      expected_trace: "System cost source paths and missing conditions must be visible"
+    tests:
+      - "tests/test_system_cost_preview.py"
+      - "tests/test_system_cost_writer.py"
+      - "tests/test_system_cost_export_flag.py"
+    status: "documented_from_tests"
+    implementation_status: "implemented_in_code_existing"
+    evidence:
+      - "src/engine/system_cost_preview.py"
+      - "src/engine/system_cost_writer.py"
+
+  - id: ga_admin_allocation
+    business_name_vi: "GA/Admin allocation"
+    source: "GA/admin source workbook"
+    canonical_reference: "09.06.2026 workbook"
+    source_file_hint: "docs/MP2027/総務課 FY2027 MP 振替予定.xlsx"
+    sheet_hint: "REQUIRES_CURRENT_OUTPUT_AUDIT"
+    filter: "By allocation/source rules in GA parser and allocator"
+    cost_center_field: "Parsed Cost Center/allocation driver"
+    account_resolution: "From GA parser/allocator"
+    target: "FORM export workbook per Cost Center"
+    form_rows: "REQUIRES_CURRENT_OUTPUT_AUDIT"
+    months: "FY2027 months where source provides values"
+    calculation: "Existing allocation engine; no new allocation rule in this mapping"
+    formula_kind: "allocation"
+    fail_closed_conditions:
+      - "Missing allocation driver"
+      - "Missing source amount"
+    audit:
+      expected_trace: "Allocation/missing driver must be auditable"
+    tests:
+      - "allocator tests where present"
+    status: "needs_confirmation"
+    implementation_status: "implemented_in_code_existing"
+    evidence:
+      - "src/parsers/ga.py"
+      - "src/engine/allocator.py"
+
+  - id: birthday
+    business_name_vi: "Sinh nhật"
+    source: "Birthday workbook"
+    canonical_reference: "09.06.2026 workbook"
+    source_file_hint: "docs/MP2027/Sinh nhật MP FY2027.xlsx"
+    sheet_hint: "REQUIRES_CURRENT_OUTPUT_AUDIT"
+    filter: "Rules parsed by birthday parser"
+    cost_center_field: "Parsed Cost Center if present"
+    account_resolution: "From source/parser"
+    target: "FORM export workbook per Cost Center"
+    form_rows: "Source-order area"
+    months: "FY2027 months from source"
+    calculation: "Source-derived/manual driver behavior in existing code"
+    formula_kind: "source_or_driver"
+    fail_closed_conditions:
+      - "Missing birthday workbook"
+      - "Missing driver/CC"
+    audit:
+      expected_trace: "Missing birthday input should appear in audit/missing input"
+    tests: []
+    status: "needs_confirmation"
+    implementation_status: "implemented_in_code_existing"
+    evidence:
+      - "src/parsers/birthday.py"
+
+  - id: nnn_paperwork
+    business_name_vi: "Chi phí làm giấy tờ cho NNN"
+    source: "NNN paperwork workbook"
+    canonical_reference: "09.06.2026 workbook"
+    source_file_hint: "docs/MP2027/Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx"
+    sheet_hint: "REQUIRES_CURRENT_OUTPUT_AUDIT"
+    filter: "Rules parsed by nnn_paperwork parser"
+    cost_center_field: "Parsed Cost Center if present"
+    account_resolution: "From source/parser"
+    target: "FORM export workbook per Cost Center"
+    form_rows: "Source-order area"
+    months: "FY2027 months from source"
+    calculation: "Source-derived"
+    formula_kind: "source_derived"
+    fail_closed_conditions:
+      - "Missing NNN workbook"
+      - "Missing required row/period/CC"
+    audit:
+      expected_trace: "Missing NNN input should appear in audit/missing input"
+    tests: []
+    status: "needs_confirmation"
+    implementation_status: "implemented_in_code_existing"
+    evidence:
+      - "src/parsers/nnn_paperwork.py"
+
+  - id: manual_headcount
+    business_name_vi: "Headcount manual"
+    source: "Manual CSV"
+    canonical_reference: "09.06.2026 workbook plus manual CSV policy"
+    source_file_hint: "raw/headcount_manual.csv; docs/MP2027/headcount_manual.csv"
+    sheet_hint: "CSV"
+    filter: "By Cost Center and fiscal period"
+    cost_center_field: "cost_center"
+    account_resolution: "Driver only; not an amount source by itself"
+    target: "Allocation drivers and missing input checks"
+    form_rows: "N/A driver"
+    months: "FY2027 fiscal periods in CSV"
+    calculation: "Manual driver used by existing allocation/import code"
+    formula_kind: "manual_driver"
+    fail_closed_conditions:
+      - "Missing headcount for required CC/month"
+      - "Partial save/load mismatch"
+    audit:
+      expected_trace: "Headcount gaps must be listed as missing input"
+    tests:
+      - "tests/test_phase42n66_fiscal_periods.py"
+      - "tests/test_phase42n66_runtime_save_load.py"
+    status: "documented_from_code_and_tests"
+    implementation_status: "implemented_in_code_existing"
+    evidence:
+      - "src/parsers/manual_headcount.py"
+
+  - id: bus
+    business_name_vi: "Bus headcount/driver"
+    source: "Manual CSV"
+    canonical_reference: "09.06.2026 workbook plus manual CSV policy"
+    source_file_hint: "raw/bus_headcount_manual.csv; docs/MP2027/bus_headcount_manual.csv"
+    sheet_hint: "CSV"
+    filter: "By Cost Center/month where applicable"
+    cost_center_field: "cost_center"
+    account_resolution: "Driver/source-specific"
+    target: "Allocation/export areas using bus driver"
+    form_rows: "REQUIRES_CURRENT_OUTPUT_AUDIT"
+    months: "FY2027 fiscal periods in CSV"
+    calculation: "Manual driver; exact allocation requires canonical confirmation"
+    formula_kind: "manual_driver"
+    fail_closed_conditions:
+      - "Missing bus headcount/driver for required CC/month"
+    audit:
+      expected_trace: "Bus driver gaps must be auditable"
+    tests: []
+    status: "needs_confirmation"
+    implementation_status: "implemented_in_code_existing"
+    evidence:
+      - "docs/MP2027/bus_headcount_manual.csv"
+
+  - id: event_drivers
+    business_name_vi: "Event drivers"
+    source: "Manual CSV"
+    canonical_reference: "09.06.2026 workbook plus manual CSV policy"
+    source_file_hint: "docs/MP2027/event_drivers_manual.csv; raw/event_drivers_manual.csv"
+    sheet_hint: "CSV"
+    filter: "By event/Cost Center/month fields in CSV"
+    cost_center_field: "cost_center if present"
+    account_resolution: "Driver/source-specific"
+    target: "Allocation/export areas using event drivers"
+    form_rows: "REQUIRES_CURRENT_OUTPUT_AUDIT"
+    months: "FY2027 periods in CSV"
+    calculation: "Manual driver; existing code only"
+    formula_kind: "manual_driver"
+    fail_closed_conditions:
+      - "Missing event driver for required allocation"
+    audit:
+      expected_trace: "Event driver gaps must be auditable"
+    tests:
+      - "event-driver tests/fixtures where present"
+    status: "needs_confirmation"
+    implementation_status: "implemented_in_code_existing"
+    evidence:
+      - "src/parsers/manual_event_drivers.py"
+
+  - id: special_costs
+    business_name_vi: "Special costs"
+    source: "Manual CSV"
+    canonical_reference: "09.06.2026 workbook plus manual CSV policy"
+    source_file_hint: "docs/MP2027/special_costs_manual.csv; raw/special_costs_manual.csv"
+    sheet_hint: "CSV"
+    filter: "By Cost Center/account/month fields in CSV"
+    cost_center_field: "cost_center"
+    account_resolution: "Manual CSV/account field where present"
+    target: "FORM export workbook per Cost Center"
+    form_rows: "REQUIRES_CURRENT_OUTPUT_AUDIT"
+    months: "FY2027 periods in CSV"
+    calculation: "Manual amount/source-derived from CSV; no invented values"
+    formula_kind: "manual_amount"
+    fail_closed_conditions:
+      - "Missing required amount/account/month"
+    audit:
+      expected_trace: "Special cost rows should be traceable to manual CSV"
+    tests: []
+    status: "needs_confirmation"
+    implementation_status: "implemented_in_code_existing"
+    evidence:
+      - "src/parsers/manual_special_costs.py"

@@ -515,8 +515,9 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         log_callback(traceback.format_exc())
         return False, str(e)
 
-if __name__ == '__main__':
+def main(argv=None):
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--fy', type=int, default=2027)
     parser.add_argument('--template', type=str, default=_default_template_path())
@@ -598,12 +599,12 @@ if __name__ == '__main__':
         action='store_true',
         help=argparse.SUPPRESS,
     )
-    args = parser.parse_args()
-    
-    run_universal_pipeline(
-        fiscal_year=args.fy, 
-        template_path=args.template, 
-        source_dir=args.source, 
+    args = parser.parse_args(argv)
+
+    success, message = run_universal_pipeline(
+        fiscal_year=args.fy,
+        template_path=args.template,
+        source_dir=args.source,
         exchange_rate=args.exchange_rate,
         target_cc=args.target_cc,
         facility_file_order_preview=args.facility_file_order_preview,
@@ -626,3 +627,8 @@ if __name__ == '__main__':
         fixed_assets_skeleton_start_row=args.fixed_assets_skeleton_start_row,
         mp_saisan_complete_v1=not args.legacy_export,
     )
+    return 0 if success else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
