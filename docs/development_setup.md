@@ -1,4 +1,4 @@
-﻿# Development setup MP2027
+# Development setup MP2027
 
 ## Python khuyến nghị
 
@@ -17,8 +17,11 @@ pip install -r requirements.txt
 
 ```powershell
 py -m compileall src scripts packaging
+py -m pytest -m "not requires_raw_excel"
 py -m pytest
 ```
+
+GitHub CI chạy `py -m pytest -m "not requires_raw_excel"` để loại các integration test cần workbook Excel thật trong `raw/`. Local máy có đủ dữ liệu raw vẫn chạy `py -m pytest` để kiểm tra toàn bộ. Test có marker `requires_raw_excel` không được skip âm thầm nếu raw workbook tồn tại.
 
 ## Chạy GUI
 

@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 import scripts.run_e2e as run_e2e
 
 
@@ -101,6 +103,7 @@ def test_facility_preview_flag_requires_explicit_opt_in(monkeypatch, tmp_path):
     assert not called
 
 
+@pytest.mark.requires_raw_excel
 def test_facility_preview_does_not_modify_template_or_source():
     template = Path("FORM.xlsx")
     source = Path("raw/施設課　MPFY2027.xlsx")

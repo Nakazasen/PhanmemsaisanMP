@@ -1,5 +1,10 @@
-﻿from pathlib import Path
+import pytest
+
+from pathlib import Path
 from src.engine.system_cost_preview import preview_system_cost_file_order
+
+pytestmark = pytest.mark.requires_raw_excel
+
 SYSTEM=[Path('raw/システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls'),Path('raw/システム課金金額(Simulation)_FY2027_July.2026 ~ Dec.2026(Change AMS & PLM price).xls'),Path('raw/システム課金金額(Simulation)_FY2027_Jan.2027 ~ March.2027(Change SAP price).xls')]
 def test_system_cost_preview_detects_native_structure():
  p=preview_system_cost_file_order(SYSTEM)

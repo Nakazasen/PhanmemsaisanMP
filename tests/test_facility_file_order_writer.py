@@ -1,9 +1,14 @@
+import pytest
+
 from pathlib import Path
 
 from openpyxl import load_workbook
 
 from src.engine.facility_file_order_writer import write_facility_file_order_preview_workbook
 from src.utils import excel_helpers as helpers
+
+pytestmark = pytest.mark.requires_raw_excel
+
 
 TEMPLATE = Path("FORM.xlsx")
 FACILITY_SOURCE = Path("raw/施設課　MPFY2027.xlsx")

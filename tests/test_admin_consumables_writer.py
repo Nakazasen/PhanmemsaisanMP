@@ -1,10 +1,15 @@
-﻿from pathlib import Path
+import pytest
+
+from pathlib import Path
 from shutil import copy2
 
 from openpyxl import load_workbook
 
 from src.engine.admin_consumables_writer import apply_admin_consumables_to_workbook
 from src.utils import excel_helpers as helpers
+
+pytestmark = pytest.mark.requires_raw_excel
+
 
 TEMPLATE = Path("FORM.xlsx")
 ADMIN_SOURCE = Path("raw/総務課 FY2027 MP 振替予定.xlsx")

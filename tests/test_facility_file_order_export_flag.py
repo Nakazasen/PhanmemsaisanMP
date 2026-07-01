@@ -1,3 +1,5 @@
+import pytest
+
 from pathlib import Path
 from shutil import copy2
 
@@ -6,6 +8,9 @@ from openpyxl import load_workbook
 import scripts.run_e2e as run_e2e
 from src.engine.facility_file_order_writer import apply_facility_file_order_to_workbook
 from src.utils import excel_helpers as helpers
+
+pytestmark = pytest.mark.requires_raw_excel
+
 
 TEMPLATE = Path("FORM.xlsx")
 FACILITY_SOURCE = Path("raw/施設課　MPFY2027.xlsx")

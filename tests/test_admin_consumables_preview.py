@@ -1,6 +1,11 @@
-﻿from pathlib import Path
+import pytest
+
+from pathlib import Path
 
 from src.engine.admin_consumables_preview import preview_admin_consumables_file_order
+
+pytestmark = pytest.mark.requires_raw_excel
+
 
 ADMIN_SOURCE = Path("raw/総務課 FY2027 MP 振替予定.xlsx")
 ALLOC_SOURCE = Path("raw/FY2027配賦額一覧 (2025.12.29).xlsx")
