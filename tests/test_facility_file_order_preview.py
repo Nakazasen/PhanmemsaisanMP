@@ -1,8 +1,13 @@
+import pytest
+
 from pathlib import Path
 
 from openpyxl import load_workbook
 
 from src.engine.facility_file_order_preview import preview_facility_file_order
+
+pytestmark = pytest.mark.requires_raw_excel
+
 
 SOURCE = Path("raw/施設課　MPFY2027.xlsx")
 

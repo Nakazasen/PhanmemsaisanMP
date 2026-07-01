@@ -1,9 +1,14 @@
+import pytest
+
 import subprocess
 import sys
 
 from openpyxl import load_workbook
 
 from src.utils import excel_helpers as helpers
+
+pytestmark = pytest.mark.requires_raw_excel
+
 
 TEMPLATE = "FORM.xlsx"
 FACILITY_SOURCE = "raw/施設課　MPFY2027.xlsx"

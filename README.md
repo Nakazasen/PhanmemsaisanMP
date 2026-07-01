@@ -1,4 +1,4 @@
-﻿# MP2027 Manager
+# MP2027 Manager
 
 MP2027 Manager là phần mềm desktop Windows viết bằng Python/Tkinter để gom dữ liệu budget MP FY2027 từ nhiều workbook Excel, tính các phần phân bổ đã có trong code, rồi xuất FORM theo từng Cost Center.
 
@@ -81,10 +81,23 @@ CLI E2E là developer smoke/integration path. Nó có thể cần `docs/MP2027/F
 
 ```powershell
 py -m compileall src scripts packaging
+py -m pytest -m "not requires_raw_excel"
 py -m pytest
 ```
 
-CI GitHub Actions chạy compileall và pytest an toàn, không được phụ thuộc dữ liệu công ty/private ngoài repo.
+GitHub Actions chỉ chạy nhóm test CI-safe không cần workbook Excel thật trong `raw/`:
+
+```powershell
+py -m pytest -m "not requires_raw_excel"
+```
+
+Local full validation trên máy có dữ liệu `raw/` thật vẫn chạy toàn bộ test suite:
+
+```powershell
+py -m pytest
+```
+
+Các test được đánh dấu `requires_raw_excel` cần workbook thật trong `raw/` và không chạy trên GitHub CI. Nếu các workbook này tồn tại local, test phải chạy thật và không được skip âm thầm để che lỗi nghiệp vụ.
 
 ## Cấu trúc thư mục quan trọng
 

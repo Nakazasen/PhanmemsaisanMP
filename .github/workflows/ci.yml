@@ -1,4 +1,4 @@
-﻿name: CI
+name: CI
 
 on:
   push:
@@ -26,5 +26,5 @@ jobs:
       - name: Compile Python modules
         run: python -m compileall src scripts packaging
 
-      - name: Run tests
-        run: python -m pytest
+      - name: Run CI-safe tests
+        run: python -m pytest -m "not requires_raw_excel"
