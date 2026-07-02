@@ -11,6 +11,8 @@ from typing import Any
 from src.parsers.manual_event_drivers import TEMPLATE_FILENAME as EVENT_DRIVER_FILENAME
 from src.parsers.manual_headcount import get_required_headcount_periods
 from src.utils.excel_helpers import get_fy_months
+from src.audit.fixed_assets_coverage import build_fixed_assets_coverage_report
+from src.parsers.fixed_assets import find_fixed_assets_file
 
 
 def _count_rows(conn: sqlite3.Connection, source: str) -> int:
@@ -155,6 +157,8 @@ def write_pipeline_audit_report(
     health_gender_ccs = _manual_health_check_gender_ccs(conn, fiscal_year)
     cc_list = _target_ccs(conn, target_cc)
     manual_event_count = _manual_event_rows(source_dir)
+    fixed_assets_workbook = find_fixed_assets_file(source_dir)
+    fixed_assets_coverage = build_fixed_assets_coverage_report(conn, fixed_assets_workbook)
 
     missing_rows: list[dict[str, str]] = []
     for cc_code in cc_list:
@@ -270,6 +274,33 @@ def write_pipeline_audit_report(
                 path=path,
             )
         )
+
+
+    fixed_source = fixed_assets_coverage.get("source", {})
+    fixed_db = fixed_assets_coverage.get("db", {})
+    fixed_mismatches = fixed_assets_coverage.get("mismatches", {})
+    lines.extend([
+        "",
+        "## Fixed assets coverage theo CC",
+        "",
+        "| Chỉ số | Giá trị |",
+        "|---|---:|",
+        f"| Source asset rows | {fixed_source.get('source_rows', 0)} |",
+        f"| CC có source fixed assets | {len(fixed_source.get('by_cc', {}))} |",
+        f"| Parsed fixed asset series trong DB | {sum(fixed_db.get('asset_series_by_cc', {}).values())} |",
+        f"| Parsed period rows trong DB | {sum(fixed_db.get('period_rows_by_cc', {}).values())} |",
+        f"| CC có source nhưng chưa có parsed series | {len(fixed_mismatches)} |",
+    ])
+    skipped_reasons = fixed_source.get("skipped_reasons", {})
+    if skipped_reasons:
+        lines.append("")
+        lines.append("Skipped source rows được tổng hợp theo lý do, không dump dữ liệu raw:")
+        for reason, count in skipped_reasons.items():
+            lines.append(f"- `{reason}`: {count}")
+    if fixed_mismatches:
+        lines.append("")
+        lines.append("> [!WARNING]")
+        lines.append("> Có CC xuất hiện trong source fixed assets nhưng chưa có parsed series trong DB. Cần kiểm tra parser/header/source workbook.")
 
     lines.extend(["", "## Cần người dùng xem/chốt", ""])
     if missing_rows:

@@ -31,6 +31,27 @@ class TestSrcV2Logic(unittest.TestCase):
         self.assertEqual(schedule['202605'], 8.0)   # Lãi tháng 5+
         self.assertNotIn('202606', schedule)         # Sau khi hết hạn
 
+
+    def test_depreciation_expansion_after_fy_last_month_keeps_all_months(self):
+        fy_months = ['202604', '202605', '202606']
+        schedule = fa_parser.expand_depreciation_schedule(100.0, '202711', 50.0, fy_months)
+        self.assertEqual(schedule, {'202604': 100.0, '202605': 100.0, '202606': 100.0})
+
+    def test_depreciation_expansion_before_fy_last_month_outputs_nothing(self):
+        fy_months = ['202604', '202605', '202606']
+        schedule = fa_parser.expand_depreciation_schedule(100.0, '202603', 50.0, fy_months)
+        self.assertEqual(schedule, {})
+
+    def test_depreciation_expansion_blank_last_month_keeps_all_positive_months(self):
+        fy_months = ['202604', '202605', '202606']
+        schedule = fa_parser.expand_depreciation_schedule(100.0, None, 0.0, fy_months)
+        self.assertEqual(schedule, {'202604': 100.0, '202605': 100.0, '202606': 100.0})
+
+    def test_interest_expansion_before_fy_last_month_outputs_nothing(self):
+        fy_months = ['202604', '202605', '202606']
+        schedule = fa_parser.expand_interest_schedule(10.0, 8.0, '202603', fy_months)
+        self.assertEqual(schedule, {})
+
     def test_normalize_period(self):
         """Xác nhận logic chuẩn hóa ngày tháng."""
         self.assertEqual(helpers.normalize_period(datetime(2027, 11, 30)), '202711')

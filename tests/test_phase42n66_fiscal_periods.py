@@ -1,4 +1,4 @@
-﻿import csv
+import csv
 from pathlib import Path
 
 import pytest
@@ -103,7 +103,9 @@ def test_bus_scalar_contract_has_no_period():
 
 def test_scope_guards_fixed_assets_and_canonical_writer_unchanged():
     fixed = Path("src/parsers/fixed_assets.py").read_text(encoding="utf-8")
-    assert "helpers.extract_cc_code(row[7]" in fixed
+    assert "HEADER_ALIASES" in fixed
+    assert "LEGACY_COLUMN_MAP" in fixed
+    assert '"cc_code": 7' in fixed
     assert "helpers.extract_cc_code(row[9]" not in fixed
     canonical = Path("src/engine/complete_v1_source_order_writer.py").read_text(encoding="utf-8")
     assert "MANAGED_CLEAR_COLS" in canonical
