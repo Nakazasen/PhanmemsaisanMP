@@ -1777,6 +1777,52 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_december_only_headcount_snapshot_does_not_create_fake_new_hire_notebook(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        dec_period = next(period for period in periods if period.endswith("12"))
+        dec_col = 6 + periods.index(dec_period)
+        self._insert_full_headcount_series(
+            conn,
+            cc_code,
+            staff_values={dec_period: 31},
+            worker_values={},
+        )
+        self._insert_notebook_rule(conn, unit_price=9100, driver_type="headcount_staff")
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        rows = conn.execute(
+            "SELECT period, amount_vnd FROM fact_input_data WHERE description LIKE 'Alloc: notebook source%'"
+        ).fetchall()
+        self.assertEqual(rows, [])
+        missing = conn.execute(
+            """
+            SELECT message
+            FROM fact_missing_inputs
+            WHERE area = 'headcount_event_delta'
+              AND cc_code = ?
+              AND period = ?
+            """,
+            (str(cc_code), dec_period),
+        ).fetchall()
+        self.assertTrue(any("ambiguous_december_only_snapshot" in row["message"] for row in missing))
+
+        tmpdir, output_path = self._export(conn, cc_code, "out_december_snapshot_no_fake_new_hire.xlsx")
+        try:
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertIsNone(ws.cell(97, dec_col).value)
+                self.assertNotEqual(ws.cell(97, dec_col).value, "=31*9100")
+                self.assertIsNone(ws.cell(90, dec_col).value)
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_acquisition_month_rules_are_skipped_until_manual_event_data_exists(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)

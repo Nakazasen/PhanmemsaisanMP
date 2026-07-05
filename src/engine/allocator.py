@@ -436,6 +436,34 @@ class AllocationEngine:
             }
         return {"workbook": "", "sheet": "", "cells": ""}
 
+    def _is_ambiguous_single_month_headcount_snapshot(self, cc_code: object, period: str, driver_type: str) -> bool:
+        """Detect December-only headcount snapshots that are unsafe for event deltas.
+
+        Some manual files use December male/female/staff totals only for annual
+        health-check split. Treating the prior blank/zero months as real history
+        turns that total into a fake new-hire delta. Fail closed for event-month
+        allocations unless a real multi-month headcount series is present.
+        """
+        if not str(period or "").endswith("12"):
+            return False
+        cc_key = str(cc_code).strip()
+        baseline = self._get_prev_period(self.fy_months[0]) or ""
+        positive_periods: list[str] = []
+        saw_any_period = False
+        for check_period in [baseline, *self.fy_months]:
+            if not check_period:
+                continue
+            row = self.hc_cache.get((cc_key, check_period))
+            if row is None:
+                continue
+            saw_any_period = True
+            value = row.get(driver_type)
+            if value is None:
+                value = row.get("headcount_all", 0.0)
+            if float(value or 0.0) > 0:
+                positive_periods.append(check_period)
+        return saw_any_period and positive_periods == [period]
+
     def _get_event_delta(self, cc_code: object, period: str, driver_type: str, rule=None) -> float:
         prev_period = self._get_prev_period(period)
         if not prev_period:
@@ -463,6 +491,16 @@ class AllocationEngine:
                 driver_type,
                 rule,
                 tuple(missing_parts),
+            )
+            return 0.0
+        if self._is_ambiguous_single_month_headcount_snapshot(cc_code, period, driver_type):
+            self._record_event_delta_missing(
+                cc_code,
+                period,
+                prev_period,
+                driver_type,
+                rule,
+                ("ambiguous_december_only_snapshot",),
             )
             return 0.0
         delta = current - prev
