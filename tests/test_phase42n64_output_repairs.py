@@ -91,7 +91,7 @@ def test_fixed_assets_parser_keeps_legacy_cc_column_and_adds_header_detection():
     text = Path("src/parsers/fixed_assets.py").read_text(encoding="utf-8")
     assert "HEADER_ALIASES" in text
     assert "LEGACY_COLUMN_MAP" in text
-    assert '"cc_code": 7' in text
+    assert '"cc_code": 9' in text
     assert "helpers.extract_cc_code(row[9]" not in text
 
 

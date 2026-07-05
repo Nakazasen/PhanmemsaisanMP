@@ -1,11 +1,11 @@
-﻿"""
+"""
 MP2027 Manager - Fixed Assets Parser (Refactored V4.5.0)
 Processes depreciation and interest schedules with month-end logic.
 """
 from __future__ import annotations
 
 import sqlite3
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +18,20 @@ from src.utils.source_manifest import resolve_manifest_file
 HEADER_ALIASES = {
     "asset_no": ("asset no", "asset_no", "資産番号", "固定資産番号", "no."),
     "asset_text": ("asset text", "asset_text", "資産テキスト", "資産名", "名称"),
-    "cc_code": ("code phòng chịu chi phí", "cost center", "cost_center", "原価センタ", "原価センター", "cc"),
+    # Business requirement uses the cost center that bears depreciation cost
+    # (償却計上原価センタ / Depreciation Cost Center), not the control-owner CC.
+    "cc_code": (
+        "code phòng chịu chi phí",
+        "償却計上原価センタ",
+        "depreciation cost center",
+        "depreciation cost centre",
+        "depreciation cost",
+        "cost center",
+        "cost_center",
+        "原価センタ",
+        "原価センター",
+        "cc",
+    ),
     "monthly_depr": ("chi phí khấu hao", "monthly depr", "monthly depreciation", "減価償却費", "償却費"),
     "last_month": ("tháng khấu hao cuối cùng", "last month", "last depreciation month", "償却終了", "最終償却", "最終月"),
     "last_month_depr": ("chi phí khấu hao của tháng cuối cùng", "last month depr", "last month depreciation", "最終月償却", "最終償却額"),
@@ -29,7 +42,7 @@ HEADER_ALIASES = {
 LEGACY_COLUMN_MAP = {
     "asset_no": 2,
     "asset_text": 3,
-    "cc_code": 7,
+    "cc_code": 9,
     "monthly_depr": 11,
     "last_month": 15,
     "last_month_depr": 16,
@@ -67,9 +80,19 @@ def _find_header_row(ws) -> tuple[int | None, dict[str, int]]:
     mapping: dict[str, int] = {}
     normalized_cells = [_norm(cell) for cell in best_values]
     for field, aliases in HEADER_ALIASES.items():
-        for col_idx, cell_text in enumerate(normalized_cells):
-            if cell_text and any(_norm(alias) in cell_text for alias in aliases):
+        for alias in aliases:
+            normalized_alias = _norm(alias)
+            for col_idx, cell_text in enumerate(normalized_cells):
+                if not cell_text or normalized_alias not in cell_text:
+                    continue
+                # "Chi phí lãi" is the May-onward interest column in the source
+                # sheet, but it is also a substring of "Chi phí lãi tháng 4".
+                # Do not let the broad May alias bind to the April-only column.
+                if field == "may_interest" and any(marker in cell_text for marker in ("tháng 4", "april", "apr", "4月")):
+                    continue
                 mapping[field] = col_idx
+                break
+            if field in mapping:
                 break
     if "cc_code" not in mapping:
         return None, {}

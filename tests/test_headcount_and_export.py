@@ -3850,7 +3850,8 @@ class TestHubBuilderExport(unittest.TestCase):
             def write_asset(row_index, cc, monthly_depr, last_month, last_month_depr, apr_interest, may_interest):
                 ws.cell(row=row_index, column=3, value=f"A{row_index}")
                 ws.cell(row=row_index, column=4, value=f"Asset {row_index}")
-                ws.cell(row=row_index, column=8, value=cc)
+                ws.cell(row=row_index, column=8, value=1412000084)
+                ws.cell(row=row_index, column=10, value=cc)
                 ws.cell(row=row_index, column=12, value=monthly_depr)
                 ws.cell(row=row_index, column=16, value=last_month)
                 ws.cell(row=row_index, column=17, value=last_month_depr)
@@ -3861,6 +3862,8 @@ class TestHubBuilderExport(unittest.TestCase):
             write_asset(6, cc_code, 20.0, "2026/05/31", 7.0, 3.0, 4.0)
             write_asset(7, cc_code, 30.0, "2026/11/30", 8.0, 5.0, 6.0)
             write_asset(8, other_cc, 1000.0, "2027/11/30", 900.0, 100.0, 200.0)
+            # Regression: source must filter by Depreciation Cost Center (column J),
+            # not Control Cost Center (column H), otherwise CCs that bear the cost miss data.
             ws.row_dimensions[7].hidden = True
             workbook.save(source_path)
             workbook.close()

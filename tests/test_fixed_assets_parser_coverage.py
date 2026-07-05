@@ -1,4 +1,4 @@
-﻿import sqlite3
+import sqlite3
 from pathlib import Path
 
 import openpyxl
@@ -24,22 +24,23 @@ def _write_fixed_assets_fixture(path: Path):
     ws.append([
         "Asset No",
         "Asset Text",
-        "Code phòng chịu chi phí",
+        "Control Cost Center",
+        "Code phòng chịu chi phí / Depreciation Cost Center",
         "Chi phí khấu hao",
         "Tháng khấu hao cuối cùng",
         "Chi phí khấu hao của tháng cuối cùng",
         "Chi phí lãi tháng 4",
         "Chi phí lãi",
     ])
-    ws.append(["A-001", "Machine A", "1412000040", 10, "2026-05-31", 4, 1, 2])
-    ws.append(["A-002", "Machine B", "1412000040", 20, "2027-11-30", 5, 3, 4])
-    ws.append(["B-001", "Machine C", "1412000018", 7, None, None, 0, 0])
-    ws.append(["NOCC", "Skipped", None, 99, None, None, 0, 0])
+    ws.append(["A-001", "Machine A", "CONTROL-IGNORED", "1412000040", 10, "2026-05-31", 4, 1, 2])
+    ws.append(["A-002", "Machine B", "CONTROL-IGNORED", "1412000040", 20, "2027-11-30", 5, 3, 4])
+    ws.append(["B-001", "Machine C", "CONTROL-IGNORED", "1412000018", 7, None, None, 0, 0])
+    ws.append(["NOCC", "Skipped", "CONTROL-IGNORED", None, 99, None, None, 0, 0])
     ws2 = wb.create_sheet("Extra")
     ws2.append([
         "Asset No",
         "Asset Text",
-        "Cost Center",
+        "Depreciation Cost Center",
         "Monthly depreciation",
         "Last depreciation month",
         "Last month depreciation",
@@ -83,6 +84,22 @@ def test_parse_fixed_assets_reads_all_matching_sheets_and_cc_rows(tmp_path):
         """
     ).fetchone()[0]
     assert after_last == 0
+
+    before_last_interest = conn.execute(
+        """
+        SELECT amount_usd FROM fact_input_data
+        WHERE cc_code='1412000040' AND period='202605' AND description LIKE 'fixed_assets_interest|A-001%'
+        """
+    ).fetchone()
+    assert float(before_last_interest[0]) == 2.0
+
+    interest_after_last = conn.execute(
+        """
+        SELECT COUNT(*) FROM fact_input_data
+        WHERE cc_code='1412000040' AND period='202606' AND description LIKE 'fixed_assets_interest|A-001%'
+        """
+    ).fetchone()[0]
+    assert interest_after_last == 0
     conn.close()
 
 
@@ -116,4 +133,48 @@ def test_fixed_assets_raw_workbook_coverage_if_present():
     report = build_fixed_assets_coverage_report(conn, workbook)
     assert result["source_rows"] >= result["parsed_assets"]
     assert isinstance(report["source"].get("by_cc", {}), dict)
+    conn.close()
+
+
+
+def test_fixed_assets_legacy_layout_uses_depreciation_cost_center_column(tmp_path):
+    workbook = tmp_path / "Fixed_Assets_Information_legacy.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "2025.11"
+    ws.append([None] * 23)
+    ws.append([None] * 23)
+    ws.append([None] * 23)
+    ws.append([
+        "No", "Category", "Assets No", "Text", "Material", "Date", "Life",
+        "Control Cost Center", "Control Name",
+        "Depreciation Cost Center", "Depreciation Name",
+        "November 2025 Depreciation", "Interest in December 2025", "Balance",
+        "Class", "Last Depreciation Month", "Last Month Depr", "Allocation", "WBS", None,
+        "FY2027 Beginning balance", "Interest in April 2026", "Interest from May 2026",
+    ])
+    row = [None] * 23
+    row[0] = 1
+    row[2] = "LEG-001"
+    row[3] = "Legacy machine"
+    row[7] = "1412000084"   # control/owner CC, must not drive output
+    row[9] = "1412000004"   # cost-bearing depreciation CC
+    row[11] = 375.31
+    row[15] = "2026-08-31"
+    row[16] = 123.45
+    row[21] = 19.14
+    row[22] = 5.63
+    ws.append(row)
+    wb.save(workbook)
+
+    conn = _mk_conn()
+    result = parse_fixed_assets(conn, fa_path=str(workbook))
+    assert result["by_cc"] == {"1412000004": 1}
+    assert "1412000084" not in result["by_cc"]
+    assert conn.execute(
+        "SELECT COUNT(*) FROM fact_input_data WHERE cc_code='1412000004' AND source='fixed_assets'"
+    ).fetchone()[0] > 0
+    assert conn.execute(
+        "SELECT COUNT(*) FROM fact_input_data WHERE cc_code='1412000084' AND source='fixed_assets'"
+    ).fetchone()[0] == 0
     conn.close()
