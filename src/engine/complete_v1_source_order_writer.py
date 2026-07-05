@@ -51,8 +51,10 @@ SOURCE_ROW_GROUPS = (
     (3, (175, 176, 177)),
     # Birthday.
     (4, (59,)),
-    # Allocation-master/new employee rows previously staged on fixed FORM rows.
-    (5, (57, 58, 97, 98)),
+    # Allocation-master/Admin rows previously staged on fixed FORM rows.
+    # Includes the admin allocation section documented around source rows A144:A169
+    # plus new-hire rows below it.
+    (5, (54, 57, 58, 63, 64, 65, 66, 67, 68, 70, 71, 79, 80, 81, 82, 88, 89, 97, 98)),
     # NNN paperwork.
     (6, (137,)),
 )

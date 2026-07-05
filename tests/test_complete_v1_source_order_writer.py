@@ -16,7 +16,10 @@ def _workbook(path: Path) -> Path:
         (36, 5006016260, "facility building depreciation"),
         (38, 5006016244, "fixed asset depreciation"),
         (42, 9114120007, "fixed asset interest"),
+        (54, 5004086291, "kickoff party"),
         (59, 5004086291, "birthday"),
+        (70, 5004086291, "year-end party subsidy"),
+        (82, 5005246288, "pocket calendar"),
         (137, 5005246286, "NNN paperwork"),
         (175, None, "admin toilet paper"),
         (179, None, "system cost"),
@@ -35,8 +38,8 @@ def test_complete_v1_writer_rewrites_legacy_rows_to_source_order_blocks(tmp_path
 
     result = apply_complete_v1_source_order_to_workbook(workbook, start_row=168, clear_until_row=190)
 
-    assert result["rows_written"] == 7
-    assert result["blank_rows_written"] == 5
+    assert result["rows_written"] == 10
+    assert result["blank_rows_written"] == 6
 
     wb = load_workbook(workbook)
     try:
@@ -49,15 +52,19 @@ def test_complete_v1_writer_rewrites_legacy_rows_to_source_order_blocks(tmp_path
         assert ws.cell(173, 19).value == "system cost"
         assert ws.cell(175, 19).value == "admin toilet paper"
         assert ws.cell(177, 19).value == "birthday"
-        assert ws.cell(179, 19).value == "NNN paperwork"
+        assert ws.cell(179, 19).value == "kickoff party"
+        assert ws.cell(180, 19).value == "year-end party subsidy"
+        assert ws.cell(181, 19).value == "pocket calendar"
+        assert ws.cell(183, 19).value == "NNN paperwork"
 
-        for legacy_row in [38, 42, 59, 137]:
+        for legacy_row in [38, 42, 54, 59, 70, 82, 137]:
             assert ws.cell(legacy_row, 19).value is None
             assert ws.cell(legacy_row, 6).value is None
 
         assert CANONICAL_SOURCE_FILE_ORDER[0] in ws.cell(168, 20).value
         assert CANONICAL_SOURCE_FILE_ORDER[1] in ws.cell(170, 20).value
-        assert CANONICAL_SOURCE_FILE_ORDER[6] in ws.cell(179, 20).value
+        assert CANONICAL_SOURCE_FILE_ORDER[5] in ws.cell(179, 20).value
+        assert CANONICAL_SOURCE_FILE_ORDER[6] in ws.cell(183, 20).value
     finally:
         wb.close()
 
