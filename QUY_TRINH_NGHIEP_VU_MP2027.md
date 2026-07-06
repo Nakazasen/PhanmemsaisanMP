@@ -18,6 +18,12 @@ Tài liệu này là handover tổng hợp cho dự án MP2027 Manager. Canonica
 
 Thông tin lịch sử không tự động override code hiện tại. Mọi claim về implementation phải có commit/test evidence hoặc được đánh dấu là cần audit lại.
 
+
+## Reconcile note - workbook canonical updated
+
+Local reconcile time: `2026-07-07 06:40:00`. Requirement Markdown and machine-readable mapping were refreshed against `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx` after the workbook received additional content. Key refreshed points: workbook inventory is 10 sheets; admin 12-month costs use previous-month total headcount with April exception; bus uses scalar app input; account lookup uses `原価区分` to choose `勘定科目` column `製造`/`一般`/`販売`. Canonical workbook still wins over this Markdown.
+
+---
 ## 1. Mục tiêu chương trình
 
 MP2027 Manager là ứng dụng Windows desktop dùng Python/Tkinter để tổng hợp dữ liệu ngân sách MP FY2027 từ nhiều file Excel nguồn, tính phân bổ chi phí theo rule, rồi xuất FORM theo từng Cost Center.

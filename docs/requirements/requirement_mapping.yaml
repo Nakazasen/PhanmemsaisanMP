@@ -1,6 +1,52 @@
-﻿# Machine-readable MP2027 requirement mapping.
+# Machine-readable MP2027 requirement mapping.
 # Canonical rule: raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx wins over all derived Markdown.
 canonical_source_of_truth: "raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx"
+canonical_reconciled_at_local: "2026-07-07 06:39:47"
+canonical_workbook_inventory:
+  - sheet: "Sheet1"
+    max_row: 55
+    max_column: 2
+    role: "Tổng quan nhóm yêu cầu và mô tả cải tiến"
+  - sheet: "Hạng mục cần cải tiến"
+    max_row: 233
+    max_column: 11
+    role: "Danh sách hạng mục, thứ tự ưu tiên và liên kết tới sheet chi tiết"
+  - sheet: "Chi phí hệ thống"
+    max_row: 97
+    max_column: 9
+    role: "Rule system cost"
+  - sheet: "Chi phí khấu hao, lãi nhà đất"
+    max_row: 131
+    max_column: 17
+    role: "Rule facility: khấu hao/lãi nhà đất, điện, nước"
+  - sheet: "Chi phí tài sản cố định"
+    max_row: 66
+    max_column: 21
+    role: "Rule fixed assets"
+  - sheet: "Chi phí làm giấy tờ cho NNN"
+    max_row: 24
+    max_column: 17
+    role: "Rule NNN paperwork"
+  - sheet: "Chi phí sinh nhật"
+    max_row: 48
+    max_column: 16
+    role: "Rule birthday"
+  - sheet: "Chi phí phân bổ từ hành chính "
+    max_row: 215
+    max_column: 20
+    role: "Rule admin/GA allocation, previous-month headcount, bus scalar, event allocation"
+  - sheet: "勘定科目"
+    max_row: 244
+    max_column: 9
+    role: "Master account; columns 製造/一般/販売"
+  - sheet: "原価センタ"
+    max_row: 66
+    max_column: 5
+    role: "Master Cost Center; use 原価区分 for account group"
+canonical_rule_updates:
+  - "Admin 12-month costs use total headcount from previous month. April 2026 uses April 2026 headcount because prior March is unavailable."
+  - "Bus costs use scalar bus counts entered at the start of the app, independent from staff/worker/male/female headcount."
+  - "Account lookup must follow Cost Center -> 原価センタ -> 原価区分 -> 勘定科目 column 製造/一般/販売 -> account_code. Do not use 採算区分 for this account-group choice."
 derived_documents:
   - "docs/requirements/cai_tien_nhap_du_lieu_chung.md"
   - "QUY_TRINH_NGHIEP_VU_MP2027.md"

@@ -17,6 +17,45 @@ Current source hierarchy last verified:
 
 # Cải tiến nhập dữ liệu chung vào file MPnew.xlsx — bản kế hoạch đã kiểm tra, sửa và bổ sung
 
+## 0.0. Reconcile workbook canonical sau cập nhật nội dung
+
+Ngày reconcile local: `2026-07-07 06:39:28`.
+
+Đã đọc lại workbook canonical `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx` sau khi người dùng báo file đã bổ sung nội dung. Snapshot trích xuất đầy đủ được lưu ngoài repo tại artifact scratch để audit nội bộ agent, không commit vào project.
+
+### 0.0.1. Inventory workbook hiện tại
+
+| Sheet | Max row | Max column | Ghi chú nghiệp vụ |
+|---|---:|---:|---|
+| `Sheet1` | 55 | 2 | Tổng quan nhóm yêu cầu và mô tả cải tiến. |
+| `Hạng mục cần cải tiến` | 233 | 11 | Danh sách hạng mục, thứ tự ưu tiên và liên kết tới sheet chi tiết. |
+| `Chi phí hệ thống` | 97 | 9 | Rule system cost, gộp/ghi công thức theo chi phí hệ thống. |
+| `Chi phí khấu hao, lãi nhà đất` | 131 | 17 | Rule facility: khấu hao/lãi nhà đất, điện, nước. |
+| `Chi phí tài sản cố định` | 66 | 21 | Rule fixed assets, khấu hao/lãi theo tài sản/tháng. |
+| `Chi phí làm giấy tờ cho NNN` | 24 | 17 | Rule NNN paperwork, target row/range cần giữ theo canonical. |
+| `Chi phí sinh nhật` | 48 | 16 | Rule birthday: số người/người mới x đơn giá. |
+| `Chi phí phân bổ từ hành chính ` | 215 | 20 | Rule admin/GA allocation, headcount previous-month, bus scalar, event-month allocation. |
+| `勘定科目` | 244 | 9 | Master account; cột `製造`/`一般`/`販売` để lấy account code theo `原価区分`. |
+| `原価センタ` | 66 | 5 | Master Cost Center; dùng `原価区分`, không dùng nhầm `採算区分`, khi chọn account group. |
+
+### 0.0.2. Nội dung bổ sung/nhấn mạnh cần phản ánh khi code hoặc audit
+
+- Sheet `Chi phí phân bổ từ hành chính ` hiện ghi rõ nhóm chi phí 12 tháng:
+  - Áp dụng cho gas, nước rửa tay, giấy vệ sinh, cleaning.
+  - Công thức: `số người * chi phí tương ứng`.
+  - Driver headcount là tổng số người của tháng trước.
+  - Ngoại lệ tháng 4/2026: do không có dữ liệu tháng 3 kỳ trước, dùng tổng số người tháng 4/2026.
+- Cùng sheet này ghi riêng bus đưa đón người Nhật/người Việt:
+  - Công thức: `số người nhập ở đầu phần mềm * chi phí tương ứng`.
+  - Bus count là scalar input theo CC, độc lập với staff/worker/male/female headcount.
+- Rule lấy account code vẫn bắt buộc đi qua chuỗi:
+  - `Cost Center -> 原価センタ -> 原価区分 -> 勘定科目 -> cột 製造/一般/販売 -> account_code`.
+  - Không dùng nhầm `採算区分` để chọn cột account.
+- Các sheet master `勘定科目` và `原価センタ` là dữ liệu canonical trong workbook requirement hiện tại; Markdown chỉ diễn giải.
+- Khi có khác biệt giữa phần dưới đây và workbook Excel hiện tại, workbook Excel vẫn thắng.
+
+---
+
 > Tài liệu này được viết lại từ file phân tích `cai_tien_nhap_du_lieu_chung.md` do Gemini Flash tạo, dựa trên đối chiếu với file yêu cầu gốc **`Cải tiến nhập dữ liệu chung vào file MPnew.xlsx`**.
 > Bản canonical hiện tại: **`Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`**. Bản **`Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026.xlsx`** chỉ là `HISTORICAL_04_06_CONTEXT` / predecessor để giải thích lineage thay đổi; mọi quyết định mới phải verify lại với canonical 09.06.2026.
 > Nguyên tắc chỉnh sửa: **giữ phần Gemini cào đúng**, **sửa phần sai/nguy hiểm**, **bổ sung phần thiếu để agent có thể dùng làm kế hoạch viết chương trình**.

@@ -14,6 +14,12 @@ Current source hierarchy last verified:
 - Implementation status last verified against code/audits at the same commit unless a row says `STATUS_REQUIRES_CURRENT_CODE_AUDIT`.
 - Historical content must not override current audits, code, or the canonical 09.06.2026 workbook.
 
+
+## Reconcile note - workbook canonical updated
+
+Local reconcile time: `2026-07-07 06:40:00`. Requirement Markdown and machine-readable mapping were refreshed against `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx` after the workbook received additional content. Key refreshed points: workbook inventory is 10 sheets; admin 12-month costs use previous-month total headcount with April exception; bus uses scalar app input; account lookup uses `原価区分` to choose `勘定科目` column `製造`/`一般`/`販売`. Canonical workbook still wins over this Markdown.
+
+---
 # MP Saisan Business Knowledge Base v2 - Full Business Specification
 
 ## 1. Purpose and current truth
