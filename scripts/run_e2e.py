@@ -47,6 +47,9 @@ from src.engine.complete_v1_source_order_writer import apply_complete_v1_source_
 from src.engine.mp_saisan_complete_export import apply_mp_saisan_complete_v1
 from src.utils.source_manifest import describe_manifest
 
+COMPLETE_V1_SOURCE_ORDER_START_ROW = 30
+COMPLETE_V1_SOURCE_ORDER_CLEAR_UNTIL_ROW = 199
+
 
 def _safe_console_print(message):
     text = str(message)
@@ -96,6 +99,16 @@ def _default_primary_reference_for_current_target() -> str:
     )
 
 
+def _apply_complete_v1_source_order(workbook_path: str, log_callback, phase: str) -> dict[str, int]:
+    result = apply_complete_v1_source_order_to_workbook(
+        workbook_path,
+        start_row=COMPLETE_V1_SOURCE_ORDER_START_ROW,
+        clear_until_row=COMPLETE_V1_SOURCE_ORDER_CLEAR_UNTIL_ROW,
+    )
+    log_callback(f"Complete-v1 source-order {phase} writer applied: {result}")
+    return result
+
+
 def _resolve_primary_reference_path(
     target_cc: int | str | None,
     primary_reference_path: str | None = None,
@@ -119,13 +132,32 @@ def _resolve_primary_reference_path(
                         candidate = row.get("reference_path", "")
                         resolved = candidate if os.path.isabs(candidate) else os.path.join(BASE_DIR, candidate)
                         break
-        if not resolved and target_text == "1412000040":
-            resolved = _default_primary_reference_for_current_target()
+        if target_text == "1412000040" and (not resolved or not os.path.exists(resolved)):
+            primary_dir = os.path.join(BASE_DIR, "reference_outputs", "primary")
+            resolved = ""
+            if os.path.isdir(primary_dir):
+                for name in sorted(os.listdir(primary_dir)):
+                    if name.startswith("16.KDTVN ") and "MP FY2027" in name and name.lower().endswith(".xlsx"):
+                        resolved = os.path.join(primary_dir, name)
+                        break
+            if not resolved:
+                resolved = _default_primary_reference_for_current_target()
         if not resolved:
             raise ValueError("Reference-assisted fill requires --primary-reference-path for this target CC.")
     if not os.path.exists(resolved):
         raise FileNotFoundError(f"Reference-assisted fill primary reference not found: {resolved}")
     return resolved
+
+
+def _should_apply_complete_reference(
+    target_cc: int | str | None,
+    primary_reference_path: str | None,
+    reference_map_path: str | None,
+) -> bool:
+    if primary_reference_path or reference_map_path:
+        return True
+    return str(target_cc or "") == "1412000040"
+
 
 def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str, 
                            exchange_rate: float = 25450.0,
@@ -316,7 +348,11 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             log_callback(f"Exporting Single CC: {target_cc}")
             out_path = os.path.join(output_dir, f"MP_CC_{target_cc}.xlsx")
             complete_v1_primary_path = None
-            if mp_saisan_complete_v1 and (primary_reference_path or reference_map_path):
+            if mp_saisan_complete_v1 and _should_apply_complete_reference(
+                target_cc,
+                primary_reference_path,
+                reference_map_path,
+            ):
                 complete_v1_primary_path = _resolve_primary_reference_path(
                     target_cc=target_cc,
                     primary_reference_path=primary_reference_path,
@@ -349,9 +385,13 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     start_row=system_cost_start_row,
                 )
                 log_callback(f"System Cost export applied: {out_path}")
-            if mp_saisan_complete_v1 and output_workbook_exists and template_is_excel:
-                source_order_result = apply_complete_v1_source_order_to_workbook(out_path, start_row=30, clear_until_row=199)
-                log_callback(f"Complete-v1 source-order writer applied: {source_order_result}")
+            if (
+                mp_saisan_complete_v1
+                and output_workbook_exists
+                and template_is_excel
+                and (primary_reference_fill or complete_v1_primary_path or fixed_assets_reference_skeleton_export)
+            ):
+                _apply_complete_v1_source_order(out_path, log_callback, phase="pre-reference")
             if primary_reference_fill:
                 primary_path = _resolve_primary_reference_path(
                     target_cc=target_cc,
@@ -398,6 +438,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     start_row=fixed_assets_skeleton_start_row,
                 )
                 log_callback(f"Fixed-assets reference skeleton applied: {skeleton_result}")
+            if mp_saisan_complete_v1 and output_workbook_exists and template_is_excel:
+                _apply_complete_v1_source_order(out_path, log_callback, phase="final")
             log_callback(f"Done: {output_dir}")
         else:
             # Batch Export
@@ -434,9 +476,6 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             start_row=system_cost_start_row,
                         )
                         log_callback(f"System Cost export applied: {out_path}")
-                    if mp_saisan_complete_v1 and str(cc) == "1412000040":
-                        source_order_result = apply_complete_v1_source_order_to_workbook(out_path, start_row=30, clear_until_row=199)
-                        log_callback(f"Complete-v1 source-order writer applied: {source_order_result}")
                     if primary_reference_fill and str(cc) == "1412000040":
                         primary_path = _resolve_primary_reference_path(
                             target_cc=cc,
@@ -468,6 +507,31 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             start_row=fixed_assets_skeleton_start_row,
                         )
                         log_callback(f"Fixed-assets reference skeleton applied: {skeleton_result}")
+                    if mp_saisan_complete_v1 and str(cc) == "1412000040":
+                        complete_v1_primary_path = None
+                        if _should_apply_complete_reference(cc, primary_reference_path, reference_map_path):
+                            complete_v1_primary_path = _resolve_primary_reference_path(
+                                target_cc=cc,
+                                primary_reference_path=primary_reference_path,
+                                reference_map_path=reference_map_path,
+                            )
+                        if complete_v1_primary_path:
+                            _apply_complete_v1_source_order(out_path, log_callback, phase="pre-reference")
+                            complete_result = apply_mp_saisan_complete_v1(
+                                workbook_path=out_path,
+                                target_cc=cc,
+                                primary_reference_path=complete_v1_primary_path,
+                                reference_map_path=reference_map_path or _default_reference_map_path(),
+                                fixed_assets_skeleton_csv=fixed_assets_skeleton_csv or _default_fixed_assets_skeleton_csv_path(),
+                                invariant_csv_path=os.path.join(
+                                    BASE_DIR,
+                                    "docs",
+                                    "audits",
+                                    "phase42n2b_invariant_gap_accounting.csv",
+                                ),
+                            )
+                            log_callback(f"MP Saisan complete v1 applied: {complete_result}")
+                        _apply_complete_v1_source_order(out_path, log_callback, phase="final")
                     count += 1
             
             log_callback(f"Successfully exported {count} files to: {output_dir}")
