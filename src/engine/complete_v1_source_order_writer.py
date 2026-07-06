@@ -11,11 +11,12 @@ from __future__ import annotations
 from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Iterable
 
 from openpyxl import load_workbook
 
-from src.engine.column_s_normalizer import normalize_output_description_column_s
+from src.engine.column_s_normalizer import normalize_output_description_column_s, worksheet_row_has_cost
 from src.engine.source_order_output import CANONICAL_SOURCE_FILE_ORDER
 from src.utils import excel_helpers as helpers
 
@@ -23,11 +24,14 @@ ACCOUNT_COL = 2
 ITEM_ID_COL = 5
 MONTH_START_COL = 6
 MONTH_END_COL = 17
+TOTAL_COL = 18
 DESCRIPTION_COL = 19
 NOTE_COL = 20
 BUSINESS_COLS = (ACCOUNT_COL, ITEM_ID_COL, *range(MONTH_START_COL, MONTH_END_COL + 1), DESCRIPTION_COL, NOTE_COL)
+MONTH_COLS = tuple(range(MONTH_START_COL, MONTH_END_COL + 1))
 MANAGED_CLEAR_COLS = tuple(range(2, 21))  # B:T, values/formulas only; styles are preserved.
 COPY_COLS = tuple(range(1, 21))
+SOURCE_NOTE_RE = re.compile(r"source_file=([^;]+);\s*original_row=(\d+)")
 
 
 @dataclass(frozen=True)
@@ -68,8 +72,12 @@ def _business_row_present(ws, row: int) -> bool:
     return any(_norm(ws.cell(row, col).value) for col in BUSINESS_COLS)
 
 
-def _copy_staged_row(ws, source_file: str, row: int) -> StagedWorkbookRow | None:
-    if not _business_row_present(ws, row):
+def _row_has_visible_month_cost(ws, row: int) -> bool:
+    return worksheet_row_has_cost(ws, row, MONTH_COLS)
+
+
+def _copy_staged_row(ws, source_file: str, row: int, original_row: int | None = None) -> StagedWorkbookRow | None:
+    if not _row_has_visible_month_cost(ws, row):
         return None
     values: dict[int, object] = {}
     styles: dict[int, object] = {}
@@ -80,7 +88,7 @@ def _copy_staged_row(ws, source_file: str, row: int) -> StagedWorkbookRow | None
         if cell.has_style:
             styles[col] = copy(cell._style)
         number_formats[col] = cell.number_format
-    return StagedWorkbookRow(source_file, row, values, styles, number_formats)
+    return StagedWorkbookRow(source_file, int(original_row or row), values, styles, number_formats)
 
 
 def _clear_business_row(ws, row: int) -> None:
@@ -106,6 +114,16 @@ def _write_staged_row(ws, target_row: int, staged: StagedWorkbookRow) -> None:
     note = _norm(ws.cell(target_row, NOTE_COL).value)
     source_note = f"source_file={staged.source_file}; original_row={staged.original_row}; source-order-complete-v1"
     ws.cell(target_row, NOTE_COL).value = f"{note} | {source_note}" if note else source_note
+    ws.cell(target_row, TOTAL_COL).value = f"=SUM(F{target_row}:Q{target_row})"
+
+
+def _source_rows_to_clear(ws) -> set[int]:
+    rows_to_clear: set[int] = set()
+    for _, rows in SOURCE_ROW_GROUPS:
+        for row in rows:
+            if _business_row_present(ws, row):
+                rows_to_clear.add(row)
+    return rows_to_clear
 
 
 def _collect_staged_rows(ws) -> list[StagedWorkbookRow]:
@@ -116,6 +134,26 @@ def _collect_staged_rows(ws) -> list[StagedWorkbookRow]:
             item = _copy_staged_row(ws, source_file, row)
             if item is not None:
                 staged.append(item)
+    return staged
+
+
+def _parse_source_order_note(note: object) -> tuple[str, int] | None:
+    match = SOURCE_NOTE_RE.search(_norm(note))
+    if not match:
+        return None
+    return match.group(1).strip(), int(match.group(2))
+
+
+def _collect_existing_source_order_rows(ws, start_row: int, clear_until_row: int) -> list[StagedWorkbookRow]:
+    staged: list[StagedWorkbookRow] = []
+    for row in range(int(start_row), int(clear_until_row) + 1):
+        parsed = _parse_source_order_note(ws.cell(row, NOTE_COL).value)
+        if parsed is None:
+            continue
+        source_file, original_row = parsed
+        item = _copy_staged_row(ws, source_file, row, original_row)
+        if item is not None:
+            staged.append(item)
     return staged
 
 
@@ -133,12 +171,14 @@ def apply_complete_v1_source_order_to_workbook(
             ws = wb[helpers.find_hub_sheet_name(wb)]
         except ValueError:
             ws = wb.active
-        staged = _collect_staged_rows(ws)
+        staged = _collect_existing_source_order_rows(ws, start_row, clear_until_row)
+        source_rows_to_clear = set()
+        if not staged:
+            source_rows_to_clear = _source_rows_to_clear(ws)
+            staged = _collect_staged_rows(ws)
 
         _clear_rows(ws, range(start_row, clear_until_row + 1))
-        # Clear legacy staging rows only for rows actually emitted into canonical blocks.
-        # This removes exact legacy/canonical duplicates without clearing unrelated template rows.
-        _clear_rows(ws, {row.original_row for row in staged})
+        _clear_rows(ws, source_rows_to_clear)
 
         current_row = int(start_row)
         source_blocks_written = 0
