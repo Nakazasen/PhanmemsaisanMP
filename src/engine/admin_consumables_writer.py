@@ -29,9 +29,9 @@ def _clear_preview_row(worksheet, row_index: int) -> None:
 def _preview_value(item: AdminConsumablePreviewItem, month_column: int) -> Any:
     apr, mar = item.source_month_values_sample
     if month_column == VISIBLE_MONTH_START_COL:
-        return apr if apr not in (None, "") else "UNKNOWN"
+        return apr if apr not in (None, "") else None
     if month_column == VISIBLE_MONTH_END_COL:
-        return mar if mar not in (None, "") else "UNKNOWN"
+        return mar if mar not in (None, "") else None
     return None
 
 
