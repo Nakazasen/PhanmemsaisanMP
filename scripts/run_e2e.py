@@ -350,7 +350,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 )
                 log_callback(f"System Cost export applied: {out_path}")
             if mp_saisan_complete_v1 and output_workbook_exists and template_is_excel:
-                source_order_result = apply_complete_v1_source_order_to_workbook(out_path, start_row=168, clear_until_row=199)
+                source_order_result = apply_complete_v1_source_order_to_workbook(out_path, start_row=30, clear_until_row=199)
                 log_callback(f"Complete-v1 source-order writer applied: {source_order_result}")
             if primary_reference_fill:
                 primary_path = _resolve_primary_reference_path(
@@ -435,7 +435,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                         )
                         log_callback(f"System Cost export applied: {out_path}")
                     if mp_saisan_complete_v1 and str(cc) == "1412000040":
-                        source_order_result = apply_complete_v1_source_order_to_workbook(out_path, start_row=168, clear_until_row=199)
+                        source_order_result = apply_complete_v1_source_order_to_workbook(out_path, start_row=30, clear_until_row=199)
                         log_callback(f"Complete-v1 source-order writer applied: {source_order_result}")
                     if primary_reference_fill and str(cc) == "1412000040":
                         primary_path = _resolve_primary_reference_path(

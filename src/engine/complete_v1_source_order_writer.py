@@ -160,7 +160,7 @@ def _collect_existing_source_order_rows(ws, start_row: int, clear_until_row: int
 def apply_complete_v1_source_order_to_workbook(
     workbook_path: str | Path,
     *,
-    start_row: int = 168,
+    start_row: int = 30,
     clear_until_row: int = 212,
 ) -> dict[str, int]:
     """Rewrite complete-v1 business rows into canonical source-file blocks."""

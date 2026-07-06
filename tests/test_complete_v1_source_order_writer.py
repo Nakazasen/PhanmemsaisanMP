@@ -63,6 +63,29 @@ def test_complete_v1_writer_rewrites_legacy_rows_to_source_order_blocks(tmp_path
         wb.close()
 
 
+def test_complete_v1_writer_default_output_starts_at_row_30(tmp_path):
+    workbook = _workbook(tmp_path / "out.xlsx")
+
+    result = apply_complete_v1_source_order_to_workbook(workbook, clear_until_row=190)
+
+    assert result["start_row"] == 30
+    assert result["rows_written"] == 7
+    assert result["blank_rows_written"] == 5
+
+    wb = load_workbook(workbook)
+    try:
+        ws = wb[SHEET]
+        assert ws.cell(30, 19).value == "facility building depreciation"
+        assert ws.cell(30, 18).value == "=SUM(F30:Q30)"
+        assert ws.cell(31, 19).value is None
+        assert ws.cell(32, 19).value == "fixed asset depreciation"
+        assert ws.cell(33, 19).value == "fixed asset interest"
+        assert ws.cell(34, 19).value is None
+        assert ws.cell(35, 19).value == "system cost"
+    finally:
+        wb.close()
+
+
 def test_complete_v1_writer_skips_no_cost_source_rows(tmp_path):
     path = tmp_path / "out.xlsx"
     wb = Workbook()

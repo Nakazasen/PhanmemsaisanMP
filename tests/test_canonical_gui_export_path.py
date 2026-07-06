@@ -52,6 +52,7 @@ def test_source_order_writers_are_enabled_by_canonical_default():
     assert "if mp_saisan_complete_v1:" in source
     assert "facility_file_order_export = True" in source
     assert "apply_complete_v1_source_order_to_workbook" in source
+    assert "apply_complete_v1_source_order_to_workbook(out_path, start_row=30, clear_until_row=199)" in source
 
 def test_fixed_assets_parser_uses_audited_header_detection_not_h_to_j_shortcut():
     text = Path("src/parsers/fixed_assets.py").read_text(encoding="utf-8")
