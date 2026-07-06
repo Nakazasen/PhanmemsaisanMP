@@ -114,7 +114,7 @@ def _make_validation_error(
     }
 
 
-def _parse_required_headcount_int(
+def _parse_blank_zero_headcount_int(
     row_number: int | None,
     row: dict[str, Any],
     field: str,
@@ -122,15 +122,7 @@ def _parse_required_headcount_int(
 ) -> tuple[int | None, dict[str, Any] | None]:
     raw_value = row.get(field, "")
     if not _has_value(raw_value):
-        return None, _make_validation_error(
-            row_number,
-            row.get("cc_code"),
-            row.get("period"),
-            field,
-            raw_value,
-            "REQUIRED",
-            f"Missing {reason_label} value",
-        )
+        return 0, None
     parsed = _parse_non_negative_int(raw_value)
     if parsed is None:
         return None, _make_validation_error(
@@ -258,8 +250,8 @@ def validate_manual_headcount_rows(
             continue
         seen_keys.add(key)
 
-        staff, staff_error = _parse_required_headcount_int(row_number, row, "headcount_staff", "staff")
-        worker, worker_error = _parse_required_headcount_int(row_number, row, "headcount_worker", "worker")
+        staff, staff_error = _parse_blank_zero_headcount_int(row_number, row, "headcount_staff", "staff")
+        worker, worker_error = _parse_blank_zero_headcount_int(row_number, row, "headcount_worker", "worker")
         male, male_error = _parse_optional_headcount_int(row_number, row, "headcount_male", "male")
         female, female_error = _parse_optional_headcount_int(row_number, row, "headcount_female", "female")
         row_errors = [error for error in (staff_error, worker_error, male_error, female_error) if error]

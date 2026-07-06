@@ -671,7 +671,7 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
-    def test_manual_parser_requires_staff_and_worker_category_values(self):
+    def test_manual_parser_treats_blank_staff_and_worker_category_values_as_zero(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
         tmpdir = _mk_tmpdir()
@@ -700,10 +700,20 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
                 )
 
             result = parse_manual_headcount(conn, source_dir=str(tmpdir))
-            self.assertEqual(result["inserted"], 0)
-            self.assertEqual(result["errors"], 1)
+            self.assertEqual(result["inserted"], 1)
+            self.assertEqual(result["errors"], 0)
             count = conn.execute("SELECT COUNT(*) FROM fact_monthly_headcount").fetchone()[0]
-            self.assertEqual(count, 0)
+            self.assertEqual(count, 1)
+            row = conn.execute(
+                """
+                SELECT headcount_staff, headcount_worker
+                FROM fact_monthly_headcount
+                WHERE cc_code=? AND period='202603' AND source='manual'
+                """,
+                (cc_code,),
+            ).fetchone()
+            self.assertEqual(float(row["headcount_staff"]), 27.0)
+            self.assertEqual(float(row["headcount_worker"]), 0.0)
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
@@ -759,7 +769,7 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
-    def test_manual_parser_fail_closed_preserves_existing_db_on_any_csv_error(self):
+    def test_manual_parser_blank_worker_import_updates_existing_db(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
         tmpdir = _mk_tmpdir()
@@ -821,11 +831,8 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
                 )
 
             result = parse_manual_headcount(conn, source_dir=str(tmpdir))
-            self.assertEqual(result["inserted"], 0)
-            self.assertEqual(result["errors"], 1)
-            self.assertEqual(result["error_details"][0]["period"], "202603")
-            self.assertEqual(result["error_details"][0]["field"], "headcount_worker")
-            self.assertEqual(result["error_details"][0]["validation_rule"], "REQUIRED")
+            self.assertEqual(result["inserted"], 1)
+            self.assertEqual(result["errors"], 0)
 
             row = conn.execute(
                 """
@@ -835,9 +842,9 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
                 """,
                 (cc_code,),
             ).fetchone()
-            self.assertEqual(float(row["headcount_staff"]), 7.0)
+            self.assertEqual(float(row["headcount_staff"]), 8.0)
             self.assertEqual(float(row["headcount_worker"]), 0.0)
-            self.assertEqual(row["description"], "preexisting")
+            self.assertEqual(row["description"], "invalid new import")
 
             bus_row = conn.execute(
                 """
@@ -847,9 +854,9 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
                 """,
                 (str(cc_code),),
             ).fetchone()
-            self.assertEqual(float(bus_row["bus_expat_count"]), 1.0)
-            self.assertEqual(float(bus_row["bus_vietnamese_count"]), 2.0)
-            self.assertEqual(bus_row["description"], "preexisting bus")
+            self.assertEqual(float(bus_row["bus_expat_count"]), 0.0)
+            self.assertEqual(float(bus_row["bus_vietnamese_count"]), 0.0)
+            self.assertEqual(bus_row["description"], "new bus")
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)

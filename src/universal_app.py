@@ -66,10 +66,10 @@ def _headcount_save_error(period: str, field: str, raw_value: str, validation_ru
     }
 
 
-def _parse_required_save_int(period: str, field: str, raw_value: str, label: str) -> tuple[str | None, dict | None]:
+def _parse_blank_zero_save_int(period: str, field: str, raw_value: str, label: str) -> tuple[str | None, dict | None]:
     text = str(raw_value or "").strip()
     if text == "":
-        return None, _headcount_save_error(period, field, text, "REQUIRED", f"Missing {label} value")
+        return "0", None
     if not text.isdecimal():
         return None, _headcount_save_error(period, field, text, "INTEGER_GTE_0", f"{label.capitalize()} must be an integer >= 0")
     return str(int(text)), None
@@ -94,13 +94,13 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
         label = label_by_period.get(period, period)
         row_error_count = len(errors)
 
-        staff, staff_error = _parse_required_save_int(
+        staff, staff_error = _parse_blank_zero_save_int(
             period,
             "headcount_staff",
             values.get("staff", ""),
             f"staff at {label}",
         )
-        worker, worker_error = _parse_required_save_int(
+        worker, worker_error = _parse_blank_zero_save_int(
             period,
             "headcount_worker",
             values.get("worker", ""),

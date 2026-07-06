@@ -84,20 +84,17 @@ def test_headcount_save_requires_full_13_period_series_before_write():
     assert rows[0]["period"] == "202603"
 
 
-def test_headcount_save_missing_baseline_is_exact_error_and_no_success_title_source():
+def test_headcount_save_blank_baseline_is_saved_as_zero_and_no_old_defaulting_source():
     periods = get_required_headcount_periods(2027)
     values = _full_period_values()
     values["202603"]["staff"] = ""
     rows, errors = validate_headcount_save_period_rows(periods, values, {period: period for period in periods})
 
-    assert rows
-    assert errors[0]["period"] == "202603"
-    assert errors[0]["field"] == "headcount_staff"
-    assert errors[0]["validation_rule"] == "REQUIRED"
-    assert errors[0]["csv_row_written"] is False
-    assert errors[0]["db_row_inserted"] is False
+    assert errors == []
+    assert rows[0]["period"] == "202603"
+    assert rows[0]["headcount_staff"] == "0"
     formatted = format_headcount_save_errors(errors)
-    assert "202603 | headcount_staff | blank | REQUIRED" in formatted
+    assert formatted == ""
 
     source = Path("src/universal_app.py").read_text(encoding="utf-8")
     assert "Lưu chưa hoàn tất cho CC {cc_code}. Không có thay đổi nào được áp dụng." in source
@@ -105,7 +102,7 @@ def test_headcount_save_missing_baseline_is_exact_error_and_no_success_title_sou
     assert "staff_text = month_vars[period][\"staff\"].get().strip() or \"0\"" not in source
 
 
-def test_headcount_save_missing_worker_and_invalid_numbers_are_exact_errors():
+def test_headcount_save_blank_worker_is_zero_and_invalid_numbers_are_exact_errors():
     periods = get_required_headcount_periods(2027)
     values = _full_period_values()
     values["202604"]["worker"] = ""
@@ -116,7 +113,7 @@ def test_headcount_save_missing_worker_and_invalid_numbers_are_exact_errors():
     _, errors = validate_headcount_save_period_rows(periods, values, {period: period for period in periods})
     observed = {(error["period"], error["field"], error["raw_value"], error["validation_rule"]) for error in errors}
 
-    assert ("202604", "headcount_worker", "", "REQUIRED") in observed
+    assert ("202604", "headcount_worker", "", "REQUIRED") not in observed
     assert ("202605", "headcount_staff", "-1", "INTEGER_GTE_0") in observed
     assert ("202606", "headcount_staff", "1.5", "INTEGER_GTE_0") in observed
     assert ("202607", "headcount_worker", "abc", "INTEGER_GTE_0") in observed
