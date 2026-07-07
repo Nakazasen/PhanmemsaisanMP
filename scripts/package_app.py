@@ -3,8 +3,31 @@ import os
 import sys
 import shutil
 
+
+def _add_data_args(source: str, target: str) -> list[str]:
+    args: list[str] = []
+    if os.path.isdir(source):
+        for root, _dirs, files in os.walk(source):
+            for filename in files:
+                if filename.startswith("~$"):
+                    continue
+                source_path = os.path.join(root, filename)
+                relative_dir = os.path.relpath(root, source)
+                target_dir = target if relative_dir == "." else os.path.join(target, relative_dir)
+                args.extend(["--add-data", f"{source_path};{target_dir}"])
+    elif os.path.exists(source) and not os.path.basename(source).startswith("~$"):
+        args.extend(["--add-data", f"{source};{target}"])
+    return args
+
+
+def _copytree_without_excel_locks(source: str, target: str) -> None:
+    if os.path.exists(target):
+        shutil.rmtree(target)
+    shutil.copytree(source, target, ignore=shutil.ignore_patterns("~$*"))
+
+
 def package():
-    print("Bắt đầu đóng gói MP2027 Manager...")
+    print("Bắt đầu đóng gói MP2027 Manager dạng thư mục...")
     
     # Ensure we are at project root
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -18,13 +41,16 @@ def package():
     # PyInstaller command
     cmd = [
         sys.executable, "-m", "PyInstaller",
+        "--clean",
+        "--noconfirm",
         "--noconsole",
         "--hide-console", "minimize-late",
-        "--onefile",
+        "--onedir",
         f"--icon={icon_path}",
-        "--add-data", "assets;assets",
-        "--add-data", "docs\\MP2027;docs\\MP2027",
-        "--name", "MP2027_Manager",
+        "--name", "MP2027_Portable",
+        *_add_data_args("assets", "assets"),
+        *_add_data_args(os.path.join("docs", "MP2027"), os.path.join("docs", "MP2027")),
+        *_add_data_args("raw", "raw"),
         "src/universal_app.py"
     ]
     
@@ -32,13 +58,15 @@ def package():
     
     try:
         subprocess.run(cmd, check=True)
-        dist_docs = os.path.join(project_root, "dist", "docs", "MP2027")
-        if os.path.exists(dist_docs):
-            shutil.rmtree(dist_docs)
-        shutil.copytree(os.path.join(project_root, "docs", "MP2027"), dist_docs)
+        dist_root = os.path.join(project_root, "dist", "MP2027_Portable")
+        dist_docs = os.path.join(dist_root, "docs", "MP2027")
+        dist_raw = os.path.join(dist_root, "raw")
+        _copytree_without_excel_locks(os.path.join(project_root, "docs", "MP2027"), dist_docs)
+        _copytree_without_excel_locks(os.path.join(project_root, "raw"), dist_raw)
         print("\nTHÀNH CÔNG! Đã đóng gói xong.")
-        print(f"Tệp chạy nằm tại: {os.path.join(project_root, 'dist', 'MP2027_Manager.exe')}")
-        print(f"Dữ liệu runtime có thể chỉnh sửa đã được chép vào: {dist_docs}")
+        print(f"Thư mục chương trình nằm tại: {dist_root}")
+        print(f"Tệp chạy nằm tại: {os.path.join(dist_root, 'MP2027_Portable.exe')}")
+        print(f"Dữ liệu runtime có thể chỉnh sửa đã được chép vào: {dist_docs} và {dist_raw}")
     except subprocess.CalledProcessError as e:
         print(f"\nLỗi khi đóng gói: {e}")
 
