@@ -86,6 +86,20 @@ def _alloc_periods(conn, rule_id):
     return {r["period"]: float(r["amount"]) for r in rows}
 
 
+def _missing_areas(conn, cc_code):
+    rows = conn.execute(
+        """
+        SELECT area, COUNT(*) AS count
+        FROM fact_missing_inputs
+        WHERE source='allocator' AND CAST(cc_code AS TEXT)=?
+        GROUP BY area
+        ORDER BY area
+        """,
+        (str(cc_code),),
+    ).fetchall()
+    return {row["area"]: int(row["count"]) for row in rows}
+
+
 class TestPostingMonthLogic(unittest.TestCase):
     def test_fixed_month_posts_only_in_target_month(self):
         conn = _mk_conn()
@@ -99,6 +113,37 @@ class TestPostingMonthLogic(unittest.TestCase):
         periods = _alloc_periods(conn, rid)
         self.assertEqual(set(periods.keys()), {month_7})
         self.assertEqual(periods[month_7], 1000.0)
+        conn.close()
+
+    def test_dash_posting_month_records_missing_manual_event_input(self):
+        conn = _mk_conn()
+        cc = _seed_cc(conn)
+        _seed_hc(conn, cc, [10] * 12)
+        rid = _insert_rule(conn, "-", "headcount_all", unit_price=100, rid_label="application-month event")
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        self.assertEqual(_alloc_periods(conn, rid), {})
+        self.assertEqual(_missing_areas(conn, cc), {"manual_event_driver": 1})
+        conn.close()
+
+    def test_actual_participant_fixed_month_records_missing_manual_driver(self):
+        conn = _mk_conn()
+        cc = _seed_cc(conn)
+        _seed_hc(conn, cc, [10] * 12)
+        rid = _insert_rule(
+            conn,
+            "5月",
+            "headcount_all",
+            unit_price=100,
+            rid_label="company trip",
+            driver_raw="実際の参加人数で実施月に振替",
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        self.assertEqual(_alloc_periods(conn, rid), {})
+        self.assertEqual(_missing_areas(conn, cc), {"manual_distribution_driver": 1})
         conn.close()
 
     def test_event_month_posting_types_use_positive_delta(self):
@@ -188,6 +233,56 @@ class TestPostingMonthLogic(unittest.TestCase):
         self.assertEqual(periods.get(months[2]), 200.0)
         self.assertEqual(periods.get(months[4]), 300.0)
         self.assertNotIn(months[1], periods)
+        conn.close()
+
+    def test_mixed_event_and_fixed_month_rule_adds_delta_and_fixed_month_headcount(self):
+        conn = _mk_conn()
+        cc = _seed_cc(conn)
+        months = get_fy_months(2027)
+        headcounts = {
+            "202603": 22,
+            months[0]: 22,
+            months[1]: 22,
+            months[2]: 26,
+            months[3]: 27,
+            months[4]: 27,
+            months[5]: 27,
+            months[6]: 27,
+            months[7]: 27,
+            months[8]: 27,
+            months[9]: 28,
+            months[10]: 28,
+            months[11]: 28,
+        }
+        for period, value in headcounts.items():
+            conn.execute(
+                """
+                INSERT INTO fact_monthly_headcount
+                (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
+                VALUES (?, ?, ?, ?, 0, 'manual', 'mixed event fixed month')
+                """,
+                (period, cc, value, value),
+            )
+        rid = _insert_rule(
+            conn,
+            "入社月\n入社月の翌月\n11月",
+            "headcount_all",
+            unit_price=760,
+            rid_label="pocket calendar",
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        periods = _alloc_periods(conn, rid)
+        self.assertEqual(
+            periods,
+            {
+                months[2]: 4 * 760.0,
+                months[3]: 1 * 760.0,
+                months[7]: 27 * 760.0,
+                months[9]: 1 * 760.0,
+            },
+        )
         conn.close()
 
     def test_separate_count_admin_events_require_manual_event_source(self):

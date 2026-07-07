@@ -316,7 +316,7 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
     try:
         excel_file = pd.ExcelFile(path, engine="xlrd")
     except Exception as exc:
-        print(f"Warning: Cannot open {os.path.basename(path)}: {exc}")
+        print(f"Cảnh báo: không mở được {os.path.basename(path)}: {exc}")
         return records
 
     try:
@@ -426,7 +426,7 @@ def parse_it_simulation(conn: sqlite3.Connection, source_dir: str | None = None)
         if matched_path:
             files_to_parse.append((matched_path, months))
         else:
-            print(f"Info: Could not find IT Simulation file for {keywords}")
+            print(f"Thông tin: không tìm thấy tệp mô phỏng hệ thống cho {keywords}")
 
     cursor = conn.cursor()
     cursor.execute("DELETE FROM fact_input_data WHERE source = 'it_sim'")
@@ -457,5 +457,5 @@ def parse_it_simulation(conn: sqlite3.Connection, source_dir: str | None = None)
 
     conn.commit()
     results["total"] = total
-    print(f"IT Simulation total: {total} records.")
+    print(f"Mô phỏng hệ thống: tổng {total} bản ghi.")
     return results

@@ -39,6 +39,31 @@ def _normalize_text(value: Any) -> str:
     return " ".join(text.split())
 
 
+def _worksheet_looks_like_ga_main(worksheet, fiscal_year: int) -> bool:
+    if worksheet.max_row < 8 or worksheet.max_column < 12:
+        return False
+
+    header_cells: list[str] = []
+    for row in worksheet.iter_rows(min_row=1, max_row=6, max_col=18, values_only=True):
+        for value in row:
+            if value is not None:
+                header_cells.append(_normalize_text(value))
+    header_blob = " | ".join(header_cells)
+    return (
+        str(fiscal_year) in header_blob
+        and "vnd" in header_blob
+        and ("yotei" in header_blob or "item" in header_blob or "項目" in header_blob)
+        and ("費" in header_blob or "製造" in header_blob or "tai khoan" in header_blob or "account" in header_blob)
+    )
+
+
+def _find_ga_main_sheet(workbook, fiscal_year: int) -> str | None:
+    for sheet_name in workbook.sheetnames:
+        if _worksheet_looks_like_ga_main(workbook[sheet_name], fiscal_year):
+            return sheet_name
+    return None
+
+
 def _looks_like_ga_workbook(path: str, fiscal_year: int) -> bool:
     try:
         workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
@@ -49,23 +74,7 @@ def _looks_like_ga_workbook(path: str, fiscal_year: int) -> bool:
         normalized_sheets = [_normalize_text(name) for name in workbook.sheetnames]
         if not any("cach tinh" in name or "振替" in name or "計算" in name for name in normalized_sheets):
             return False
-
-        worksheet = workbook[workbook.sheetnames[0]]
-        if worksheet.max_row < 8 or worksheet.max_column < 12:
-            return False
-
-        header_cells: list[str] = []
-        for row in worksheet.iter_rows(min_row=1, max_row=6, max_col=18, values_only=True):
-            for value in row:
-                if value is not None:
-                    header_cells.append(_normalize_text(value))
-        header_blob = " | ".join(header_cells)
-        return (
-            str(fiscal_year) in header_blob
-            and "vnd" in header_blob
-            and ("yotei" in header_blob or "item" in header_blob or "項目" in header_blob)
-            and ("費" in header_blob or "製造" in header_blob or "tai khoan" in header_blob or "account" in header_blob)
-        )
+        return _find_ga_main_sheet(workbook, fiscal_year) is not None
     finally:
         workbook.close()
 
@@ -547,7 +556,13 @@ def parse_ga(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[st
 
     excel_file = pd.ExcelFile(path, engine="openpyxl")
 
-    main_sheet = excel_file.sheet_names[0]
+    workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    try:
+        main_sheet = _find_ga_main_sheet(workbook, fiscal_year)
+    finally:
+        workbook.close()
+    if not main_sheet:
+        return {"total": 0, "working_days": 0, "headcount": 0, "admin_allocation": 0}
     main_df = pd.read_excel(excel_file, sheet_name=main_sheet, header=None, engine="openpyxl")
     unit_price_records = _parse_ga_main_sheet(main_df, fy_months)
     for record in unit_price_records:

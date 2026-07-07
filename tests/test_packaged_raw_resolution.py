@@ -20,7 +20,7 @@ from src.parsers.manual_headcount import (
 class TestIDERawResolution:
     """IDE mode: base_dir is the repo root with raw/ as a sibling."""
 
-    def test_docs_mp2027_redirects_to_raw(self, tmp_path):
+    def test_docs_mp2027_is_active_source_folder(self, tmp_path):
         base = tmp_path / "project"
         raw = base / "raw"
         raw.mkdir(parents=True)
@@ -30,7 +30,7 @@ class TestIDERawResolution:
         result = resolve_manual_headcount_source_dir(
             source_dir=str(docs), base_dir=str(base)
         )
-        assert Path(result) == raw
+        assert Path(result) == docs
 
     def test_project_root_returns_raw(self, tmp_path):
         base = tmp_path / "project"

@@ -11,16 +11,40 @@ import openpyxl
 MANIFEST_FILENAME = "source_file_order.csv"
 MANIFEST_XLSX_FILENAME = "source_file_order.xlsx"
 MANIFEST_COLUMNS = ("order", "category", "filename", "enabled", "description")
+SUPPORTED_SOURCE_SUFFIXES = {".xls", ".xlsx", ".xlsm"}
+SYSTEM_FILENAMES = {"form.xlsx", MANIFEST_FILENAME.lower(), MANIFEST_XLSX_FILENAME.lower()}
+SYSTEM_PREFIXES = ("~$", "mp_cc_")
+SYSTEM_EXACT_OUTPUTS = {"mp2027_audit_report.md", "mp2027_missing_inputs.csv"}
 
 
 DEFAULT_DESCRIPTIONS = {
-    "facility": "Facility depreciation, interest, electric and water source",
-    "fixed_assets": "Fixed assets source",
-    "it_simulation": "IT simulation source",
-    "ga": "General affairs source",
-    "birthday": "Birthday source",
-    "allocation_rules": "Allocation rules source",
-    "nnn_paperwork": "NNN paperwork source",
+    "facility": "Nguồn cơ sở vật chất",
+    "fixed_assets": "Nguồn tài sản cố định",
+    "it_simulation": "Nguồn mô phỏng hệ thống",
+    "ga": "Nguồn Tổng vụ",
+    "birthday": "Nguồn sinh nhật",
+    "allocation_rules": "Nguồn quy tắc phân bổ",
+    "nnn_paperwork": "Nguồn giấy tờ NNN",
+}
+
+CATEGORY_DISPLAY_NAMES = {
+    "facility": "Cơ sở vật chất",
+    "fixed_assets": "Tài sản cố định",
+    "it_simulation": "Mô phỏng hệ thống",
+    "ga": "Tổng vụ",
+    "birthday": "Sinh nhật",
+    "allocation_rules": "Quy tắc phân bổ",
+    "nnn_paperwork": "Giấy tờ NNN",
+}
+
+CATEGORY_ORDER = {
+    "facility": 10,
+    "fixed_assets": 20,
+    "it_simulation": 30,
+    "ga": 40,
+    "birthday": 50,
+    "allocation_rules": 60,
+    "nnn_paperwork": 70,
 }
 
 
@@ -33,13 +57,12 @@ def _source_dir_path(source_dir: str | None) -> Path | None:
 
 def _normalize_row(row: dict[str, object], base_dir: Path) -> dict[str, str] | None:
     enabled = str(row.get("enabled", "1")).strip().lower()
-    if enabled in {"0", "false", "no", "n"}:
-        return None
     filename = str(row.get("filename", "")).strip()
     category = str(row.get("category", "")).strip()
     if not filename or not category:
         return None
     normalized = {key: str(row.get(key, "")).strip() for key in MANIFEST_COLUMNS}
+    normalized["enabled"] = "0" if enabled in {"0", "false", "no", "n"} else "1"
     normalized["_path"] = str(base_dir / filename)
     return normalized
 
@@ -92,56 +115,82 @@ def _read_xlsx_manifest(path: Path, base_dir: Path) -> list[dict[str, str]]:
         workbook.close()
 
 
-def _existing_entries(entries: list[dict[str, str]]) -> list[dict[str, str]]:
-    return [entry for entry in entries if Path(str(entry.get("_path", ""))).is_file()]
+def _existing_enabled_entries(entries: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [
+        entry
+        for entry in entries
+        if str(entry.get("enabled", "1")).strip() != "0" and Path(str(entry.get("_path", ""))).is_file()
+    ]
 
 
-def _detect_source_files(base_dir: Path) -> list[dict[str, str]]:
-    paths = [path for path in base_dir.iterdir() if path.is_file() and not path.name.startswith("~$")]
+def _is_system_or_generated_file(path: Path) -> bool:
+    lower = path.name.lower()
+    if lower in SYSTEM_FILENAMES or lower in SYSTEM_EXACT_OUTPUTS:
+        return True
+    if any(lower.startswith(prefix) for prefix in SYSTEM_PREFIXES):
+        return True
+    if lower.endswith(".tmp_export.xlsx") or lower.endswith(".tmp.xlsx"):
+        return True
+    return False
 
-    def first(predicate) -> Path | None:
-        return next((path for path in paths if predicate(path.name)), None)
 
-    def all_matching(predicate) -> list[Path]:
-        return sorted((path for path in paths if predicate(path.name)), key=lambda item: item.name.lower())
+def _source_candidates(base_dir: Path) -> list[Path]:
+    return [
+        path
+        for path in base_dir.iterdir()
+        if path.is_file()
+        and path.suffix.lower() in SUPPORTED_SOURCE_SUFFIXES
+        and not _is_system_or_generated_file(path)
+    ]
 
-    rows: list[tuple[str, Path]] = []
-    facility = first(lambda name: name.endswith(".xlsx") and "MPFY2027" in name and name != "FORM.xlsx")
-    fixed_assets = first(lambda name: name.endswith(".xlsx") and "Fixed_Assets_Information" in name)
-    ga = first(lambda name: name.endswith(".xlsx") and "FY2027 MP" in name and "振替" in name)
-    birthday = first(lambda name: name.endswith(".xlsx") and "Sinh" in name and "FY2027" in name)
-    allocation = first(lambda name: name.endswith(".xlsx") and "FY2027" in name and "2025.12.29" in name)
-    nnn = first(lambda name: name.endswith(".xlsx") and "NNN" in name)
 
-    for category, path in (
-        ("facility", facility),
-        ("fixed_assets", fixed_assets),
-        ("ga", ga),
-        ("birthday", birthday),
-        ("allocation_rules", allocation),
-        ("nnn_paperwork", nnn),
-    ):
-        if path:
-            rows.append((category, path))
+def _classify_source_file(path: Path) -> str | None:
+    name = path.name
+    lower = name.lower()
+    if "fixed_assets_information" in lower or "固定資産情報" in name:
+        return "fixed_assets"
+    if "simulation" in lower and "fy2027" in lower:
+        return "it_simulation"
+    if "mpfy2027" in lower and "施設" in name:
+        return "facility"
+    if "fy2027 mp" in lower and "振替" in name:
+        return "ga"
+    if "sinh" in lower and "fy2027" in lower:
+        return "birthday"
+    if "配賦額一覧" in name or ("fy2027" in lower and "2025.12.29" in lower):
+        return "allocation_rules"
+    if "nnn" in lower or "giấy tờ" in lower or "giay to" in lower:
+        return "nnn_paperwork"
+    return None
 
-    it_files = all_matching(lambda name: name.endswith(".xls") and "Simulation" in name and "FY2027" in name)
-    if it_files:
-        def it_order(path: Path) -> int:
-            lower = path.name.lower()
-            if "apr" in lower or "june" in lower:
-                return 0
-            if "july" in lower or "dec" in lower:
-                return 1
-            if "jan" in lower or "march" in lower:
-                return 2
-            return 9
 
-        insert_after = 2 if len(rows) >= 2 else len(rows)
-        for offset, path in enumerate(sorted(it_files, key=it_order)):
-            rows.insert(insert_after + offset, ("it_simulation", path))
+def _it_order(path: Path) -> int:
+    lower = path.name.lower()
+    if "apr" in lower or "june" in lower:
+        return 0
+    if "july" in lower or "dec" in lower:
+        return 1
+    if "jan" in lower or "march" in lower:
+        return 2
+    return 9
+
+
+def _detected_sort_key(path: Path) -> tuple[int, int, str]:
+    category = _classify_source_file(path) or ""
+    return CATEGORY_ORDER.get(category, 999), _it_order(path), path.name.lower()
+
+
+def detect_source_files(source_dir: str | None) -> list[dict[str, str]]:
+    """Auto-detect supported business source files in the selected folder."""
+    base_dir = _source_dir_path(source_dir)
+    if base_dir is None:
+        return []
 
     entries: list[dict[str, str]] = []
-    for index, (category, path) in enumerate(rows, start=1):
+    for index, path in enumerate(sorted(_source_candidates(base_dir), key=_detected_sort_key), start=1):
+        category = _classify_source_file(path)
+        if not category:
+            continue
         entries.append(
             {
                 "order": str(index),
@@ -155,10 +204,67 @@ def _detect_source_files(base_dir: Path) -> list[dict[str, str]]:
     return entries
 
 
+def _read_saved_manifest(source_dir: str | None, include_csv: bool = True) -> list[dict[str, str]]:
+    base_dir = _source_dir_path(source_dir)
+    if base_dir is None:
+        return []
+    xlsx_path = base_dir / MANIFEST_XLSX_FILENAME
+    if xlsx_path.is_file():
+        return _read_xlsx_manifest(xlsx_path, base_dir)
+    csv_path = base_dir / MANIFEST_FILENAME
+    if include_csv and csv_path.is_file():
+        return _read_csv_manifest(csv_path, base_dir)
+    return []
+
+
+def merge_manifest_with_detected(
+    source_dir: str | None,
+    saved_entries: list[dict[str, str]] | None = None,
+) -> list[dict[str, str]]:
+    """Merge user overrides with current folder auto-discovery."""
+    base_dir = _source_dir_path(source_dir)
+    if base_dir is None:
+        return []
+
+    saved = saved_entries if saved_entries is not None else _read_saved_manifest(source_dir)
+    detected = detect_source_files(source_dir)
+    detected_by_name = {entry["filename"].lower(): entry for entry in detected}
+
+    merged: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for row in _sort_entries(saved):
+        filename = str(row.get("filename", "")).strip()
+        key = filename.lower()
+        if not filename or key in seen or key not in detected_by_name:
+            continue
+        merged_row = dict(detected_by_name[key])
+        merged_row.update(
+            {
+                "order": row.get("order", merged_row["order"]),
+                "category": row.get("category", merged_row["category"]),
+                "enabled": row.get("enabled", "1"),
+                "description": row.get("description", merged_row.get("description", "")),
+                "_path": str(base_dir / filename),
+            }
+        )
+        merged.append(merged_row)
+        seen.add(key)
+
+    for row in detected:
+        key = row["filename"].lower()
+        if key not in seen:
+            merged.append(row)
+            seen.add(key)
+
+    for index, row in enumerate(_sort_entries(merged), start=1):
+        row["order"] = str(index)
+    return merged
+
+
 def write_source_manifest_xlsx(source_dir: str | None, entries: list[dict[str, str]]) -> str:
     base_dir = _source_dir_path(source_dir)
     if base_dir is None:
-        raise FileNotFoundError(f"Source directory not found: {source_dir}")
+        raise FileNotFoundError(f"Không tìm thấy thư mục nguồn: {source_dir}")
 
     workbook = openpyxl.Workbook()
     worksheet = workbook.active
@@ -174,39 +280,30 @@ def write_source_manifest_xlsx(source_dir: str | None, entries: list[dict[str, s
     return str(path)
 
 
-def ensure_source_manifest(source_dir: str | None) -> str:
+def ensure_source_manifest(source_dir: str | None, *, refresh: bool = True) -> str:
     base_dir = _source_dir_path(source_dir)
     if base_dir is None:
-        raise FileNotFoundError(f"Source directory not found: {source_dir}")
+        raise FileNotFoundError(f"Không tìm thấy thư mục nguồn: {source_dir}")
 
-    xlsx_path = base_dir / MANIFEST_XLSX_FILENAME
-    if xlsx_path.is_file():
-        return str(xlsx_path)
-
-    entries = read_source_manifest(source_dir, include_missing=True)
-    if not _existing_entries(entries):
-        entries = _detect_source_files(base_dir)
+    entries = merge_manifest_with_detected(source_dir) if refresh else _read_saved_manifest(source_dir)
+    if not entries:
+        entries = detect_source_files(source_dir)
     write_source_manifest_xlsx(source_dir, entries)
-    return str(xlsx_path)
+    return str(base_dir / MANIFEST_XLSX_FILENAME)
 
 
 def read_source_manifest(source_dir: str | None, include_missing: bool = False) -> list[dict[str, str]]:
-    """Read enabled source file entries sorted by their explicit order."""
+    """Read source file entries sorted by their explicit order."""
     base_dir = _source_dir_path(source_dir)
     if base_dir is None:
         return []
 
-    xlsx_path = base_dir / MANIFEST_XLSX_FILENAME
-    if xlsx_path.is_file():
-        entries = _read_xlsx_manifest(xlsx_path, base_dir)
-        return entries if include_missing else _existing_entries(entries)
-
-    manifest_path = base_dir / MANIFEST_FILENAME
-    if not manifest_path.is_file():
-        return []
-
-    entries = _read_csv_manifest(manifest_path, base_dir)
-    return entries if include_missing else _existing_entries(entries)
+    entries = merge_manifest_with_detected(source_dir)
+    if entries:
+        write_source_manifest_xlsx(source_dir, entries)
+    if include_missing:
+        return entries
+    return _existing_enabled_entries(entries)
 
 
 def resolve_manifest_file(source_dir: str | None, category: str) -> str | None:
@@ -236,13 +333,17 @@ def describe_manifest(source_dir: str | None) -> list[str]:
     lines: list[str] = []
     for entry in read_source_manifest(source_dir, include_missing=True):
         path = Path(str(entry.get("_path", "")))
-        status = "OK" if path.is_file() else "MISSING"
+        status = "ĐỦ" if path.is_file() else "THIẾU"
+        enabled = "BẬT" if str(entry.get("enabled", "1")).strip() != "0" else "TẮT"
+        category_key = str(entry.get("category", "")).strip()
+        category = CATEGORY_DISPLAY_NAMES.get(category_key, category_key)
         lines.append(
-            "{order}. {category}: {filename} [{status}]".format(
+            "{order}. {category}: {filename} [{status}; {enabled}]".format(
                 order=str(entry.get("order", "")).strip() or "?",
-                category=str(entry.get("category", "")).strip(),
+                category=category,
                 filename=str(entry.get("filename", "")).strip(),
                 status=status,
+                enabled=enabled,
             )
         )
     return lines

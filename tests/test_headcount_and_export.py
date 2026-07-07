@@ -263,18 +263,12 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
                         }
                     )
 
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                resolved = resolve_manual_headcount_source_dir(str(docs_dir), base_dir=str(project_root))
-            self.assertEqual(Path(resolved).resolve(), raw_dir.resolve())
-            self.assertTrue(any(LEGACY_HEADCOUNT_SOURCE_WARNING in str(w.message) for w in caught))
+            resolved = resolve_manual_headcount_source_dir(str(docs_dir), base_dir=str(project_root))
+            self.assertEqual(Path(resolved).resolve(), docs_dir.resolve())
 
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                result = parse_manual_headcount(conn, source_dir=str(docs_dir), base_dir=str(project_root))
-            self.assertTrue(any(LEGACY_HEADCOUNT_SOURCE_WARNING in str(w.message) for w in caught))
+            result = parse_manual_headcount(conn, source_dir=str(docs_dir), base_dir=str(project_root))
 
-            self.assertEqual(Path(str(result["template_path"])).resolve(), (raw_dir / "headcount_manual.csv").resolve())
+            self.assertEqual(Path(str(result["template_path"])).resolve(), (docs_dir / "headcount_manual.csv").resolve())
             self.assertEqual(result["inserted"], 1)
             row = conn.execute(
                 """
@@ -285,9 +279,9 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
                 (cc_code,),
             ).fetchone()
             self.assertIsNotNone(row)
-            self.assertEqual(float(row["headcount_staff"]), 7.0)
-            self.assertEqual(float(row["headcount_worker"]), 1.0)
-            self.assertEqual(row["description"], "canonical raw row")
+            self.assertEqual(float(row["headcount_staff"]), 99.0)
+            self.assertEqual(float(row["headcount_worker"]), 0.0)
+            self.assertEqual(row["description"], "legacy docs row")
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
@@ -330,15 +324,21 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
 
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                result = parse_manual_headcount(conn, source_dir=str(docs_path), base_dir=str(project_root))
+            result = parse_manual_headcount(conn, source_dir=str(docs_path), base_dir=str(project_root))
 
-            self.assertTrue(any(LEGACY_HEADCOUNT_SOURCE_WARNING in str(w.message) for w in caught))
-            self.assertEqual(Path(str(result["template_path"])).resolve(), (raw_dir / "headcount_manual.csv").resolve())
-            self.assertEqual(result["inserted"], 0)
-            count = conn.execute("SELECT COUNT(*) FROM fact_monthly_headcount").fetchone()[0]
-            self.assertEqual(count, 0)
+            self.assertEqual(Path(str(result["template_path"])).resolve(), docs_path.resolve())
+            self.assertEqual(result["inserted"], 1)
+            row = conn.execute(
+                """
+                SELECT headcount_staff, headcount_worker, description
+                FROM fact_monthly_headcount
+                WHERE cc_code=? AND period='202701' AND source='manual'
+                """,
+                (cc_code,),
+            ).fetchone()
+            self.assertIsNotNone(row)
+            self.assertEqual(float(row["headcount_staff"]), 99.0)
+            self.assertEqual(row["description"], "legacy file path must not import")
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
@@ -352,15 +352,12 @@ class TestManualHeadcountGenderSplit(unittest.TestCase):
             docs_dir = project_root / "docs" / "MP2027"
             docs_dir.mkdir(parents=True)
 
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                result = parse_manual_headcount(conn, source_dir=str(docs_dir), base_dir=str(project_root))
+            result = parse_manual_headcount(conn, source_dir=str(docs_dir), base_dir=str(project_root))
 
-            self.assertTrue(any(LEGACY_HEADCOUNT_SOURCE_WARNING in str(w.message) for w in caught))
-            raw_path = project_root / "raw" / "headcount_manual.csv"
-            self.assertEqual(Path(str(result["template_path"])).resolve(), raw_path.resolve())
-            self.assertTrue(raw_path.exists())
-            self.assertFalse((docs_dir / "headcount_manual.csv").exists())
+            docs_path = docs_dir / "headcount_manual.csv"
+            self.assertEqual(Path(str(result["template_path"])).resolve(), docs_path.resolve())
+            self.assertTrue(docs_path.exists())
+            self.assertFalse((project_root / "raw" / "headcount_manual.csv").exists())
             self.assertEqual(result["inserted"], 0)
         finally:
             conn.close()
@@ -1100,7 +1097,7 @@ class TestPostingMonthOverride(unittest.TestCase):
         self.assertEqual([(row["period"], float(row["amount_vnd"])) for row in bonenkai], [(periods[10], 800000.0)])
         conn.close()
 
-    def test_section27_monthly_events_use_total_headcount_and_required_months(self):
+    def test_actual_event_rules_fail_closed_until_manual_event_input_exists(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
         periods = get_fy_months(2027)
@@ -1116,14 +1113,11 @@ class TestPostingMonthOverride(unittest.TestCase):
             [(period, cc_code) for period in periods],
         )
         rules = [
-            ("社員旅行 Du lịch công ty", "5月", "headcount_worker", 100, periods[1], 300),
-            ("Tiệc khuấy động năm tài chính\n決起コンパ（対象：全部門）", "-", "headcount_worker", 200, periods[1], 600),
-            ("会社設立記念 感謝イベント Sự kiện tri ân ngày thành lập công ty", "-", "headcount_worker", 300, periods[6], 900),
-            ("ポケットカレンダー Lịch bỏ túi", "毎月\n11月", "headcount_all", 400, periods[7], 1200),
-            ("忘年会補助金 Hỗ trợ tiệc tất niên", "-", "headcount_worker", 500, periods[10], 1500),
-            ("お年玉 Tiền lì xì", "2月", "headcount_worker", 600, periods[10], 1800),
+            ("社員旅行 Du lịch công ty", "5月", "headcount_worker", 100, "実際の参加人数で実施月に振替"),
+            ("Tiệc khuấy động năm tài chính\n決起コンパ（対象：全部門）", "-", "headcount_worker", 200, "対象者：コンパ参加した社員"),
+            ("忘年会補助金 Hỗ trợ tiệc tất niên", "-", "headcount_worker", 500, "対象者：コンパ参加した社員"),
         ]
-        for item_name, posting_month, driver_type, unit_price, _period, _amount in rules:
+        for item_name, posting_month, driver_type, unit_price, driver_raw in rules:
             conn.execute(
                 """
                 INSERT INTO map_allocation_rules
@@ -1131,32 +1125,110 @@ class TestPostingMonthOverride(unittest.TestCase):
                  posting_month, unit_price, unit, driver_type, driver_raw)
                 VALUES ('GA', ?, 'GA', 5004086291, 6004086651, 6004086551, ?, ?, '/unit', ?, ?)
                 """,
-                (item_name, posting_month, unit_price, driver_type, "section27 total headcount"),
+                (item_name, posting_month, unit_price, driver_type, driver_raw),
             )
+        conn.commit()
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        fact_count = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM fact_input_data
+            WHERE CAST(cc_code AS TEXT)=?
+            """,
+            (str(cc_code),),
+        ).fetchone()[0]
+        missing_rows = conn.execute(
+            """
+            SELECT area, COUNT(*) AS count
+            FROM fact_missing_inputs
+            WHERE source='allocator'
+              AND CAST(cc_code AS TEXT)=?
+            GROUP BY area
+            ORDER BY area
+            """,
+            (str(cc_code),),
+        ).fetchall()
+        self.assertEqual(fact_count, 0)
+        self.assertEqual(
+            {row["area"]: int(row["count"]) for row in missing_rows},
+            {"manual_distribution_driver": 1, "manual_event_driver": 2},
+        )
+        conn.close()
+
+    def test_pocket_calendar_keeps_november_all_staff_allocation_when_driver_mentions_distribution_count(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        conn.executemany(
+            """
+            INSERT INTO fact_monthly_headcount
+            (
+                period, cc_code, headcount_all, headcount_staff, headcount_worker,
+                headcount_male, headcount_female, source, description
+            )
+            VALUES (?, ?, 0, 0, 0, 0, 0, 'manual', 'pocket calendar baseline')
+            """,
+            [(period, cc_code) for period in periods],
+        )
+        conn.execute(
+            """
+            UPDATE fact_monthly_headcount
+            SET headcount_all = 5, headcount_staff = 5
+            WHERE cc_code = ? AND period = ?
+            """,
+            (cc_code, periods[7]),
+        )
+        conn.execute(
+            """
+            INSERT INTO map_allocation_rules
+            (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
+             posting_month, unit_price, unit, driver_type, driver_raw)
+            VALUES ('GA', 'ポケットカレンダー Lịch bỏ túi', '図書印刷費', 5005246281, 6005146627, 6005146541,
+                    '入社月\n入社月の翌月\n11月', 760, '/人', 'headcount_all',
+                    '前月16日から当月15日までの新入社員と支給依頼者の配布数は当月振替\n※11月：全員に新年のポケットカレンダーを配布する。配布数で引渡し月に振替。')
+            """
+        )
         conn.commit()
 
         AllocationEngine(conn)._process_allocation_rules()
 
         rows = conn.execute(
             """
-            SELECT description, period, amount_vnd
+            SELECT period, amount_vnd, description
             FROM fact_input_data
             WHERE CAST(cc_code AS TEXT)=?
-            ORDER BY description
+              AND description = 'Alloc: ポケットカレンダー Lịch bỏ túi'
+            ORDER BY period
             """,
             (str(cc_code),),
         ).fetchall()
-        observed = {
-            row["description"]: (row["period"], float(row["amount_vnd"]))
-            for row in rows
-        }
-        for item_name, _posting_month, _driver_type, _unit_price, expected_period, expected_amount in rules:
-            self.assertEqual(
-                observed[f"Alloc: {item_name}"],
-                (expected_period, float(expected_amount)),
-                item_name,
-            )
+        self.assertEqual([(row["period"], float(row["amount_vnd"])) for row in rows], [(periods[7], 7600.0)])
         conn.close()
+
+    def test_pocket_calendar_append_rows_are_not_suppressed_by_legacy_fixed_matcher(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        try:
+            conn.execute(
+                """
+                INSERT INTO fact_input_data
+                (source, period, amount_vnd, cc_code, account_code, description)
+                VALUES ('alloc_82', ?, 7600, ?, 5005246281, 'Alloc: ポケットカレンダー Lịch bỏ túi')
+                """,
+                (get_fy_months(2027)[7], cc_code),
+            )
+            conn.commit()
+
+            rows = HubBuilder(conn)._load_append_rows(cc_code)
+
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["account_code"], 5005246281)
+            self.assertEqual(rows[0]["description"], "Alloc: ポケットカレンダー Lịch bỏ túi")
+            self.assertEqual(rows[0]["months"][get_fy_months(2027)[7]], 7600.0)
+        finally:
+            conn.close()
 
 
 class TestEventDeltaHeadcountFailClosed(unittest.TestCase):
@@ -1783,6 +1855,45 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
         self.assertEqual(_apply_mp2026_reference_unit_price("月餅 Bánh Trung Thu", 0), 56000.0)
         self.assertEqual(_apply_mp2026_reference_unit_price("運動会 Đại hội thể thao", 0), 107000.0)
         self.assertEqual(_apply_mp2026_reference_unit_price("運動会 Đại hội thể thao", 123), 123.0)
+
+
+    def test_allocation_loader_prefers_fiscal_year_sheet(self):
+        conn = _mk_conn()
+        tmpdir = _mk_tmpdir()
+        try:
+            source_path = tmpdir / "FY2027配賦額一覧 (2025.12.29).xlsx"
+            workbook = openpyxl.Workbook()
+            ws_old = workbook.active
+            ws_old.title = "配賦額一覧"
+            ws_old.append(["配布元", "内容", "科目名称", "製造コード", "間接コード", "販売コード", "計上月", "単価", "単位", "計上基準"])
+            ws_old.append(["総務課", "FY2026 only", "福利厚生費", 1, 2, 3, "4月", 999, "/人", "人数"])
+
+            ws_fy = workbook.create_sheet("FY2027配賦額一覧")
+            ws_fy.append(["配布元", "内容", "科目名称", "製造コード", "間接コード", "販売コード", "計上月", "単価", "単位", "計上基準"])
+            ws_fy.append([
+                "総務課",
+                "会社設立記念 感謝イベント Sự kiện tri ân ngày thành lập công ty",
+                "福利厚生費",
+                5004086291,
+                6004086651,
+                6004086551,
+                "10月",
+                100000,
+                "/人",
+                "実際の参加人数で実施月に振替 Phân bổ theo số người tham gia thực tế",
+            ])
+            workbook.save(source_path)
+            workbook.close()
+
+            loaded = load_allocation_rules(conn, alloc_path=str(source_path), fiscal_year=2027)
+            self.assertEqual(loaded, 1)
+            row = conn.execute("SELECT item_name, posting_month, unit_price FROM map_allocation_rules").fetchone()
+            self.assertIn("会社設立記念", row["item_name"])
+            self.assertEqual(row["posting_month"], "10月")
+            self.assertEqual(float(row["unit_price"]), 100000.0)
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     def test_allocation_loader_keeps_footnote_unit_price_rules_as_missing_price_metadata(self):
         conn = _mk_conn()
@@ -3620,9 +3731,17 @@ class TestHubBuilderExport(unittest.TestCase):
             workbook = openpyxl.load_workbook(output_path, data_only=False)
             try:
                 ws = workbook[find_hub_sheet_name(workbook)]
-                self.assertEqual(ws["G66"].value, "=111")
-                self.assertEqual(ws["K66"].value, "=222")
-                self.assertEqual(ws["I79"].value, "=333")
+                dynamic_rows = {
+                    ws.cell(row_index, 19).value: row_index
+                    for row_index in range(168, 260)
+                    if ws.cell(row_index, 19).value
+                }
+                travel_row = dynamic_rows["Alloc: 社員旅行 Du lịch công ty"]
+                festival_row = dynamic_rows["Alloc: 京セラフェスティバルLễ hội Kyocera"]
+                card_row = dynamic_rows["Alloc: 社員証（新入社員用・再発行時、写真含む）\nThẻ từ chấm công + ảnh"]
+                self.assertEqual(ws.cell(travel_row, 7).value, "=111")
+                self.assertEqual(ws.cell(festival_row, 11).value, "=222")
+                self.assertEqual(ws.cell(card_row, 9).value, "=333")
                 self.assertIsNone(ws["F67"].value)
                 appended_row = next(
                     row_index
@@ -3854,6 +3973,44 @@ class TestHubBuilderExport(unittest.TestCase):
                 self.assertNotEqual(ws["K71"].value, "=99*1000")
             finally:
                 workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+    def test_ga_parser_finds_main_sheet_when_not_first_sheet(self):
+        conn = _mk_conn()
+        expat_prices = [856107, 894022, 841125, 843756, 840449, 826939, 807491, 851412, 890880, 868440, 823640, 810900]
+        tmpdir = _mk_tmpdir()
+        try:
+            source_path = tmpdir / "総務課 FY2027 MP 振替予定.xlsx"
+            months = get_fy_months(2027)
+            workbook = openpyxl.Workbook()
+            ws_dummy = workbook.active
+            ws_dummy.title = "Sheet1"
+            ws_dummy.append(["This sheet is only a cover sheet and must not be parsed as GA main data"])
+            ws_main = workbook.create_sheet("FY2027予定")
+            ws_main.append(["Item FY2027 VND account", *months, None, "Basis VND Yotei", "account"])
+            ws_main.append(["出向者送迎費\nXe đưa đón người Nhật", *expat_prices, None, "一人当たり", 5004086291])
+            for _ in range(6):
+                ws_main.append(["padding", *([0] * 12), None, "headcount", None])
+            workbook.create_sheet("Cách tính phân bổ 振替計算")
+            workbook.save(source_path)
+            workbook.close()
+
+            result = parse_ga(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["total"], 12)
+            rows = conn.execute(
+                """
+                SELECT period, amount_vnd, description
+                FROM fact_input_data
+                WHERE source='ga_unit_price'
+                  AND description LIKE '%出向者送迎費%'
+                ORDER BY period
+                """
+            ).fetchall()
+            self.assertEqual([row["period"] for row in rows], months)
+            self.assertEqual([float(row["amount_vnd"]) for row in rows], [float(price) for price in expat_prices])
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)

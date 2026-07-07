@@ -136,12 +136,12 @@ def parse_facility(conn: sqlite3.Connection, source_dir: str = None) -> dict:
     path = os.path.join(search_dir, f'施設課　MP{fy_str}.xlsx')
     if manifest_path:
         path = manifest_path
-    print(f"Opening Facility: {path}")
+    print(f"Đang mở tệp Cơ sở vật chất: {path}")
     if not os.path.exists(path):
         # Try local folder
         path = f'施設課　MP{fy_str}.xlsx'
         if not os.path.exists(path):
-            print(f"Warning: Facility file not found: {path} in {search_dir}")
+            print(f"Cảnh báo: không tìm thấy tệp Cơ sở vật chất: {path} trong {search_dir}")
             return {'total': 0}
 
     results = {}
@@ -187,5 +187,5 @@ def parse_facility(conn: sqlite3.Connection, source_dir: str = None) -> dict:
 
     conn.commit()
     results['total'] = total
-    print(f"Facility total: {total} records inserted.")
+    print(f"Cơ sở vật chất: đã thêm {total} bản ghi.")
     return results

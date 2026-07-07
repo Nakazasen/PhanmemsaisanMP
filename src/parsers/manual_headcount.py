@@ -40,10 +40,10 @@ def _warn_legacy_headcount_source(requested: Path, raw_dir: Path) -> None:
 def resolve_manual_headcount_source_dir(source_dir: str | None = None, base_dir: str | None = None) -> str:
     """Resolve the active manual headcount folder.
 
-    In the checked-out project, raw/ is the canonical manual CSV input area.
-    If the user points the general source folder at docs/MP2027, keep business
-    workbook loading there but read/write manual headcount from raw/.
-    Custom source folders are left unchanged.
+    New source-folder UX: when the user explicitly selects a source folder,
+    manual CSVs live in that same folder and are created there if missing.
+    Legacy/project-root mode still uses raw/ so older CLI/package flows remain
+    compatible.
     """
     requested = Path(source_dir or os.getcwd()).expanduser()
     try:
@@ -58,29 +58,27 @@ def resolve_manual_headcount_source_dir(source_dir: str | None = None, base_dir:
         project_root = Path(os.path.abspath(str(project_root)))
 
     raw_dir = project_root / "raw"
-    docs_dir = project_root / "docs" / "MP2027"
 
     # In packaged mode base_dir is the exe directory, but PyInstaller COLLECT
-    # puts bundled data under sys._MEIPASS (_internal/).  If raw/ is not next
-    # to the exe, fall back to the bundled location.  External raw/ next to the
-    # exe takes priority so users can edit CSVs without unpacking.
+    # puts bundled data under sys._MEIPASS (_internal/). External raw/ next to
+    # the exe takes priority so users can edit CSVs without unpacking.
     meipass = getattr(sys, "_MEIPASS", None)
     if meipass:
-        meipass_raw = Path(meipass) / "raw"
-        meipass_docs = Path(meipass) / "docs" / "MP2027"
+        meipass_path = Path(meipass).expanduser()
+        try:
+            meipass_path = meipass_path.resolve()
+        except OSError:
+            meipass_path = Path(os.path.abspath(str(meipass_path)))
+        meipass_raw = meipass_path / "raw"
+        meipass_docs = meipass_path / "docs" / "MP2027"
         if not raw_dir.exists() and meipass_raw.exists():
             raw_dir = meipass_raw
-        if not docs_dir.exists() and meipass_docs.exists():
-            docs_dir = meipass_docs
+        if requested == meipass_docs:
+            return str(raw_dir)
+
     if requested == project_root:
         return str(raw_dir)
-    if requested == docs_dir:
-        _warn_legacy_headcount_source(requested, raw_dir)
-        return str(raw_dir)
     if requested.name == TEMPLATE_FILENAME:
-        if requested.parent == docs_dir:
-            _warn_legacy_headcount_source(requested, raw_dir)
-            return str(raw_dir)
         if requested.parent == raw_dir:
             return str(raw_dir)
         return str(requested.parent)

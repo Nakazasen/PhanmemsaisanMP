@@ -16,33 +16,6 @@ from src.utils import excel_helpers as helpers
 HEALTH_CHECK_KEYWORDS = ("kham suc khoe", "khám sức khỏe", "健康診断")
 MALE_KEYWORDS = ("cho cnv nam", " nam)", " male", "男")
 FEMALE_KEYWORDS = ("cho cnv nu", "cho cnv nữ", " nu)", " nữ)", " female", "女")
-POSTING_MONTH_ITEM_OVERRIDES = (
-    (("部門方針発表会後の決起コンパ", "phương châm bộ phận"), "4月"),
-    (("tiệc khuấy động năm tài chính", "quyet起コンパ", "決起コンパ"), "5月"),
-    (("社員旅行不参加", "không thể tham gia du lịch"), "6月"),
-    (("社員旅行 du lịch công ty", "社員旅行"), "5月"),
-    (("マイエピソード", "cảm nghĩ về triết lý kinh doanh"), "7月"),
-    (("京セラフェスティバル", "lễ hội kyocera"), "9月"),
-    (("月餅", "bánh trung thu"), "9月"),
-    (("10年勤続記念コンパ", "tiệc kỷ niệm 10 năm"), "10月"),
-    (("10年勤続記念品", "quà kỷ niệm"), "10月"),
-    (("ポケットカレンダー", "pocket calendar", "lịch bỏ túi"), "11月"),
-    (("運動会", "đại hội thể thao"), "11月"),
-    (("忘年会補助金", "hỗ trợ tiệc tất niên"), "2月"),
-    (("お年玉", "tiền lì xì"), "2月"),
-    (("会社設立記念", "sự kiện tri ân ngày thành lập công ty"), "10月"),
-)
-
-SECTION27_EVENT_RULES = (
-    (("社員旅行", "du lich cong ty", "du lịch công ty"), "5月"),
-    (("決起コンパ", "tiec khuay dong", "tiệc khuấy động"), "5月"),
-    (("会社設立記念", "感謝イベント", "su kien tri an", "sự kiện tri ân"), "10月"),
-    (("ポケットカレンダー", "pocket calendar", "lich bo tui", "lịch bỏ túi"), "11月"),
-    (("忘年会補助金", "ho tro tiec tat nien", "hỗ trợ tiệc tất niên"), "2月"),
-    (("お年玉", "tien li xi", "tiền lì xì"), "2月"),
-)
-
-
 MANUAL_EVENT_ITEM_TOKENS = (
     "visa",
     "passport",
@@ -76,6 +49,9 @@ MANUAL_EVENT_ITEM_TOKENS = (
     "10年勤続記念品",
     "quà kỷ niệm",
     "qua ky niem",
+    "会社設立記念",
+    "sự kiện tri ân",
+    "su kien tri an",
     "採用時健診",
     "khám sức khỏe khi tuyển dụng",
     "kham suc khoe khi tuyen dung",
@@ -105,6 +81,15 @@ NEW_HIRE_PHOTO_ONLY_TOKENS = (
 )
 MANUAL_DISTRIBUTION_DRIVER_TOKENS = (
     "\u914d\u5e03\u6570",
+)
+ACTUAL_COUNT_DRIVER_TOKENS = (
+    "\u5b9f\u969b\u306e\u53c2\u52a0\u4eba\u6570",
+    "\u53c2\u52a0\u4eba\u6570",
+    "\u6570\u91cf\u767a\u5b9f\u7e3e",
+    "so nguoi tham gia",
+    "so luong phat thuc te",
+    "số người tham gia",
+    "số lượng phát thực tế",
 )
 BUS_RULE_SPECS = {
     "bus_expat_count": {
@@ -356,6 +341,13 @@ class AllocationEngine:
             token in lower_text for token in NEXT_EVENT_MONTH_TOKENS
         )
 
+    def _is_mixed_event_and_fixed_month_rule(self, posting_month: str | None) -> bool:
+        if not posting_month:
+            return False
+        return bool(self._extract_month_numbers(str(posting_month))) and (
+            self._is_event_month_rule(posting_month) or self._is_next_event_month_rule(posting_month)
+        )
+
     def _is_new_hire_driven_rule(self, rule, posting_month: str | None = None) -> bool:
         raw_text = " ".join(
             str(rule[key] or "")
@@ -457,6 +449,54 @@ class AllocationEngine:
             (cc_key, ",".join(self.fy_months), message, action, rule_id),
         )
 
+    def _record_manual_driver_missing(
+        self,
+        cc_code: object,
+        period: str,
+        area: str,
+        reason: str,
+        rule,
+    ) -> None:
+        cc_key = str(cc_code).strip()
+        rule_id = int(rule["id"]) if rule is not None and rule["id"] is not None else None
+        period_text = str(period or "").strip() or ",".join(self.fy_months)
+        key = (cc_key, period_text, area, str(rule_id or ""))
+        if key in self._missing_input_keys:
+            return
+        self._missing_input_keys.add(key)
+
+        item_name = str(rule["item_name"] or "").replace("\n", " ").strip() if rule is not None else ""
+        message = (
+            "Missing manual event/distribution driver for allocation rule: "
+            f"cc={cc_key}, period={period_text}, rule_id={rule_id}, item={item_name}, reason={reason}"
+        )
+        action = (
+            "Provide an explicit event/distribution count or amount in event_drivers_manual.csv "
+            "for this cost center and target month. The allocator does not infer actual "
+            "participant/distribution counts from total headcount."
+        )
+        self.conn.execute(
+            """
+            INSERT INTO fact_missing_inputs
+            (severity, cc_code, period, area, message, action, source, rule_id)
+            VALUES ('action', ?, ?, ?, ?, ?, 'allocator', ?)
+            """,
+            (cc_key, period_text, area, message, action, rule_id),
+        )
+
+    def _record_rule_missing_for_all_cost_centers(
+        self,
+        rule,
+        *,
+        area: str,
+        reason: str,
+        periods: list[str] | None = None,
+    ) -> None:
+        target_periods = periods or [",".join(self.fy_months)]
+        for cc in self.cost_centers:
+            for period in target_periods:
+                self._record_manual_driver_missing(cc["code"], period, area, reason, rule)
+
     def _bus_unit_price_for_period(self, driver_key: str, period: str, rule) -> tuple[float, str]:
         monthly_price = float(self.bus_unit_price_cache.get(driver_key, {}).get(period, 0.0) or 0.0)
         if monthly_price > 0:
@@ -530,27 +570,8 @@ class AllocationEngine:
         return driver_type
 
     def _effective_posting_month(self, rule) -> str | None:
-        item_name = self._normalize_text(rule["item_name"] or "")
-        section27_month = self._section27_event_month(rule)
-        if section27_month:
-            return section27_month
-        for tokens, posting_month in POSTING_MONTH_ITEM_OVERRIDES:
-            normalized_tokens = tuple(self._normalize_text(token) for token in tokens)
-            if any(token in item_name for token in normalized_tokens):
-                return posting_month
         raw_posting_month = str(rule["posting_month"] or "").strip()
         return raw_posting_month or None
-
-    def _section27_event_month(self, rule) -> str | None:
-        item_name = self._normalize_text(rule["item_name"] or "")
-        for tokens, posting_month in SECTION27_EVENT_RULES:
-            normalized_tokens = tuple(self._normalize_text(token) for token in tokens)
-            if any(token in item_name for token in normalized_tokens):
-                return posting_month
-        return None
-
-    def _is_section27_event_rule(self, rule) -> bool:
-        return self._section27_event_month(rule) is not None
 
     def _requires_manual_event_source(self, rule) -> bool:
         raw_item_name = str(rule["item_name"] or "")
@@ -562,11 +583,18 @@ class AllocationEngine:
         return False
 
     def _requires_manual_distribution_count(self, rule) -> bool:
+        # Hybrid rules with both event-month and fixed-month instructions are
+        # computed from monthly headcount deltas plus fixed-month headcount.
+        if self._is_mixed_event_and_fixed_month_rule(rule["posting_month"]):
+            return False
         driver_raw = str(rule["driver_raw"] or "")
-        return any(token in driver_raw for token in MANUAL_DISTRIBUTION_DRIVER_TOKENS)
+        normalized_driver = self._normalize_text(driver_raw)
+        return any(token in driver_raw for token in MANUAL_DISTRIBUTION_DRIVER_TOKENS) or any(
+            self._normalize_text(token) in normalized_driver for token in ACTUAL_COUNT_DRIVER_TOKENS
+        )
 
     def run_allocation(self) -> dict:
-        print("Starting Refactored Allocation Engine...")
+        print("Bắt đầu tính phân bổ...")
         self._map_direct_costs()
         self._process_allocation_rules()
         self._process_bus_headcount_drivers()
@@ -600,7 +628,7 @@ class AllocationEngine:
 
         if updates:
             cursor.executemany("UPDATE fact_input_data SET account_code = ? WHERE id = ?", updates)
-            print(f"Mapped {len(updates)} direct cost records.")
+            print(f"Đã ánh xạ {len(updates)} bản ghi chi phí trực tiếp.")
 
     def _process_allocation_rules(self):
         self._missing_input_keys.clear()
@@ -612,8 +640,22 @@ class AllocationEngine:
             if self._bus_rule_kind(rule) is not None:
                 continue
             if self._requires_manual_event_source(rule):
+                target_periods = self._resolve_target_periods(self._effective_posting_month(rule))
+                self._record_rule_missing_for_all_cost_centers(
+                    rule,
+                    area="manual_event_driver",
+                    reason="event requires explicit actual count/amount input",
+                    periods=target_periods or None,
+                )
                 continue
             if self._requires_manual_distribution_count(rule):
+                target_periods = self._resolve_target_periods(self._effective_posting_month(rule))
+                self._record_rule_missing_for_all_cost_centers(
+                    rule,
+                    area="manual_distribution_driver",
+                    reason="actual participant/distribution count cannot be inferred from headcount",
+                    periods=target_periods or None,
+                )
                 continue
 
             unit_price = float(rule["unit_price"] or 0.0)
@@ -623,17 +665,35 @@ class AllocationEngine:
             posting_month = self._effective_posting_month(rule)
             target_periods = self._resolve_target_periods(posting_month)
             if not target_periods:
+                self._record_rule_missing_for_all_cost_centers(
+                    rule,
+                    area="manual_event_driver",
+                    reason="posting month is blank/dash or cannot be resolved from source",
+                )
                 continue
 
-            section27_event = self._is_section27_event_rule(rule)
-            driver_type = "headcount_all" if section27_event else self._resolve_rule_driver_type(rule)
-            new_hire_driven = False if section27_event else self._is_new_hire_driven_rule(rule, posting_month)
+            driver_type = self._resolve_rule_driver_type(rule)
+            new_hire_driven = self._is_new_hire_driven_rule(rule, posting_month)
             if new_hire_driven and self._is_new_hire_photo_only_rule(rule):
                 continue
+            mixed_event_fixed_month = self._is_mixed_event_and_fixed_month_rule(posting_month)
+            fixed_month_numbers = self._extract_month_numbers(str(posting_month or "")) if mixed_event_fixed_month else set()
+            if mixed_event_fixed_month:
+                target_periods = self.fy_months
             for period in target_periods:
                 for cc in self.cost_centers:
                     if driver_type == "working_days":
                         driver_val = self._get_working_days(period)
+                    elif mixed_event_fixed_month:
+                        driver_val = 0.0
+                        if self._is_event_month_rule(posting_month):
+                            driver_val += self._get_event_delta(cc["code"], period, driver_type, rule=rule)
+                        elif self._is_next_event_month_rule(posting_month):
+                            prev_period = self._get_prev_period(period)
+                            if prev_period:
+                                driver_val += self._get_event_delta(cc["code"], prev_period, driver_type, rule=rule)
+                        if int(str(period)[-2:]) in fixed_month_numbers:
+                            driver_val += self._get_monthly_hc(cc["code"], period, driver_type)
                     else:
                         if self._is_next_event_month_rule(posting_month):
                             prev_period = self._get_prev_period(period)

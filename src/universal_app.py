@@ -169,13 +169,13 @@ def format_headcount_save_errors(errors) -> str:
         period = str(error.get("period", "") or "-")
         field = str(error.get("field", "") or "-")
         raw_value = str(error.get("raw_value", ""))
-        raw_display = "blank" if raw_value == "" else raw_value
+        raw_display = "trống" if raw_value == "" else raw_value
         rule = str(error.get("validation_rule", "") or "-")
         reason = str(error.get("reason", "") or "-")
         csv_written = error.get("csv_row_written", False)
         db_inserted = error.get("db_row_inserted", False)
         lines.append(
-            f"{period} | {field} | {raw_display} | {rule} | {reason} | CSV written={csv_written} | DB inserted={db_inserted}"
+            f"{period} | {field} | {raw_display} | {rule} | {reason} | đã ghi tệp dữ liệu={csv_written} | đã nạp vào dữ liệu={db_inserted}"
         )
     return "\n".join(lines)
 
@@ -569,7 +569,7 @@ class MPManagerApp:
                 # Windows specific icon loading
                 self.root.iconbitmap(icon_path)
             except Exception as e:
-                print(f"Error loading icon: {e}")
+                print(f"Lỗi khi nạp icon: {e}")
 
 
     def setup_styles(self):
@@ -924,7 +924,7 @@ class MPManagerApp:
             try:
                 db_path = os.path.join(BASE_DIR, "mp2027.db")
                 load_all(db_path=db_path, template_path=template)
-                self.log("Tự động nạp dữ liệu Master THÀNH CÔNG.")
+                self.log("Tự động nạp dữ liệu gốc THÀNH CÔNG.")
                 self.root.after(100, self.load_cc_list)
             except Exception as e:
                 self.log(f"Tự động nạp dữ liệu thất bại: {e}")
@@ -1189,7 +1189,7 @@ class MPManagerApp:
             finally:
                 conn.close()
             self.log(
-                "Đã lưu nhân sự thủ công: {rows} hàng -> {path}; DB inserted={inserted}, errors={errors}".format(
+                "Đã lưu nhân sự thủ công: {rows} hàng -> {path}; đã nạp vào dữ liệu={inserted}, lỗi={errors}".format(
                     rows=len(rows),
                     path=csv_path,
                     inserted=result.get("inserted", 0),
@@ -1198,7 +1198,7 @@ class MPManagerApp:
             )
             messagebox.showinfo(
                 "Đã lưu",
-                "Đã lưu {rows} hàng. DB inserted={inserted}, errors={errors}.".format(
+                "Đã lưu {rows} hàng. Đã nạp vào dữ liệu={inserted}, lỗi={errors}.".format(
                     rows=len(rows),
                     inserted=result.get("inserted", 0),
                     errors=result.get("errors", 0),
@@ -1496,7 +1496,7 @@ class MPManagerApp:
             finally:
                 conn.close()
             self.log(
-                "Lưu nhân sự theo kỳ: CC={cc}, số dòng={rows}, tệp={path}; bus_file={bus_path}; DB inserted={inserted}, bus_inserted={bus_inserted}, errors={errors}".format(
+                "Lưu nhân sự theo kỳ: mã bộ phận={cc}, số dòng={rows}, tệp={path}; tệp xe bus={bus_path}; đã nạp vào dữ liệu={inserted}, đã nạp xe bus={bus_inserted}, lỗi={errors}".format(
                     cc=cc_code,
                     rows=saved_count,
                     path=csv_path,
@@ -1511,7 +1511,7 @@ class MPManagerApp:
                 return
             messagebox.showinfo(
                 "Đã lưu",
-                "Đã lưu đầy đủ {rows} kỳ cho CC {cc}.\nCSV rows written={rows}; DB rows imported={inserted}; bus drivers written={bus_inserted}; errors=0.".format(
+                "Đã lưu đầy đủ {rows} kỳ cho mã bộ phận {cc}.\nDòng đã ghi vào tệp dữ liệu={rows}; dòng đã nạp vào dữ liệu={inserted}; dòng xe bus đã ghi={bus_inserted}; lỗi=0.".format(
                     rows=saved_count,
                     cc=cc_code,
                     inserted=result.get("inserted", 0),

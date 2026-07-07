@@ -34,13 +34,13 @@ def test_reference_fill_is_after_normal_export():
 
 
 def test_v2_requires_explicit_or_mapped_primary_reference():
-    with pytest.raises(ValueError, match="primary-reference-path or a mapped primary reference"):
+    with pytest.raises(ValueError, match="primary-reference-path.*bảng ánh xạ tham chiếu chính"):
         run_e2e._resolve_primary_reference_path(1412000040, reference_map_path="missing-map.csv")
 
 
 def test_v2_other_cc_without_reference_path_fails(tmp_path):
     missing_map = tmp_path / "missing.csv"
-    with pytest.raises(ValueError, match="Reference-assisted fill requires --primary-reference-path or a mapped primary reference for this target CC"):
+    with pytest.raises(ValueError, match="Điền theo tham chiếu cần --primary-reference-path"):
         run_e2e._resolve_primary_reference_path(9999999999, reference_map_path=str(missing_map))
 
 

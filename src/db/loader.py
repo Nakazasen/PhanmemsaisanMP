@@ -178,7 +178,7 @@ def load_cost_centers(conn: sqlite3.Connection, form_path: str = None) -> int:
     """Load cost centers from FORM.xlsx 原価センタ sheet."""
     path = form_path or FORM_PATH
     if not os.path.exists(path):
-        print(f"⚠️ FORM.xlsx not found at {path}")
+        print(f"Không tìm thấy FORM.xlsx tại {path}")
         return 0
 
     xl = pd.ExcelFile(path, engine='openpyxl')
@@ -193,12 +193,12 @@ def load_cost_centers(conn: sqlite3.Connection, form_path: str = None) -> int:
         # Fall back to known index from extract_samples.py (index 5)
         if len(xl.sheet_names) > 5:
             cc_sheet = xl.sheet_names[5]
-            print(f"Info: Using sheet by index: {cc_sheet}")
+            print(f"Thông tin: đang dùng trang tính theo vị trí: {cc_sheet}")
         else:
-            print("Warning: Cost center sheet not found")
+            print("Cảnh báo: không tìm thấy trang tính mã bộ phận")
             return 0
 
-    print(f"Reading cost centers from sheet: {cc_sheet}")
+    print(f"Đang đọc mã bộ phận từ trang tính: {cc_sheet}")
     df = pd.read_excel(path, sheet_name=cc_sheet, engine='openpyxl')
 
     cursor = conn.cursor()
@@ -229,7 +229,7 @@ def load_cost_centers(conn: sqlite3.Connection, form_path: str = None) -> int:
         count += 1
 
     conn.commit()
-    print(f"Loaded {count} cost centers.")
+    print(f"Đã nạp {count} mã bộ phận.")
     return count
 
 
@@ -250,12 +250,12 @@ def load_accounts(conn: sqlite3.Connection, form_path: str = None) -> int:
     if not acc_sheet:
         if len(xl.sheet_names) > 4:
             acc_sheet = xl.sheet_names[4]
-            print(f" Using sheet by index: {acc_sheet}")
+            print(f" Đang dùng trang tính theo vị trí: {acc_sheet}")
         else:
-            print("Warning: Account sheet not found")
+            print("Cảnh báo: không tìm thấy trang tính tài khoản")
             return 0
 
-    print(f" Reading accounts from sheet: {acc_sheet}")
+    print(f" Đang đọc tài khoản từ trang tính: {acc_sheet}")
     df = pd.read_excel(path, sheet_name=acc_sheet, engine='openpyxl')
 
     cursor = conn.cursor()
@@ -309,8 +309,21 @@ def load_accounts(conn: sqlite3.Connection, form_path: str = None) -> int:
         count += 1
 
     conn.commit()
-    print(f"Loaded {count} accounts.")
+    print(f"Đã nạp {count} tài khoản.")
     return count
+
+def _select_allocation_rules_sheet(sheet_names: list[str], fiscal_year: int) -> str:
+    """Select the fiscal-year allocation sheet instead of blindly using the first sheet."""
+    fiscal_token = f"FY{fiscal_year}"
+    for sheet_name in sheet_names:
+        if fiscal_token in sheet_name:
+            return sheet_name
+
+    for sheet_name in sheet_names:
+        if "配賦額一覧" in sheet_name or "allocation" in sheet_name.lower():
+            return sheet_name
+
+    return sheet_names[0]
 
 
 def load_allocation_rules(
@@ -326,12 +339,14 @@ def load_allocation_rules(
         if discovered:
             path = discovered
     if not os.path.exists(path):
-        print(f"Warning: Allocation rules file not found at {path}")
+        print(f"Cảnh báo: không tìm thấy tệp quy tắc phân bổ tại {path}")
         return 0
 
-    print(f"Reading allocation rules from: {os.path.basename(path)}")
+    print(f"Đang đọc quy tắc phân bổ từ: {os.path.basename(path)}")
     xl = pd.ExcelFile(path, engine='openpyxl')
-    df = pd.read_excel(path, sheet_name=xl.sheet_names[0], engine='openpyxl')
+    target_sheet = _select_allocation_rules_sheet(xl.sheet_names, fiscal_year)
+    print(f"Đang đọc quy tắc phân bổ từ trang tính: {target_sheet}")
+    df = pd.read_excel(path, sheet_name=target_sheet, engine='openpyxl')
 
     cursor = conn.cursor()
     cursor.execute("DELETE FROM map_allocation_rules")
@@ -429,7 +444,7 @@ def load_allocation_rules(
         count += 1
 
     conn.commit()
-    print(f"Loaded {count} allocation rules.")
+    print(f"Đã nạp {count} quy tắc phân bổ.")
     return count
 
 
@@ -447,10 +462,10 @@ def load_all(db_path: str = None, template_path: str = None,
         try:
             excel_rate = read_exchange_rate_from_form(t_path)
             if excel_rate > 0:
-                print(f"SSOT: Using Exchange Rate from {os.path.basename(t_path)} [B2]: {excel_rate:,.0f}")
+                print(f"Nguồn chuẩn: dùng tỷ giá từ {os.path.basename(t_path)} [B2]: {excel_rate:,.0f}")
                 exchange_rate = excel_rate
         except Exception as e:
-            print(f"Warning: Could not read rate from B2, falling back to {exchange_rate:,.0f}. Error: {e}")
+            print(f"Cảnh báo: không đọc được tỷ giá từ B2, dùng lại {exchange_rate:,.0f}. Lỗi: {e}")
 
     conn = get_connection(db_path)
     # Ensure Row factory for Row-based access in loaders if needed (schema.py usually sets this)
@@ -494,4 +509,5 @@ def load_all(db_path: str = None, template_path: str = None,
 
 if __name__ == '__main__':
     results = load_all()
-    print(f"\nSummary: {results}")
+    print(f"\nTóm tắt: {results}")
+

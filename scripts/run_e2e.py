@@ -69,6 +69,7 @@ from src.engine.reference_assisted_fill import apply_reference_assisted_fill_to_
 from src.engine.fixed_assets_reference_skeleton import apply_fixed_assets_reference_skeleton_to_workbook
 from src.engine.complete_v1_source_order_writer import apply_complete_v1_source_order_to_workbook
 from src.engine.mp_saisan_complete_export import apply_mp_saisan_complete_v1
+from src.utils.excel_helpers import get_fy_months
 from src.utils.source_manifest import describe_manifest
 
 COMPLETE_V1_SOURCE_ORDER_START_ROW = 30
@@ -77,6 +78,11 @@ COMPLETE_V1_SOURCE_ORDER_CLEAR_UNTIL_ROW = 199
 
 def _safe_console_print(message):
     text = str(message)
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
     try:
         print(text)
@@ -96,8 +102,8 @@ def _default_template_path() -> str:
         if os.path.exists(meipass_candidate):
             return meipass_candidate
     raise FileNotFoundError(
-        f"Required template not found: {candidate}. "
-        "Do not fallback to the old root FORM.xlsx because it contains stale sample formulas."
+        f"Không tìm thấy tệp mẫu bắt buộc: {candidate}. "
+        "Không dùng lại FORM.xlsx cũ ở thư mục gốc vì tệp đó có công thức mẫu đã lỗi thời."
     )
 
 
@@ -126,14 +132,54 @@ def _default_fixed_assets_skeleton_csv_path() -> str:
     )
 
 
-def _apply_complete_v1_source_order(workbook_path: str, log_callback, phase: str) -> dict[str, int]:
+def _apply_complete_v1_source_order(
+    workbook_path: str,
+    log_callback,
+    phase: str,
+    *,
+    dynamic_allocation_rows=None,
+    fiscal_periods=None,
+) -> dict[str, int]:
     result = apply_complete_v1_source_order_to_workbook(
         workbook_path,
         start_row=COMPLETE_V1_SOURCE_ORDER_START_ROW,
         clear_until_row=COMPLETE_V1_SOURCE_ORDER_CLEAR_UNTIL_ROW,
+        dynamic_allocation_rows=dynamic_allocation_rows,
+        fiscal_periods=fiscal_periods,
     )
-    log_callback(f"Complete-v1 source-order {phase} writer applied: {result}")
+    log_callback(
+        "Đã áp dụng ghi kết quả hoàn chỉnh theo thứ tự nguồn ({phase}): {summary}".format(
+            phase=_translate_complete_v1_phase(phase),
+            summary=_format_complete_v1_result_vi(result),
+        )
+    )
     return result
+
+
+def _translate_complete_v1_phase(phase: str) -> str:
+    translations = {
+        "final": "cuối",
+        "pre-reference": "trước tham chiếu",
+    }
+    return translations.get(str(phase), str(phase))
+
+
+def _format_complete_v1_result_vi(result: dict[str, int]) -> str:
+    labels = {
+        "source_blocks_written": "nhóm nguồn",
+        "rows_written": "dòng ghi",
+        "preserved_rows_written": "dòng giữ lại",
+        "blank_rows_written": "dòng trống",
+        "start_row": "dòng bắt đầu",
+        "end_row": "dòng kết thúc",
+        "layout_fills_cleared": "ô nền đã xóa",
+        "item_ids_cleared": "mã mục đã xóa",
+    }
+    parts = []
+    for key, label in labels.items():
+        if key in result:
+            parts.append(f"{label}={result[key]}")
+    return ", ".join(parts) if parts else str(result)
 
 
 def _resolve_primary_reference_path(
@@ -156,9 +202,9 @@ def _resolve_primary_reference_path(
                         resolved = candidate if os.path.isabs(candidate) else os.path.join(BASE_DIR, candidate)
                         break
         if not resolved:
-            raise ValueError("Reference-assisted fill requires --primary-reference-path or a mapped primary reference for this target CC.")
+            raise ValueError("Điền theo tham chiếu cần --primary-reference-path hoặc bảng ánh xạ tham chiếu chính cho mã bộ phận này.")
     if not os.path.exists(resolved):
-        raise FileNotFoundError(f"Reference-assisted fill primary reference not found: {resolved}")
+        raise FileNotFoundError(f"Không tìm thấy tệp tham chiếu chính để điền dữ liệu: {resolved}")
     return resolved
 
 
@@ -227,14 +273,14 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
 
     if file_order_export_v2 and fixed_assets_reference_skeleton_export:
         return False, (
-            "Duplicate risk: --fixed-assets-reference-skeleton-export cannot run with "
-            "--primary-reference-fill or --file-order-export-v2. Run it separately."
+            "Nguy cơ trùng dữ liệu: --fixed-assets-reference-skeleton-export không thể chạy cùng "
+            "--primary-reference-fill hoặc --file-order-export-v2. Hãy chạy riêng."
         )
 
     if fixed_assets_reference_skeleton_export and primary_reference_fill:
         return False, (
-            "Duplicate risk: --fixed-assets-reference-skeleton-export cannot run with "
-            "--primary-reference-fill or --file-order-export-v2. Run it separately."
+            "Nguy cơ trùng dữ liệu: --fixed-assets-reference-skeleton-export không thể chạy cùng "
+            "--primary-reference-fill hoặc --file-order-export-v2. Hãy chạy riêng."
         )
 
     if file_order_export_v2:
@@ -256,7 +302,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         system_cost_start_row = 179
 
     try:
-        log_callback(f"Pipeline FY{fiscal_year} (ExRate: {exchange_rate:,.0f})")
+        log_callback(f"Quy trình năm tài chính {fiscal_year} (Tỷ giá: {exchange_rate:,.0f})")
         
         # 1. Setup Environment
         db_path = os.path.join(BASE_DIR, 'mp2027.db')
@@ -277,7 +323,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         cursor.execute("DELETE FROM fact_missing_inputs")
         conn.commit()
         
-        log_callback("Loading master data...")
+        log_callback("Đang nạp dữ liệu gốc...")
         load_all(
             db_path=db_path,
             template_path=template_path,
@@ -290,7 +336,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         parser_results = {}
         manifest_lines = describe_manifest(source_dir)
         if manifest_lines:
-            log_callback("Configured source file order:")
+            log_callback("Thứ tự tệp nguồn đã cấu hình:")
             for line in manifest_lines:
                 log_callback(f"  {line}")
 
@@ -302,11 +348,11 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         parser_results["it_simulation"] = it_result
         ga_result = parse_ga(conn, source_dir=source_dir)
         parser_results["ga"] = ga_result
-        log_callback(f"GA parser: unit-price={ga_result.get('total', 0)}, headcount={ga_result.get('headcount', 0)}")
+        log_callback(f"Dữ liệu Tổng vụ: đơn giá={ga_result.get('total', 0)}, nhân sự={ga_result.get('headcount', 0)}")
         birthday_result = parse_birthday_workbook(conn, source_dir=source_dir)
         parser_results["birthday_workbook"] = birthday_result
         log_callback(
-            "Birthday workbook: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
+            "Tệp sinh nhật: thêm={inserted}, bỏ qua={skipped}, lỗi={errors}, tệp={path}".format(
                 inserted=birthday_result.get("inserted", 0),
                 skipped=birthday_result.get("skipped", 0),
                 errors=birthday_result.get("errors", 0),
@@ -316,7 +362,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         manual_hc_result = _parse_manual_headcount(conn, source_dir)
         parser_results["manual_headcount"] = manual_hc_result
         log_callback(
-            "Manual headcount: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
+            "Nhân sự nhập tay: thêm={inserted}, bỏ qua={skipped}, lỗi={errors}, tệp={path}".format(
                 inserted=manual_hc_result.get("inserted", 0),
                 skipped=manual_hc_result.get("skipped", 0),
                 errors=manual_hc_result.get("errors", 0),
@@ -326,7 +372,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         manual_special_result = parse_manual_special_costs(conn, source_dir=source_dir)
         parser_results["manual_special_costs"] = manual_special_result
         log_callback(
-            "Manual special costs: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
+            "Chi phí đặc biệt nhập tay: thêm={inserted}, bỏ qua={skipped}, lỗi={errors}, tệp={path}".format(
                 inserted=manual_special_result.get("inserted", 0),
                 skipped=manual_special_result.get("skipped", 0),
                 errors=manual_special_result.get("errors", 0),
@@ -336,7 +382,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         manual_event_result = parse_manual_event_drivers(conn, source_dir=source_dir)
         parser_results["manual_event_drivers"] = manual_event_result
         log_callback(
-            "Manual event drivers: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
+            "Sự kiện nhập tay: thêm={inserted}, bỏ qua={skipped}, lỗi={errors}, tệp={path}".format(
                 inserted=manual_event_result.get("inserted", 0),
                 skipped=manual_event_result.get("skipped", 0),
                 errors=manual_event_result.get("errors", 0),
@@ -346,7 +392,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         nnn_result = parse_nnn_paperwork(conn, source_dir=source_dir)
         parser_results["nnn_paperwork"] = nnn_result
         log_callback(
-            "NNN paperwork workbook: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
+            "Tệp giấy tờ NNN: thêm={inserted}, bỏ qua={skipped}, lỗi={errors}, tệp={path}".format(
                 inserted=nnn_result.get("inserted", 0),
                 skipped=nnn_result.get("skipped", 0),
                 errors=nnn_result.get("errors", 0),
@@ -355,9 +401,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         )
 
         # 4. Allocation Engine
-        log_callback("Running allocation...")
-        # 4. Allocation Engine
-        log_callback("Running allocation...")
+        log_callback("Đang tính phân bổ...")
         engine = AllocationEngine(conn)
         engine.run_allocation()
         
@@ -374,7 +418,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         ]
         if target_cc:
             # Single Export
-            log_callback(f"Exporting Single CC: {target_cc}")
+            log_callback(f"Đang xuất riêng mã bộ phận: {target_cc}")
             out_path = os.path.join(output_dir, f"MP_CC_{target_cc}.xlsx")
             complete_v1_primary_path = None
             if mp_saisan_complete_v1:
@@ -384,6 +428,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     reference_map_path=reference_map_path,
                 )
             builder.export_to_template(template_path, out_path, cc_code=target_cc)
+            complete_v1_dynamic_allocation_rows = builder._load_append_rows(str(target_cc)) if mp_saisan_complete_v1 else []
+            complete_v1_fiscal_periods = get_fy_months(fiscal_year) if mp_saisan_complete_v1 else []
             output_workbook_exists = os.path.exists(out_path)
             if facility_file_order_export and output_workbook_exists and (explicit_facility_file_order_export or template_is_excel):
                 apply_facility_file_order_to_workbook(
@@ -392,7 +438,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     cost_center=target_cc,
                     start_row=facility_file_order_start_row,
                 )
-                log_callback(f"Facility file-order export applied: {out_path}")
+                log_callback(f"Đã áp dụng xuất Cơ sở vật chất theo thứ tự tệp: {out_path}")
             if admin_consumables_export and output_workbook_exists and (explicit_admin_consumables_export or template_is_excel):
                 apply_admin_consumables_to_workbook(
                     workbook_path=out_path,
@@ -401,7 +447,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     cost_center=target_cc,
                     start_row=admin_consumables_start_row,
                 )
-                log_callback(f"Admin consumables export applied: {out_path}")
+                log_callback(f"Đã áp dụng xuất vật tư Tổng vụ: {out_path}")
             if system_cost_export and output_workbook_exists and (explicit_system_cost_export or template_is_excel):
                 apply_system_cost_to_workbook(
                     workbook_path=out_path,
@@ -409,7 +455,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     cost_center=target_cc,
                     start_row=system_cost_start_row,
                 )
-                log_callback(f"System Cost export applied: {out_path}")
+                log_callback(f"Đã áp dụng xuất chi phí hệ thống: {out_path}")
             if (
                 mp_saisan_complete_v1
                 and output_workbook_exists
@@ -435,7 +481,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     invariant_csv_path=invariant_path,
                     start_row=primary_reference_fill_start_row,
                 )
-                log_callback(f"Reference-assisted primary fill applied: {fill_result}")
+                log_callback(f"Đã áp dụng điền theo tệp tham chiếu chính: {fill_result}")
             if mp_saisan_complete_v1 and complete_v1_primary_path:
                 complete_result = apply_mp_saisan_complete_v1(
                     workbook_path=out_path,
@@ -450,25 +496,31 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                         "phase42n2b_invariant_gap_accounting.csv",
                     ),
                 )
-                log_callback(f"MP Saisan complete v1 applied: {complete_result}")
+                log_callback(f"Đã áp dụng hoàn chỉnh MP Saisan v1: {complete_result}")
             if fixed_assets_reference_skeleton_export:
                 if primary_reference_fill:
                     raise ValueError(
-                        "Duplicate risk: --fixed-assets-reference-skeleton-export cannot run with "
-                        "--primary-reference-fill or --file-order-export-v2. Run it separately."
+                        "Nguy cơ trùng dữ liệu: --fixed-assets-reference-skeleton-export không thể chạy cùng "
+                        "--primary-reference-fill hoặc --file-order-export-v2. Hãy chạy riêng."
                     )
                 skeleton_result = apply_fixed_assets_reference_skeleton_to_workbook(
                     workbook_path=out_path,
                     csv_path=fixed_assets_skeleton_csv or _default_fixed_assets_skeleton_csv_path(),
                     start_row=fixed_assets_skeleton_start_row,
                 )
-                log_callback(f"Fixed-assets reference skeleton applied: {skeleton_result}")
+                log_callback(f"Đã áp dụng khung tham chiếu tài sản cố định: {skeleton_result}")
             if mp_saisan_complete_v1 and output_workbook_exists and template_is_excel:
-                _apply_complete_v1_source_order(out_path, log_callback, phase="final")
-            log_callback(f"Done: {output_dir}")
+                _apply_complete_v1_source_order(
+                    out_path,
+                    log_callback,
+                    phase="final",
+                    dynamic_allocation_rows=complete_v1_dynamic_allocation_rows,
+                    fiscal_periods=complete_v1_fiscal_periods,
+                )
+            log_callback(f"Hoàn tất: {output_dir}")
         else:
             # Batch Export
-            log_callback("Exporting Batch...")
+            log_callback("Đang xuất hàng loạt...")
             cursor.execute("SELECT DISTINCT cc_code FROM fact_input_data WHERE account_code > 0")
             all_ccs = [row[0] for row in cursor.fetchall()]
             
@@ -483,7 +535,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             cost_center=cc,
                             start_row=facility_file_order_start_row,
                         )
-                        log_callback(f"Facility file-order export applied: {out_path}")
+                        log_callback(f"Đã áp dụng xuất Cơ sở vật chất theo thứ tự tệp: {out_path}")
                     if admin_consumables_export:
                         apply_admin_consumables_to_workbook(
                             workbook_path=out_path,
@@ -492,7 +544,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             cost_center=cc,
                             start_row=admin_consumables_start_row,
                         )
-                        log_callback(f"Admin consumables export applied: {out_path}")
+                        log_callback(f"Đã áp dụng xuất vật tư Tổng vụ: {out_path}")
                     if system_cost_export:
                         apply_system_cost_to_workbook(
                             workbook_path=out_path,
@@ -500,7 +552,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             cost_center=cc,
                             start_row=system_cost_start_row,
                         )
-                        log_callback(f"System Cost export applied: {out_path}")
+                        log_callback(f"Đã áp dụng xuất chi phí hệ thống: {out_path}")
                     if primary_reference_fill:
                         primary_path = _resolve_primary_reference_path(
                             target_cc=cc,
@@ -519,19 +571,19 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             invariant_csv_path=invariant_path,
                             start_row=primary_reference_fill_start_row,
                         )
-                        log_callback(f"Reference-assisted primary fill applied: {fill_result}")
+                        log_callback(f"Đã áp dụng điền theo tệp tham chiếu chính: {fill_result}")
                     if fixed_assets_reference_skeleton_export:
                         if primary_reference_fill:
                             raise ValueError(
-                                "Duplicate risk: --fixed-assets-reference-skeleton-export cannot run with "
-                                "--primary-reference-fill or --file-order-export-v2. Run it separately."
+                                "Nguy cơ trùng dữ liệu: --fixed-assets-reference-skeleton-export không thể chạy cùng "
+                                "--primary-reference-fill hoặc --file-order-export-v2. Hãy chạy riêng."
                             )
                         skeleton_result = apply_fixed_assets_reference_skeleton_to_workbook(
                             workbook_path=out_path,
                             csv_path=fixed_assets_skeleton_csv or _default_fixed_assets_skeleton_csv_path(),
                             start_row=fixed_assets_skeleton_start_row,
                         )
-                        log_callback(f"Fixed-assets reference skeleton applied: {skeleton_result}")
+                        log_callback(f"Đã áp dụng khung tham chiếu tài sản cố định: {skeleton_result}")
                     if mp_saisan_complete_v1:
                         complete_v1_primary_path = _try_resolve_primary_reference_path(
                             target_cc=cc,
@@ -553,11 +605,11 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                                     "phase42n2b_invariant_gap_accounting.csv",
                                 ),
                             )
-                            log_callback(f"MP Saisan complete v1 applied: {complete_result}")
+                            log_callback(f"Đã áp dụng hoàn chỉnh MP Saisan v1: {complete_result}")
                         _apply_complete_v1_source_order(out_path, log_callback, phase="final")
                     count += 1
             
-            log_callback(f"Successfully exported {count} files to: {output_dir}")
+            log_callback(f"Đã xuất thành công {count} tệp vào: {output_dir}")
 
         audit_result = write_pipeline_audit_report(
             conn=conn,
@@ -567,8 +619,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             target_cc=target_cc,
             parser_results=parser_results,
         )
-        log_callback(f"Audit report: {audit_result['report_path']}")
-        log_callback(f"Missing input CSV: {audit_result['missing_csv_path']}")
+        log_callback(f"Báo cáo kiểm tra: {audit_result['report_path']}")
+        log_callback(f"Tệp dữ liệu thiếu: {audit_result['missing_csv_path']}")
 
         if facility_file_order_preview:
             preview_output = facility_preview_output or os.path.join(
@@ -578,7 +630,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 "facility_file_order_preview.xlsx",
             )
             if target_cc is None:
-                raise ValueError("Facility file-order preview requires --target-cc.")
+                raise ValueError("Xem trước Cơ sở vật chất theo thứ tự nguồn cần tham số --target-cc.")
             preview_cc = target_cc
             preview_path = write_facility_file_order_preview_workbook(
                 template_path=template_path,
@@ -587,20 +639,20 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 cost_center=preview_cc,
                 start_row=facility_preview_start_row,
             )
-            log_callback(f"Facility file-order preview: {preview_path}")
+            log_callback(f"Tệp xem trước Cơ sở vật chất theo thứ tự nguồn: {preview_path}")
         
         conn.close()
         return True, output_dir
 
 
     except (FileNotFoundError, BadZipFile) as e:
-        message = f"template/source workbook not found or invalid: {e}"
-        log_callback(f"ERROR: {message}")
+        message = f"Không tìm thấy hoặc tệp mẫu/nguồn không hợp lệ: {e}"
+        log_callback(f"LỖI: {message}")
         log_callback(traceback.format_exc())
         return False, message
 
     except Exception as e:
-        log_callback(f"ERROR: {str(e)}")
+        log_callback(f"LỖI: {str(e)}")
         log_callback(traceback.format_exc())
         return False, str(e)
 

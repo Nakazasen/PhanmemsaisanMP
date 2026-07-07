@@ -305,6 +305,9 @@ def _collect_preserved_unmanaged_rows(
             and not _norm(ws.cell(row, NOTE_COL).value)
         ):
             continue
+        description = _norm(ws.cell(row, DESCRIPTION_COL).value)
+        if description.lower().startswith("alloc:"):
+            continue
         item = _copy_staged_row(
             ws,
             "",
@@ -318,11 +321,54 @@ def _collect_preserved_unmanaged_rows(
     return preserved
 
 
+def _collect_dynamic_allocation_rows(
+    dynamic_allocation_rows: Iterable[dict[str, object]] | None,
+    fiscal_periods: Iterable[str] | None,
+) -> list[StagedWorkbookRow]:
+    if not dynamic_allocation_rows or not fiscal_periods:
+        return []
+    period_to_col = {str(period): MONTH_START_COL + index for index, period in enumerate(fiscal_periods)}
+    source_file = CANONICAL_SOURCE_FILE_ORDER[5]
+    staged: list[StagedWorkbookRow] = []
+    for index, row in enumerate(dynamic_allocation_rows, start=1):
+        values: dict[int, object] = {
+            ACCOUNT_COL: row.get("account_code"),
+            DESCRIPTION_COL: row.get("description"),
+        }
+        terms_by_period = row.get("terms") or {}
+        numeric_by_period = row.get("numeric_months") or row.get("months") or {}
+        for period, col in period_to_col.items():
+            terms = list((terms_by_period or {}).get(period, []))
+            numeric_value = float((numeric_by_period or {}).get(period, 0.0) or 0.0)
+            if terms and numeric_value:
+                terms.append(str(int(numeric_value)) if numeric_value.is_integer() else str(numeric_value))
+            if terms:
+                values[col] = "=" + "+".join(str(term).lstrip("=") for term in terms)
+            elif numeric_value:
+                values[col] = numeric_value
+        if not _norm(values.get(DESCRIPTION_COL)) or not _norm(values.get(ACCOUNT_COL)):
+            continue
+        staged.append(
+            StagedWorkbookRow(
+                source_file=source_file,
+                original_row=10000 + index,
+                source_row=10000 + index,
+                values=values,
+                styles={},
+                number_formats={},
+                source_order_managed=True,
+            )
+        )
+    return staged
+
+
 def apply_complete_v1_source_order_to_workbook(
     workbook_path: str | Path,
     *,
     start_row: int = 30,
     clear_until_row: int = 212,
+    dynamic_allocation_rows: Iterable[dict[str, object]] | None = None,
+    fiscal_periods: Iterable[str] | None = None,
 ) -> dict[str, int]:
     """Rewrite complete-v1 business rows into canonical source-file blocks."""
     workbook_file = Path(workbook_path)
@@ -336,6 +382,7 @@ def apply_complete_v1_source_order_to_workbook(
         staged = _collect_existing_source_order_rows(ws, start_row, clear_until_row)
         if not staged:
             staged = _collect_staged_rows(ws)
+        staged.extend(_collect_dynamic_allocation_rows(dynamic_allocation_rows, fiscal_periods))
         preserved = _collect_preserved_unmanaged_rows(
             ws,
             start_row,
