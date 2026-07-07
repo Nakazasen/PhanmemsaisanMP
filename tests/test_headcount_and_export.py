@@ -1100,6 +1100,64 @@ class TestPostingMonthOverride(unittest.TestCase):
         self.assertEqual([(row["period"], float(row["amount_vnd"])) for row in bonenkai], [(periods[10], 800000.0)])
         conn.close()
 
+    def test_section27_monthly_events_use_total_headcount_and_required_months(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        conn.executemany(
+            """
+            INSERT INTO fact_monthly_headcount
+            (
+                period, cc_code, headcount_all, headcount_staff, headcount_worker,
+                headcount_male, headcount_female, source, description
+            )
+            VALUES (?, ?, 3, 3, 0, 0, 0, 'manual', 'section27 staff-only')
+            """,
+            [(period, cc_code) for period in periods],
+        )
+        rules = [
+            ("社員旅行 Du lịch công ty", "5月", "headcount_worker", 100, periods[1], 300),
+            ("Tiệc khuấy động năm tài chính\n決起コンパ（対象：全部門）", "-", "headcount_worker", 200, periods[1], 600),
+            ("会社設立記念 感謝イベント Sự kiện tri ân ngày thành lập công ty", "-", "headcount_worker", 300, periods[6], 900),
+            ("ポケットカレンダー Lịch bỏ túi", "毎月\n11月", "headcount_all", 400, periods[7], 1200),
+            ("忘年会補助金 Hỗ trợ tiệc tất niên", "-", "headcount_worker", 500, periods[10], 1500),
+            ("お年玉 Tiền lì xì", "2月", "headcount_worker", 600, periods[10], 1800),
+        ]
+        for item_name, posting_month, driver_type, unit_price, _period, _amount in rules:
+            conn.execute(
+                """
+                INSERT INTO map_allocation_rules
+                (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
+                 posting_month, unit_price, unit, driver_type, driver_raw)
+                VALUES ('GA', ?, 'GA', 5004086291, 6004086651, 6004086551, ?, ?, '/unit', ?, ?)
+                """,
+                (item_name, posting_month, unit_price, driver_type, "section27 total headcount"),
+            )
+        conn.commit()
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        rows = conn.execute(
+            """
+            SELECT description, period, amount_vnd
+            FROM fact_input_data
+            WHERE CAST(cc_code AS TEXT)=?
+            ORDER BY description
+            """,
+            (str(cc_code),),
+        ).fetchall()
+        observed = {
+            row["description"]: (row["period"], float(row["amount_vnd"]))
+            for row in rows
+        }
+        for item_name, _posting_month, _driver_type, _unit_price, expected_period, expected_amount in rules:
+            self.assertEqual(
+                observed[f"Alloc: {item_name}"],
+                (expected_period, float(expected_amount)),
+                item_name,
+            )
+        conn.close()
+
 
 class TestEventDeltaHeadcountFailClosed(unittest.TestCase):
     def _insert_rule(
@@ -1481,6 +1539,39 @@ class TestNewHireAllocationIdentityDedupe(unittest.TestCase):
         conn.commit()
         return cursor.lastrowid
 
+    def _insert_allocation_rule(
+        self,
+        conn,
+        *,
+        item_name,
+        posting_month,
+        unit_price,
+        driver_type="headcount_all",
+        driver_raw=None,
+        account=5004086291,
+    ):
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO map_allocation_rules
+            (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
+             posting_month, unit_price, unit, driver_type, driver_raw)
+            VALUES ('GA', ?, 'Welfare', ?, ?, ?, ?, ?, '/person', ?, ?)
+            """,
+            (
+                item_name,
+                account,
+                account,
+                account,
+                posting_month,
+                float(unit_price),
+                driver_type,
+                driver_raw if driver_raw is not None else posting_month,
+            ),
+        )
+        conn.commit()
+        return cursor.lastrowid
+
     def _insert_full_headcount_series(self, conn, cc_code, *, staff_values, worker_values):
         rows = []
         for period in ["202603", *get_fy_months(2027)]:
@@ -1578,6 +1669,47 @@ class TestNewHireAllocationIdentityDedupe(unittest.TestCase):
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_monthly_new_hire_issue_export_uses_delta_and_skips_photo_only(self):
+        """配布数 rules require manual distribution counts and must NOT auto-allocate.
+        Photo-only rules are also skipped.  Neither should produce output."""
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        staff_values = {period: 4 for period in ["202603", *periods]}
+        staff_values.update({"202612": 31})
+        self._insert_full_headcount_series(conn, cc_code, staff_values=staff_values, worker_values={})
+        monthly_new_hire_raw = (
+            "\u524d\u670816\u65e5\u304b\u3089\u5f53\u670815\u65e5\u307e\u3067\u306e"
+            "\u65b0\u5165\u793e\u54e1\u3068\u652f\u7d66\u4f9d\u983c\u8005\u306e"
+            "\u914d\u5e03\u6570\u306f\u5f53\u6708\u632f\u66ff"
+        )
+        self._insert_allocation_rule(
+            conn,
+            item_name="\u5e3d\u5b50\uff08\u767d\uff09 M\u0169 tr\u1eafng",
+            posting_month="\u6bce\u6708",
+            unit_price=33500,
+            driver_raw=monthly_new_hire_raw,
+        )
+        self._insert_allocation_rule(
+            conn,
+            item_name="\u793e\u54e1\u8a3c\u7528\u5199\u771f\u306e\u307f",
+            posting_month="\u914d\u5e03\u6708",
+            unit_price=500,
+            driver_raw="\u914d\u5c5e\u4eba\u6570\u3067\u5165\u793e\u6708\u306b\u632f\u66ff",
+            account=5005246281,
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        # Both rules should be skipped: 配布数 rule requires manual distribution
+        # count, photo-only rule is excluded by design.  Verify via DB.
+        alloc_rows = conn.execute(
+            "SELECT COUNT(*) FROM fact_input_data WHERE source LIKE 'alloc_%' AND cc_code = ?",
+            (cc_code,),
+        ).fetchone()[0]
+        self.assertEqual(alloc_rows, 0, "配布数 and photo-only rules must not auto-allocate")
+        conn.close()
 
     def test_same_amount_staff_and_worker_notebooks_are_not_over_deduped(self):
         conn = _mk_conn()

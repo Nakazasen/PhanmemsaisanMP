@@ -27,7 +27,7 @@ def _seed_cc(conn, code=1412000004):
     return code
 
 
-def _insert_rule(conn, posting_month, driver_type, unit_price=100, rid_label="TEST"):
+def _insert_rule(conn, posting_month, driver_type, unit_price=100, rid_label="TEST", driver_raw=None):
     cur = conn.cursor()
     cur.execute(
         """
@@ -36,7 +36,7 @@ def _insert_rule(conn, posting_month, driver_type, unit_price=100, rid_label="TE
          posting_month, unit_price, unit, driver_type, driver_raw)
         VALUES ('QA', ?, 'Test Account', 500001, 600001, 700001, ?, ?, '/unit', ?, ?)
         """,
-        (rid_label, posting_month, float(unit_price), driver_type, posting_month),
+        (rid_label, posting_month, float(unit_price), driver_type, driver_raw if driver_raw is not None else posting_month),
     )
     conn.commit()
     return cur.lastrowid
@@ -117,6 +117,63 @@ class TestPostingMonthLogic(unittest.TestCase):
             self.assertEqual(periods.get(months[3]), 300.0)
             self.assertNotIn(months[0], periods)
             conn.close()
+
+    def test_monthly_new_hire_driver_raw_uses_positive_delta_not_total_headcount(self):
+        """配布数 rules require manual distribution counts and are now skipped."""
+        conn = _mk_conn()
+        cc = _seed_cc(conn)
+        _seed_hc(conn, cc, [4, 4, 4, 4, 4, 4, 4, 4, 31, 2, 2, 3])
+        rid = _insert_rule(
+            conn,
+            "\u8c48\u53d6\u6026",
+            "headcount_all",
+            unit_price=100,
+            rid_label="hat monthly issue",
+            driver_raw="\u524d\u670816\u65e5\u304b\u3089\u5f53\u670815\u65e5\u307e\u3067\u306e\u65b0\u5165\u793e\u54e1\u3068\u652f\u7d66\u4f9d\u983c\u8005\u306e\u914d\u5e03\u6570\u306f\u5f53\u6708\u632f\u66ff",
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        periods = _alloc_periods(conn, rid)
+        # 配布数 in driver_raw → rule is skipped, no auto-allocation
+        self.assertEqual(periods, {})
+        conn.close()
+
+    def test_monthly_new_hire_driver_raw_with_no_positive_delta_creates_no_amount(self):
+        conn = _mk_conn()
+        cc = _seed_cc(conn)
+        _seed_hc(conn, cc, [4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3])
+        rid = _insert_rule(
+            conn,
+            "豈取怦",
+            "headcount_all",
+            unit_price=100,
+            rid_label="uniform monthly issue",
+            driver_raw="\u65b0\u5165\u793e\u54e1 \u914d\u5c5e\u4eba\u6570",
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        self.assertEqual(_alloc_periods(conn, rid), {})
+        conn.close()
+
+    def test_new_hire_photo_only_rule_is_not_auto_allocated(self):
+        conn = _mk_conn()
+        cc = _seed_cc(conn)
+        _seed_hc(conn, cc, [1, 2, 2, 2, 2, 2, 2, 2, 31, 31, 31, 31])
+        rid = _insert_rule(
+            conn,
+            "\u914d\u5e03\u6708",
+            "headcount_all",
+            unit_price=500,
+            rid_label="\u793e\u54e1\u8a3c\u7528\u5199\u771f\u306e\u307f",
+            driver_raw="\u914d\u5c5e\u4eba\u6570\u3067\u5165\u793e\u6708\u306b\u632f\u66ff",
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        self.assertEqual(_alloc_periods(conn, rid), {})
+        conn.close()
 
     def test_next_month_rule_posts_in_month_after_delta(self):
         conn = _mk_conn()

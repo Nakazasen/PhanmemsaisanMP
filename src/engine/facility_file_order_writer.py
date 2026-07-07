@@ -61,7 +61,7 @@ def _write_facility_preview_rows(worksheet, facility_source_path: str | Path, co
 def apply_facility_file_order_to_workbook(
     workbook_path: str | Path,
     facility_source_path: str | Path,
-    cost_center: str | int = "1412000040",
+    cost_center: str | int | None = None,
     start_row: int = 200,
 ) -> Path:
     """Apply Facility file-order rows to an explicit existing workbook path."""
@@ -87,7 +87,7 @@ def write_facility_file_order_preview_workbook(
     template_path: str | Path,
     facility_source_path: str | Path,
     output_path: str | Path,
-    cost_center: str | int = "1412000040",
+    cost_center: str | int | None = None,
     start_row: int = 200,
 ) -> Path:
     """Write an explicit Facility file-order preview workbook to ``output_path``."""

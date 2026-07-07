@@ -15,6 +15,7 @@ pytestmark = pytest.mark.requires_raw_excel
 TEMPLATE = Path("FORM.xlsx")
 FACILITY_SOURCE = Path("raw/施設課　MPFY2027.xlsx")
 
+CC = "1412000040"
 
 def test_default_export_does_not_call_facility_file_order(monkeypatch):
     called = False
@@ -39,7 +40,7 @@ def test_facility_file_order_export_writes_rows_200_to_205(tmp_path):
     workbook_path = tmp_path / "output.xlsx"
     copy2(TEMPLATE, workbook_path)
 
-    apply_facility_file_order_to_workbook(workbook_path, FACILITY_SOURCE)
+    apply_facility_file_order_to_workbook(workbook_path, FACILITY_SOURCE, cost_center=CC)
 
     workbook = load_workbook(workbook_path, data_only=False)
     try:
@@ -60,7 +61,7 @@ def test_facility_file_order_export_leaves_blank_row_206(tmp_path):
     workbook_path = tmp_path / "output.xlsx"
     copy2(TEMPLATE, workbook_path)
 
-    apply_facility_file_order_to_workbook(workbook_path, FACILITY_SOURCE)
+    apply_facility_file_order_to_workbook(workbook_path, FACILITY_SOURCE, cost_center=CC)
 
     workbook = load_workbook(workbook_path, data_only=False)
     try:
@@ -79,7 +80,7 @@ def test_facility_file_order_export_does_not_modify_template_or_source(tmp_path)
     before_template_mtime = TEMPLATE.stat().st_mtime_ns
     before_source_mtime = FACILITY_SOURCE.stat().st_mtime_ns
 
-    apply_facility_file_order_to_workbook(workbook_path, FACILITY_SOURCE)
+    apply_facility_file_order_to_workbook(workbook_path, FACILITY_SOURCE, cost_center=CC)
 
     assert TEMPLATE.stat().st_mtime_ns == before_template_mtime
     assert FACILITY_SOURCE.stat().st_mtime_ns == before_source_mtime

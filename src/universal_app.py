@@ -2219,6 +2219,14 @@ class MPManagerApp:
 
 
 if __name__ == "__main__":
+    # Support headless export from packaged exe: if CLI args like --target-cc
+    # are present, delegate to the CLI pipeline instead of opening the GUI.
+    if len(sys.argv) > 1 and any(
+        arg.startswith("--target-cc") or arg.startswith("--legacy-export")
+        for arg in sys.argv[1:]
+    ):
+        from scripts.run_e2e import main as _cli_main
+        raise SystemExit(_cli_main())
     root = tk.Tk()
     app = MPManagerApp(root)
     root.mainloop()

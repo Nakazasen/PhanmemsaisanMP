@@ -10,6 +10,7 @@ CSV columns:
 
 import csv
 import os
+import sys
 import sqlite3
 import warnings
 from datetime import datetime, timezone
@@ -58,6 +59,19 @@ def resolve_manual_headcount_source_dir(source_dir: str | None = None, base_dir:
 
     raw_dir = project_root / "raw"
     docs_dir = project_root / "docs" / "MP2027"
+
+    # In packaged mode base_dir is the exe directory, but PyInstaller COLLECT
+    # puts bundled data under sys._MEIPASS (_internal/).  If raw/ is not next
+    # to the exe, fall back to the bundled location.  External raw/ next to the
+    # exe takes priority so users can edit CSVs without unpacking.
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        meipass_raw = Path(meipass) / "raw"
+        meipass_docs = Path(meipass) / "docs" / "MP2027"
+        if not raw_dir.exists() and meipass_raw.exists():
+            raw_dir = meipass_raw
+        if not docs_dir.exists() and meipass_docs.exists():
+            docs_dir = meipass_docs
     if requested == project_root:
         return str(raw_dir)
     if requested == docs_dir:
@@ -119,10 +133,22 @@ def _parse_blank_zero_headcount_int(
     row: dict[str, Any],
     field: str,
     reason_label: str,
+    *,
+    blank_as_zero: bool = False,
 ) -> tuple[int | None, dict[str, Any] | None]:
     raw_value = row.get(field, "")
     if not _has_value(raw_value):
-        return 0, None
+        if blank_as_zero:
+            return 0, None
+        return None, _make_validation_error(
+            row_number,
+            row.get("cc_code"),
+            row.get("period"),
+            field,
+            raw_value,
+            "REQUIRED_INTEGER_GTE_0",
+            f"{reason_label.capitalize()} must be an explicit integer >= 0",
+        )
     parsed = _parse_non_negative_int(raw_value)
     if parsed is None:
         return None, _make_validation_error(
@@ -164,6 +190,8 @@ def validate_manual_headcount_rows(
     rows: list[dict[str, Any]],
     valid_cc_codes: set[str],
     fiscal_year: int = 2027,
+    *,
+    blank_categories_as_zero: bool = False,
 ) -> dict[str, Any]:
     """Validate manual headcount rows without mutating CSV or DB."""
     fiscal_months = get_fy_months(fiscal_year)
@@ -250,8 +278,20 @@ def validate_manual_headcount_rows(
             continue
         seen_keys.add(key)
 
-        staff, staff_error = _parse_blank_zero_headcount_int(row_number, row, "headcount_staff", "staff")
-        worker, worker_error = _parse_blank_zero_headcount_int(row_number, row, "headcount_worker", "worker")
+        staff, staff_error = _parse_blank_zero_headcount_int(
+            row_number,
+            row,
+            "headcount_staff",
+            "staff",
+            blank_as_zero=blank_categories_as_zero,
+        )
+        worker, worker_error = _parse_blank_zero_headcount_int(
+            row_number,
+            row,
+            "headcount_worker",
+            "worker",
+            blank_as_zero=blank_categories_as_zero,
+        )
         male, male_error = _parse_optional_headcount_int(row_number, row, "headcount_male", "male")
         female, female_error = _parse_optional_headcount_int(row_number, row, "headcount_female", "female")
         row_errors = [error for error in (staff_error, worker_error, male_error, female_error) if error]
@@ -653,7 +693,12 @@ def parse_manual_headcount(
             row["_csv_row"] = row_number
             bus_rows.append(row)
 
-    validation = validate_manual_headcount_rows(csv_rows, valid_cc_codes, fiscal_year)
+    validation = validate_manual_headcount_rows(
+        csv_rows,
+        valid_cc_codes,
+        fiscal_year,
+        blank_categories_as_zero=True,
+    )
     bus_result = validate_manual_bus_headcount_rows(bus_rows, valid_cc_codes)
     error_details = list(validation.get("error_details", []))
     error_details.extend(bus_result.get("error_details", []))

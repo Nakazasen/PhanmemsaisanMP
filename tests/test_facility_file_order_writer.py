@@ -13,6 +13,7 @@ pytestmark = pytest.mark.requires_raw_excel
 TEMPLATE = Path("FORM.xlsx")
 FACILITY_SOURCE = Path("raw/施設課　MPFY2027.xlsx")
 
+CC = "1412000040"
 
 def _hub_sheet(workbook):
     return workbook[helpers.find_hub_sheet_name(workbook)]
@@ -23,7 +24,7 @@ def test_writer_creates_preview_workbook_without_touching_template(tmp_path):
     before_template_mtime = TEMPLATE.stat().st_mtime_ns
     before_source_mtime = FACILITY_SOURCE.stat().st_mtime_ns
 
-    result = write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, output_path)
+    result = write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, output_path, cost_center=CC)
 
     assert result == output_path
     assert output_path.exists()
@@ -33,7 +34,7 @@ def test_writer_creates_preview_workbook_without_touching_template(tmp_path):
 
 def test_writer_writes_facility_rows_200_to_205(tmp_path):
     output_path = tmp_path / "facility_preview.xlsx"
-    write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, output_path)
+    write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, output_path, cost_center=CC)
 
     workbook = load_workbook(output_path, data_only=False)
     try:
@@ -62,7 +63,7 @@ def test_writer_writes_facility_rows_200_to_205(tmp_path):
 
 def test_writer_leaves_blank_row_206(tmp_path):
     output_path = tmp_path / "facility_preview.xlsx"
-    write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, output_path)
+    write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, output_path, cost_center=CC)
 
     workbook = load_workbook(output_path, data_only=False)
     try:
@@ -77,7 +78,7 @@ def test_writer_leaves_blank_row_206(tmp_path):
 
 def test_writer_contains_six_facility_items(tmp_path):
     output_path = tmp_path / "facility_preview.xlsx"
-    write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, output_path)
+    write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, output_path, cost_center=CC)
 
     workbook = load_workbook(output_path, data_only=False)
     try:
@@ -106,14 +107,14 @@ def test_default_hub_builder_export_flow_not_changed():
 
 def test_writer_requires_explicit_output_path(tmp_path):
     try:
-        write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, "")
+        write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, "", cost_center=CC)
     except ValueError as exc:
         assert "output_path is required" in str(exc)
     else:
         raise AssertionError("Expected output_path validation failure")
 
     try:
-        write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, TEMPLATE)
+        write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, TEMPLATE, cost_center=CC)
     except ValueError as exc:
         assert "must not overwrite the template" in str(exc)
     else:

@@ -7,10 +7,34 @@ Compatibility guard: facility file-order export remains explicit via
 """
 import sqlite3
 import csv
+import inspect
 import os
 import sys
 import traceback
 from zipfile import BadZipFile
+
+
+class _NullTextIO:
+    encoding = "utf-8"
+
+    def write(self, text):
+        return len(str(text))
+
+    def flush(self):
+        return None
+
+    def isatty(self):
+        return False
+
+
+def _ensure_text_streams() -> None:
+    if sys.stdout is None:
+        sys.stdout = _NullTextIO()
+    if sys.stderr is None:
+        sys.stderr = _NullTextIO()
+
+
+_ensure_text_streams()
 
 # Add root project to path
 if getattr(sys, 'frozen', False):
@@ -64,6 +88,13 @@ def _default_template_path() -> str:
     candidate = os.path.join(BASE_DIR, "docs", "MP2027", "FORM.xlsx")
     if os.path.exists(candidate):
         return candidate
+    # In packaged (COLLECT) mode, BASE_DIR is the exe dir but bundled data
+    # lives under sys._MEIPASS (_internal/).
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        meipass_candidate = os.path.join(meipass, "docs", "MP2027", "FORM.xlsx")
+        if os.path.exists(meipass_candidate):
+            return meipass_candidate
     raise FileNotFoundError(
         f"Required template not found: {candidate}. "
         "Do not fallback to the old root FORM.xlsx because it contains stale sample formulas."
@@ -74,6 +105,11 @@ def _default_source_dir() -> str:
     candidate = os.path.join(BASE_DIR, "docs", "MP2027")
     if os.path.isdir(candidate):
         return candidate
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        meipass_candidate = os.path.join(meipass, "docs", "MP2027")
+        if os.path.isdir(meipass_candidate):
+            return meipass_candidate
     return BASE_DIR
 
 
@@ -87,15 +123,6 @@ def _default_fixed_assets_skeleton_csv_path() -> str:
         "docs",
         "audits",
         "phase42n2e_5005026371_secondary_skeleton_patterns.csv",
-    )
-
-
-def _default_primary_reference_for_current_target() -> str:
-    return os.path.join(
-        BASE_DIR,
-        "reference_outputs",
-        "primary",
-        "16.KDTVN 電気製造技術課_MP FY2027_各予定(Ver01).xlsx",
     )
 
 
@@ -114,11 +141,7 @@ def _resolve_primary_reference_path(
     primary_reference_path: str | None = None,
     reference_map_path: str | None = None,
 ) -> str:
-    """Resolve an explicit reference workbook for reference-assisted fill.
-
-    The built-in default is intentionally scoped to current target CC 1412000040.
-    Other CCs must provide --primary-reference-path or a map row.
-    """
+    """Resolve an explicit or mapped reference workbook for reference-assisted fill."""
     if primary_reference_path:
         resolved = os.path.abspath(primary_reference_path)
     else:
@@ -132,31 +155,37 @@ def _resolve_primary_reference_path(
                         candidate = row.get("reference_path", "")
                         resolved = candidate if os.path.isabs(candidate) else os.path.join(BASE_DIR, candidate)
                         break
-        if target_text == "1412000040" and (not resolved or not os.path.exists(resolved)):
-            primary_dir = os.path.join(BASE_DIR, "reference_outputs", "primary")
-            resolved = ""
-            if os.path.isdir(primary_dir):
-                for name in sorted(os.listdir(primary_dir)):
-                    if name.startswith("16.KDTVN ") and "MP FY2027" in name and name.lower().endswith(".xlsx"):
-                        resolved = os.path.join(primary_dir, name)
-                        break
-            if not resolved:
-                resolved = _default_primary_reference_for_current_target()
         if not resolved:
-            raise ValueError("Reference-assisted fill requires --primary-reference-path for this target CC.")
+            raise ValueError("Reference-assisted fill requires --primary-reference-path or a mapped primary reference for this target CC.")
     if not os.path.exists(resolved):
         raise FileNotFoundError(f"Reference-assisted fill primary reference not found: {resolved}")
     return resolved
 
 
-def _should_apply_complete_reference(
+def _try_resolve_primary_reference_path(
     target_cc: int | str | None,
-    primary_reference_path: str | None,
-    reference_map_path: str | None,
-) -> bool:
-    if primary_reference_path or reference_map_path:
-        return True
-    return str(target_cc or "") == "1412000040"
+    primary_reference_path: str | None = None,
+    reference_map_path: str | None = None,
+) -> str | None:
+    """Resolve an optional reference workbook for canonical export."""
+    if not primary_reference_path and not reference_map_path:
+        return None
+    try:
+        return _resolve_primary_reference_path(
+            target_cc=target_cc,
+            primary_reference_path=primary_reference_path,
+            reference_map_path=reference_map_path,
+        )
+    except ValueError:
+        return None
+
+
+def _parse_manual_headcount(conn, source_dir: str):
+    """Call the parser with packaged raw-directory support when available."""
+    signature = inspect.signature(parse_manual_headcount)
+    if "base_dir" in signature.parameters:
+        return parse_manual_headcount(conn, source_dir=source_dir, base_dir=BASE_DIR)
+    return parse_manual_headcount(conn, source_dir=source_dir)
 
 
 def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str, 
@@ -284,7 +313,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 path=birthday_result.get("path", ""),
             )
         )
-        manual_hc_result = parse_manual_headcount(conn, source_dir=source_dir)
+        manual_hc_result = _parse_manual_headcount(conn, source_dir)
         parser_results["manual_headcount"] = manual_hc_result
         log_callback(
             "Manual headcount: inserted={inserted}, skipped={skipped}, errors={errors}, file={path}".format(
@@ -348,12 +377,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             log_callback(f"Exporting Single CC: {target_cc}")
             out_path = os.path.join(output_dir, f"MP_CC_{target_cc}.xlsx")
             complete_v1_primary_path = None
-            if mp_saisan_complete_v1 and _should_apply_complete_reference(
-                target_cc,
-                primary_reference_path,
-                reference_map_path,
-            ):
-                complete_v1_primary_path = _resolve_primary_reference_path(
+            if mp_saisan_complete_v1:
+                complete_v1_primary_path = _try_resolve_primary_reference_path(
                     target_cc=target_cc,
                     primary_reference_path=primary_reference_path,
                     reference_map_path=reference_map_path,
@@ -451,7 +476,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             for cc in all_ccs:
                 out_path = os.path.join(output_dir, f"MP_CC_{cc}.xlsx")
                 if builder.export_to_template(template_path, out_path, cc_code=cc):
-                    if facility_file_order_export and str(cc) == "1412000040":
+                    if facility_file_order_export:
                         apply_facility_file_order_to_workbook(
                             workbook_path=out_path,
                             facility_source_path=facility_source_path,
@@ -459,7 +484,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             start_row=facility_file_order_start_row,
                         )
                         log_callback(f"Facility file-order export applied: {out_path}")
-                    if admin_consumables_export and str(cc) == "1412000040":
+                    if admin_consumables_export:
                         apply_admin_consumables_to_workbook(
                             workbook_path=out_path,
                             admin_source_path=admin_source_path,
@@ -468,7 +493,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             start_row=admin_consumables_start_row,
                         )
                         log_callback(f"Admin consumables export applied: {out_path}")
-                    if system_cost_export and str(cc) == "1412000040":
+                    if system_cost_export:
                         apply_system_cost_to_workbook(
                             workbook_path=out_path,
                             system_source_paths=system_source_paths,
@@ -476,7 +501,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             start_row=system_cost_start_row,
                         )
                         log_callback(f"System Cost export applied: {out_path}")
-                    if primary_reference_fill and str(cc) == "1412000040":
+                    if primary_reference_fill:
                         primary_path = _resolve_primary_reference_path(
                             target_cc=cc,
                             primary_reference_path=primary_reference_path,
@@ -495,7 +520,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             start_row=primary_reference_fill_start_row,
                         )
                         log_callback(f"Reference-assisted primary fill applied: {fill_result}")
-                    if fixed_assets_reference_skeleton_export and str(cc) == "1412000040":
+                    if fixed_assets_reference_skeleton_export:
                         if primary_reference_fill:
                             raise ValueError(
                                 "Duplicate risk: --fixed-assets-reference-skeleton-export cannot run with "
@@ -507,14 +532,12 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             start_row=fixed_assets_skeleton_start_row,
                         )
                         log_callback(f"Fixed-assets reference skeleton applied: {skeleton_result}")
-                    if mp_saisan_complete_v1 and str(cc) == "1412000040":
-                        complete_v1_primary_path = None
-                        if _should_apply_complete_reference(cc, primary_reference_path, reference_map_path):
-                            complete_v1_primary_path = _resolve_primary_reference_path(
-                                target_cc=cc,
-                                primary_reference_path=primary_reference_path,
-                                reference_map_path=reference_map_path,
-                            )
+                    if mp_saisan_complete_v1:
+                        complete_v1_primary_path = _try_resolve_primary_reference_path(
+                            target_cc=cc,
+                            primary_reference_path=primary_reference_path,
+                            reference_map_path=reference_map_path,
+                        )
                         if complete_v1_primary_path:
                             _apply_complete_v1_source_order(out_path, log_callback, phase="pre-reference")
                             complete_result = apply_mp_saisan_complete_v1(
@@ -554,7 +577,9 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 "preview",
                 "facility_file_order_preview.xlsx",
             )
-            preview_cc = target_cc or 1412000040
+            if target_cc is None:
+                raise ValueError("Facility file-order preview requires --target-cc.")
+            preview_cc = target_cc
             preview_path = write_facility_file_order_preview_workbook(
                 template_path=template_path,
                 facility_source_path=facility_source_path,
@@ -638,7 +663,7 @@ def main(argv=None):
         '--primary-reference-path',
         type=str,
         default=None,
-        help='Primary reference workbook for reference-assisted fill. Required for CCs other than 1412000040 unless mapped.',
+        help='Primary reference workbook for reference-assisted fill. Required unless the target CC is mapped.',
     )
     parser.add_argument('--reference-map-path', type=str, default=_default_reference_map_path())
     parser.add_argument(

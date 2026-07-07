@@ -15,11 +15,12 @@ TEMPLATE = Path("FORM.xlsx")
 ADMIN_SOURCE = Path("raw/総務課 FY2027 MP 振替予定.xlsx")
 ALLOC_SOURCE = Path("raw/FY2027配賦額一覧 (2025.12.29).xlsx")
 
+CC = "1412000040"
 
 def test_admin_consumables_writer_writes_rows_207_to_209(tmp_path):
     workbook_path = tmp_path / "output.xlsx"
     copy2(TEMPLATE, workbook_path)
-    apply_admin_consumables_to_workbook(workbook_path, ADMIN_SOURCE, ALLOC_SOURCE)
+    apply_admin_consumables_to_workbook(workbook_path, ADMIN_SOURCE, ALLOC_SOURCE, cost_center=CC)
     workbook = load_workbook(workbook_path)
     try:
         sheet = workbook[helpers.find_hub_sheet_name(workbook)]
@@ -40,7 +41,7 @@ def test_admin_consumables_writer_writes_rows_207_to_209(tmp_path):
 def test_admin_consumables_writer_blank_row_210(tmp_path):
     workbook_path = tmp_path / "output.xlsx"
     copy2(TEMPLATE, workbook_path)
-    apply_admin_consumables_to_workbook(workbook_path, ADMIN_SOURCE, ALLOC_SOURCE)
+    apply_admin_consumables_to_workbook(workbook_path, ADMIN_SOURCE, ALLOC_SOURCE, cost_center=CC)
     workbook = load_workbook(workbook_path)
     try:
         sheet = workbook[helpers.find_hub_sheet_name(workbook)]
@@ -56,7 +57,7 @@ def test_admin_consumables_writer_blank_row_210(tmp_path):
 def test_admin_consumables_writer_does_not_write_unknown_text_into_month_cells(tmp_path):
     workbook_path = tmp_path / "output.xlsx"
     copy2(TEMPLATE, workbook_path)
-    apply_admin_consumables_to_workbook(workbook_path, ADMIN_SOURCE, ALLOC_SOURCE)
+    apply_admin_consumables_to_workbook(workbook_path, ADMIN_SOURCE, ALLOC_SOURCE, cost_center=CC)
     workbook = load_workbook(workbook_path)
     try:
         sheet = workbook[helpers.find_hub_sheet_name(workbook)]
@@ -73,7 +74,7 @@ def test_admin_consumables_writer_does_not_modify_source_or_template(tmp_path):
     before_template_mtime = TEMPLATE.stat().st_mtime_ns
     before_admin_mtime = ADMIN_SOURCE.stat().st_mtime_ns
     before_alloc_mtime = ALLOC_SOURCE.stat().st_mtime_ns
-    apply_admin_consumables_to_workbook(workbook_path, ADMIN_SOURCE, ALLOC_SOURCE)
+    apply_admin_consumables_to_workbook(workbook_path, ADMIN_SOURCE, ALLOC_SOURCE, cost_center=CC)
     assert TEMPLATE.stat().st_mtime_ns == before_template_mtime
     assert ADMIN_SOURCE.stat().st_mtime_ns == before_admin_mtime
     assert ALLOC_SOURCE.stat().st_mtime_ns == before_alloc_mtime

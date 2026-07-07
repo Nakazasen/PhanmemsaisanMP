@@ -172,10 +172,6 @@ def resolve_reference_path(
                     if not candidate.exists():
                         raise FileNotFoundError(f"Mapped primary reference workbook not found: {candidate}")
                     return candidate
-    if target_text == "1412000040":
-        fallback = Path("reference_outputs/primary/16.KDTVN 電気製造技術課_MP FY2027_各予定(Ver01).xlsx")
-        if fallback.exists():
-            return fallback
     raise ValueError("MP Saisan complete v1 requires a primary reference path/map for reference-assisted fill.")
 
 
@@ -292,7 +288,7 @@ def apply_mp_saisan_complete_v1(
     final_business_rows = count_business_rows(workbook_path)
     primary_business_rows = count_business_rows(primary_path)
     physical_gap = primary_business_rows - final_business_rows
-    logical_false_gaps = 2 if norm(target_cc) == "1412000040" else 0
+    logical_false_gaps = 0
     return {
         "source_rows": before,
         "primary_reference_rows_written": primary_after - primary_before,

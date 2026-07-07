@@ -16,6 +16,7 @@ from typing import Iterable
 
 from openpyxl import load_workbook
 from openpyxl.formula.translate import Translator
+from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
 
 from src.engine.column_s_normalizer import worksheet_row_has_cost
@@ -23,6 +24,8 @@ from src.engine.source_order_output import CANONICAL_SOURCE_FILE_ORDER
 from src.utils import excel_helpers as helpers
 
 ACCOUNT_COL = 2
+LOOKUP_NAME_COL = 3
+LOOKUP_GROUP_COL = 4
 ITEM_ID_COL = 5
 MONTH_START_COL = 6
 MONTH_END_COL = 17
@@ -33,8 +36,18 @@ BUSINESS_COLS = (ACCOUNT_COL, ITEM_ID_COL, *range(MONTH_START_COL, MONTH_END_COL
 MONTH_COLS = tuple(range(MONTH_START_COL, MONTH_END_COL + 1))
 MANAGED_CLEAR_COLS = tuple(range(2, 21))  # B:T, values/formulas only; styles are preserved.
 COPY_COLS = tuple(range(1, 21))
+LAYOUT_WHITE_COLUMNS = tuple(range(1, 5))
 SOURCE_ORDER_MARKER = "source-order-complete-v1"
 SOURCE_NOTE_RE = re.compile(r"source_file=([^;]+);\s*original_row=(\d+)")
+ACCOUNT_MASTER_SHEET = "\u52d8\u5b9a\u79d1\u76ee"
+NO_FILL = PatternFill(fill_type=None)
+GENERATED_FILE_ORDER_POLICIES = (
+    "ROUND_USD_BY_B2",
+    "COPY_VND_MONTHLY",
+    "COPY_SUMMARY_VND_TOTAL_BY_PERIOD",
+    "COPY_SOURCE_MONTH_SAMPLE",
+    "UNKNOWN",
+)
 
 
 @dataclass(frozen=True)
@@ -136,6 +149,27 @@ def _translated_formula(value: object, *, original_row: int, target_row: int, co
         return value
 
 
+def _lookup_name_formula(row: int) -> str:
+    return (
+        f'=IFERROR(IF(VLOOKUP($B{row},{ACCOUNT_MASTER_SHEET}!$A:$H,'
+        f'HLOOKUP($E$5,{ACCOUNT_MASTER_SHEET}!$F$1:$H$2,2,0),0)="","",'
+        f'VLOOKUP($B{row},{ACCOUNT_MASTER_SHEET}!$A:$E,2,0)),"")'
+    )
+
+
+def _lookup_group_formula(row: int) -> str:
+    return f'=IF(C{row}="","",VLOOKUP($B{row},{ACCOUNT_MASTER_SHEET}!$A:$E,4,0))'
+
+
+def _ensure_lookup_formulas(ws, row: int) -> None:
+    if not _norm(ws.cell(row, ACCOUNT_COL).value) or not _row_has_visible_month_cost(ws, row):
+        return
+    if not _norm(ws.cell(row, LOOKUP_NAME_COL).value):
+        ws.cell(row, LOOKUP_NAME_COL).value = _lookup_name_formula(row)
+    if not _norm(ws.cell(row, LOOKUP_GROUP_COL).value):
+        ws.cell(row, LOOKUP_GROUP_COL).value = _lookup_group_formula(row)
+
+
 def _write_staged_row(ws, target_row: int, staged: StagedWorkbookRow) -> None:
     for col, value in staged.values.items():
         cell = ws.cell(target_row, col)
@@ -155,7 +189,27 @@ def _write_staged_row(ws, target_row: int, staged: StagedWorkbookRow) -> None:
         note = _source_order_note_base(ws.cell(target_row, NOTE_COL).value)
         source_note = f"source_file={staged.source_file}; original_row={staged.original_row}; {SOURCE_ORDER_MARKER}"
         ws.cell(target_row, NOTE_COL).value = f"{note} | {source_note}" if note else source_note
+    _ensure_lookup_formulas(ws, target_row)
     ws.cell(target_row, TOTAL_COL).value = f"=SUM(F{target_row}:Q{target_row})"
+
+
+def _normalize_final_output_layout(ws, start_row: int) -> dict[str, int]:
+    cleared_fills = 0
+    cleared_item_ids = 0
+    for row in range(max(1, int(start_row)), int(ws.max_row or 0) + 1):
+        for col in LAYOUT_WHITE_COLUMNS:
+            cell = ws.cell(row, col)
+            if cell.fill and cell.fill.fill_type:
+                cleared_fills += 1
+            cell.fill = copy(NO_FILL)
+        item_cell = ws.cell(row, ITEM_ID_COL)
+        if _norm(item_cell.value):
+            item_cell.value = None
+            cleared_item_ids += 1
+    return {
+        "layout_fills_cleared": cleared_fills,
+        "item_ids_cleared": cleared_item_ids,
+    }
 
 
 def _source_rows_to_clear(ws) -> set[int]:
@@ -174,6 +228,8 @@ def _collect_staged_rows(ws) -> list[StagedWorkbookRow]:
     for source_index, rows in SOURCE_ROW_GROUPS:
         source_file = CANONICAL_SOURCE_FILE_ORDER[source_index]
         for row in rows:
+            if _has_generated_file_order_policy(ws.cell(row, NOTE_COL).value):
+                continue
             item = _copy_staged_row(ws, source_file, row, require_visible_month_cost=False)
             if item is not None:
                 staged.append(item)
@@ -200,6 +256,8 @@ def _collect_existing_source_order_rows(ws, start_row: int, clear_until_row: int
     staged: list[StagedWorkbookRow] = []
     seen: set[tuple[str, int, str, str, tuple[str, ...]]] = set()
     for row in range(int(start_row), int(clear_until_row) + 1):
+        if _has_generated_file_order_policy(ws.cell(row, NOTE_COL).value):
+            continue
         parsed = _parse_source_order_note(ws.cell(row, NOTE_COL).value)
         if parsed is None:
             continue
@@ -220,6 +278,11 @@ def _collect_existing_source_order_rows(ws, start_row: int, clear_until_row: int
     return staged
 
 
+def _has_generated_file_order_policy(note: object) -> bool:
+    text = _norm(note)
+    return any(policy in text for policy in GENERATED_FILE_ORDER_POLICIES)
+
+
 def _collect_preserved_unmanaged_rows(
     ws,
     start_row: int,
@@ -233,6 +296,14 @@ def _collect_preserved_unmanaged_rows(
         if row in rows_to_skip:
             continue
         if _parse_source_order_note(ws.cell(row, NOTE_COL).value) is not None:
+            continue
+        if _has_generated_file_order_policy(ws.cell(row, NOTE_COL).value):
+            continue
+        if (
+            not _row_has_visible_month_cost(ws, row)
+            and not _norm(ws.cell(row, DESCRIPTION_COL).value)
+            and not _norm(ws.cell(row, NOTE_COL).value)
+        ):
             continue
         item = _copy_staged_row(
             ws,
@@ -305,6 +376,7 @@ def apply_complete_v1_source_order_to_workbook(
                 preserved_rows_written += 1
                 current_row += 1
 
+        layout_stats = _normalize_final_output_layout(ws, start_row)
         wb.save(workbook_file)
         return {
             "source_blocks_written": source_blocks_written,
@@ -313,6 +385,7 @@ def apply_complete_v1_source_order_to_workbook(
             "blank_rows_written": blank_rows_written,
             "start_row": start_row,
             "end_row": current_row - 1 if rows_written or preserved_rows_written else start_row - 1,
+            **layout_stats,
         }
     finally:
         wb.close()

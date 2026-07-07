@@ -39,7 +39,7 @@ def apply_admin_consumables_to_workbook(
     workbook_path: str | Path,
     admin_source_path: str | Path,
     allocation_source_path: str | Path | None = None,
-    cost_center: str | int = "1412000040",
+    cost_center: str | int | None = None,
     start_row: int = 207,
 ) -> Path:
     """Apply Admin consumables rows to an explicit existing workbook path."""

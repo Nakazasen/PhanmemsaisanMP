@@ -45,9 +45,10 @@ Ngày reconcile local: `2026-07-07 06:39:28`.
   - Công thức: `số người * chi phí tương ứng`.
   - Driver headcount là tổng số người của tháng trước.
   - Ngoại lệ tháng 4/2026: do không có dữ liệu tháng 3 kỳ trước, dùng tổng số người tháng 4/2026.
-- Cùng sheet này ghi riêng bus đưa đón người Nhật/người Việt:
+- Cùng sheet này ghi riêng bus đưa đón người biệt phái (người Nhật)/người Việt:
   - Công thức: `số người nhập ở đầu phần mềm * chi phí tương ứng`.
   - Bus count là scalar input theo CC, độc lập với staff/worker/male/female headcount.
+  - Excel gốc dùng: "Người biệt phái đi xe bus" (= người Nhật được cử sang) và "Người VN đi xe bus".
 - Rule lấy account code vẫn bắt buộc đi qua chuỗi:
   - `Cost Center -> 原価センタ -> 原価区分 -> 勘定科目 -> cột 製造/一般/販売 -> account_code`.
   - Không dùng nhầm `採算区分` để chọn cột account.
@@ -301,6 +302,10 @@ Yêu cầu code:
 - Nếu template FORM vẫn có sẵn dòng này, không được xóa bừa layout; chỉ bỏ qua việc nhập dữ liệu nếu chưa có chỉ thị xóa dòng.
 - Cần test regression để đảm bảo output không phát sinh lại 2 dòng dữ liệu cũ từ engine.
 
+Hình minh họa từ Excel gốc (item 1 — không cần điền 2 dữ liệu):
+
+![Item 1: Không cần điền 2 dữ liệu nhân sự cũ](images/Hạng_mục_cần_cải_tiến_row3_img0.png)
+
 ### 4.2. Đẩy dữ liệu về đúng cột theo FORM
 
 Sheet `Hạng mục cần cải tiến` yêu cầu: **Đẩy các cột dữ liệu ghi dưới về cột chỉ mũi tên ghi dưới**.
@@ -330,6 +335,12 @@ Agent phải đảm bảo các cột output khớp FORM gốc, đặc biệt:
 
 Không được tự tạo layout output mới nếu yêu cầu là nhập vào FORM gốc.
 
+Hình minh họa từ Excel gốc (item 2 — đẩy cột về đúng vị trí):
+
+![Item 2: Đẩy cột dữ liệu (trái)](images/Hạng_mục_cần_cải_tiến_row17_img1.png)
+
+![Item 2: Đẩy cột dữ liệu (phải)](images/Hạng_mục_cần_cải_tiến_row18_img2.png)
+
 ### 4.3. Giữ màu và định dạng FORM gốc
 
 Yêu cầu: **Bôi lại đúng màu, đúng định dạng như FORM vốn có**.
@@ -353,6 +364,10 @@ Cách triển khai an toàn:
 3. Khi cần thêm dòng mới, copy nguyên style từ dòng mẫu gần nhất cùng loại account.
 4. Không rebuild workbook từ đầu bằng DataFrame trắng.
 ```
+
+Hình minh họa từ Excel gốc (item 3 — bôi lại đúng màu):
+
+![Item 3: Bôi lại đúng màu, đúng định dạng](images/Hạng_mục_cần_cải_tiến_row38_img7.png)
 
 ### 4.4. Để lại tất cả công thức tính
 
@@ -386,6 +401,12 @@ Ngoại lệ:
 - Nếu nguồn yêu cầu “copy/paste dữ liệu” và không yêu cầu để công thức, có thể ghi giá trị, nhưng vẫn nên có audit trace.
 - Nếu công thức quá dài hoặc FORM không cho phép, phải ghi giá trị + ghi công thức nguồn vào audit sheet, nhưng đây là fallback, không phải mặc định.
 
+Hình minh họa từ Excel gốc (item 4 — để lại công thức):
+
+![Item 4: Để lại tất cả công thức tính](images/Hạng_mục_cần_cải_tiến_row47_img4.png)
+
+![Item 4: Ví dụ công thức chi tiết](images/Hạng_mục_cần_cải_tiến_row51_img3.png)
+
 ### 4.5. Audit bắt buộc
 
 Mỗi khoản được ghi vào FORM nên có record audit tối thiểu:
@@ -410,6 +431,18 @@ Mỗi khoản được ghi vào FORM nên có record audit tối thiểu:
 ---
 
 ## 5. Sheet `Sheet1` — tổng quan yêu cầu
+
+Hình tổng quan file MP từ Sheet1:
+
+![Tổng quan file MP](images/Sheet1_row4_img5.png)
+
+Danh sách file chi phí chung (từ Sheet1):
+
+![File: Chi phí hệ thống](images/Sheet1_row41_img0.png)
+![File: Chi phí khấu hao](images/Sheet1_row43_img2.png)
+![File: TSCĐ & phân bổ](images/Sheet1_row45_img1.png)
+![File: NNN](images/Sheet1_row47_img3.png)
+![File: Sinh nhật](images/Sheet1_row48_img4.png)
 
 ### 5.1. Nội dung Gemini cào đúng
 
@@ -473,6 +506,12 @@ Output:
    - Label tháng phải hiển thị `Tháng 4`, `Tháng 5`, ... thay vì `202704`, `202705`, ...
 7. Bổ sung hạng mục ở sheet `Chi phí phân bổ từ hành chính`.
 
+Hình minh họa từ Excel gốc (item 5 — sai code hệ thống):
+
+![Item 5: Sai code chi phí hệ thống (trái)](images/Hạng_mục_cần_cải_tiến_row71_img5.png)
+
+![Item 5: Sai code chi phí hệ thống (phải)](images/Hạng_mục_cần_cải_tiến_row78_img6.png)
+
 ### 6.2. Ghi chú màu trong file yêu cầu
 
 File ghi:
@@ -512,6 +551,12 @@ Ngày 9/4 người dùng bổ sung:
    - Làm `Chi phí làm giấy tờ cho người nước ngoài`.
    - `Chi phí tài sản cố định` khó hơn, có thể làm sau.
 
+Hình minh họa ghi chú ngày 9/4 (bug công thức hệ thống, tổng tiền sai):
+
+![Bug 9/4: Công thức hệ thống sai](images/Hạng_mục_cần_cải_tiến_row118_img9.png)
+
+![Bug 9/4: Tổng tiền không khớp](images/Hạng_mục_cần_cải_tiến_row127_img10.png)
+
 ### 6.4. Input số người mới thay thế logic hiện tại
 
 File yêu cầu:
@@ -545,6 +590,10 @@ Yêu cầu UI:
   - `Tháng 12 - Nam`
   - `Tháng 12 - Nữ`
 
+Hình minh họa (nhập số người 12 tháng, tách Nam/Nữ ở tháng 12):
+
+![Item 6: Nhập số người 12 tháng](images/Hạng_mục_cần_cải_tiến_row92_img8.png)
+
 ### 6.5. “Xóa nội dung dưới đây cho không cần thiết”
 
 Trong sheet có ghi “Xóa nội dung dưới đây cho ko cần thiết”.
@@ -554,6 +603,10 @@ Agent phải kiểm tra hình/FORM để biết chính xác vùng nào cần b�
 - Chỉ mark là `DEPRECATED_INPUT_BLOCK`.
 - Ẩn/không dùng input cũ nếu đã thay bằng input mới.
 - Không xóa dữ liệu nguồn/audit.
+
+Hình minh họa (xóa nội dung không cần thiết):
+
+![Xóa nội dung không cần thiết](images/Hạng_mục_cần_cải_tiến_row172_img11.png)
 
 ### 6.6. HISTORICAL_04_06_CONTEXT — lineage 04.06 cho thứ tự file và dòng trống giữa các nhóm file
 
@@ -575,6 +628,16 @@ Quy tắc output theo xác nhận của user:
 - Thứ tự chi phí chi tiết trong từng file xem trong sheet tương ứng bên cạnh.
 - Không bắt buộc mọi khoản phải có row cố định nếu đang output theo mode thứ tự file.
 
+Hình minh họa thứ tự file chi phí (từ Excel gốc Row 178-193):
+
+![Thứ tự file 1](images/Hạng_mục_cần_cải_tiến_row178_img12.png)
+![Thứ tự file 2](images/Hạng_mục_cần_cải_tiến_row180_img13.png)
+![Thứ tự file 3](images/Hạng_mục_cần_cải_tiến_row182_img14.png)
+![Thứ tự file 4](images/Hạng_mục_cần_cải_tiến_row184_img15.png)
+![Thứ tự file 5](images/Hạng_mục_cần_cải_tiến_row186_img16.png)
+![Thứ tự file 6](images/Hạng_mục_cần_cải_tiến_row189_img17.png)
+![Thứ tự file 7](images/Hạng_mục_cần_cải_tiến_row191_img18.png)
+
 ### 6.7. HISTORICAL_04_06_CONTEXT — “6 chi phí / gộp thành 1 dòng chi phí”
 
 - `Hạng mục cần cải tiến!H182` (“6 chi phí”) hyperlink tới `Chi phí khấu hao, lãi nhà đất!J65`.
@@ -587,6 +650,12 @@ Quy tắc output theo xác nhận của user:
 ---
 
 ## 7. Sheet `Chi phí hệ thống`
+
+Hình tổng quan từ sheet `Chi phí hệ thống`:
+
+![Tổng quan chi phí hệ thống](images/Chi_phí_hệ_thống_row3_img1.png)
+
+![Ví dụ công thức phân bổ hệ thống](images/Chi_phí_hệ_thống_row49_img0.png)
 
 ### 7.1. Mục tiêu
 
@@ -754,6 +823,16 @@ Diễn giải cho code:
 
 ## 8. Sheet `Chi phí khấu hao, lãi nhà đất`
 
+Hình tổng quan từ sheet `Chi phí khấu hao, lãi nhà đất`:
+
+![Tổng quan khấu hao](images/Chi_phí_khấu_hao_lãi_nhà_đất_row3_img0.png)
+
+![Sheet khấu hao nhà đất](images/Chi_phí_khấu_hao_lãi_nhà_đất_row38_img1.png)
+
+![Sheet lãi nhà đất](images/Chi_phí_khấu_hao_lãi_nhà_đất_row72_img2.png)
+
+![Sheet điện nước](images/Chi_phí_khấu_hao_lãi_nhà_đất_row104_img3.png)
+
 ### 8.1. Mục tiêu
 
 Nhập tự động nhóm chi phí từ file Facility:
@@ -850,6 +929,10 @@ Khi đọc nguồn, không được làm mất các dòng đất/lãi đất do 
 ---
 
 ## 9. Sheet `Chi phí tài sản cố định`
+
+Hình tổng quan từ sheet `Chi phí tài sản cố định`:
+
+![Tổng quan TSCĐ](images/Chi_phí_tài_sản_cố_định_row3_img0.png)
 
 ### 9.1. Mục tiêu
 
@@ -1015,6 +1098,12 @@ Vì vậy trong kế hoạch phát triển:
 
 ## 10. Sheet `Chi phí làm giấy tờ cho NNN`
 
+Hình tổng quan từ sheet `Chi phí làm giấy tờ cho NNN`:
+
+![Tổng quan NNN](images/Chi_phí_làm_giấy_tờ_cho_NNN_row2_img0.png)
+
+![Cách lọc code 1412000018](images/Chi_phí_làm_giấy_tờ_cho_NNN_row25_img1.png)
+
 ### 10.1. Mục tiêu
 
 Bổ sung loại chi phí mới:
@@ -1115,6 +1204,12 @@ Tuy nhiên yêu cầu chung là “để lại tất cả công thức tính”.
 ---
 
 ## 11. Sheet `Chi phí sinh nhật`
+
+Hình tổng quan từ sheet `Chi phí sinh nhật`:
+
+![Tổng quan sinh nhật](images/Chi_phí_sinh_nhật_row3_img0.png)
+
+![Công thức nhập sinh nhật](images/Chi_phí_sinh_nhật_row26_img1.png)
 
 ### 11.1. Mục tiêu
 
@@ -1238,6 +1333,12 @@ Diễn giải an toàn:
 
 Đây là phần quan trọng nhất và được ưu tiên làm trước.
 
+Hình tổng quan từ sheet `Chi phí phân bổ từ hành chính`:
+
+![Nhóm 1: Chi phí phân bổ 12 tháng](images/Chi_phí_phân_bổ_từ_hành_chính__row4_img1.png)
+
+![Nhóm 2: Chi phí đặc thù theo tháng](images/Chi_phí_phân_bổ_từ_hành_chính__row41_img2.png)
+
 ### 12.1. Nhóm 1 — chi phí phân bổ cho cả 12 tháng
 
 Áp dụng cho:
@@ -1301,6 +1402,14 @@ Cách lấy mã account đúng:
 ⑫ Nhập account và công thức vào FORM đúng tháng.
 ```
 
+Hình minh họa bảng mã tài khoản theo nhóm (từ sheet phân bổ hành chính):
+
+![Bảng mã tài khoản (trái)](images/Chi_phí_phân_bổ_từ_hành_chính__row74_img3.png)
+
+![Bảng mã tài khoản (phải)](images/Chi_phí_phân_bổ_từ_hành_chính__row74_img4.png)
+
+![Filter nhóm chi phí](images/Chi_phí_phân_bổ_từ_hành_chính__row102_img5.png)
+
 ### 12.3. Lưu ý filter nội dung
 
 File ghi:
@@ -1322,6 +1431,10 @@ thì filter nội dung bằng:
 ```
 
 hoặc phần tiếng Nhật/chuẩn trong master `FY2027配賦額一覧`, không kèm `: Tháng 5`.
+
+Hình minh họa ví dụ du lịch công ty:
+
+![Du lịch công ty: xác định tháng và tên tài khoản](images/Chi_phí_phân_bổ_từ_hành_chính__row112_img0.png)
 
 ### 12.4. Ví dụ `社員旅行 / Du lịch công ty`
 
@@ -1409,9 +1522,17 @@ Rule code:
 - Driver:
   - Nam: `male_count_december`.
   - Nữ: `female_count_december`.
-- Không nhầm với **khám sức khỏe khi tuyển dụng**.
+- Không được nhầm với **khám sức khỏe khi tuyển dụng**.
+
+Hình minh họa cách tra mã tài khoản 3 nhóm:
+
+![Mã tài khoản 3 nhóm](images/Chi_phí_phân_bổ_từ_hành_chính__row128_img6.png)
 
 ### 12.7. Nhóm chi phí cho người mới
+
+Nguồn: Excel gốc sheet `Hạng mục cần cải tiến`, Row 214-215 (item 7: "Chưa chạy xong
+các chi phí phân bổ từ hành chính — Dữ liệu từ A144~A169"), và sheet
+`Chi phí phân bổ từ hành chính` Row 195-215.
 
 File yêu cầu:
 
@@ -1432,6 +1553,12 @@ Các khoản hiện có vẫn giữ logic cũ nếu đã đúng, ví dụ:
 - Khám sức khỏe khi tuyển dụng.
 
 Không được phá logic cũ nếu nó đã đúng.
+
+Hình minh họa đơn giá khám sức khỏe và chi phí người mới:
+
+![Chi phí phân bổ hành chính — đơn giá](images/Chi_phí_phân_bổ_từ_hành_chính__row182_img7.png)
+
+![Chi phí người mới: sổ, thẻ](images/Chi_phí_phân_bổ_từ_hành_chính__row201_img8.png)
 
 ### 12.8. Bổ sung hạng mục `Sổ` phân tách nhân viên/công nhân
 
@@ -1633,6 +1760,11 @@ Ví dụ:
 | `1412000024` | 総務課 | 工場間接 | 一般 |
 | `1412000030` | 貿易管理課 | 工場間接 | 販売 |
 | `1412000072` | 製品管理課 | 部内間接 | 販売 |
+| `1412000098` | 電工製造課 | 製造 | 製造 |
+| `1412000096` | ESD2課 | 製造 | 製造 |
+| `1412000099` | MD4課 | 製造 | 製造 |
+| `1412000100` | MD5課 | 製造 | 製造 |
+| `1412000101` | EI2課 | 製造 | 製造 |
 
 ### 14.3. Test bắt buộc
 
@@ -1911,3 +2043,487 @@ File yêu cầu này muốn chương trình MP2027 làm tự động phần nh�
 - Ưu tiên làm trước chi phí hành chính và chi phí giấy tờ người nước ngoài.
 - Không được nhầm mã phòng `1412...` với mã tài khoản kế toán.
 - Không được tự ý paste số chết hoặc gộp chi phí sai.
+
+---
+
+## 22. Yêu cầu layout output từ file gốc 09.06.2026
+
+> **Nguồn gốc**: Các rule dưới đây được trích xuất trực tiếp từ workbook canonical
+> `Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`.
+> Đây là yêu cầu người dùng từ Excel gốc, **không phải suy diễn** của agent.
+
+Hình tổng quan layout output từ Excel gốc:
+
+![Yêu cầu layout items (từ Row 198)](images/Hạng_mục_cần_cải_tiến_row198_img19.png)
+
+Thứ tự chi phí output (lặp lại từ Row 221-236):
+
+![Thứ tự output 1](images/Hạng_mục_cần_cải_tiến_row221_img20.png)
+![Thứ tự output 2](images/Hạng_mục_cần_cải_tiến_row223_img21.png)
+![Thứ tự output 3](images/Hạng_mục_cần_cải_tiến_row225_img22.png)
+![Thứ tự output 4](images/Hạng_mục_cần_cải_tiến_row228_img23.png)
+![Thứ tự output 5](images/Hạng_mục_cần_cải_tiến_row230_img24.png)
+![Thứ tự output 6](images/Hạng_mục_cần_cải_tiến_row232_img25.png)
+![Thứ tự output 7](images/Hạng_mục_cần_cải_tiến_row234_img26.png)
+
+![Layout output tổng quan (Row 241)](images/Hạng_mục_cần_cải_tiến_row241_img27.png)
+
+### 22.1. Dữ liệu output bắt đầu từ dòng 30
+
+File kết quả phải xuất dữ liệu từ **dòng 30** trở đi.
+Không được xuất dữ liệu chi phí vào các dòng trước dòng 30 (vùng header/layout cố định của FORM).
+
+### 22.2. Cột A đến D từ dòng 30 trở đi phải màu trắng
+
+Từ cột A đến cột D, dòng 30 trở đi phải có **màu trắng** (không fill color / background trắng).
+Không được tô màu nền khác cho vùng A:D ở khu vực dữ liệu output.
+
+### 22.3. Cột E từ dòng 30 trở xuống không được có giải thích
+
+Cột E từ dòng 30 trở xuống **không được có giải thích** / diễn giải do agent tự nghĩ.
+Nếu cột E cần chứa nội dung, nội dung đó phải lấy nguyên từ nguồn dữ liệu canonical,
+không được tự sáng tạo hoặc dịch thêm.
+
+### 22.4. Giải thích/diễn giải phải lấy từ cột B của sheet `*配賦額一覧`
+
+Phần giải thích/diễn giải cho các hạng mục chi phí **không được tự nghĩ**.
+Nếu cần lấy diễn giải, phải lấy từ **cột B** của sheet `*配賦額一覧` trong file nguồn
+(ví dụ `FY2027配賦額一覧 (2025.12.29).xlsx`).
+
+Rule:
+- Không tự dịch, không tự diễn giải, không tự thêm ghi chú vào output nếu không có
+  trong cột B của sheet `*配賦額一覧`.
+- Nếu cột B trống hoặc không có hạng mục tương ứng, để trống, không tự điền.
+
+### 22.5. Workbook Excel gốc thắng markdown khi mâu thuẫn
+
+Khi có mâu thuẫn giữa tài liệu markdown này và workbook Excel canonical
+`Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`,
+**workbook Excel gốc luôn được ưu tiên** (canonical wins).
+
+Điều này đã được ghi ở Section 0 nhưng được nhắc lại ở đây để nhấn mạnh:
+markdown chỉ là diễn giải; source of truth là workbook 09.06.2026.
+
+### 22.6. Không quay lại cách xuất cố định theo từng dòng
+
+Không quay lại logic cũ xuất output cố định theo dòng (hardcode row cho từng hạng mục).
+Output phải theo source-order hoặc dynamic placement, trừ các dòng đã được workbook
+xác nhận cụ thể (ví dụ dòng 137 cho NNN, dòng 38/42 cho fixed assets).
+
+### 22.7. Không hardcode Cost Center `1412000040`
+
+Không được hardcode Cost Center `1412000040` làm default trong export logic.
+Tất cả Cost Center phải được xác định từ input của người dùng hoặc từ danh sách
+master `原価センタ`, không dùng giá trị cố định.
+
+> **Ghi chú audit**: Mã `1412000040` chỉ được nhắc đến trong ngữ cảnh
+> "không hardcode" hoặc ví dụ minh họa. Không sử dụng làm fallback/default
+> trong bất kỳ hàm export nào.
+
+### 22.8. Không hardcode/map riêng file `16.KDTVN 電気製造技術課_MP FY2027_各予定(Ver01)`
+
+Không được hardcode hoặc map riêng file
+`16.KDTVN 電気製造技術課_MP FY2027_各予定(Ver01)` trong Python.
+Logic export phải generic, hoạt động với mọi file FORM output
+mà không cần đặc biệt hóa cho bất kỳ file cụ thể nào.
+
+### 22.9. Xóa nội dung cũ trước khi xuất output mới
+
+> **Nguồn**: Excel gốc sheet `Hạng mục cần cải tiến`, Row 197 (item 2):
+> `"Xóa nội dung dưới đây"`
+
+Khi xuất output mới, phải **xóa/clear toàn bộ nội dung cũ** trong vùng output
+(từ dòng 30 đến hết vùng dữ liệu) trước khi ghi dữ liệu mới.
+
+Rule:
+- Không được ghi đè lên dữ liệu cũ mà không clear trước.
+- Nếu output mới ngắn hơn output cũ, các dòng thừa phải trống.
+- Code hiện tại dùng `clear_until_row` trong `complete_v1_source_order_writer`
+  để đảm bảo điều này.
+
+---
+
+## 23. Trạng thái hoàn thiện theo Excel gốc 09.06.2026
+
+> **Nguồn**: Excel gốc sheet `Hạng mục cần cải tiến`, Row 194-266.
+> Ngày ghi: 09.06.2026.
+
+Bảng dưới đây ghi lại trạng thái từng hạng mục theo Excel gốc,
+giúp track xem hạng mục nào người dùng coi là "đã xong" và hạng mục nào
+"chưa xong / cần sửa".
+
+| # | Hạng mục (Excel gốc) | Trạng thái theo Excel | Ghi chú |
+|---|---|---|---|
+| 1 | File kết quả xuất từ dòng 30 | Yêu cầu mới 09.06 | Đã implement (start_row=30) |
+| 2 | Xóa nội dung cũ | Yêu cầu mới 09.06 | Đã implement (clear_until_row) |
+| 3 | Bổ sung nhập số người bus biệt phái/VN | Yêu cầu mới 09.06 | Đã có manual input |
+| 4 | Chi phí TSCĐ | **Chưa chạy hết tất cả CC** | Cần audit thêm |
+| 5 | Chi phí khám sức khỏe | **Đang bị lặp 2 lần** | Xem Section 24.1 |
+| 6 | Chi phí VPP người mới | **Đang bị sai** (gom tháng 12) | Xem Section 24.2 |
+| 7 | Chi phí phân bổ hành chính | **Chưa chạy xong** (A144~A169) | Section 12.7 |
+| 8 | Bổ sung thêm mô tả | Yêu cầu mới 09.06 | Xem Section 25 |
+| 9 | Không xuất theo dòng cố định | Yêu cầu mới 09.06 | Đã implement (source-order) |
+| 10 | Cột A-D trắng, cột E không giải thích | Yêu cầu mới 09.06 | Section 22.2, 22.3 |
+| 11 | Giải thích lấy từ cột B `*配賦額一覧*` | Yêu cầu mới 09.06 | Section 22.4 |
+
+> **Lưu ý**: Các hạng mục đánh dấu **in đậm** là hạng mục mà Excel gốc
+> ghi là chưa hoàn thiện hoặc đang có bug. Không được coi các hạng mục này
+> là "đã xong" trong bất kỳ audit nào trừ khi đã verify bằng test.
+
+---
+
+## 24. Regression guard — các bug đã biết từ Excel gốc
+
+> **Mục đích**: Ghi lại các bug/lỗi cụ thể mà Excel gốc 09.06.2026 đã chỉ ra.
+> Khi sửa code hoặc refactor, phải kiểm tra KHÔNG tái phát các bug này.
+
+### 24.1. Khám sức khỏe định kỳ bị lặp 2 lần
+
+> **Nguồn**: Excel gốc sheet `Hạng mục cần cải tiến`, Row 208-209 (item 5):
+> `"Chi phí khám sức khỏe — Đang bị lặp 2 lần"`
+
+Bug cũ: chi phí khám sức khỏe định kỳ (nam/nữ) bị xuất ra 2 lần trong output,
+dẫn đến tổng chi phí bị x2.
+
+Rule phòng tránh:
+- Mỗi hạng mục khám sức khỏe (nam, nữ) chỉ được xuất **đúng 1 lần** trong output.
+- Nếu có nhiều dòng source cùng account code khám sức khỏe, phải gộp chứ không nhân đôi.
+- Test phải kiểm tra output không có 2 dòng cùng account khám sức khỏe cho cùng CC.
+
+### 24.2. Chi phí người mới bị gom hết vào tháng 12
+
+> **Nguồn**: Excel gốc sheet `Hạng mục cần cải tiến`, Row 211-212 (item 6):
+> `"Chi phí văn phòng phẩm của người mới đang bị sai"`
+> `"Tất cả các chi phí người mới đang bị nhập vào tháng 12 và nhân với tổng số người"`
+
+Bug cũ: tất cả chi phí người mới (VPP, sổ, thẻ, v.v.) bị gom vào **tháng 12**
+và nhân với **tổng số người** thay vì phân bổ theo tháng nhập việc.
+
+Root cause: code cũ không phân biệt tháng nhập việc, mặc định dồn hết tháng 12.
+
+Rule đúng (đã ghi ở Section 12.7):
+- Số người mới = số người tháng sau - số người tháng trước.
+- Chi phí người mới phải phân bổ vào **tháng nhập việc** (入社月), không phải tháng 12.
+- Riêng khám sức khỏe tuyển dụng: phân bổ vào **tháng sau** tháng nhập việc (Section 12.10).
+
+Test phải kiểm tra:
+- Chi phí người mới KHÔNG tập trung hết vào tháng 12.
+- Nếu tháng 6 có 4 người mới, chi phí VPP/sổ phải nằm ở tháng 6, không phải tháng 12.
+
+---
+
+## 25. Yêu cầu bổ sung mô tả
+
+> **Nguồn**: Excel gốc sheet `Hạng mục cần cải tiến`, Row 218 (item 8):
+> `"Bổ sung thêm mô tả"`
+
+Excel gốc ghi yêu cầu "bổ sung thêm mô tả" nhưng **không ghi rõ** mô tả gì,
+ở đâu, cho hạng mục nào.
+
+Trạng thái: `NEEDS_CLARIFICATION` — cần hỏi lại người dùng để xác nhận:
+
+- "Mô tả" ở đây là mô tả cho cột nào trong FORM output? (cột E? cột S?)
+- Mô tả lấy từ nguồn nào? (cột B của `*配賦額一覧*`? hay nguồn khác?)
+- Áp dụng cho tất cả chi phí hay chỉ nhóm cụ thể?
+
+Cho đến khi được clarify, không tự sáng tạo mô tả trong output.
+Rule Section 22.3 và 22.4 vẫn áp dụng: không tự nghĩ giải thích.
+
+---
+
+## 26. User claims — lỗi người dùng phát hiện khi sử dụng chương trình
+
+> **Nguồn**: Excel gốc sheet `Hạng mục cần cải tiến`, Row 267-339.
+> Đây là các lỗi/claim mà người dùng (Nguyễn Thị Phương Anh) ghi nhận
+> khi dùng chương trình xuất file kết quả `MP_CC_1412000006.xlsx`.
+> File xuất từ chương trình: `D:\SETUP\tvn183660\download\MP_CC_1412000006.xlsx`
+
+### 26.1. Claim 12: Cột E không được phép tồn tại mô tả
+
+> **Excel Row 268** (item 12):
+> `"Lỗi người dùng claim khi xuất file: Cột E không được phép tồn tại mô tả."`
+
+Người dùng xác nhận lại: cột E trong file output **không được có mô tả/giải thích**.
+Đây là lần xác nhận thứ hai (lần đầu ở Section 22.3, item 10 Row 239).
+
+Rule:
+- Cột E từ dòng 30 trở xuống phải **hoàn toàn trống** hoặc chỉ chứa nội dung
+  lấy nguyên từ nguồn dữ liệu canonical.
+- Không được agent tự viết/dịch/diễn giải bất kỳ text nào vào cột E.
+
+Hình minh họa từ output thực tế (cột E đang có text do agent tự viết):
+
+![Claim 12: Cột E có mô tả sai](images/claim_row269_img28.png)
+
+### 26.2. Claim 13: Chưa có tiền du lịch của tháng 5
+
+> **Excel Row 268 cột M** (item 13):
+> `"Chưa có tiền du lịch của tháng 5"`
+
+Output thiếu chi phí `社員旅行 Du lịch công ty` cho tháng 5.
+Chi phí này thuộc nhóm chi phí đặc thù theo tháng (Section 12.2, 12.4).
+
+Rule:
+- Phải kiểm tra output có dòng chi phí du lịch công ty ở cột tháng 5.
+- Nếu thiếu, điều tra xem filter nội dung `社員旅行` trong `FY2027配賦額一覧`
+  có đang bỏ sót không.
+
+Hình minh họa:
+
+![Claim 13: Thiếu tiền du lịch tháng 5](images/claim_row270_img30.png)
+
+### 26.3. Claim 14: Code 5005246282 chỉ chạy được từ tháng 4 đến tháng 6
+
+> **Excel Row 279 cột M** (item 14):
+> `"Code 5005246282 đang chỉ chạy được từ tháng 4 đến tháng 6"`
+
+Account code `5005246282` chỉ có dữ liệu từ tháng 4-6, thiếu các tháng còn lại.
+Cần điều tra:
+- Liệu source data (file phân bổ) có dữ liệu cho các tháng 7-3 không?
+- Hay code đang filter sai khiến mất dữ liệu các tháng sau tháng 6?
+
+Hình minh họa:
+
+![Claim 14: Code 5005246282 thiếu tháng](images/claim_row281_img29.png)
+
+### 26.4. Claim 15: Tháng 12 đang mặc định nhân chi phí người mới với tổng số người
+
+> **Excel Row 289 cột M** (item 15):
+> `"Code 5005246281, 5005246281, 5005246281, 5005246281, 5005246288, 5005246288`
+> `như hình đang bị claim: tháng 12 đang mặc định nhân chi phí của người mới`
+> `với tổng số người (sai với yêu cầu)"`
+
+Đây là xác nhận lại bug đã ghi ở Section 24.2 (GAP-5).
+Các account codes bị ảnh hưởng:
+- `5005246281` (xuất hiện 4 lần — có thể là 4 loại chi phí khác nhau cùng code)
+- `5005246288` (xuất hiện 2 lần)
+
+Tháng 12 đang sai: nhân chi phí người mới × **tổng số người** thay vì × **số người mới**.
+
+Hình minh họa (các dòng đỏ là dòng sai):
+
+![Claim 15: Tháng 12 sai công thức người mới](images/claim_row291_img31.png)
+
+### 26.5. Claim 16: Chi phí `社員証用写真のみ` không cần cho người mới
+
+> **Excel Row 306 cột M** (item 16):
+> `"chi phí 社員証用写真のみ không cần cho người mới"`
+
+Chi phí ảnh thẻ nhân viên (`社員証用写真のみ`) **không áp dụng** cho người mới.
+Code hiện tại đang nhầm, gộp chi phí này vào nhóm "chi phí người mới".
+
+Rule:
+- Loại bỏ `社員証用写真のみ` khỏi danh sách chi phí người mới.
+- Chỉ tính ảnh thẻ cho tổng nhân sự (không liên quan đến new employee count).
+
+Hình minh họa:
+
+![Claim 16: Ảnh thẻ không phải chi phí người mới](images/claim_row307_img32.png)
+
+### 26.6. Claim 17: Dòng `ペン Bút` thiếu dữ liệu cột C, D
+
+> **Excel Row 316 cột M** (item 17):
+> `"5005246288 ... ペン Bút -> ở dòng này đang thiếu dữ liệu của cột C, D"`
+
+Dòng chi phí bút (`ペン Bút`, account `5005246288`) trong output thiếu dữ liệu
+ở cột C và cột D. Cần điều tra:
+- Cột C, D trong FORM output thường chứa gì? (account code, tên tài khoản?)
+- Source data có đủ thông tin để điền C, D không?
+
+Hình minh họa:
+
+![Claim 17: Dòng Bút thiếu cột C, D](images/claim_row317_img34.png)
+
+### 26.7. Claim 18: Dòng 64-69 trùng với dòng 30-35 nhưng code chi phí sai
+
+> **Excel Row 323 cột M** (item 18):
+> `"Những dòng 64~69, người dùng nói nó đang trùng với chi phí ở dòng từ 30~35`
+> `nhưng code chi phí thì sai? Điều tra và fix triệt để (không hardcode dòng dữ liệu)"`
+
+Người dùng phát hiện:
+- Dòng 64-69 trong output chứa dữ liệu **trùng** với dòng 30-35.
+- Nhưng account code ở dòng 64-69 **sai** (khác với account code ở dòng 30-35).
+
+Rule:
+- Điều tra xem tại sao có duplicate data giữa 2 block.
+- Không được hardcode dòng để fix — phải fix logic gốc.
+- Có thể là do source data có 2 entries cho cùng chi phí nhưng khác account,
+  hoặc code đang ghi 2 lần.
+
+Hình minh họa:
+
+![Claim 18: Dòng 64-69 trùng dòng 30-35](images/claim_row324_img33.png)
+
+### 26.8. Claim 19: Không có chi phí ở dòng 73, 74, 75
+
+> **Excel Row 331 cột M** (item 19):
+> `"Không có chi phí ở dòng 73, 74, 75? Điều tra và fix triệt để`
+> `(không hardcode dòng dữ liệu)"`
+
+Dòng 73-75 trong output trống, không có chi phí.
+Cần điều tra:
+- Dòng 73-75 nên chứa chi phí gì? (dựa vào FORM template)
+- Source data có dữ liệu cho các dòng này không?
+- Có phải code đang bỏ qua 1 số loại chi phí?
+
+Rule: Không hardcode dòng — fix logic gốc để output đầy đủ.
+
+Hình minh họa:
+
+![Claim 19: Thiếu chi phí dòng 73-75](images/claim_row333_img35.png)
+
+---
+
+### 26.9. Tổng hợp claims và phân loại
+
+| Claim | Loại lỗi | Mức độ | Liên quan section |
+|---|---|---|---|
+| 12 | Layout: cột E có mô tả sai | 🔴 Nghiêm trọng | 22.3, 22.4 |
+| 13 | Thiếu dữ liệu: du lịch tháng 5 | 🔴 Nghiêm trọng | 12.4 |
+| 14 | Thiếu dữ liệu: code 5005246282 chỉ có 3 tháng | 🟡 Quan trọng | 12.2 |
+| 15 | Logic sai: người mới × tổng số người ở tháng 12 | 🔴 Nghiêm trọng | 24.2, 12.7 |
+| 16 | Logic sai: ảnh thẻ không phải chi phí người mới | 🟡 Quan trọng | 12.7 |
+| 17 | Thiếu dữ liệu: dòng Bút thiếu cột C, D | 🟡 Quan trọng | — |
+| 18 | Duplicate: dòng 64-69 trùng dòng 30-35 + sai code | 🔴 Nghiêm trọng | — |
+| 19 | Thiếu dữ liệu: dòng 73-75 trống | 🟡 Quan trọng | — |
+
+> **Ghi chú**: Tất cả claim 12-19 trên đều từ file output `MP_CC_1412000006.xlsx`.
+> Người dùng nhấn mạnh: **không hardcode dòng dữ liệu** để fix (Claim 18, 19).
+
+---
+
+## 27. Yêu cầu bổ sung — item 20: Chi phí event theo tháng chưa chạy được
+
+> **Nguồn**: Excel gốc sheet `Hạng mục cần cải tiến`, Row 341-343 (item 20).
+> Ngày bổ sung: 09.07.2026.
+
+### 27.1. Nội dung yêu cầu
+
+> **Excel Row 341 cột F** (item 20):
+> `"Trong sheet: 'Chi phí phân bổ từ hành chính', dòng 95:`
+> `社員旅行 Du lịch công ty: Tháng 5,`
+> `Tiệc khuấy động năm tài chính 決起コンパ: Tháng 5,`
+> `会社設立記念 感謝イベント Sự kiện tri ân ngày thành lập công ty: Tháng 10,`
+> `ポケットカレンダー Lịch bỏ túi: Tháng 11,`
+> `忘年会補助金 Hỗ trợ tiệc tất niên: Tháng 2,`
+> `お年玉 Tiền lì xì: Tháng 2`
+> `vẫn chưa chạy được chi phí"`
+
+Các khoản chi phí event theo tháng (Section 12.5) chưa được chương trình tính.
+Danh sách cụ thể:
+
+| Event | Tiếng Nhật | Tháng |
+|---|---|---|
+| Du lịch công ty | 社員旅行 | 5 |
+| Tiệc khuấy động năm tài chính | 決起コンパ | 5 |
+| Sự kiện tri ân ngày thành lập | 会社設立記念 感謝イベント | 10 |
+| Lịch bỏ túi | ポケットカレンダー | 11 |
+| Hỗ trợ tiệc tất niên | 忘年会補助金 | 2 |
+| Tiền lì xì | お年玉 | 2 |
+
+### 27.2. Ngoại lệ: chi phí có "số người riêng"
+
+> **Excel Row 342 cột F**:
+> `"Những chi phí có ghi (có số người riêng) ở ngay bên dưới`
+> `tạm thời không cần tính chi phí, vì người dùng tạm thời chưa nhớ về 'số người riêng'"`
+
+Rule:
+- Những event có ghi "о́ số người riêng" (khác với tổng số người) → **tạm thời bỏ qua**, không tính chi phí.
+- Chỉ tính những event dùng tổng số người (driver chung).
+- Khi người dùng cung cấp "số người riêng" sau, sẽ bật lại.
+
+### 27.3. Ưu tiên giữa yêu cầu 7 và yêu cầu 20
+
+> **Excel Row 343 cột F**:
+> `"Nó đang có chút xung đột với yêu cầu 7, nhưng hãy tuân theo yêu cầu số 20 này."`
+
+Yêu cầu 7 (Section 6.1 item 7) nói "đã bổ sung hạng mục ở sheet phân bổ hành chính".
+Yêu cầu 20 nói "những event có số người riêng thì tạm bỏ qua".
+
+Rule: **Yêu cầu 20 thắng yêu cầu 7** khi xung đột.
+
+Hình minh họa (tham chiếu item 7 — chưa chạy xong chi phí phân bổ hành chính):
+
+![Item 20: Chưa chạy chi phí phân bổ hành chính (A144-A169)](images/Hạng_mục_cần_cải_tiến_row345_img36.png)
+
+---
+
+## 28. Cập nhật master `原価センタ` — 5 Cost Center mới
+
+> **Nguồn**: Excel gốc sheet `原価センタ`, Row 62-66.
+> Đây là 5 Cost Center mới được thêm vào master.
+
+| Cost Center | Tên | No. | 採算区分 | 原価区分 |
+|---|---|---|---|---|
+| `1412000098` | 電工製造課 | 64 | 製造 | 製造 |
+| `1412000096` | ESD2課 | 63 | 製造 | 製造 |
+| `1412000099` | MD4課 | 65 | 製造 | 製造 |
+| `1412000100` | MD5課 | 68 | 製造 | 製造 |
+| `1412000101` | EI2課 | 66 | 製造 | 製造 |
+
+Rule:
+- Tất cả 5 CC mới đều thuộc `原価区分 = 製造`.
+- Code phải hỗ trợ các CC này khi user chọn từ dropdown.
+- Không cần hardcode — chỉ cần đọc master `原価センタ` đầy đủ.
+
+---
+
+## 21. BUG: Chi phí phát thực tế (配布数) bị tính sai bằng headcount delta
+
+**Ngày phát hiện**: 2026-07-07
+**Claim từ**: Người dùng claim dòng 61 trong `MP_CC_1412000006.xlsx` (`金型用帽子（白）Mũ trắng tĩnh điện`) không đúng.
+
+### Mô tả vấn đề
+
+Trong file `FY2027配賦額一覧`, có **23 rules** (制服, 帽子, シューズ, 安全靴, v.v.) có `driver_raw` chứa keyword `配布数` (actual distribution count):
+
+> 前月16日から当月15日までの新入社員と**支給依頼者**の**制服配布数**は当月振替
+
+Nghĩa: _"Phân bổ dựa trên **số lượng THỰC TẾ PHÁT RA** cho nhân viên mới + người yêu cầu cấp đổi"_
+
+**Chương trình đang tính SAI**: vì `driver_raw` chứa `新入社員` → `_is_new_hire_driven_rule()=True` → dùng `_get_event_delta()` (headcount delta) làm driver.
+
+Điều này **SAI** vì:
+1. **配布数 = số lượng phát thực tế**, KHÔNG PHẢI headcount delta
+2. Headcount delta chỉ đếm người mới, bỏ sót **支給依頼者** (người yêu cầu cấp đổi vì hỏng/mất)
+3. Không phải tất cả CC đều cần tất cả items (ví dụ: CC kỹ thuật văn phòng không cần mũ tĩnh điện `金型用帽子`)
+4. Kết quả: tất cả CC có người mới đều bị allocate chi phí đồng phục/mũ/giày → **phân bổ tràn lan, sai thực tế**
+
+### 23 Rules bị ảnh hưởng
+
+| Rule ID | Item | Unit Price |
+|---------|------|-----------|
+| 21 | ポケットカレンダー Lịch bỏ túi | 10,935 |
+| 22 | 制服（夏） Đồng phục ngắn tay | 165,000 |
+| 24 | 制服（冬） Đồng phục dài tay | 175,000 |
+| 26 | ポロ制服 Áo Polo | 139,000 |
+| 27 | コート制服 Áo khoác | 240,000 |
+| 28 | 制服ズボン Quần | 116,000 |
+| 29 | 妊婦ズボン Quần bà bầu | 124,500 |
+| 30 | 帽子（白） Mũ trắng | 33,500 |
+| 31 | 帽子（カラー） Mũ màu | 39,000 |
+| 32 | 金型用帽子（白）Mũ trắng tĩnh điện | 47,000 |
+| 33 | シューズ（女性） Giày vải nữ | 82,000 |
+| 34 | シューズ（男性） Giày vải nam | 84,000 |
+| 35 | 大シューズ Giày ngoại cỡ | 120,000 |
+| 36 | タイプ1の安全靴 Giày bảo hộ loại 1 | 410,000 |
+| 37 | 妊婦用腕章 Băng đeo tay cho người bầu | 27,000 |
+| 38 | 保安課の半袖 Áo ngắn tay phòng an ninh | 250,500 |
+| 39 | 保安課の長袖 Áo dài tay phòng an ninh | 265,000 |
+| 40 | 保安課のズボン Quần phòng an ninh | 129,500 |
+| 41 | 保安課のコート Áo khoác phòng an ninh | 240,000 |
+| 42 | 保安課の靴 Giày phòng an ninh | 297,600 |
+| 43 | 保安課の帽子 Mũ phòng an ninh | 43,200 |
+| 50 | 社員旅行不参加対象者へのギフト贈呈 | 1,312,500 |
+| 52 | 月餅 Bánh Trung Thu | 56,000 |
+
+### Cách fix
+
+**Nguyên tắc**: Rules có `配布数` trong `driver_raw` → yêu cầu **manual input** (số lượng phát thực tế), KHÔNG auto-calculate từ headcount delta.
+
+**Code fix** (đã áp dụng trong `allocator.py`):
+1. Thêm constant `MANUAL_DISTRIBUTION_DRIVER_TOKENS = ("配布数",)`
+2. Thêm method `_requires_manual_distribution_count(rule)` → check `driver_raw` chứa `配布数`
+3. Trong `_process_allocation_rules()`: skip rules có `配布数` → output = 0 (chờ manual input)
+
+**Kết quả**: 23 rules sẽ **không tự động phân bổ** nữa. Khi cần, user phải cung cấp actual distribution count qua `event_drivers_manual.csv`.

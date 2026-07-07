@@ -12,6 +12,7 @@ from typing import Any
 
 from openpyxl import load_workbook
 
+from src.engine.cost_center_context import require_cost_center
 from src.engine.output_mode import get_group_spec
 from src.engine.output_placement import plan_output_groups
 
@@ -92,12 +93,12 @@ def _row_month_values(value_ws, formula_ws, row_index: int | None) -> tuple[tupl
 
 def preview_facility_file_order(
     source_path: str | Path,
-    cost_center: str | int = "1412000040",
+    cost_center: str | int | None = None,
     start_row: int = 200,
 ) -> FacilityFileOrderPreview:
     """Build a read-only Facility file-order preview for one cost center."""
     source = Path(source_path)
-    cc_key = str(cost_center)
+    cc_key = require_cost_center(cost_center, context="Facility file-order preview")
     specs = (get_group_spec("facility"),)
     planned = plan_output_groups(specs, start_row=start_row, item_counts={"facility": 6})[0]
     planned_rows = dict(planned.item_rows)

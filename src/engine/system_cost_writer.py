@@ -18,7 +18,7 @@ def _clear_row(ws, row:int):
     for c in range(MONTH_START_COL, MONTH_START_COL+12):
         ws.cell(row=row,column=c).value=None
 
-def apply_system_cost_to_workbook(workbook_path, system_source_paths, cost_center: str | int='1412000040', start_row:int=211):
+def apply_system_cost_to_workbook(workbook_path, system_source_paths, cost_center: str | int | None = None, start_row:int=211):
     workbook_file=Path(workbook_path)
     for src in system_source_paths:
         if workbook_file.resolve()==Path(src).resolve():

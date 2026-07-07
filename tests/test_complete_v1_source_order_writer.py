@@ -1,11 +1,13 @@
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
+from openpyxl.styles import PatternFill
 
 from src.engine.complete_v1_source_order_writer import apply_complete_v1_source_order_to_workbook
 from src.engine.source_order_output import CANONICAL_SOURCE_FILE_ORDER
 
 SHEET = "蜀・ｨｳ・假ｽｽ・・4・・譛・"
+BLUE_FILL = PatternFill(fill_type="solid", fgColor="CCFFFF")
 
 
 def _workbook(path: Path) -> Path:
@@ -28,6 +30,24 @@ def _workbook(path: Path) -> Path:
     wb.save(path)
     wb.close()
     return path
+
+
+def _fill_rgb(cell):
+    fill = cell.fill
+    if fill is None or not fill.fill_type:
+        return None
+    color = fill.fgColor
+    if color is not None and color.type == "rgb":
+        return color.rgb
+    return fill.fill_type
+
+
+def _assert_output_layout_clean(ws, start_row: int = 30, end_row: int | None = None):
+    end = end_row or ws.max_row
+    for row in range(start_row, end + 1):
+        for col in range(1, 5):
+            assert _fill_rgb(ws.cell(row, col)) in (None, "00000000", "00FFFFFF", "FFFFFFFF")
+        assert ws.cell(row, 5).value is None
 
 
 def test_complete_v1_writer_rewrites_legacy_rows_to_source_order_blocks(tmp_path):
@@ -82,6 +102,40 @@ def test_complete_v1_writer_default_output_starts_at_row_30(tmp_path):
         assert ws.cell(33, 19).value == "fixed asset interest"
         assert ws.cell(34, 19).value is None
         assert ws.cell(35, 19).value == "system cost"
+        _assert_output_layout_clean(ws, 30, 40)
+    finally:
+        wb.close()
+
+
+def test_complete_v1_writer_clears_ad_fill_and_column_e_item_ids_from_final_output(tmp_path):
+    path = tmp_path / "out.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    for col in range(1, 5):
+        ws.cell(36, col).fill = BLUE_FILL
+    ws.cell(36, 2).value = 5006016260
+    ws.cell(36, 5).value = "building_depreciation"
+    ws.cell(36, 6).value = 100
+    ws.cell(36, 19).value = "facility building depreciation"
+    ws.cell(36, 20).value = "SOURCE_DERIVED"
+    wb.save(path)
+    wb.close()
+
+    result = apply_complete_v1_source_order_to_workbook(path, start_row=30, clear_until_row=90)
+
+    assert result["rows_written"] == 1
+    assert result["layout_fills_cleared"] >= 4
+    assert result["item_ids_cleared"] >= 1
+
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        assert ws.cell(30, 2).value == 5006016260
+        assert ws.cell(30, 6).value == 100
+        assert ws.cell(30, 19).value == "facility building depreciation"
+        assert CANONICAL_SOURCE_FILE_ORDER[0] in ws.cell(30, 20).value
+        _assert_output_layout_clean(ws, 30, 36)
     finally:
         wb.close()
 
@@ -188,6 +242,8 @@ def test_complete_v1_writer_reorders_existing_source_order_rows_idempotently(tmp
     ws.cell(171, 6).value = 300
     ws.cell(171, 19).value = "birthday"
     ws.cell(171, 20).value = f"source_file={CANONICAL_SOURCE_FILE_ORDER[4]}; original_row=59; source-order-complete-v1"
+    for col in range(1, 5):
+        ws.cell(170, col).fill = BLUE_FILL
     wb.save(path)
     wb.close()
 
@@ -205,6 +261,7 @@ def test_complete_v1_writer_reorders_existing_source_order_rows_idempotently(tmp
         assert ws.cell(171, 19).value is None
         assert ws.cell(172, 19).value == "birthday"
         assert ws.cell(172, 18).value == "=SUM(F172:Q172)"
+        _assert_output_layout_clean(ws, 168, 172)
     finally:
         wb.close()
 
@@ -240,6 +297,141 @@ def test_complete_v1_writer_preserves_unmanaged_business_rows_inside_clear_range
         wb.close()
 
 
+def test_complete_v1_writer_does_not_preserve_generated_file_order_duplicates(tmp_path):
+    path = tmp_path / "out.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    ws.cell(36, 2).value = 5006016260
+    ws.cell(36, 6).value = "=ROUND(244.09*$B$2,0)"
+    ws.cell(36, 19).value = "facility building depreciation"
+    ws.cell(52, 2).value = 5004086291
+    ws.cell(52, 6).value = "=ROUND(244.09*$B$2,0)"
+    ws.cell(52, 18).value = "=SUM(F52:Q52)"
+    ws.cell(52, 19).value = "Khấu hao nhà"
+    ws.cell(52, 20).value = "ROUND_USD_BY_B2"
+    ws.cell(64, 2).value = 5004086291
+    ws.cell(64, 6).value = 932009
+    ws.cell(64, 18).value = "=SUM(F64:Q64)"
+    ws.cell(64, 19).value = "Điện"
+    ws.cell(64, 20).value = "COPY_VND_MONTHLY"
+    wb.save(path)
+    wb.close()
+
+    result = apply_complete_v1_source_order_to_workbook(path, start_row=30, clear_until_row=90)
+
+    assert result["rows_written"] == 1
+    assert result["preserved_rows_written"] == 0
+
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        descriptions = [ws.cell(row, 19).value for row in range(30, 60)]
+        assert "facility building depreciation" in descriptions
+        assert "Khấu hao nhà" not in descriptions
+        assert "Điện" not in descriptions
+    finally:
+        wb.close()
+
+
+def test_complete_v1_writer_drops_generated_source_order_summary_rows_on_rerun(tmp_path):
+    path = tmp_path / "out.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    ws.cell(30, 2).value = 5004086291
+    ws.cell(30, 6).value = 120399176
+    ws.cell(30, 18).value = "=SUM(F30:Q30)"
+    ws.cell(30, 19).value = "System Cost / システム課金"
+    ws.cell(30, 20).value = (
+        "COPY_SUMMARY_VND_TOTAL_BY_PERIOD | "
+        f"source_file={CANONICAL_SOURCE_FILE_ORDER[2]}; original_row=179; source-order-complete-v1"
+    )
+    ws.cell(75, 2).value = 5005246282
+    ws.cell(75, 6).value = "=ROUND((10*3)*$B$2,0)"
+    ws.cell(75, 18).value = "=SUM(F75:Q75)"
+    ws.cell(75, 19).value = "System Cost (Mail,VPN,R3, Mes,PLM,VPS,...)"
+    wb.save(path)
+    wb.close()
+
+    result = apply_complete_v1_source_order_to_workbook(path, start_row=30, clear_until_row=199)
+
+    assert result["rows_written"] == 0
+    assert result["preserved_rows_written"] == 1
+
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        assert ws.cell(30, 2).value == 5005246282
+        assert ws.cell(30, 19).value == "System Cost (Mail,VPN,R3, Mes,PLM,VPS,...)"
+        descriptions = [ws.cell(row, 19).value for row in range(30, 80)]
+        assert "System Cost / システム課金" not in descriptions
+    finally:
+        wb.close()
+
+
+def test_complete_v1_writer_fills_lookup_formulas_for_preserved_cost_rows(tmp_path):
+    path = tmp_path / "out.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    ws.cell(89, 2).value = 5005246288
+    ws.cell(89, 6).value = "=4*3000"
+    ws.cell(89, 18).value = "=SUM(F89:Q89)"
+    ws.cell(89, 19).value = "ペン Bút"
+    ws.cell(89, 20).value = "allocation_rule_row=89; exact_identity=ペン Bút"
+    wb.save(path)
+    wb.close()
+
+    result = apply_complete_v1_source_order_to_workbook(path, start_row=30, clear_until_row=199)
+
+    assert result["rows_written"] == 0
+    assert result["preserved_rows_written"] == 1
+
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        assert ws.cell(30, 2).value == 5005246288
+        assert ws.cell(30, 3).value.startswith("=IFERROR(IF(VLOOKUP($B30,")
+        assert "勘定科目" in ws.cell(30, 3).value
+        assert ws.cell(30, 4).value == '=IF(C30="","",VLOOKUP($B30,勘定科目!$A:$E,4,0))'
+        assert ws.cell(30, 6).value == "=4*3000"
+        assert ws.cell(30, 18).value == "=SUM(F30:Q30)"
+    finally:
+        wb.close()
+
+
+def test_complete_v1_writer_drops_account_only_template_rows(tmp_path):
+    path = tmp_path / "out.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    ws.cell(36, 2).value = 5006016260
+    ws.cell(36, 6).value = 100
+    ws.cell(36, 19).value = "facility building depreciation"
+    for row in (61, 62, 63):
+        ws.cell(row, 2).value = 5004086291
+        ws.cell(row, 3).value = f'=IFERROR(VLOOKUP($B{row},蜍伜ｮ夂ｧ醍岼!$A:$E,2,0),"")'
+        ws.cell(row, 4).value = f'=IF(C{row}="","",VLOOKUP($B{row},蜍伜ｮ夂ｧ醍岼!$A:$E,4,0))'
+    wb.save(path)
+    wb.close()
+
+    result = apply_complete_v1_source_order_to_workbook(path, start_row=30, clear_until_row=90)
+
+    assert result["rows_written"] == 1
+    assert result["preserved_rows_written"] == 0
+
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        assert ws.cell(30, 19).value == "facility building depreciation"
+        for row in (31, 32, 33):
+            assert ws.cell(row, 2).value is None
+            assert ws.cell(row, 19).value is None
+    finally:
+        wb.close()
+
+
 def test_complete_v1_writer_does_not_duplicate_source_order_marker_on_rerun(tmp_path):
     path = tmp_path / "out.xlsx"
     wb = Workbook()
@@ -260,9 +452,12 @@ def test_complete_v1_writer_does_not_duplicate_source_order_marker_on_rerun(tmp_
     wb = load_workbook(path)
     try:
         ws = wb[SHEET]
+        # COPY_SOURCE_MONTH_SAMPLE rows are now treated as generated file-order
+        # policy rows and are skipped (cleared) during source-order re-layout.
+        # This prevents phantom admin consumable rows from being preserved
+        # without account codes under incorrect parent accounts.
         note = ws.cell(30, 20).value
-        assert note.startswith("COPY_SOURCE_MONTH_SAMPLE | source_file=")
-        assert note.count("source-order-complete-v1") == 1
+        assert note is None or "COPY_SOURCE_MONTH_SAMPLE" not in str(note)
     finally:
         wb.close()
 

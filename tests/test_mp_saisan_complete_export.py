@@ -117,10 +117,11 @@ def test_no_overwrite_rows_200_212(tmp_path):
     wb.close()
 
 
-def test_complete_v1_missing_reference_map_fails_before_workbook_export(monkeypatch, tmp_path):
+def test_complete_v1_missing_reference_map_exports_without_reference_layer(monkeypatch, tmp_path):
     import scripts.run_e2e as run_e2e
 
     export_calls = []
+    complete_reference_calls = []
 
     class Cursor:
         def execute(self, *args):
@@ -162,12 +163,15 @@ def test_complete_v1_missing_reference_map_fails_before_workbook_export(monkeypa
     monkeypatch.setattr(run_e2e, "parse_it_simulation", lambda conn, source_dir: {})
     monkeypatch.setattr(run_e2e, "parse_ga", lambda conn, source_dir: {})
     monkeypatch.setattr(run_e2e, "parse_birthday_workbook", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_manual_headcount", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_manual_headcount", lambda conn, source_dir, base_dir=None: {})
     monkeypatch.setattr(run_e2e, "parse_manual_special_costs", lambda conn, source_dir: {})
     monkeypatch.setattr(run_e2e, "parse_manual_event_drivers", lambda conn, source_dir: {})
     monkeypatch.setattr(run_e2e, "parse_nnn_paperwork", lambda conn, source_dir: {})
     monkeypatch.setattr(run_e2e, "AllocationEngine", Engine)
     monkeypatch.setattr(run_e2e, "HubBuilder", Builder)
+    monkeypatch.setattr(run_e2e, "write_pipeline_audit_report", lambda **kwargs: {"report_path": "audit.md", "missing_csv_path": "missing.csv"})
+    monkeypatch.setattr(run_e2e, "apply_mp_saisan_complete_v1", lambda **kwargs: complete_reference_calls.append(kwargs) or {})
+    monkeypatch.setattr(run_e2e, "_apply_complete_v1_source_order", lambda workbook_path, log_callback, phase: {"phase": phase})
 
     ok, message = run_e2e.run_universal_pipeline(
         2027,
@@ -178,7 +182,6 @@ def test_complete_v1_missing_reference_map_fails_before_workbook_export(monkeypa
         reference_map_path=str(tmp_path / "missing-map.csv"),
     )
 
-    assert ok is False
-    assert "requires --primary-reference-path" in message
-    assert export_calls == []
-    assert not (tmp_path / "OUTPUT_FY2027" / "MP_CC_1412000006.xlsx").exists()
+    assert ok is True, message
+    assert export_calls
+    assert complete_reference_calls == []

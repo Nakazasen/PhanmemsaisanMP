@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 import xlrd
+from src.engine.cost_center_context import require_cost_center
 
 MONTH_RANGES = ((0,3),(3,9),(9,12))
 SUMMARY_SHEET = '部門別サマリー(VND)'
@@ -47,12 +48,13 @@ def _summary_total_for_cc(path: str | Path, cost_center: str) -> tuple[float | N
                 return None, f"{Path(path).name}|{SUMMARY_SHEET}|row={r+1}|cc={_norm_cc(vals[1])}|total_vnd={total}"
     return None, f"{Path(path).name}|{SUMMARY_SHEET}|cc_not_found"
 
-def preview_system_cost_file_order(system_source_paths, cost_center: str | int = '1412000040', start_row: int = 211):
+def preview_system_cost_file_order(system_source_paths, cost_center: str | int | None = None, start_row: int = 211):
+    cc_key = require_cost_center(cost_center, context="System Cost preview")
     paths = [Path(p) for p in system_source_paths]
     values = [None] * 12
     evidence = []
     for path, (start, end) in zip(paths, MONTH_RANGES):
-        total, ev = _summary_total_for_cc(path, str(cost_center))
+        total, ev = _summary_total_for_cc(path, cc_key)
         evidence.append(ev)
         for idx in range(start, end):
             values[idx] = total
@@ -68,4 +70,4 @@ def preview_system_cost_file_order(system_source_paths, cost_center: str | int =
         confidence=confidence,
         note='FILE_ORDER_SINGLE_ROW from three System Cost period workbooks',
     )
-    return SystemCostFileOrderPreview(str(cost_center), start_row, start_row, start_row + 1, (item,))
+    return SystemCostFileOrderPreview(cc_key, start_row, start_row, start_row + 1, (item,))

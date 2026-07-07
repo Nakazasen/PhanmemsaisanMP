@@ -75,10 +75,12 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
     54: {
         "tokens": ("決起コンパ", "tiệc khuấy động năm tài chính", "phương châm bộ phận", "phuong cham bo phan"),
         "exclude_tokens": (),
+        "output_description": "決起コンパ",
     },
     63: {
         "tokens": ("お年玉", "tiền lì xì"),
         "exclude_tokens": (),
+        "output_description": "お年玉",
     },
     66: {
         "tokens": ("社員旅行 du lịch công ty", "社員旅行", "京セラフェスティバル", "lễ hội kyocera"),
@@ -93,6 +95,7 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
     70: {
         "tokens": ("忘年会補助金", "hỗ trợ tiệc tất niên"),
         "exclude_tokens": (),
+        "output_description": "忘年会補助金",
     },
     71: {
         "tokens": ("月餅", "bánh trung thu"),
@@ -129,10 +132,12 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
     82: {
         "tokens": ("ポケットカレンダー", "pocket calendar", "lịch bỏ túi"),
         "exclude_tokens": (),
+        "output_description": "ポケットカレンダー",
     },
     88: {
         "tokens": ("社員証用ケース", "vỏ thẻ + móc thẻ"),
         "exclude_tokens": (),
+        "output_description": "社員証用ケース",
     },
     89: {
         "tokens": ("alloc: ペン", "ペン bút"),
@@ -322,8 +327,20 @@ class HubBuilder:
         self._clear_visible_months(worksheet, row_index)
 
     def _clear_append_area(self, worksheet, start_row: int) -> None:
+        meaningful_columns = (
+            ACCOUNT_COL,
+            5,
+            *range(VISIBLE_MONTH_START_COL, TOTAL_COL + 1),
+            DESCRIPTION_COL,
+            WBS_COL,
+        )
         for row_index in range(start_row, self._append_last_row(worksheet) + 1):
-            self._prepare_append_row(worksheet, row_index)
+            if any(
+                self._cell_has_user_visible_value(worksheet, row_index, column_index)
+                for column_index in meaningful_columns
+            ):
+                for column_index in range(ACCOUNT_COL, WBS_COL + 1):
+                    worksheet.cell(row=row_index, column=column_index).value = None
 
     def _append_last_row(self, worksheet) -> int:
         return max(int(worksheet.max_row or 0), MIN_APPEND_LAST_ROW)
@@ -1104,6 +1121,7 @@ class HubBuilder:
             account_code = fixed_account_codes.get(row_index)
             if account_code:
                 worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
+                self._write_lookup_formulas(worksheet, row_index)
 
         electric_series = self._month_series(cc_code, source="facility", description="electric")
         if self._series_has_output(electric_series):
@@ -1225,6 +1243,7 @@ class HubBuilder:
             )
             if account_code:
                 worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
+                self._write_lookup_formulas(worksheet, row_index)
             output_description = matcher.get("output_description")
             if output_description:
                 worksheet.cell(row=row_index, column=DESCRIPTION_COL, value=output_description)

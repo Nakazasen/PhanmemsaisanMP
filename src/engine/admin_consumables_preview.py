@@ -8,6 +8,8 @@ from typing import Any
 
 from openpyxl import load_workbook
 
+from src.engine.cost_center_context import require_cost_center
+
 ADMIN_CONSUMABLE_ITEMS = (
     ("toilet_paper", "トイレットペーパー", "FY2027予定", "トイレットペーパー"),
     ("hand_soap", "手洗い洗剤", "FY2027予定", "手洗い洗剤"),
@@ -70,12 +72,13 @@ def _month_sample(sheet_name: str, values: list[Any]) -> tuple[Any, Any]:
 def preview_admin_consumables_file_order(
     admin_source_path: str | Path,
     allocation_source_path: str | Path | None = None,
-    cost_center: str | int = "1412000040",
+    cost_center: str | int | None = None,
     start_row: int = 207,
 ) -> AdminConsumablesFileOrderPreview:
     """Build a read-only preview for the Admin consumables mini-batch."""
     admin_source = Path(admin_source_path)
     allocation_source = Path(allocation_source_path) if allocation_source_path else None
+    cc_key = require_cost_center(cost_center, context="Admin consumables preview")
     value_wb = load_workbook(admin_source, read_only=True, data_only=True)
     try:
         items: list[AdminConsumablePreviewItem] = []
@@ -105,7 +108,7 @@ def preview_admin_consumables_file_order(
                 )
             )
         return AdminConsumablesFileOrderPreview(
-            cost_center=str(cost_center),
+            cost_center=cc_key,
             admin_source_path=str(admin_source),
             allocation_source_path=str(allocation_source) if allocation_source else None,
             planned_start_row=start_row,

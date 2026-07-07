@@ -33,6 +33,15 @@ POSTING_MONTH_ITEM_OVERRIDES = (
     (("会社設立記念", "sự kiện tri ân ngày thành lập công ty"), "10月"),
 )
 
+SECTION27_EVENT_RULES = (
+    (("社員旅行", "du lich cong ty", "du lịch công ty"), "5月"),
+    (("決起コンパ", "tiec khuay dong", "tiệc khuấy động"), "5月"),
+    (("会社設立記念", "感謝イベント", "su kien tri an", "sự kiện tri ân"), "10月"),
+    (("ポケットカレンダー", "pocket calendar", "lich bo tui", "lịch bỏ túi"), "11月"),
+    (("忘年会補助金", "ho tro tiec tat nien", "hỗ trợ tiệc tất niên"), "2月"),
+    (("お年玉", "tien li xi", "tiền lì xì"), "2月"),
+)
+
 
 MANUAL_EVENT_ITEM_TOKENS = (
     "visa",
@@ -81,6 +90,22 @@ EVENT_MONTH_TOKENS = (
     "thang cap",
 )
 NEXT_EVENT_MONTH_TOKENS = ("\u7fcc\u6708", "thang tiep theo")
+NEW_HIRE_DRIVER_TOKENS = (
+    "\u65b0\u5165\u793e\u54e1",
+    "\u914d\u5c5e\u4eba\u6570",
+    "nguoi moi",
+    "so nguoi vao",
+    "nhan vien moi",
+    "cong nhan moi",
+    "new hire",
+)
+NEW_HIRE_PHOTO_ONLY_TOKENS = (
+    "\u793e\u54e1\u8a3c\u7528\u5199\u771f\u306e\u307f",
+    "\u793e\u54e1\u8a3c\u7528\u5199\u771f",
+)
+MANUAL_DISTRIBUTION_DRIVER_TOKENS = (
+    "\u914d\u5e03\u6570",
+)
 BUS_RULE_SPECS = {
     "bus_expat_count": {
         "tokens": ("出向者通勤送迎費", "xe dua don cho nguoi nhat", "xe đưa đón cho người nhật"),
@@ -331,6 +356,29 @@ class AllocationEngine:
             token in lower_text for token in NEXT_EVENT_MONTH_TOKENS
         )
 
+    def _is_new_hire_driven_rule(self, rule, posting_month: str | None = None) -> bool:
+        raw_text = " ".join(
+            str(rule[key] or "")
+            for key in ("item_name", "driver_raw", "posting_month")
+            if key in rule.keys()
+        )
+        normalized_text = self._normalize_text(raw_text)
+        if any(token in raw_text for token in NEW_HIRE_DRIVER_TOKENS):
+            return True
+        if any(token in normalized_text for token in NEW_HIRE_DRIVER_TOKENS):
+            return True
+        return self._is_event_month_rule(posting_month) or self._is_next_event_month_rule(posting_month)
+
+    def _is_new_hire_photo_only_rule(self, rule) -> bool:
+        raw_text = str(rule["item_name"] or "")
+        normalized_text = self._normalize_text(raw_text)
+        has_photo_only = any(token in raw_text for token in NEW_HIRE_PHOTO_ONLY_TOKENS) or any(
+            token in normalized_text for token in NEW_HIRE_PHOTO_ONLY_TOKENS
+        )
+        if not has_photo_only:
+            return False
+        return True
+
     def _clear_allocator_missing_inputs(self) -> None:
         self.conn.execute("DELETE FROM fact_missing_inputs WHERE source = 'allocator'")
 
@@ -483,12 +531,26 @@ class AllocationEngine:
 
     def _effective_posting_month(self, rule) -> str | None:
         item_name = self._normalize_text(rule["item_name"] or "")
+        section27_month = self._section27_event_month(rule)
+        if section27_month:
+            return section27_month
         for tokens, posting_month in POSTING_MONTH_ITEM_OVERRIDES:
             normalized_tokens = tuple(self._normalize_text(token) for token in tokens)
             if any(token in item_name for token in normalized_tokens):
                 return posting_month
         raw_posting_month = str(rule["posting_month"] or "").strip()
         return raw_posting_month or None
+
+    def _section27_event_month(self, rule) -> str | None:
+        item_name = self._normalize_text(rule["item_name"] or "")
+        for tokens, posting_month in SECTION27_EVENT_RULES:
+            normalized_tokens = tuple(self._normalize_text(token) for token in tokens)
+            if any(token in item_name for token in normalized_tokens):
+                return posting_month
+        return None
+
+    def _is_section27_event_rule(self, rule) -> bool:
+        return self._section27_event_month(rule) is not None
 
     def _requires_manual_event_source(self, rule) -> bool:
         raw_item_name = str(rule["item_name"] or "")
@@ -498,6 +560,10 @@ class AllocationEngine:
         if any(token in normalized_item_name for token in MANUAL_EVENT_ITEM_TOKENS):
             return True
         return False
+
+    def _requires_manual_distribution_count(self, rule) -> bool:
+        driver_raw = str(rule["driver_raw"] or "")
+        return any(token in driver_raw for token in MANUAL_DISTRIBUTION_DRIVER_TOKENS)
 
     def run_allocation(self) -> dict:
         print("Starting Refactored Allocation Engine...")
@@ -547,6 +613,8 @@ class AllocationEngine:
                 continue
             if self._requires_manual_event_source(rule):
                 continue
+            if self._requires_manual_distribution_count(rule):
+                continue
 
             unit_price = float(rule["unit_price"] or 0.0)
             if unit_price <= 0:
@@ -557,7 +625,11 @@ class AllocationEngine:
             if not target_periods:
                 continue
 
-            driver_type = self._resolve_rule_driver_type(rule)
+            section27_event = self._is_section27_event_rule(rule)
+            driver_type = "headcount_all" if section27_event else self._resolve_rule_driver_type(rule)
+            new_hire_driven = False if section27_event else self._is_new_hire_driven_rule(rule, posting_month)
+            if new_hire_driven and self._is_new_hire_photo_only_rule(rule):
+                continue
             for period in target_periods:
                 for cc in self.cost_centers:
                     if driver_type == "working_days":
@@ -568,7 +640,7 @@ class AllocationEngine:
                             if not prev_period:
                                 continue
                             driver_val = self._get_event_delta(cc["code"], prev_period, driver_type, rule=rule)
-                        elif self._is_event_month_rule(posting_month):
+                        elif self._is_event_month_rule(posting_month) or new_hire_driven:
                             driver_val = self._get_event_delta(cc["code"], period, driver_type, rule=rule)
                         else:
                             driver_val = self._get_monthly_hc(cc["code"], period, driver_type)

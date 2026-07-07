@@ -33,14 +33,14 @@ def test_reference_fill_is_after_normal_export():
     assert text.index("apply_system_cost_to_workbook") < text.index("apply_reference_assisted_fill_to_workbook")
 
 
-def test_v2_current_target_can_use_default_primary_reference():
-    resolved = run_e2e._resolve_primary_reference_path(1412000040, reference_map_path="missing-map.csv")
-    assert resolved.endswith("16.KDTVN 電気製造技術課_MP FY2027_各予定(Ver01).xlsx")
+def test_v2_requires_explicit_or_mapped_primary_reference():
+    with pytest.raises(ValueError, match="primary-reference-path or a mapped primary reference"):
+        run_e2e._resolve_primary_reference_path(1412000040, reference_map_path="missing-map.csv")
 
 
 def test_v2_other_cc_without_reference_path_fails(tmp_path):
     missing_map = tmp_path / "missing.csv"
-    with pytest.raises(ValueError, match="Reference-assisted fill requires --primary-reference-path for this target CC"):
+    with pytest.raises(ValueError, match="Reference-assisted fill requires --primary-reference-path or a mapped primary reference for this target CC"):
         run_e2e._resolve_primary_reference_path(9999999999, reference_map_path=str(missing_map))
 
 
