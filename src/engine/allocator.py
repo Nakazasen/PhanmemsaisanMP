@@ -91,6 +91,34 @@ ACTUAL_COUNT_DRIVER_TOKENS = (
     "số người tham gia",
     "số lượng phát thực tế",
 )
+SEPARATE_COUNT_PLACEHOLDER_MARKER = "missing_separate_count=1"
+SEPARATE_COUNT_PLACEHOLDER_TOKENS = (
+    ("部門方針発表会後",),
+    ("phuong cham bo phan", "fy2027"),
+    ("社員旅行不参加",),
+    ("khong the tham gia du lich",),
+    ("マイエピソード",),
+    ("cam nghi ve triet ly kinh doanh",),
+    ("10年勤続記念コンパ",),
+    ("tiec ky niem 10 nam",),
+    ("10年勤続記念品",),
+    ("qua ky niem", "10"),
+)
+FISCAL_YEAR_KICKOFF_TOKENS = (
+    "決起コンパ",
+    "豎ｺ襍ｷ繧ｳ",
+    "khuay dong nam tai chinh",
+    "khuấy động năm tài chính",
+)
+DEPARTMENT_POLICY_KICKOFF_TOKENS = (
+    "部門方針",
+    "phuong cham bo phan",
+    "phương châm bộ phận",
+)
+YEAR_END_PARTY_SUBSIDY_TOKENS = (
+    "忘年会補助金",
+    "ho tro tiec tat nien",
+)
 BUS_RULE_SPECS = {
     "bus_expat_count": {
         "tokens": ("出向者通勤送迎費", "xe dua don cho nguoi nhat", "xe đưa đón cho người nhật"),
@@ -582,6 +610,107 @@ class AllocationEngine:
             return True
         return False
 
+    def _requires_separate_count_placeholder(self, rule) -> bool:
+        normalized_item_name = self._normalize_text(rule["item_name"] or "")
+        for token_group in SEPARATE_COUNT_PLACEHOLDER_TOKENS:
+            if all(self._normalize_text(token) in normalized_item_name for token in token_group):
+                return True
+        return False
+
+    def _is_fiscal_year_kickoff_rule(self, rule) -> bool:
+        normalized_item_name = self._normalize_text(rule["item_name"] or "")
+        has_kickoff = any(self._normalize_text(token) in normalized_item_name for token in FISCAL_YEAR_KICKOFF_TOKENS)
+        has_department_policy = any(
+            self._normalize_text(token) in normalized_item_name for token in DEPARTMENT_POLICY_KICKOFF_TOKENS
+        )
+        return has_kickoff and not has_department_policy
+
+    def _fiscal_period_for_month_number(self, month_number: int) -> str | None:
+        for period in self.fy_months:
+            if int(str(period)[-2:]) == int(month_number):
+                return period
+        return None
+
+    def _fixed_month_headcount_override(self, rule) -> tuple[int, int] | None:
+        normalized_item_name = self._normalize_text(rule["item_name"] or "")
+        if self._is_fiscal_year_kickoff_rule(rule):
+            return 5, 4
+        if any(self._normalize_text(token) in normalized_item_name for token in YEAR_END_PARTY_SUBSIDY_TOKENS):
+            return 2, 1
+        return None
+
+    def _has_manual_event_driver_for_rule(self, cc_code: object, period: str, rule) -> bool:
+        item_name = self._normalize_text(rule["item_name"] or "")
+        rows = self.conn.execute(
+            """
+            SELECT description
+            FROM fact_input_data
+            WHERE source = 'manual_event_driver'
+              AND cc_code = ?
+              AND period = ?
+            """,
+            (str(cc_code).strip(), str(period)),
+        ).fetchall()
+        for row in rows:
+            description = self._normalize_text(row["description"] or "")
+            if item_name and (item_name in description or description in item_name):
+                return True
+            for token_group in SEPARATE_COUNT_PLACEHOLDER_TOKENS:
+                if all(self._normalize_text(token) in description for token in token_group):
+                    return True
+        return False
+
+    def _insert_separate_count_placeholders(self, cursor, rule, target_periods: list[str]) -> None:
+        unit_price = float(rule["unit_price"] or 0.0)
+        if unit_price <= 0:
+            self._record_rule_missing_for_all_cost_centers(
+                rule,
+                area="manual_event_driver",
+                reason="separate-count event has no unit price for placeholder formula",
+                periods=target_periods or None,
+            )
+            return
+
+        rows_to_insert = []
+        for period in target_periods:
+            for cc in self.cost_centers:
+                cc_code = str(cc["code"]).strip()
+                if self._has_manual_event_driver_for_rule(cc_code, period, rule):
+                    continue
+                target_acc = self._get_account_for_cc(
+                    str(cc["cost_type"]),
+                    rule["mfg_account"],
+                    rule["ga_account"],
+                    rule["sales_account"],
+                )
+                if not target_acc:
+                    continue
+                formula = f"0*{self._format_formula_number(unit_price)}"
+                description = (
+                    f"Alloc: {rule['item_name']}|formula_expr={formula}|"
+                    f"{SEPARATE_COUNT_PLACEHOLDER_MARKER}|status=NEEDS_SEPARATE_COUNT"
+                )
+                rows_to_insert.append(
+                    (
+                        f"alloc_{int(rule['id'])}",
+                        period,
+                        0.0,
+                        cc_code,
+                        int(target_acc),
+                        None,
+                        description,
+                    )
+                )
+        if rows_to_insert:
+            cursor.executemany(
+                """
+                INSERT INTO fact_input_data
+                (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
+                VALUES (?, ?, ?, ?, ?, ?, 'base', ?)
+                """,
+                rows_to_insert,
+            )
+
     def _requires_manual_distribution_count(self, rule) -> bool:
         # Hybrid rules with both event-month and fixed-month instructions are
         # computed from monthly headcount deltas plus fixed-month headcount.
@@ -639,6 +768,17 @@ class AllocationEngine:
         for rule in rules:
             if self._bus_rule_kind(rule) is not None:
                 continue
+            if self._requires_separate_count_placeholder(rule):
+                target_periods = self._resolve_target_periods(self._effective_posting_month(rule))
+                if not target_periods:
+                    self._record_rule_missing_for_all_cost_centers(
+                        rule,
+                        area="manual_event_driver",
+                        reason="posting month is blank/dash or cannot be resolved from source",
+                    )
+                    continue
+                self._insert_separate_count_placeholders(cursor, rule, target_periods)
+                continue
             if self._requires_manual_event_source(rule):
                 target_periods = self._resolve_target_periods(self._effective_posting_month(rule))
                 self._record_rule_missing_for_all_cost_centers(
@@ -663,7 +803,15 @@ class AllocationEngine:
                 continue
 
             posting_month = self._effective_posting_month(rule)
-            target_periods = self._resolve_target_periods(posting_month)
+            fixed_month_override = self._fixed_month_headcount_override(rule)
+            source_period = None
+            if fixed_month_override:
+                target_month, source_month = fixed_month_override
+                target_period = self._fiscal_period_for_month_number(target_month)
+                source_period = self._fiscal_period_for_month_number(source_month)
+                target_periods = [target_period] if target_period and source_period else []
+            else:
+                target_periods = self._resolve_target_periods(posting_month)
             if not target_periods:
                 self._record_rule_missing_for_all_cost_centers(
                     rule,
@@ -673,6 +821,8 @@ class AllocationEngine:
                 continue
 
             driver_type = self._resolve_rule_driver_type(rule)
+            if fixed_month_override:
+                driver_type = "headcount_all"
             new_hire_driven = self._is_new_hire_driven_rule(rule, posting_month)
             if new_hire_driven and self._is_new_hire_photo_only_rule(rule):
                 continue
@@ -702,6 +852,8 @@ class AllocationEngine:
                             driver_val = self._get_event_delta(cc["code"], prev_period, driver_type, rule=rule)
                         elif self._is_event_month_rule(posting_month) or new_hire_driven:
                             driver_val = self._get_event_delta(cc["code"], period, driver_type, rule=rule)
+                        elif fixed_month_override and source_period:
+                            driver_val = self._get_monthly_hc(cc["code"], source_period, driver_type)
                         else:
                             driver_val = self._get_monthly_hc(cc["code"], period, driver_type)
 
@@ -720,6 +872,7 @@ class AllocationEngine:
                     amount_vnd = unit_price * float(driver_val)
                     if amount_vnd <= 0:
                         continue
+                    formula = f"{self._format_formula_number(driver_val)}*{self._format_formula_number(unit_price)}"
                     cursor.execute(
                         """
                         INSERT INTO fact_input_data
@@ -732,7 +885,14 @@ class AllocationEngine:
                             amount_vnd,
                             str(cc["code"]).strip(),
                             int(target_acc),
-                            f"Alloc: {rule['item_name']}",
+                            (
+                                f"Alloc: {rule['item_name']}|source_month={source_period}"
+                                f"|driver_month={source_period[:4]}-{source_period[-2:]}"
+                                f"|driver_type={driver_type}|driver_value={self._format_formula_number(driver_val)}"
+                                f"|formula_expr={formula}"
+                                if fixed_month_override and source_period
+                                else f"Alloc: {rule['item_name']}"
+                            ),
                         ),
                     )
 

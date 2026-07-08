@@ -1059,10 +1059,12 @@ class TestPostingMonthOverride(unittest.TestCase):
                 headcount_male, headcount_female, source, description
             )
             VALUES
+            (?, ?, 2, 0, 2, 0, 0, 'manual', 'april worker'),
             (?, ?, 3, 0, 3, 0, 0, 'manual', 'may worker'),
+            (?, ?, 5, 0, 5, 0, 0, 'manual', 'january worker'),
             (?, ?, 4, 0, 4, 0, 0, 'manual', 'feb worker')
             """,
-            (periods[1], cc_code, periods[10], cc_code),
+            (periods[0], cc_code, periods[1], cc_code, periods[9], cc_code, periods[10], cc_code),
         )
         conn.execute(
             """
@@ -1080,21 +1082,22 @@ class TestPostingMonthOverride(unittest.TestCase):
 
         kickoff = conn.execute(
             """
-            SELECT period, amount_vnd
+            SELECT period, amount_vnd, description
             FROM fact_input_data
             WHERE description LIKE 'Alloc: Tiệc khuấy động năm tài chính%'
             """
         ).fetchall()
         bonenkai = conn.execute(
             """
-            SELECT period, amount_vnd
+            SELECT period, amount_vnd, description
             FROM fact_input_data
-            WHERE description = 'Alloc: 忘年会補助金 Hỗ trợ tiệc tất niên'
+            WHERE description LIKE '%source_month=202701%'
             """
         ).fetchall()
-
-        self.assertEqual([(row["period"], float(row["amount_vnd"])) for row in kickoff], [(periods[1], 900000.0)])
-        self.assertEqual([(row["period"], float(row["amount_vnd"])) for row in bonenkai], [(periods[10], 800000.0)])
+        self.assertEqual([(row["period"], float(row["amount_vnd"])) for row in kickoff], [(periods[1], 600000.0)])
+        self.assertIn("source_month=202604", kickoff[0]["description"])
+        self.assertEqual([(row["period"], float(row["amount_vnd"])) for row in bonenkai], [(periods[10], 1000000.0)])
+        self.assertIn("source_month=202701", bonenkai[0]["description"])
         conn.close()
 
     def test_actual_event_rules_fail_closed_until_manual_event_input_exists(self):
@@ -1150,10 +1153,10 @@ class TestPostingMonthOverride(unittest.TestCase):
             """,
             (str(cc_code),),
         ).fetchall()
-        self.assertEqual(fact_count, 0)
+        self.assertEqual(fact_count, 2)
         self.assertEqual(
             {row["area"]: int(row["count"]) for row in missing_rows},
-            {"manual_distribution_driver": 1, "manual_event_driver": 2},
+            {"manual_distribution_driver": 1},
         )
         conn.close()
 

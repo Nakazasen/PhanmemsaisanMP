@@ -107,6 +107,53 @@ def test_complete_v1_writer_default_output_starts_at_row_30(tmp_path):
         wb.close()
 
 
+def test_complete_v1_writer_preserves_missing_separate_count_red_fill(tmp_path):
+    workbook = tmp_path / "out_missing_count.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    wb.save(workbook)
+    wb.close()
+
+    periods = [
+        "202604",
+        "202605",
+        "202606",
+        "202607",
+        "202608",
+        "202609",
+        "202610",
+        "202611",
+        "202612",
+        "202701",
+        "202702",
+        "202703",
+    ]
+    result = apply_complete_v1_source_order_to_workbook(
+        workbook,
+        start_row=30,
+        clear_until_row=90,
+        dynamic_allocation_rows=[
+            {
+                "account_code": 600001,
+                "description": "Alloc: separate count",
+                "terms": {"202606": ["0*100"]},
+                "highlight_periods": {"202606"},
+            }
+        ],
+        fiscal_periods=periods,
+    )
+
+    assert result["rows_written"] == 1
+    wb = load_workbook(workbook)
+    try:
+        ws = wb[SHEET]
+        assert ws.cell(30, 8).value == "=0*100"
+        assert (_fill_rgb(ws.cell(30, 8)) or "").endswith("FFC7CE")
+    finally:
+        wb.close()
+
+
 def test_complete_v1_writer_clears_ad_fill_and_column_e_item_ids_from_final_output(tmp_path):
     path = tmp_path / "out.xlsx"
     wb = Workbook()

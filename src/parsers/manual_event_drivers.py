@@ -18,14 +18,14 @@ EVENT_DEFAULTS = (
     {
         "tokens": ("部門方針発表会後の決起コンパ", "phương châm bộ phận", "phuong cham bo phan"),
         "period": "202604",
-        "form_row": 54,
+        "form_row": None,
         "unit_price_key": "FY2027部門方針発表会後の決起コンパ",
         "separate_count": True,
     },
     {
         "tokens": ("tiệc khuấy động năm tài chính", "決起コンパ"),
         "period": "202605",
-        "form_row": 54,
+        "form_row": None,
         "unit_price_key": "Tiệc khuấy động năm tài chính決起コンパ",
         "separate_count": False,
     },
@@ -39,7 +39,7 @@ EVENT_DEFAULTS = (
     {
         "tokens": ("マイエピソード", "cảm nghĩ về triết lý kinh doanh", "cam nghi ve triet ly kinh doanh"),
         "period": "202607",
-        "form_row": 81,
+        "form_row": None,
         "unit_price_key": "マイエピソード ～フィロソフィの実践～参加賞",
         "separate_count": True,
     },
@@ -60,14 +60,14 @@ EVENT_DEFAULTS = (
     {
         "tokens": ("10年勤続記念コンパ", "tiệc kỷ niệm 10 năm", "tiec ky niem 10 nam"),
         "period": "202610",
-        "form_row": 64,
+        "form_row": None,
         "unit_price_key": "10年勤続記念コンパ",
         "separate_count": True,
     },
     {
         "tokens": ("10年勤続記念品", "quà kỷ niệm", "qua ky niem"),
         "period": "202610",
-        "form_row": 65,
+        "form_row": None,
         "unit_price_key": "10年勤続記念品",
         "separate_count": True,
     },
@@ -95,7 +95,7 @@ EVENT_DEFAULTS = (
     {
         "tokens": ("忘年会補助金", "hỗ trợ tiệc tất niên", "ho tro tiec tat nien"),
         "period": "202702",
-        "form_row": 70,
+        "form_row": None,
         "unit_price_key": "忘年会補助金",
         "separate_count": False,
     },
@@ -371,6 +371,7 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
             if (
                 event_default
                 and event_default.get("form_row") is not None
+                and not event_default.get("separate_count")
                 and not str(row.get("form_row", "") or "").strip()
                 and not str(row.get("row", "") or "").strip()
             ):

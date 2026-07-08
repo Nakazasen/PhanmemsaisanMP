@@ -41,6 +41,7 @@ SOURCE_ORDER_MARKER = "source-order-complete-v1"
 SOURCE_NOTE_RE = re.compile(r"source_file=([^;]+);\s*original_row=(\d+)")
 ACCOUNT_MASTER_SHEET = "\u52d8\u5b9a\u79d1\u76ee"
 NO_FILL = PatternFill(fill_type=None)
+MISSING_SEPARATE_COUNT_FILL = PatternFill(fill_type="solid", fgColor="FFC7CE")
 GENERATED_FILE_ORDER_POLICIES = (
     "ROUND_USD_BY_B2",
     "COPY_VND_MONTHLY",
@@ -59,6 +60,7 @@ class StagedWorkbookRow:
     styles: dict[int, object]
     number_formats: dict[int, str]
     source_order_managed: bool = True
+    red_month_cols: frozenset[int] = frozenset()
 
 
 SOURCE_ROW_GROUPS = (
@@ -189,6 +191,8 @@ def _write_staged_row(ws, target_row: int, staged: StagedWorkbookRow) -> None:
         note = _source_order_note_base(ws.cell(target_row, NOTE_COL).value)
         source_note = f"source_file={staged.source_file}; original_row={staged.original_row}; {SOURCE_ORDER_MARKER}"
         ws.cell(target_row, NOTE_COL).value = f"{note} | {source_note}" if note else source_note
+    for col in staged.red_month_cols:
+        ws.cell(target_row, col).fill = copy(MISSING_SEPARATE_COUNT_FILL)
     _ensure_lookup_formulas(ws, target_row)
     ws.cell(target_row, TOTAL_COL).value = f"=SUM(F{target_row}:Q{target_row})"
 
@@ -335,6 +339,8 @@ def _collect_dynamic_allocation_rows(
             ACCOUNT_COL: row.get("account_code"),
             DESCRIPTION_COL: row.get("description"),
         }
+        highlight_periods = {str(period) for period in (row.get("highlight_periods") or set())}
+        red_month_cols: set[int] = set()
         terms_by_period = row.get("terms") or {}
         numeric_by_period = row.get("numeric_months") or row.get("months") or {}
         for period, col in period_to_col.items():
@@ -346,6 +352,8 @@ def _collect_dynamic_allocation_rows(
                 values[col] = "=" + "+".join(str(term).lstrip("=") for term in terms)
             elif numeric_value:
                 values[col] = numeric_value
+            if period in highlight_periods:
+                red_month_cols.add(col)
         if not _norm(values.get(DESCRIPTION_COL)) or not _norm(values.get(ACCOUNT_COL)):
             continue
         staged.append(
@@ -357,6 +365,7 @@ def _collect_dynamic_allocation_rows(
                 styles={},
                 number_formats={},
                 source_order_managed=True,
+                red_month_cols=frozenset(red_month_cols),
             )
         )
     return staged

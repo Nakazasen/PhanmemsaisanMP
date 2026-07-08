@@ -205,7 +205,7 @@ def test_manual_event_driver_keeps_separate_count_explicit(tmp_path):
         "SELECT period, form_row, amount_vnd, description FROM fact_input_data WHERE source='manual_event_driver'"
     ).fetchone()
     assert row["period"] == "202607"
-    assert row["form_row"] == 81
+    assert row["form_row"] is None
     assert row["amount_vnd"] == 6000
     assert "formula_expr=2*3000" in row["description"]
     conn.close()

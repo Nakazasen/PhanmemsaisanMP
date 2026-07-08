@@ -285,7 +285,7 @@ class TestPostingMonthLogic(unittest.TestCase):
         )
         conn.close()
 
-    def test_separate_count_admin_events_require_manual_event_source(self):
+    def test_separate_count_admin_events_create_missing_count_placeholder(self):
         separate_count_items = [
             "FY2027部門方針発表会後の決起コンパ",
             "社員旅行不参加対象者へのギフト贈呈 Quà tặng cho CNV không thể tham gia du lịch",
@@ -302,7 +302,15 @@ class TestPostingMonthLogic(unittest.TestCase):
             AllocationEngine(conn)._process_allocation_rules()
 
             periods = _alloc_periods(conn, rid)
-            self.assertEqual(periods, {}, item_name)
+            self.assertEqual(periods, {"202606": 0.0}, item_name)
+            row = conn.execute(
+                "SELECT form_row, description FROM fact_input_data WHERE source=?",
+                (f"alloc_{rid}",),
+            ).fetchone()
+            self.assertIsNone(row["form_row"])
+            self.assertIn("formula_expr=0*100", row["description"])
+            self.assertIn("missing_separate_count=1", row["description"])
+            self.assertEqual(_missing_areas(conn, cc), {})
             conn.close()
 
     def test_new_hire_medical_requires_manual_or_explicit_source_price(self):

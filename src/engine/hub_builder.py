@@ -38,6 +38,8 @@ TEMPLATE_ACCOUNT_CLEAR_START_ROW = 30
 APPEND_LEFT_FILL = "CCFFFF"
 APPEND_MONTH_FILL = "CCFFFF"
 APPEND_NOTE_FILL = "CCFFFF"
+MISSING_SEPARATE_COUNT_MARKER = "missing_separate_count=1"
+MISSING_SEPARATE_COUNT_FILL = "FFC7CE"
 IT_COMPONENT_ORDER = ("vpn", "mail", "r3", "mes", "plm", "qlik_sense", "vps", "ams")
 IT_SYSTEM_ACCOUNT_CODES = {5005246282, 6005146628, 6005146542}
 IT_SYSTEM_ACCOUNT_BY_COST_TYPE = {
@@ -462,9 +464,12 @@ class HubBuilder:
         row_index: int,
         terms_by_period: dict[str, list[str]],
         numeric_values: dict[str, float] | None = None,
+        highlight_periods: set[str] | None = None,
     ) -> None:
         self._clear_visible_months(worksheet, row_index)
         numeric_values = numeric_values or {}
+        highlight_periods = highlight_periods or set()
+        missing_fill = openpyxl.styles.PatternFill("solid", fgColor=MISSING_SEPARATE_COUNT_FILL)
         for offset, period in enumerate(self.fy_months):
             terms = list(terms_by_period.get(period, []))
             numeric_amount = float(numeric_values.get(period, 0.0))
@@ -477,6 +482,8 @@ class HubBuilder:
                 column=VISIBLE_MONTH_START_COL + offset,
                 value=f"={' + '.join(terms)}".replace(" + ", "+"),
             )
+            if period in highlight_periods:
+                worksheet.cell(row=row_index, column=VISIBLE_MONTH_START_COL + offset).fill = missing_fill
         worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
 
     def _write_fx_formula_series(self, worksheet, row_index: int, values_usd: dict[str, float]) -> None:
@@ -751,6 +758,7 @@ class HubBuilder:
                     "months": defaultdict(float),
                     "terms": defaultdict(list),
                     "numeric_values": defaultdict(float),
+                    "highlight_periods": set(),
                 },
             )
             account_code = int(row["account_code"] or 0)
@@ -764,6 +772,8 @@ class HubBuilder:
             period = str(row["period"])
             amount = float(row["amount"] or 0.0)
             term = self._explicit_formula_term_from_description(description)
+            if MISSING_SEPARATE_COUNT_MARKER in description:
+                bucket["highlight_periods"].add(period)
             if term:
                 bucket["terms"][period].append(term)
             else:
@@ -780,6 +790,7 @@ class HubBuilder:
             bucket["months"] = dict(bucket["months"])
             bucket["terms"] = dict(bucket["terms"])
             bucket["numeric_values"] = dict(bucket["numeric_values"])
+            bucket["highlight_periods"] = set(bucket["highlight_periods"])
             result.append(bucket)
         return result
 
@@ -826,7 +837,13 @@ class HubBuilder:
             if not existing_description and row.get("description"):
                 worksheet.cell(row=row_index, column=DESCRIPTION_COL, value=row["description"])
             if row.get("terms"):
-                self._write_formula_series(worksheet, row_index, row["terms"], row["numeric_values"])
+                self._write_formula_series(
+                    worksheet,
+                    row_index,
+                    row["terms"],
+                    row["numeric_values"],
+                    row.get("highlight_periods"),
+                )
             else:
                 self._write_numeric_series(worksheet, row_index, row["months"])
 
@@ -1221,10 +1238,13 @@ class HubBuilder:
                     "months": {},
                     "terms": defaultdict(list),
                     "numeric_months": defaultdict(float),
+                    "highlight_periods": set(),
                 },
             )
             period = str(row["period"])
             term = self._explicit_formula_term_from_description(description) or self._alloc_formula_term_from_row(row)
+            if MISSING_SEPARATE_COUNT_MARKER in description:
+                bucket["highlight_periods"].add(period)
             if term:
                 bucket["terms"][period].append(term)
             else:
@@ -1297,6 +1317,7 @@ class HubBuilder:
                             current_row,
                             dict(row["terms"]),
                             dict(row["numeric_months"]),
+                            row.get("highlight_periods"),
                         )
                     else:
                         self._write_numeric_series(worksheet, current_row, row["months"])
