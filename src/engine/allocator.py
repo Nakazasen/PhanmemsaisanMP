@@ -119,6 +119,40 @@ YEAR_END_PARTY_SUBSIDY_TOKENS = (
     "忘年会補助金",
     "ho tro tiec tat nien",
 )
+MY_EPISODE_PHILOSOPHY_TOKENS = (
+    "マイエピソード",
+    "cảm nghĩ về triết lý kinh doanh",
+    "cam nghi ve triet ly kinh doanh",
+)
+MOONCAKE_TOKENS = (
+    "月餅",
+    "bánh trung thu",
+    "banh trung thu",
+)
+COMPANY_FOUNDING_THANKS_EVENT_TOKENS = (
+    "会社設立記念",
+    "感謝イベント",
+    "sự kiện tri ân",
+    "su kien tri an",
+    "thành lập công ty",
+    "thanh lap cong ty",
+)
+LUCKY_MONEY_TOKENS = (
+    "お年玉",
+    "tiền lì xì",
+    "tien li xi",
+)
+COMPANY_TRIP_TOKENS = (
+    "du lịch công ty",
+    "du lich cong ty",
+)
+FIXED_HEADCOUNT_RULE_SPECS = (
+    (MY_EPISODE_PHILOSOPHY_TOKENS, 7, 4),
+    (MOONCAKE_TOKENS, 9, 9),
+    (COMPANY_FOUNDING_THANKS_EVENT_TOKENS, 10, 10),
+    (LUCKY_MONEY_TOKENS, 2, 2),
+    (COMPANY_TRIP_TOKENS, 5, 5),
+)
 BUS_RULE_SPECS = {
     "bus_expat_count": {
         "tokens": ("出向者通勤送迎費", "xe dua don cho nguoi nhat", "xe đưa đón cho người nhật"),
@@ -602,6 +636,8 @@ class AllocationEngine:
         return raw_posting_month or None
 
     def _requires_manual_event_source(self, rule) -> bool:
+        if self._is_fixed_headcount_override_rule(rule):
+            return False
         raw_item_name = str(rule["item_name"] or "")
         normalized_item_name = self._normalize_text(raw_item_name)
         if any(token in raw_item_name for token in MANUAL_EVENT_ITEM_TOKENS):
@@ -611,11 +647,24 @@ class AllocationEngine:
         return False
 
     def _requires_separate_count_placeholder(self, rule) -> bool:
+        if self._is_fixed_headcount_override_rule(rule):
+            return False
         normalized_item_name = self._normalize_text(rule["item_name"] or "")
         for token_group in SEPARATE_COUNT_PLACEHOLDER_TOKENS:
             if all(self._normalize_text(token) in normalized_item_name for token in token_group):
                 return True
         return False
+
+    def _fixed_headcount_rule_spec(self, rule) -> tuple[tuple[str, ...], int, int] | None:
+        normalized_item_name = self._normalize_text(rule["item_name"] or "")
+        for spec in FIXED_HEADCOUNT_RULE_SPECS:
+            tokens, _target_month, _source_month = spec
+            if any(self._normalize_text(token) in normalized_item_name for token in tokens):
+                return spec
+        return None
+
+    def _is_fixed_headcount_override_rule(self, rule) -> bool:
+        return self._fixed_headcount_rule_spec(rule) is not None
 
     def _is_fiscal_year_kickoff_rule(self, rule) -> bool:
         normalized_item_name = self._normalize_text(rule["item_name"] or "")
@@ -632,6 +681,10 @@ class AllocationEngine:
         return None
 
     def _fixed_month_headcount_override(self, rule) -> tuple[int, int] | None:
+        fixed_headcount_spec = self._fixed_headcount_rule_spec(rule)
+        if fixed_headcount_spec:
+            _tokens, target_month, source_month = fixed_headcount_spec
+            return target_month, source_month
         normalized_item_name = self._normalize_text(rule["item_name"] or "")
         if self._is_fiscal_year_kickoff_rule(rule):
             return 5, 4
@@ -715,6 +768,8 @@ class AllocationEngine:
         # Hybrid rules with both event-month and fixed-month instructions are
         # computed from monthly headcount deltas plus fixed-month headcount.
         if self._is_mixed_event_and_fixed_month_rule(rule["posting_month"]):
+            return False
+        if self._is_fixed_headcount_override_rule(rule):
             return False
         driver_raw = str(rule["driver_raw"] or "")
         normalized_driver = self._normalize_text(driver_raw)
@@ -824,6 +879,8 @@ class AllocationEngine:
             if fixed_month_override:
                 driver_type = "headcount_all"
             new_hire_driven = self._is_new_hire_driven_rule(rule, posting_month)
+            if fixed_month_override:
+                new_hire_driven = False
             if new_hire_driven and self._is_new_hire_photo_only_rule(rule):
                 continue
             mixed_event_fixed_month = self._is_mixed_event_and_fixed_month_rule(posting_month)

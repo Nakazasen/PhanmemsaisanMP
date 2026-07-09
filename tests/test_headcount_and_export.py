@@ -2030,6 +2030,48 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_allocation_loader_skips_footer_unit_price_rows_without_rule_context(self):
+        conn = _mk_conn()
+        tmpdir = _mk_tmpdir()
+        try:
+            source_path = tmpdir / "FY2027配賦額一覧 (2025.12.29).xlsx"
+            workbook = openpyxl.Workbook()
+            ws = workbook.active
+            ws.title = "FY2027配賦額一覧"
+            ws.append(["dept", "item", "account", "mfg", "ga", "sales", "posting", "unit_price", "unit", "driver"])
+            ws.append(
+                [
+                    "総務課 Phòng hành chính",
+                    "会社設立記念 感謝イベント Sự kiện tri ân ngày thành lập công ty",
+                    "福利厚生費",
+                    5004086291,
+                    6004086651,
+                    6004086551,
+                    "10月",
+                    100000,
+                    "/人",
+                    "実際の参加人数で実施月に振替",
+                ]
+            )
+            ws.append(["※2. 季節による Phân bổ tùy theo mùa", None, None, None, None, None, None, None, None, None])
+            ws.append([None, None, None, None, None, None, None, 8.3217, None, None])
+            ws.append([None, None, None, None, None, None, None, 24.9651, None, None])
+            ws.append([None, None, None, None, None, None, None, 132500, None, None])
+            workbook.save(source_path)
+            workbook.close()
+
+            loaded = load_allocation_rules(conn, alloc_path=str(source_path), fiscal_year=2027)
+
+            self.assertEqual(loaded, 1)
+            rules = conn.execute(
+                "SELECT item_name, unit_price FROM map_allocation_rules ORDER BY unit_price"
+            ).fetchall()
+            self.assertEqual([float(row["unit_price"]) for row in rules], [100000.0])
+            self.assertIn("会社設立記念", rules[0]["item_name"])
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_acquisition_month_rules_are_skipped_until_manual_event_data_exists(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)

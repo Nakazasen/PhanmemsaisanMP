@@ -391,6 +391,10 @@ def load_allocation_rules(
         # Keep footnote-only rows as metadata with unit_price=0 so downstream
         # allocation can fail closed and report the missing unit price.
         raw_unit_price = row.iloc[7] if len(row) > 7 else None
+        raw_unit = row.iloc[8] if len(row) > 8 else None
+        raw_driver = row.iloc[9] if len(row) > 9 else None
+        if raw_item is None and pd.isna(raw_unit) and pd.isna(raw_driver):
+            continue
         unit_price = _parse_unit_price(raw_unit_price)
         if unit_price is None:
             if _is_footnote_unit_price(raw_unit_price):
@@ -429,8 +433,8 @@ def load_allocation_rules(
             if len(row) > 6 and not pd.isna(row.iloc[6])
             else current_posting_month
         )
-        unit = str(row.iloc[8]).strip() if len(row) > 8 and not pd.isna(row.iloc[8]) else None
-        driver_raw = str(row.iloc[9]).strip() if len(row) > 9 and not pd.isna(row.iloc[9]) else None
+        unit = str(raw_unit).strip() if len(row) > 8 and not pd.isna(raw_unit) else None
+        driver_raw = str(raw_driver).strip() if len(row) > 9 and not pd.isna(raw_driver) else None
 
         driver_type = _classify_driver(driver_raw)
 

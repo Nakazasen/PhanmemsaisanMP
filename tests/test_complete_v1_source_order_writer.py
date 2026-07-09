@@ -42,6 +42,17 @@ def _fill_rgb(cell):
     return fill.fill_type
 
 
+def _note_text(cell):
+    wb = cell.parent.parent
+    if "_mp2027_source_order_meta" not in wb.sheetnames:
+        return ""
+    sheet = wb["_mp2027_source_order_meta"]
+    for row in range(2, sheet.max_row + 1):
+        if sheet.cell(row, 1).value == cell.parent.title and sheet.cell(row, 2).value == cell.row:
+            return sheet.cell(row, 3).value or ""
+    return ""
+
+
 def _assert_output_layout_clean(ws, start_row: int = 30, end_row: int | None = None):
     end = end_row or ws.max_row
     for row in range(start_row, end + 1):
@@ -76,9 +87,10 @@ def test_complete_v1_writer_rewrites_legacy_rows_to_source_order_blocks(tmp_path
             assert ws.cell(legacy_row, 19).value is None
             assert ws.cell(legacy_row, 6).value is None
 
-        assert CANONICAL_SOURCE_FILE_ORDER[0] in ws.cell(168, 20).value
-        assert CANONICAL_SOURCE_FILE_ORDER[1] in ws.cell(170, 20).value
-        assert CANONICAL_SOURCE_FILE_ORDER[6] in ws.cell(179, 20).value
+        assert ws.cell(168, 20).value is None
+        assert CANONICAL_SOURCE_FILE_ORDER[0] in _note_text(ws.cell(168, 20))
+        assert CANONICAL_SOURCE_FILE_ORDER[1] in _note_text(ws.cell(170, 20))
+        assert CANONICAL_SOURCE_FILE_ORDER[6] in _note_text(ws.cell(179, 20))
     finally:
         wb.close()
 
@@ -154,6 +166,67 @@ def test_complete_v1_writer_preserves_missing_separate_count_red_fill(tmp_path):
         wb.close()
 
 
+def test_complete_v1_writer_sanitizes_visible_description_and_hides_wbs_metadata(tmp_path):
+    path = tmp_path / "out_visible_clean.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    wb.save(path)
+    wb.close()
+    periods = [
+        "202604",
+        "202605",
+        "202606",
+        "202607",
+        "202608",
+        "202609",
+        "202610",
+        "202611",
+        "202612",
+        "202701",
+        "202702",
+        "202703",
+    ]
+
+    apply_complete_v1_source_order_to_workbook(
+        path,
+        start_row=30,
+        clear_until_row=90,
+        dynamic_allocation_rows=[
+            {
+                "account_code": 5004086291,
+                "description": "Alloc: 社員旅行 Du lịch công ty|source_month=202605|driver_month=2026-05",
+                "terms": {"202605": ["23*2061000"]},
+            }
+        ],
+        fiscal_periods=periods,
+    )
+    result = apply_complete_v1_source_order_to_workbook(
+        path,
+        start_row=30,
+        clear_until_row=90,
+        dynamic_allocation_rows=[
+            {
+                "account_code": 5004086291,
+                "description": "Alloc: 社員旅行 Du lịch công ty|source_month=202605|driver_month=2026-05",
+                "terms": {"202605": ["23*2061000"]},
+            }
+        ],
+        fiscal_periods=periods,
+    )
+
+    assert result["rows_written"] == 1
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        assert ws.cell(30, 19).value == "社員旅行 Du lịch công ty"
+        assert ws.cell(30, 20).value is None
+        assert ws.cell(30, 20).comment is None
+        assert "source_file=" in _note_text(ws.cell(30, 20))
+    finally:
+        wb.close()
+
+
 def test_complete_v1_writer_clears_ad_fill_and_column_e_item_ids_from_final_output(tmp_path):
     path = tmp_path / "out.xlsx"
     wb = Workbook()
@@ -181,7 +254,8 @@ def test_complete_v1_writer_clears_ad_fill_and_column_e_item_ids_from_final_outp
         assert ws.cell(30, 2).value == 5006016260
         assert ws.cell(30, 6).value == 100
         assert ws.cell(30, 19).value == "facility building depreciation"
-        assert CANONICAL_SOURCE_FILE_ORDER[0] in ws.cell(30, 20).value
+        assert ws.cell(30, 20).value is None
+        assert CANONICAL_SOURCE_FILE_ORDER[0] in _note_text(ws.cell(30, 20))
         _assert_output_layout_clean(ws, 30, 36)
     finally:
         wb.close()
@@ -223,12 +297,13 @@ def test_complete_v1_writer_manages_bus_rows_in_admin_source_block(tmp_path):
         assert ws.cell(32, 19).value == "出向者BUS送迎費/Chi phí xe bus người JP"
         assert ws.cell(32, 6).value == "=3*856107"
         assert ws.cell(32, 18).value == "=SUM(F32:Q32)"
-        assert CANONICAL_SOURCE_FILE_ORDER[3] in ws.cell(32, 20).value
-        assert "original_row=53" in ws.cell(32, 20).value
+        assert ws.cell(32, 20).value is None
+        assert CANONICAL_SOURCE_FILE_ORDER[3] in _note_text(ws.cell(32, 20))
+        assert "original_row=53" in _note_text(ws.cell(32, 20))
         assert ws.cell(33, 19).value == "ローカル社BUS送迎費/Chi phí xe bus người VN"
         assert ws.cell(33, 6).value == "=20*1031546"
         assert ws.cell(33, 18).value == "=SUM(F33:Q33)"
-        assert "original_row=54" in ws.cell(33, 20).value
+        assert "original_row=54" in _note_text(ws.cell(33, 20))
         assert ws.cell(34, 19).value == "トイレットペーパー"
         assert ws.cell(53, 19).value is None
         assert ws.cell(54, 19).value is None
@@ -309,6 +384,168 @@ def test_complete_v1_writer_reorders_existing_source_order_rows_idempotently(tmp
         assert ws.cell(172, 19).value == "birthday"
         assert ws.cell(172, 18).value == "=SUM(F172:Q172)"
         _assert_output_layout_clean(ws, 168, 172)
+    finally:
+        wb.close()
+
+
+def test_complete_v1_writer_groups_split_accounts_inside_source_block(tmp_path):
+    path = tmp_path / "out_split_accounts.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    source_file = CANONICAL_SOURCE_FILE_ORDER[5]
+    for row, account, original_row, description in [
+        (30, 5004086291, 57, "welfare first"),
+        (31, 5005246288, 97, "office supplies"),
+        (32, 5004086291, 10001, "welfare second"),
+    ]:
+        ws.cell(row, 2).value = account
+        ws.cell(row, 6).value = row
+        ws.cell(row, 19).value = description
+        ws.cell(row, 20).value = f"source_file={source_file}; original_row={original_row}; source-order-complete-v1"
+    wb.save(path)
+    wb.close()
+
+    result = apply_complete_v1_source_order_to_workbook(path, start_row=30, clear_until_row=90)
+
+    assert result["rows_written"] == 3
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        assert [ws.cell(row, 2).value for row in range(30, 33)] == [5004086291, 5004086291, 5005246288]
+        assert [ws.cell(row, 19).value for row in range(30, 33)] == [
+            "welfare first",
+            "welfare second",
+            "office supplies",
+        ]
+        assert ws.cell(30, 20).value is None
+        assert "original_row=57" in _note_text(ws.cell(30, 20))
+        assert "original_row=10001" in _note_text(ws.cell(31, 20))
+        assert "original_row=97" in _note_text(ws.cell(32, 20))
+    finally:
+        wb.close()
+
+
+def test_complete_v1_writer_groups_legacy_and_dynamic_allocation_accounts(tmp_path):
+    path = tmp_path / "out_dynamic_split_accounts.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    ws.cell(97, 2).value = 5005246288
+    ws.cell(97, 7).value = "=1*9100"
+    ws.cell(97, 18).value = "=SUM(F97:Q97)"
+    ws.cell(97, 19).value = "legacy office supplies"
+    ws.cell(97, 20).value = "SOURCE_DERIVED"
+    wb.save(path)
+    wb.close()
+
+    periods = [
+        "202604",
+        "202605",
+        "202606",
+        "202607",
+        "202608",
+        "202609",
+        "202610",
+        "202611",
+        "202612",
+        "202701",
+        "202702",
+        "202703",
+    ]
+    result = apply_complete_v1_source_order_to_workbook(
+        path,
+        start_row=30,
+        clear_until_row=120,
+        dynamic_allocation_rows=[
+            {
+                "account_code": 5004086291,
+                "description": "dynamic welfare",
+                "terms": {"202607": ["22*100000"]},
+            },
+            {
+                "account_code": 5005246288,
+                "description": "dynamic office supplies",
+                "terms": {"202608": ["2*3000"]},
+            },
+        ],
+        fiscal_periods=periods,
+    )
+
+    assert result["rows_written"] == 3
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        assert [ws.cell(row, 2).value for row in range(30, 33)] == [5004086291, 5005246288, 5005246288]
+        assert [ws.cell(row, 19).value for row in range(30, 33)] == [
+            "dynamic welfare",
+            "legacy office supplies",
+            "dynamic office supplies",
+        ]
+        assert ws.cell(30, 20).value is None
+        assert "original_row=10001" in _note_text(ws.cell(30, 20))
+        assert "original_row=97" in _note_text(ws.cell(31, 20))
+        assert "original_row=10002" in _note_text(ws.cell(32, 20))
+    finally:
+        wb.close()
+
+
+def test_complete_v1_writer_drops_legacy_staged_row_when_dynamic_allocation_replaces_it(tmp_path):
+    path = tmp_path / "out_dynamic_duplicate.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    description = "Alloc: 月餅 Bánh Trung Thu|source_month=202609|driver_month=2026-09|driver_type=headcount_all|driver_value=24"
+    ws.cell(176, 2).value = 5004086291
+    ws.cell(176, 11).value = "=24*56000"
+    ws.cell(176, 18).value = "=SUM(F176:Q176)"
+    ws.cell(176, 19).value = description
+    ws.cell(176, 20).value = "SOURCE_DERIVED"
+    wb.save(path)
+    wb.close()
+
+    periods = [
+        "202604",
+        "202605",
+        "202606",
+        "202607",
+        "202608",
+        "202609",
+        "202610",
+        "202611",
+        "202612",
+        "202701",
+        "202702",
+        "202703",
+    ]
+    result = apply_complete_v1_source_order_to_workbook(
+        path,
+        start_row=30,
+        clear_until_row=190,
+        dynamic_allocation_rows=[
+            {
+                "account_code": 5004086291,
+                "description": description,
+                "terms": {"202609": ["24*56000"]},
+            },
+        ],
+        fiscal_periods=periods,
+    )
+
+    assert result["rows_written"] == 1
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        matching_rows = [
+            row
+            for row in range(30, 191)
+            if ws.cell(row, 19).value == "月餅 Bánh Trung Thu"
+        ]
+        assert matching_rows == [30]
+        assert ws.cell(30, 11).value == "=24*56000"
+        assert ws.cell(30, 20).value is None
+        assert CANONICAL_SOURCE_FILE_ORDER[5] in _note_text(ws.cell(30, 20))
+        assert "original_row=10001" in _note_text(ws.cell(30, 20))
     finally:
         wb.close()
 

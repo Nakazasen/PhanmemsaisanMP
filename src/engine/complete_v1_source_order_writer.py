@@ -39,6 +39,7 @@ COPY_COLS = tuple(range(1, 21))
 LAYOUT_WHITE_COLUMNS = tuple(range(1, 5))
 SOURCE_ORDER_MARKER = "source-order-complete-v1"
 SOURCE_NOTE_RE = re.compile(r"source_file=([^;]+);\s*original_row=(\d+)")
+SOURCE_ORDER_METADATA_SHEET = "_mp2027_source_order_meta"
 ACCOUNT_MASTER_SHEET = "\u52d8\u5b9a\u79d1\u76ee"
 NO_FILL = PatternFill(fill_type=None)
 MISSING_SEPARATE_COUNT_FILL = PatternFill(fill_type="solid", fgColor="FFC7CE")
@@ -132,7 +133,11 @@ def _copy_staged_row(
 
 def _clear_business_row(ws, row: int) -> None:
     for col in MANAGED_CLEAR_COLS:
-        ws.cell(row, col).value = None
+        cell = ws.cell(row, col)
+        cell.value = None
+        cell.comment = None
+        if col == NOTE_COL:
+            _clear_metadata_note_for_cell(cell)
 
 
 def _clear_rows(ws, rows: Iterable[int]) -> None:
@@ -172,9 +177,85 @@ def _ensure_lookup_formulas(ws, row: int) -> None:
         ws.cell(row, LOOKUP_GROUP_COL).value = _lookup_group_formula(row)
 
 
+def _display_description(value: object) -> object:
+    text = _norm(value)
+    if not text:
+        return value
+    if text.lower().startswith("alloc:"):
+        text = text[len("Alloc:") :].strip()
+    return text.split("|", 1)[0].strip()
+
+
+def _note_text(note: object) -> str:
+    if hasattr(note, "value") or hasattr(note, "comment"):
+        value = getattr(note, "value", None)
+        comment = getattr(note, "comment", None)
+        comment_text = getattr(comment, "text", "") if comment else ""
+        metadata_text = _metadata_note_for_cell(note)
+        return " | ".join(part for part in (_norm(value), _norm(comment_text), _norm(metadata_text)) if part)
+    return _norm(note)
+
+
+def _metadata_sheet(wb, *, create: bool = False):
+    if SOURCE_ORDER_METADATA_SHEET in wb.sheetnames:
+        return wb[SOURCE_ORDER_METADATA_SHEET]
+    if not create:
+        return None
+    sheet = wb.create_sheet(SOURCE_ORDER_METADATA_SHEET)
+    sheet.sheet_state = "veryHidden"
+    sheet.cell(1, 1).value = "sheet"
+    sheet.cell(1, 2).value = "row"
+    sheet.cell(1, 3).value = "note"
+    return sheet
+
+
+def _metadata_row_for_cell(cell) -> int | None:
+    wb = cell.parent.parent
+    sheet = _metadata_sheet(wb)
+    if sheet is None:
+        return None
+    sheet_name = cell.parent.title
+    row_number = int(cell.row)
+    for row in range(2, int(sheet.max_row or 1) + 1):
+        if sheet.cell(row, 1).value == sheet_name and int(sheet.cell(row, 2).value or 0) == row_number:
+            return row
+    return None
+
+
+def _metadata_note_for_cell(cell) -> str:
+    metadata_row = _metadata_row_for_cell(cell)
+    if metadata_row is None:
+        return ""
+    sheet = _metadata_sheet(cell.parent.parent)
+    if sheet is None:
+        return ""
+    return _norm(sheet.cell(metadata_row, 3).value)
+
+
+def _set_metadata_note_for_cell(cell, note: str) -> None:
+    sheet = _metadata_sheet(cell.parent.parent, create=True)
+    metadata_row = _metadata_row_for_cell(cell)
+    if metadata_row is None:
+        metadata_row = int(sheet.max_row or 1) + 1
+        sheet.cell(metadata_row, 1).value = cell.parent.title
+        sheet.cell(metadata_row, 2).value = int(cell.row)
+    sheet.cell(metadata_row, 3).value = note
+
+
+def _clear_metadata_note_for_cell(cell) -> None:
+    metadata_row = _metadata_row_for_cell(cell)
+    if metadata_row is None:
+        return
+    sheet = _metadata_sheet(cell.parent.parent)
+    if sheet is not None:
+        sheet.delete_rows(metadata_row, 1)
+
+
 def _write_staged_row(ws, target_row: int, staged: StagedWorkbookRow) -> None:
     for col, value in staged.values.items():
         cell = ws.cell(target_row, col)
+        if col == DESCRIPTION_COL:
+            value = _display_description(value)
         cell.value = _translated_formula(
             value,
             original_row=staged.source_row,
@@ -188,9 +269,12 @@ def _write_staged_row(ws, target_row: int, staged: StagedWorkbookRow) -> None:
             cell.number_format = number_format
 
     if staged.source_order_managed:
-        note = _source_order_note_base(ws.cell(target_row, NOTE_COL).value)
+        note_cell = ws.cell(target_row, NOTE_COL)
+        note = _source_order_note_base(note_cell)
         source_note = f"source_file={staged.source_file}; original_row={staged.original_row}; {SOURCE_ORDER_MARKER}"
-        ws.cell(target_row, NOTE_COL).value = f"{note} | {source_note}" if note else source_note
+        note_cell.value = None
+        note_cell.comment = None
+        _set_metadata_note_for_cell(note_cell, f"{note} | {source_note}" if note else source_note)
     for col in staged.red_month_cols:
         ws.cell(target_row, col).fill = copy(MISSING_SEPARATE_COUNT_FILL)
     _ensure_lookup_formulas(ws, target_row)
@@ -220,7 +304,7 @@ def _source_rows_to_clear(ws) -> set[int]:
     rows_to_clear: set[int] = set()
     for _, rows in SOURCE_ROW_GROUPS:
         for row in rows:
-            if _parse_source_order_note(ws.cell(row, NOTE_COL).value) is not None:
+            if _parse_source_order_note(ws.cell(row, NOTE_COL)) is not None:
                 continue
             if _business_row_present(ws, row):
                 rows_to_clear.add(row)
@@ -232,7 +316,7 @@ def _collect_staged_rows(ws) -> list[StagedWorkbookRow]:
     for source_index, rows in SOURCE_ROW_GROUPS:
         source_file = CANONICAL_SOURCE_FILE_ORDER[source_index]
         for row in rows:
-            if _has_generated_file_order_policy(ws.cell(row, NOTE_COL).value):
+            if _has_generated_file_order_policy(ws.cell(row, NOTE_COL)):
                 continue
             item = _copy_staged_row(ws, source_file, row, require_visible_month_cost=False)
             if item is not None:
@@ -241,7 +325,7 @@ def _collect_staged_rows(ws) -> list[StagedWorkbookRow]:
 
 
 def _parse_source_order_note(note: object) -> tuple[str, int] | None:
-    match = SOURCE_NOTE_RE.search(_norm(note))
+    match = SOURCE_NOTE_RE.search(_note_text(note))
     if not match:
         return None
     return match.group(1).strip(), int(match.group(2))
@@ -250,7 +334,7 @@ def _parse_source_order_note(note: object) -> tuple[str, int] | None:
 def _source_order_note_base(note: object) -> str:
     parts = [
         part.strip()
-        for part in _norm(note).split("|")
+        for part in _note_text(note).split("|")
         if part.strip() and SOURCE_ORDER_MARKER not in part
     ]
     return " | ".join(parts)
@@ -260,9 +344,9 @@ def _collect_existing_source_order_rows(ws, start_row: int, clear_until_row: int
     staged: list[StagedWorkbookRow] = []
     seen: set[tuple[str, int, str, str, tuple[str, ...]]] = set()
     for row in range(int(start_row), int(clear_until_row) + 1):
-        if _has_generated_file_order_policy(ws.cell(row, NOTE_COL).value):
+        if _has_generated_file_order_policy(ws.cell(row, NOTE_COL)):
             continue
-        parsed = _parse_source_order_note(ws.cell(row, NOTE_COL).value)
+        parsed = _parse_source_order_note(ws.cell(row, NOTE_COL))
         if parsed is None:
             continue
         source_file, original_row = parsed
@@ -283,7 +367,7 @@ def _collect_existing_source_order_rows(ws, start_row: int, clear_until_row: int
 
 
 def _has_generated_file_order_policy(note: object) -> bool:
-    text = _norm(note)
+    text = _note_text(note)
     return any(policy in text for policy in GENERATED_FILE_ORDER_POLICIES)
 
 
@@ -299,14 +383,14 @@ def _collect_preserved_unmanaged_rows(
     for row in range(int(start_row), int(clear_until_row) + 1):
         if row in rows_to_skip:
             continue
-        if _parse_source_order_note(ws.cell(row, NOTE_COL).value) is not None:
+        if _parse_source_order_note(ws.cell(row, NOTE_COL)) is not None:
             continue
-        if _has_generated_file_order_policy(ws.cell(row, NOTE_COL).value):
+        if _has_generated_file_order_policy(ws.cell(row, NOTE_COL)):
             continue
         if (
             not _row_has_visible_month_cost(ws, row)
             and not _norm(ws.cell(row, DESCRIPTION_COL).value)
-            and not _norm(ws.cell(row, NOTE_COL).value)
+            and not _note_text(ws.cell(row, NOTE_COL))
         ):
             continue
         description = _norm(ws.cell(row, DESCRIPTION_COL).value)
@@ -371,6 +455,56 @@ def _collect_dynamic_allocation_rows(
     return staged
 
 
+def _has_split_accounts(group: list[StagedWorkbookRow]) -> bool:
+    account_positions: dict[str, list[int]] = {}
+    for index, row in enumerate(group):
+        account_code = _norm(row.values.get(ACCOUNT_COL))
+        if not account_code:
+            continue
+        account_positions.setdefault(account_code, []).append(index)
+    for positions in account_positions.values():
+        if len(positions) <= 1:
+            continue
+        if max(positions) - min(positions) + 1 != len(positions):
+            return True
+    return False
+
+
+def _source_block_sort_key(row: StagedWorkbookRow) -> tuple[str, int, str]:
+    return (
+        _norm(row.values.get(ACCOUNT_COL)),
+        int(row.original_row),
+        _norm(_display_description(row.values.get(DESCRIPTION_COL))),
+    )
+
+
+def _ordered_source_group(group: list[StagedWorkbookRow]) -> list[StagedWorkbookRow]:
+    if not _has_split_accounts(group):
+        return group
+    return sorted(group, key=_source_block_sort_key)
+
+
+def _duplicate_identity(row: StagedWorkbookRow) -> tuple[str, str]:
+    return (_norm(row.values.get(ACCOUNT_COL)), _norm(_display_description(row.values.get(DESCRIPTION_COL))))
+
+
+def _drop_staged_rows_duplicated_by_dynamic(
+    staged: list[StagedWorkbookRow], dynamic_rows: list[StagedWorkbookRow]
+) -> list[StagedWorkbookRow]:
+    dynamic_identities = {
+        identity
+        for identity in (_duplicate_identity(row) for row in dynamic_rows)
+        if identity[0] and identity[1]
+    }
+    if not dynamic_identities:
+        return staged
+    return [
+        row
+        for row in staged
+        if _duplicate_identity(row) not in dynamic_identities
+    ]
+
+
 def apply_complete_v1_source_order_to_workbook(
     workbook_path: str | Path,
     *,
@@ -391,7 +525,9 @@ def apply_complete_v1_source_order_to_workbook(
         staged = _collect_existing_source_order_rows(ws, start_row, clear_until_row)
         if not staged:
             staged = _collect_staged_rows(ws)
-        staged.extend(_collect_dynamic_allocation_rows(dynamic_allocation_rows, fiscal_periods))
+        dynamic_staged = _collect_dynamic_allocation_rows(dynamic_allocation_rows, fiscal_periods)
+        staged = _drop_staged_rows_duplicated_by_dynamic(staged, dynamic_staged)
+        staged.extend(dynamic_staged)
         preserved = _collect_preserved_unmanaged_rows(
             ws,
             start_row,
@@ -415,7 +551,7 @@ def apply_complete_v1_source_order_to_workbook(
                 _clear_business_row(ws, current_row)
                 blank_rows_written += 1
                 current_row += 1
-            for item in group:
+            for item in _ordered_source_group(group):
                 _write_staged_row(ws, current_row, item)
                 rows_written += 1
                 current_row += 1

@@ -289,7 +289,6 @@ class TestPostingMonthLogic(unittest.TestCase):
         separate_count_items = [
             "FY2027部門方針発表会後の決起コンパ",
             "社員旅行不参加対象者へのギフト贈呈 Quà tặng cho CNV không thể tham gia du lịch",
-            "マイエピソード ～フィロソフィの実践～参加賞",
             "10年勤続記念コンパ",
             "10年勤続記念品",
         ]
@@ -312,6 +311,147 @@ class TestPostingMonthLogic(unittest.TestCase):
             self.assertIn("missing_separate_count=1", row["description"])
             self.assertEqual(_missing_areas(conn, cc), {})
             conn.close()
+
+    def test_my_episode_philosophy_uses_april_headcount_for_july_without_placeholder(self):
+        conn = _mk_conn()
+        cc = _seed_cc(conn)
+        _seed_hc(conn, cc, [22, 23, 23, 24, 24, 24, 25, 26, 26, 26, 26, 26])
+        rid = _insert_rule(
+            conn,
+            "7月",
+            "headcount_worker",
+            unit_price=100000,
+            rid_label='マイエピソード ～フィロソフィの実践～参加賞\nGiải tham gia "Cảm nghĩ về triết lý kinh doanh"',
+            driver_raw="対象者は3月31日の前の入社員です",
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        self.assertEqual(_alloc_periods(conn, rid), {"202607": 22 * 100000.0})
+        row = conn.execute(
+            "SELECT description FROM fact_input_data WHERE source=?",
+            (f"alloc_{rid}",),
+        ).fetchone()
+        self.assertIn("source_month=202604", row["description"])
+        self.assertIn("driver_value=22", row["description"])
+        self.assertIn("formula_expr=22*100000", row["description"])
+        self.assertNotIn("missing_separate_count=1", row["description"])
+        self.assertEqual(_missing_areas(conn, cc), {})
+        conn.close()
+
+    def test_mooncake_uses_september_headcount_without_manual_distribution_input(self):
+        conn = _mk_conn()
+        cc = _seed_cc(conn)
+        _seed_hc(conn, cc, [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
+        rid = _insert_rule(
+            conn,
+            "9月",
+            "headcount_staff",
+            unit_price=56000,
+            rid_label="月餅 Bánh Trung Thu",
+            driver_raw=(
+                "配布数で引渡し月に振替 / Phân bổ theo số lượng phát thực tế. "
+                "Trường hợp vào ngày phát bánh có người mới vào, vẫn thuộc đối tượng nhận bánh"
+            ),
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        self.assertEqual(_alloc_periods(conn, rid), {"202609": 15 * 56000.0})
+        row = conn.execute(
+            "SELECT description FROM fact_input_data WHERE source=?",
+            (f"alloc_{rid}",),
+        ).fetchone()
+        self.assertIn("source_month=202609", row["description"])
+        self.assertIn("driver_value=15", row["description"])
+        self.assertIn("formula_expr=15*56000", row["description"])
+        self.assertNotIn("missing_separate_count=1", row["description"])
+        self.assertEqual(_missing_areas(conn, cc), {})
+        conn.close()
+
+    def test_company_founding_thanks_event_uses_october_headcount_without_manual_input(self):
+        conn = _mk_conn()
+        cc = _seed_cc(conn)
+        _seed_hc(conn, cc, [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
+        rid = _insert_rule(
+            conn,
+            "10月",
+            "headcount_all",
+            unit_price=1000,
+            rid_label="会社設立記念 感謝イベント Sự kiện tri ân ngày thành lập công ty",
+            driver_raw="実際の参加人数で振替 / Phân bổ theo số người tham gia thực tế",
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        self.assertEqual(_alloc_periods(conn, rid), {"202610": 16 * 1000.0})
+        row = conn.execute(
+            "SELECT description FROM fact_input_data WHERE source=?",
+            (f"alloc_{rid}",),
+        ).fetchone()
+        self.assertIn("source_month=202610", row["description"])
+        self.assertIn("driver_value=16", row["description"])
+        self.assertIn("formula_expr=16*1000", row["description"])
+        self.assertNotIn("missing_separate_count=1", row["description"])
+        self.assertEqual(_missing_areas(conn, cc), {})
+        conn.close()
+
+    def test_lucky_money_uses_february_headcount_without_manual_input(self):
+        conn = _mk_conn()
+        cc = _seed_cc(conn)
+        _seed_hc(conn, cc, [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
+        rid = _insert_rule(
+            conn,
+            "2月",
+            "headcount_all",
+            unit_price=50000,
+            rid_label="お年玉 Tiền lì xì",
+            driver_raw="実際の配布人数で振替 / Phân bổ theo số người nhận thực tế",
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        self.assertEqual(_alloc_periods(conn, rid), {"202702": 20 * 50000.0})
+        row = conn.execute(
+            "SELECT description FROM fact_input_data WHERE source=?",
+            (f"alloc_{rid}",),
+        ).fetchone()
+        self.assertIn("source_month=202702", row["description"])
+        self.assertIn("driver_value=20", row["description"])
+        self.assertIn("formula_expr=20*50000", row["description"])
+        self.assertNotIn("missing_separate_count=1", row["description"])
+        self.assertEqual(_missing_areas(conn, cc), {})
+        conn.close()
+
+    def test_company_trip_uses_may_headcount_without_manual_distribution_input(self):
+        conn = _mk_conn()
+        cc = _seed_cc(conn)
+        _seed_hc(conn, cc, [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
+        rid = _insert_rule(
+            conn,
+            "5月",
+            "headcount_worker",
+            unit_price=2061000,
+            rid_label="社員旅行 Du lịch công ty",
+            driver_raw=(
+                "総額を実際の社員旅行参加人数で実施月に振替. "
+                "Phân bổ vào tháng thực hiện theo số người tham gia thực tế"
+            ),
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        self.assertEqual(_alloc_periods(conn, rid), {"202605": 11 * 2061000.0})
+        row = conn.execute(
+            "SELECT description FROM fact_input_data WHERE source=?",
+            (f"alloc_{rid}",),
+        ).fetchone()
+        self.assertIn("source_month=202605", row["description"])
+        self.assertIn("driver_value=11", row["description"])
+        self.assertIn("formula_expr=11*2061000", row["description"])
+        self.assertNotIn("missing_separate_count=1", row["description"])
+        self.assertEqual(_missing_areas(conn, cc), {})
+        conn.close()
 
     def test_new_hire_medical_requires_manual_or_explicit_source_price(self):
         conn = _mk_conn()
