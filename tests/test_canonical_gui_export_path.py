@@ -10,13 +10,12 @@ def _tree(path: str) -> ast.AST:
     return ast.parse(_source(path))
 
 
-def test_gui_callback_passes_canonical_export_mode():
-    tree = _tree("src/universal_app.py")
-    calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "run_universal_pipeline"]
-    assert calls, "GUI module must call run_universal_pipeline"
-    kw = {keyword.arg: keyword.value for keyword in calls[-1].keywords}
-    assert isinstance(kw.get("mp_saisan_complete_v1"), ast.Constant)
-    assert kw["mp_saisan_complete_v1"].value is True
+def test_gui_runs_pipeline_out_of_process():
+    source = _source("src/universal_app.py")
+    assert "subprocess.Popen" in source
+    assert "scripts\", \"run_e2e.py" in source
+    assert "run_universal_pipeline(" not in source
+    assert "--legacy-export" not in source
 
 
 def test_run_universal_pipeline_default_is_canonical():
@@ -28,16 +27,14 @@ def test_run_universal_pipeline_default_is_canonical():
     assert defaults[-1].value is True
 
 
-def test_cli_default_and_legacy_export_mapping():
+def test_cli_always_uses_canonical_export_mode():
     source = Path("scripts/run_e2e.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     call = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "run_universal_pipeline"][-1]
     kw = {keyword.arg: keyword.value for keyword in call.keywords}
-    assert isinstance(kw["mp_saisan_complete_v1"], ast.UnaryOp)
-    assert isinstance(kw["mp_saisan_complete_v1"].op, ast.Not)
-    assert isinstance(kw["mp_saisan_complete_v1"].operand, ast.Attribute)
-    assert kw["mp_saisan_complete_v1"].operand.attr == "legacy_export"
-    assert "--legacy-export" in source
+    assert isinstance(kw["mp_saisan_complete_v1"], ast.Constant)
+    assert kw["mp_saisan_complete_v1"].value is True
+    assert "--legacy-export" not in source
 
 
 def test_reference_path_resolves_from_map_for_canonical_source_order():

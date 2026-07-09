@@ -49,7 +49,29 @@ IT_SYSTEM_ACCOUNT_BY_COST_TYPE = {
     "販売": 6005146542,
 }
 IT_SYSTEM_ROW_TEXT_TOKENS = ("system cost", "kdc", "ｋｄｃ", "システム", "社内システム")
+IT_SYSTEM_DEFAULT_ROW = 75
+IT_SYSTEM_DESCRIPTION = "System Cost (Mail,VPN,R3, Mes,PLM,VPS,...)"
 MONTHLY_HEADCOUNT_FIXED_ROWS = (46, 48, 49, 51)
+FIXED_ROW_DESCRIPTIONS = {
+    36: "減価償却費（建物）/Khấu hao (Nhà)",
+    37: "減価償却費（土地）/Khấu hao (Đất)",
+    38: "減価償却費（設備）/Khấu hao (Thiết bị)",
+    40: "固定資産金利（建物）/Lãi (Nhà)",
+    41: "固定資産金利（土地）/Lãi (Đất)",
+    42: "固定資産金利（設備）/Lãi (Thiết bị)",
+    44: "電気代/Tiền điện",
+    45: "水道代/Tiền nước",
+    46: "ガス代/Tiền gas",
+    48: "Hand wash",
+    49: "Toilet paper",
+    51: "cleaning fee",
+    57: "定年の健康診断費/Chi phí khám sức khỏe hàng năm",
+    58: "採用の健康診断費/Chi phí khám sức khỏe tuyển dụng",
+    59: "誕生日会/Tiền sinh nhật",
+    97: "新入社員：ノート（スタッフ用）/Người mới: Sổ tay (Dùng cho nhân viên)",
+    98: "新入社員：ノート (G7社員用）/Người mới: Sổ tay (Dùng cho công nhân)",
+    137: "出向者の書類申請費/Chi phí làm giấy tờ cho người biệt phái",
+}
 FIXED_ALLOCATION_ROW_MATCHERS = {
     57: {
         "tokens": ("kham suc khoe (cho cnv nam)", "kham suc khoe (cho cnv nu)", "health check"),
@@ -154,10 +176,11 @@ class HubBuilder:
                 candidates.append((score, row_index))
 
         if not candidates:
+            if worksheet.max_row >= IT_SYSTEM_DEFAULT_ROW:
+                return IT_SYSTEM_DEFAULT_ROW
             raise RuntimeError(
                 "Không tìm thấy dòng System Cost trong FORM template. "
-                "Hãy dùng docs/MP2027/FORM.xlsx mới nhất; dòng này phải có tài khoản "
-                "5005246282, 6005146628, 6005146542 hoặc mô tả System Cost/KDC."
+                "Hãy dùng docs/MP2027/FORM.xlsx mới nhất hoặc giữ đủ vùng dòng output chuẩn."
             )
         candidates.sort(key=lambda item: (-item[0], item[1]))
         return candidates[0][1]
@@ -243,6 +266,16 @@ class HubBuilder:
         for offset in range(len(self.fy_months)):
             worksheet.cell(row=row_index, column=VISIBLE_MONTH_START_COL + offset).value = None
         worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
+
+    def _clear_managed_fixed_row(self, worksheet, row_index: int) -> None:
+        self._clear_visible_months(worksheet, row_index)
+        worksheet.cell(row=row_index, column=DESCRIPTION_COL).value = None
+        worksheet.cell(row=row_index, column=WBS_COL).value = None
+
+    def _write_fixed_description(self, worksheet, row_index: int, description: str | None = None) -> None:
+        text = description or FIXED_ROW_DESCRIPTIONS.get(row_index)
+        if text:
+            worksheet.cell(row=row_index, column=DESCRIPTION_COL, value=text)
 
     def _prepare_append_row(self, worksheet, row_index: int) -> None:
         self._copy_row_style(worksheet, APPEND_TEMPLATE_ROW, row_index)
@@ -535,27 +568,53 @@ class HubBuilder:
         worksheet,
         row_index: int,
         unit_prices: dict[str, float],
-        start_headcount_row: int = 24,
-        end_headcount_row: int = 25,
+        cc_code: object,
     ) -> None:
-        # Business sheet requires recurring admin costs to use previous-month headcount.
-        # April falls back to April because prior-March data is not available in the FY file.
+        # Business sheet requires recurring admin costs to use previous-month
+        # configured headcount. April falls back to April because prior-March
+        # data is not available in the FY output file.
         self._clear_visible_months(worksheet, row_index)
+        headcount_by_period = self._monthly_headcount_series(cc_code, "headcount_all")
         for offset, period in enumerate(self.fy_months):
             unit_price = float(unit_prices.get(period, 0.0))
             if unit_price <= 0:
                 continue
             source_offset = offset if offset == 0 else offset - 1
-            source_column_letter = get_column_letter(VISIBLE_MONTH_START_COL + source_offset)
+            source_period = self.fy_months[source_offset]
+            headcount = headcount_by_period.get(source_period)
+            if headcount is None:
+                continue
             worksheet.cell(
                 row=row_index,
                 column=VISIBLE_MONTH_START_COL + offset,
-                value=(
-                    f"=SUM({source_column_letter}${start_headcount_row}:{source_column_letter}${end_headcount_row})"
-                    f"*{self._format_number(unit_price)}"
-                ),
+                value=f"={self._format_number(headcount)}*{self._format_number(unit_price)}",
             )
         worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
+
+    def _monthly_headcount_series(self, cc_code: object, driver_type: str) -> dict[str, float]:
+        rows = self.conn.execute(
+            """
+            SELECT
+                period, headcount_all, headcount_staff, headcount_worker,
+                headcount_male, headcount_female, source
+            FROM fact_monthly_headcount
+            WHERE CAST(cc_code AS TEXT) = ?
+            ORDER BY
+                CASE source
+                    WHEN 'manual' THEN 3
+                    WHEN 'ga' THEN 2
+                    ELSE 1
+                END
+            """,
+            (str(cc_code).strip(),),
+        ).fetchall()
+        result: dict[str, float] = {}
+        for row in rows:
+            value = row[driver_type] if driver_type in row.keys() else row["headcount_all"]
+            if value is None and driver_type != "headcount_all":
+                value = row["headcount_all"]
+            result[str(row["period"])] = float(value or 0.0)
+        return result
 
     def _match_description(self, description: str, tokens: tuple[str, ...], exclude_tokens: tuple[str, ...]) -> bool:
         normalized_description = self._normalize_text(description)
@@ -843,8 +902,12 @@ class HubBuilder:
             if account_code:
                 worksheet.cell(row=row_index, column=ACCOUNT_COL, value=int(account_code))
             existing_description = worksheet.cell(row=row_index, column=DESCRIPTION_COL).value
-            if not existing_description and row.get("description"):
-                worksheet.cell(row=row_index, column=DESCRIPTION_COL, value=row["description"])
+            if not existing_description:
+                worksheet.cell(
+                    row=row_index,
+                    column=DESCRIPTION_COL,
+                    value=FIXED_ROW_DESCRIPTIONS.get(row_index) or row.get("description"),
+                )
             if row.get("terms"):
                 self._write_formula_series(
                     worksheet,
@@ -894,6 +957,7 @@ class HubBuilder:
                 "Hãy kiểm tra loại chi phí của mã bộ phận trong master CC."
             )
         worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
+        worksheet.cell(row=row_index, column=DESCRIPTION_COL, value=IT_SYSTEM_DESCRIPTION)
 
         self._clear_visible_months(worksheet, row_index)
         for offset, period in enumerate(self.fy_months):
@@ -962,24 +1026,28 @@ class HubBuilder:
             worksheet,
             46,
             self._ga_unit_price_series(("gas|headcount_per_person", "食堂燃料費")),
+            cc_code,
         )
         self._write_prev_month_headcount_formula_series(
             worksheet,
             51,
             self._ga_unit_price_series(("清掃費", "chi phí làm sạch|headcount_per_person")),
+            cc_code,
         )
         cleaning_series = self._ga_unit_price_series(("cleaning|headcount_per_person",))
         if cleaning_series:
-            self._write_prev_month_headcount_formula_series(worksheet, 51, cleaning_series)
+            self._write_prev_month_headcount_formula_series(worksheet, 51, cleaning_series, cc_code)
         self._write_prev_month_headcount_formula_series(
             worksheet,
             48,
             self._ga_unit_price_series(("手洗い洗剤", "nuoc rua tay|headcount_per_person", "nước rửa tay|headcount_per_person")),
+            cc_code,
         )
         self._write_prev_month_headcount_formula_series(
             worksheet,
             49,
             self._ga_unit_price_series(("トイレットペーパー", "giay ve sinh|headcount_per_person", "giấy vệ sinh|headcount_per_person")),
+            cc_code,
         )
         self._write_fx_formula_series(
             worksheet,
@@ -1072,52 +1140,53 @@ class HubBuilder:
             137: 5005246286,
         }
         for row_index in MANAGED_FIXED_ROWS:
-            self._clear_visible_months(worksheet, row_index)
+            self._clear_managed_fixed_row(worksheet, row_index)
 
-        def _set_fixed_account(row_index: int) -> None:
+        def _set_fixed_row(row_index: int, description: str | None = None) -> None:
             account_code = fixed_account_codes.get(row_index)
             if account_code:
                 worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
                 self._write_lookup_formulas(worksheet, row_index)
+            self._write_fixed_description(worksheet, row_index, description)
 
         electric_series = self._month_series(cc_code, source="facility", description="electric")
         if self._series_has_output(electric_series):
-            _set_fixed_account(44)
+            _set_fixed_row(44)
             self._write_numeric_series(worksheet, 44, electric_series)
 
         water_series = self._month_series(cc_code, source="facility", description="water")
         if self._series_has_output(water_series):
-            _set_fixed_account(45)
+            _set_fixed_row(45)
             self._write_numeric_series(worksheet, 45, water_series)
 
         gas_series = self._ga_unit_price_series(("gas|headcount_per_person", "食堂燃料費"))
         if self._series_has_output(gas_series):
-            _set_fixed_account(46)
-            self._write_prev_month_headcount_formula_series(worksheet, 46, gas_series)
+            _set_fixed_row(46)
+            self._write_prev_month_headcount_formula_series(worksheet, 46, gas_series, cc_code)
 
         legacy_cleaning_series = self._ga_unit_price_series(("清掃費", "chi ph\u00ed l\u00e0m s\u1ea1ch|headcount_per_person"))
         if self._series_has_output(legacy_cleaning_series):
-            _set_fixed_account(51)
-            self._write_prev_month_headcount_formula_series(worksheet, 51, legacy_cleaning_series)
+            _set_fixed_row(51)
+            self._write_prev_month_headcount_formula_series(worksheet, 51, legacy_cleaning_series, cc_code)
 
         cleaning_series = self._ga_unit_price_series(("cleaning|headcount_per_person",))
         if self._series_has_output(cleaning_series):
-            _set_fixed_account(51)
-            self._write_prev_month_headcount_formula_series(worksheet, 51, cleaning_series)
+            _set_fixed_row(51)
+            self._write_prev_month_headcount_formula_series(worksheet, 51, cleaning_series, cc_code)
 
         handwash_series = self._ga_unit_price_series(
             ("手洗い洗剤", "nuoc rua tay|headcount_per_person", "nước rửa tay|headcount_per_person")
         )
         if self._series_has_output(handwash_series):
-            _set_fixed_account(48)
-            self._write_prev_month_headcount_formula_series(worksheet, 48, handwash_series)
+            _set_fixed_row(48)
+            self._write_prev_month_headcount_formula_series(worksheet, 48, handwash_series, cc_code)
 
         toilet_paper_series = self._ga_unit_price_series(
             ("トイレットペーパー", "giay ve sinh|headcount_per_person", "giấy vệ sinh|headcount_per_person")
         )
         if self._series_has_output(toilet_paper_series):
-            _set_fixed_account(49)
-            self._write_prev_month_headcount_formula_series(worksheet, 49, toilet_paper_series)
+            _set_fixed_row(49)
+            self._write_prev_month_headcount_formula_series(worksheet, 49, toilet_paper_series, cc_code)
 
         building_depr_series = self._month_series(
             cc_code,
@@ -1126,7 +1195,7 @@ class HubBuilder:
             value_column="amount_usd",
         )
         if self._series_has_output(building_depr_series):
-            _set_fixed_account(36)
+            _set_fixed_row(36)
             self._write_fx_formula_series(worksheet, 36, building_depr_series)
 
         land_depr_series = self._month_series(
@@ -1136,7 +1205,7 @@ class HubBuilder:
             value_column="amount_usd",
         )
         if self._series_has_output(land_depr_series):
-            _set_fixed_account(37)
+            _set_fixed_row(37)
             self._write_fx_formula_series(worksheet, 37, land_depr_series)
 
         equipment_depr_series = self._month_series(
@@ -1146,7 +1215,7 @@ class HubBuilder:
             value_column="amount_usd",
         )
         if self._series_has_output(equipment_depr_series):
-            _set_fixed_account(38)
+            _set_fixed_row(38)
             self._write_fx_formula_series(worksheet, 38, equipment_depr_series)
 
         building_interest_series = self._month_series(
@@ -1156,7 +1225,7 @@ class HubBuilder:
             value_column="amount_usd",
         )
         if self._series_has_output(building_interest_series):
-            _set_fixed_account(40)
+            _set_fixed_row(40)
             self._write_fx_formula_series(worksheet, 40, building_interest_series)
 
         land_interest_series = self._month_series(
@@ -1166,7 +1235,7 @@ class HubBuilder:
             value_column="amount_usd",
         )
         if self._series_has_output(land_interest_series):
-            _set_fixed_account(41)
+            _set_fixed_row(41)
             self._write_fx_formula_series(worksheet, 41, land_interest_series)
 
         equipment_interest_series = self._month_series(
@@ -1176,7 +1245,7 @@ class HubBuilder:
             value_column="amount_usd",
         )
         if self._series_has_output(equipment_interest_series):
-            _set_fixed_account(42)
+            _set_fixed_row(42)
             self._write_fx_formula_series(worksheet, 42, equipment_interest_series)
 
         self._write_it_system_total_row(worksheet, cc_code)
@@ -1201,6 +1270,7 @@ class HubBuilder:
             if account_code:
                 worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
                 self._write_lookup_formulas(worksheet, row_index)
+            self._write_fixed_description(worksheet, row_index)
             output_description = matcher.get("output_description")
             if output_description:
                 worksheet.cell(row=row_index, column=DESCRIPTION_COL, value=output_description)

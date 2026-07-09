@@ -3741,7 +3741,7 @@ class TestManualSpecialCosts(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
-    def test_recurring_admin_rows_use_previous_month_headcount_formulas(self):
+    def test_recurring_admin_rows_use_configured_previous_month_headcount_formulas(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
         periods = get_fy_months(2027)
@@ -3753,6 +3753,7 @@ class TestManualSpecialCosts(unittest.TestCase):
             ('ga_unit_price', ?, 100, 0, 0, 'gas|headcount_per_person'),
             ('ga_unit_price', ?, 110, 0, 0, 'gas|headcount_per_person'),
             ('ga_unit_price', ?, 120, 0, 0, 'gas|headcount_per_person'),
+            ('ga_unit_price', ?, 130, 0, 0, 'gas|headcount_per_person'),
             ('ga_unit_price', ?, 200, 0, 0, '手洗い洗剤|headcount_per_person'),
             ('ga_unit_price', ?, 300, 0, 0, 'giay ve sinh|headcount_per_person'),
             ('ga_unit_price', ?, 400, 0, 0, 'cleaning|headcount_per_person'),
@@ -3762,12 +3763,25 @@ class TestManualSpecialCosts(unittest.TestCase):
                 periods[0],
                 periods[1],
                 periods[2],
+                periods[3],
                 periods[1],
                 periods[1],
                 periods[2],
                 periods[0],
                 cc_code,
             ),
+        )
+        conn.executemany(
+            """
+            INSERT INTO fact_monthly_headcount
+            (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
+            VALUES (?, ?, ?, ?, 0, ?, ?)
+            """,
+            [
+                (periods[0], cc_code, 99, 99, "ga", "lower-priority template-like value must lose"),
+                (periods[0], cc_code, 22, 22, "manual", "configured April headcount"),
+                (periods[1], cc_code, 23, 23, "manual", "configured May headcount"),
+            ],
         )
         conn.commit()
 
@@ -3782,15 +3796,19 @@ class TestManualSpecialCosts(unittest.TestCase):
             try:
                 ws = workbook[find_hub_sheet_name(workbook)]
                 # Gas: April uses April headcount; May uses April, not May; June uses May.
-                self.assertEqual(ws["F46"].value, "=SUM(F$24:F$25)*100")
-                self.assertEqual(ws["G46"].value, "=SUM(F$24:F$25)*110")
-                self.assertNotIn("G$24:G$25", ws["G46"].value)
-                self.assertEqual(ws["H46"].value, "=SUM(G$24:G$25)*120")
+                self.assertEqual(ws["F46"].value, "=22*100")
+                self.assertEqual(ws["G46"].value, "=22*110")
+                self.assertNotIn("$24", ws["G46"].value)
+                self.assertNotIn("$25", ws["G46"].value)
+                self.assertEqual(ws["H46"].value, "=23*120")
 
                 # Other recurring administrative allocations follow the same previous-month pattern.
-                self.assertEqual(ws["G48"].value, "=SUM(F$24:F$25)*200")
-                self.assertEqual(ws["G49"].value, "=SUM(F$24:F$25)*300")
-                self.assertEqual(ws["H51"].value, "=SUM(G$24:G$25)*400")
+                self.assertEqual(ws["G48"].value, "=22*200")
+                self.assertEqual(ws["G49"].value, "=22*300")
+                self.assertEqual(ws["H51"].value, "=23*400")
+
+                # Missing configured headcount must not fall back to workbook/template rows.
+                self.assertIsNone(ws["I46"].value)
             finally:
                 workbook.close()
         finally:
@@ -3946,13 +3964,38 @@ class TestHubBuilderExport(unittest.TestCase):
                 ("manual_special_cost", period, 1200, 0, cc_code, 5005246286, 137, "manual NNN"),
             ],
         )
+        conn.execute(
+            """
+            INSERT INTO fact_monthly_headcount
+            (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
+            VALUES (?, ?, 7, 7, 0, 'manual', 'configured fixed-row headcount')
+            """,
+            (period, cc_code),
+        )
         conn.commit()
 
         template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
         tmpdir = _mk_tmpdir()
         try:
+            blank_detail_template = tmpdir / "FORM_blank_detail_b_s_t.xlsx"
+            shutil.copy2(template_path, blank_detail_template)
+            template_workbook = openpyxl.load_workbook(blank_detail_template)
+            try:
+                template_ws = template_workbook[find_hub_sheet_name(template_workbook)]
+                for row_index in range(30, template_ws.max_row + 1):
+                    template_ws.cell(row=row_index, column=2).value = None
+                    template_ws.cell(row=row_index, column=19).value = None
+                    template_ws.cell(row=row_index, column=20).value = None
+                template_workbook.save(blank_detail_template)
+            finally:
+                template_workbook.close()
+
             output_path = tmpdir / "out_fixed_form_layout.xlsx"
-            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(
+                str(blank_detail_template),
+                str(output_path),
+                cc_code=cc_code,
+            )
             self.assertTrue(ok)
 
             workbook = openpyxl.load_workbook(output_path, data_only=False)
@@ -4002,10 +4045,10 @@ class TestHubBuilderExport(unittest.TestCase):
                 self.assertEqual(ws["F42"].value, "=ROUND(6.5*$B$2,0)")
                 self.assertEqual(ws["F44"].value, "=100")
                 self.assertEqual(ws["F45"].value, "=200")
-                self.assertEqual(ws["F46"].value, "=SUM(F$24:F$25)*300")
-                self.assertEqual(ws["F48"].value, "=SUM(F$24:F$25)*400")
-                self.assertEqual(ws["F49"].value, "=SUM(F$24:F$25)*500")
-                self.assertEqual(ws["F51"].value, "=SUM(F$24:F$25)*600")
+                self.assertEqual(ws["F46"].value, "=7*300")
+                self.assertEqual(ws["F48"].value, "=7*400")
+                self.assertEqual(ws["F49"].value, "=7*500")
+                self.assertEqual(ws["F51"].value, "=7*600")
                 self.assertEqual(ws["F57"].value, "=700")
                 self.assertEqual(ws["F58"].value, "=800")
                 self.assertEqual(ws["F59"].value, "=900")

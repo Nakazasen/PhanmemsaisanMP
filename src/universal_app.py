@@ -5,8 +5,10 @@ MP2027 Manager - ứng dụng giao diện chính.
 import csv
 import hashlib
 import os
+import queue
 import shutil
 import sqlite3
+import subprocess
 import sys
 import threading
 import tkinter as tk
@@ -64,7 +66,6 @@ def _ensure_external_runtime_data() -> None:
 
 _ensure_external_runtime_data()
 
-from scripts.run_e2e import run_universal_pipeline
 from src.config import EXCHANGE_RATE_USD_VND
 from src.db.loader import load_all
 from src.db.schema import create_schema, get_connection
@@ -758,10 +759,13 @@ class MPManagerApp:
         self.source_dir = tk.StringVar(value=_default_source_dir())
         self.last_excel_mtime = 0.0
         self.syncing_master = False
+        self.ui_thread_id = threading.get_ident()
+        self.ui_queue = queue.Queue()
 
         self.setup_styles()
         self.setup_ui()
         self.set_icon()
+        self.root.after(50, self._drain_ui_queue)
         self.root.after(300, self.load_cc_list)
 
     def set_icon(self):
@@ -798,7 +802,7 @@ class MPManagerApp:
         self.cc_combo = ttk.Combobox(cc_frame, textvariable=self.cc_code_filter, width=40, state="readonly")
         self.cc_combo.pack(side="left")
         
-        self.refresh_btn = ttk.Button(cc_frame, text="🔄", width=3, command=self.auto_init_master_data)
+        self.refresh_btn = ttk.Button(cc_frame, text="🔄", width=3, command=self.load_cc_list)
         self.refresh_btn.pack(side="left", padx=2)
         
         ttk.Label(container, text="Để trống để xuất toàn bộ").grid(row=2, column=2, sticky="w", padx=8)
@@ -857,12 +861,29 @@ class MPManagerApp:
         container.rowconfigure(10, weight=1)
         container.columnconfigure(1, weight=1)
 
+    def _run_on_ui_thread(self, callback, *args, **kwargs):
+        if threading.get_ident() == self.ui_thread_id:
+            callback(*args, **kwargs)
+            return
+        self.ui_queue.put((callback, args, kwargs))
+
+    def _drain_ui_queue(self):
+        while True:
+            try:
+                callback, args, kwargs = self.ui_queue.get_nowait()
+            except queue.Empty:
+                break
+            callback(*args, **kwargs)
+        self.root.after(50, self._drain_ui_queue)
+
     def log(self, message: str):
+        if threading.get_ident() != self.ui_thread_id:
+            self._run_on_ui_thread(self.log, message)
+            return
         self.log_widget.configure(state=tk.NORMAL)
         self.log_widget.insert(tk.END, f"{datetime.now().strftime('[%H:%M:%S]')} {message}\n")
         self.log_widget.see(tk.END)
         self.log_widget.configure(state=tk.DISABLED)
-        self.root.update_idletasks()
 
     def browse_template(self):
         path = filedialog.askopenfilename(filetypes=[("Tệp Excel", "*.xlsx")])
@@ -1082,18 +1103,9 @@ class MPManagerApp:
 
     def load_cc_list(self):
         db_path = os.path.join(BASE_DIR, "mp2027.db")
-        
-        # Smart Check on Startup
-        template = self.template_path.get()
-        if os.path.exists(template):
-            mtime = os.path.getmtime(template)
-            if mtime > self.last_excel_mtime:
-                self.last_excel_mtime = mtime
-                self.auto_init_master_data()
-                return
 
         if not os.path.exists(db_path):
-            self.auto_init_master_data()
+            self.log("Chưa có dữ liệu nền. Hãy bấm CHẠY TÍNH TOÁN để chương trình nạp nguồn và xuất kết quả.")
             return
 
         try:
@@ -1101,7 +1113,7 @@ class MPManagerApp:
             rows = conn.execute("SELECT code, name_jp FROM dim_cost_centers ORDER BY code").fetchall()
             if not rows:
                 conn.close()
-                self.auto_init_master_data()
+                self.log("Danh sách CC trong DB đang trống. Hãy bấm CHẠY TÍNH TOÁN để nạp lại dữ liệu nguồn.")
                 return
             
             self.cc_combo["values"] = [f"{row['code']} - {row['name_jp']}" for row in rows]
@@ -1129,11 +1141,11 @@ class MPManagerApp:
                 db_path = os.path.join(BASE_DIR, "mp2027.db")
                 load_all(db_path=db_path, template_path=template)
                 self.log("Tự động nạp dữ liệu gốc THÀNH CÔNG.")
-                self.root.after(100, self.load_cc_list)
+                self._run_on_ui_thread(lambda: self.root.after(100, self.load_cc_list))
             except Exception as e:
                 self.log(f"Tự động nạp dữ liệu thất bại: {e}")
             finally:
-                self.syncing_master = False
+                self._run_on_ui_thread(setattr, self, "syncing_master", False)
 
         threading.Thread(target=run_sync, daemon=True).start()
 
@@ -2387,8 +2399,13 @@ class MPManagerApp:
                 messagebox.showerror("Lỗi", source_error)
                 return
 
-            # Ensure master data is in sync only after the selected paths are validated.
-            self.auto_init_master_data()
+            if self.syncing_master:
+                messagebox.showinfo(
+                    "Đang nạp dữ liệu",
+                    "Chương trình đang tự động nạp dữ liệu gốc. Hãy đợi hoàn tất rồi chạy tính toán.",
+                )
+                return
+
             self.start_btn.configure(state=tk.DISABLED)
             self.log("--- BẮT ĐẦU TÍNH TOÁN ---")
             self.log(f"Tệp mẫu xác nhận chạy: {template}")
@@ -2402,15 +2419,68 @@ class MPManagerApp:
             messagebox.showerror("Lỗi nhập liệu", _friendly_error_message(exc))
 
     def run_process(self, fiscal_year: int, template: str, source: str, rate: float, target_cc: int | None):
-        success, result = run_universal_pipeline(
-            fiscal_year=fiscal_year,
-            template_path=template,
-            source_dir=source,
-            exchange_rate=rate,
-            target_cc=target_cc,
-            log_callback=self.log,
-            mp_saisan_complete_v1=True,
+        try:
+            cmd = self._pipeline_subprocess_command(fiscal_year, template, source, rate, target_cc)
+            env = os.environ.copy()
+            env["PYTHONIOENCODING"] = "utf-8"
+            env["PYTHONUTF8"] = "1"
+            process = subprocess.Popen(
+                cmd,
+                cwd=BASE_DIR,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                env=env,
+            )
+            assert process.stdout is not None
+            for line in process.stdout:
+                text = line.rstrip()
+                if text:
+                    self.log(text)
+            return_code = process.wait()
+            success = return_code == 0
+            result = (
+                os.path.join(BASE_DIR, f"OUTPUT_FY{fiscal_year}")
+                if success
+                else f"Pipeline exited with code {return_code}"
+            )
+        except Exception as exc:
+            success = False
+            result = exc
+
+        self._run_on_ui_thread(self._finish_pipeline, success, result)
+
+    def _pipeline_subprocess_command(
+        self,
+        fiscal_year: int,
+        template: str,
+        source: str,
+        rate: float,
+        target_cc: int | str | None,
+    ) -> list[str]:
+        if getattr(sys, "frozen", False):
+            cmd = [sys.executable]
+        else:
+            cmd = [sys.executable, os.path.join(BASE_DIR, "scripts", "run_e2e.py")]
+        cmd.extend(
+            [
+                "--fy",
+                str(fiscal_year),
+                "--template",
+                template,
+                "--source",
+                source,
+                "--exchange-rate",
+                str(rate),
+            ]
         )
+        if target_cc:
+            cmd.extend(["--target-cc", str(target_cc)])
+        return cmd
+
+    def _finish_pipeline(self, success: bool, result):
         if success:
             self.log(f"THÀNH CÔNG. Kết quả: {result}")
             self.root.after(100, self.load_cc_list)
@@ -2423,12 +2493,9 @@ class MPManagerApp:
 
 
 if __name__ == "__main__":
-    # Support headless export from packaged exe: if CLI args like --target-cc
-    # are present, delegate to the CLI pipeline instead of opening the GUI.
-    if len(sys.argv) > 1 and any(
-        arg.startswith("--target-cc") or arg.startswith("--legacy-export")
-        for arg in sys.argv[1:]
-    ):
+    # Support headless export from packaged exe: child CLI invocations delegate
+    # to the pipeline instead of opening a second GUI window.
+    if len(sys.argv) > 1 and any(arg.startswith("--") for arg in sys.argv[1:]):
         from scripts.run_e2e import main as _cli_main
         raise SystemExit(_cli_main())
     root = tk.Tk()

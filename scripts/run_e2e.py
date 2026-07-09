@@ -191,13 +191,14 @@ def _apply_complete_v1_source_order(
     dynamic_allocation_rows=None,
     fiscal_periods=None,
 ) -> dict[str, int]:
-    result = apply_complete_v1_source_order_to_workbook(
-        workbook_path,
-        start_row=COMPLETE_V1_SOURCE_ORDER_START_ROW,
-        clear_until_row=COMPLETE_V1_SOURCE_ORDER_CLEAR_UNTIL_ROW,
-        dynamic_allocation_rows=dynamic_allocation_rows,
-        fiscal_periods=fiscal_periods,
-    )
+    kwargs = {
+        "start_row": COMPLETE_V1_SOURCE_ORDER_START_ROW,
+        "clear_until_row": COMPLETE_V1_SOURCE_ORDER_CLEAR_UNTIL_ROW,
+    }
+    if dynamic_allocation_rows and fiscal_periods:
+        kwargs["dynamic_allocation_rows"] = dynamic_allocation_rows
+        kwargs["fiscal_periods"] = fiscal_periods
+    result = apply_complete_v1_source_order_to_workbook(workbook_path, **kwargs)
     log_callback(
         "Đã áp dụng ghi kết quả hoàn chỉnh theo thứ tự nguồn ({phase}): {summary}".format(
             phase=_translate_complete_v1_phase(phase),
@@ -205,6 +206,13 @@ def _apply_complete_v1_source_order(
         )
     )
     return result
+
+
+def _load_complete_v1_dynamic_allocation_rows(builder, target_cc) -> list[dict[str, object]]:
+    loader = getattr(builder, "_load_append_rows", None)
+    if not callable(loader):
+        return []
+    return loader(str(target_cc))
 
 
 def _translate_complete_v1_phase(phase: str) -> str:
@@ -479,7 +487,11 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     reference_map_path=reference_map_path,
                 )
             builder.export_to_template(template_path, out_path, cc_code=target_cc)
-            complete_v1_dynamic_allocation_rows = builder._load_append_rows(str(target_cc)) if mp_saisan_complete_v1 else []
+            complete_v1_dynamic_allocation_rows = (
+                _load_complete_v1_dynamic_allocation_rows(builder, target_cc)
+                if mp_saisan_complete_v1
+                else []
+            )
             complete_v1_fiscal_periods = get_fy_months(fiscal_year) if mp_saisan_complete_v1 else []
             output_workbook_exists = os.path.exists(out_path)
             if facility_file_order_export and output_workbook_exists and (explicit_facility_file_order_export or template_is_excel):
@@ -783,11 +795,6 @@ def main(argv=None):
     )
     parser.add_argument('--fixed-assets-skeleton-start-row', type=int, default=None)
     parser.add_argument(
-        '--legacy-export',
-        action='store_true',
-        help='Use legacy fixed-row export instead of canonical complete-v1 source-order export.',
-    )
-    parser.add_argument(
         '--mp-saisan-complete-v1',
         action='store_true',
         help=argparse.SUPPRESS,
@@ -818,7 +825,7 @@ def main(argv=None):
         fixed_assets_reference_skeleton_export=args.fixed_assets_reference_skeleton_export,
         fixed_assets_skeleton_csv=args.fixed_assets_skeleton_csv,
         fixed_assets_skeleton_start_row=args.fixed_assets_skeleton_start_row,
-        mp_saisan_complete_v1=not args.legacy_export,
+        mp_saisan_complete_v1=True,
     )
     return 0 if success else 1
 
