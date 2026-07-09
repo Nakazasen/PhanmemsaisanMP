@@ -1044,6 +1044,54 @@ class TestHealthCheckAllocation(unittest.TestCase):
         self.assertEqual(float(female_amount["amount_vnd"]), 1800.0)
         conn.close()
 
+    def test_uniform_and_long_sleeve_rules_are_suppressed(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        period = "202610"
+        conn.execute(
+            """
+            INSERT INTO fact_monthly_headcount
+            (
+                period, cc_code, headcount_all, headcount_staff, headcount_worker,
+                headcount_male, headcount_female, source, description
+            )
+            VALUES (?, ?, 3, 3, 0, 0, 0, 'manual', 'october headcount')
+            """,
+            (period, cc_code),
+        )
+        conn.executemany(
+            """
+            INSERT INTO map_allocation_rules
+            (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
+             posting_month, unit_price, unit, driver_type, driver_raw)
+            VALUES ('GA', ?, 'GA', 5004086291, 6004086651, 6004086551, '10月', ?, '/unit', 'headcount_all', 'headcount_all')
+            """,
+            [
+                ("制服（冬） Đồng phục dài tay", 175000),
+                ("保安課の長袖 Áo dài tay phòng an ninh", 265000),
+                ("General welfare control", 1000),
+            ],
+        )
+        conn.commit()
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        rows = conn.execute(
+            """
+            SELECT description, amount_vnd
+            FROM fact_input_data
+            WHERE CAST(cc_code AS TEXT)=?
+            ORDER BY description
+            """,
+            (str(cc_code),),
+        ).fetchall()
+        descriptions = [str(row["description"]) for row in rows]
+        self.assertNotIn("Alloc: 制服（冬） Đồng phục dài tay", descriptions)
+        self.assertNotIn("Alloc: 保安課の長袖 Áo dài tay phòng an ninh", descriptions)
+        self.assertEqual(descriptions, ["Alloc: General welfare control"])
+        self.assertEqual(float(rows[0]["amount_vnd"]), 3000.0)
+        conn.close()
+
 
 class TestPostingMonthOverride(unittest.TestCase):
     def test_override_uses_months_from_business_sheet(self):
@@ -2162,6 +2210,71 @@ class TestManualSpecialCosts(unittest.TestCase):
                 self.assertEqual(ws["B137"].value, 5004086291)
                 self.assertEqual(ws["G137"].value, "=3*4000")
                 self.assertEqual(ws["S137"].value, "出向者の書類申請費/Chi phí làm giấy tờ cho người biệt phái")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_manual_event_driver_zero_count_exports_red_formula_cell(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        conn.execute(
+            "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
+        )
+        conn.commit()
+
+        tmpdir = _mk_tmpdir()
+        try:
+            csv_path = tmpdir / "event_drivers_manual.csv"
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "cc_code",
+                        "event_name",
+                        "count",
+                        "unit_price",
+                        "account_code",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "cc_code": str(cc_code),
+                        "event_name": "会社設立記念 感謝イベント",
+                        "count": "0",
+                        "unit_price": "1000",
+                        "account_code": "5004086291",
+                    }
+                )
+
+            result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
+            self.assertEqual(result["inserted"], 1)
+            self.assertEqual(result["errors"], 0)
+
+            row = conn.execute(
+                """
+                SELECT period, amount_vnd, form_row, description
+                FROM fact_input_data
+                WHERE source = 'manual_event_driver'
+                """
+            ).fetchone()
+            self.assertEqual(row["period"], "202610")
+            self.assertEqual(float(row["amount_vnd"]), 0.0)
+            self.assertEqual(row["form_row"], 68)
+            self.assertIn("explicit_zero_count=1", row["description"])
+
+            template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+            output_path = tmpdir / "out_manual_event_zero.xlsx"
+            ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
+            self.assertTrue(ok)
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                self.assertEqual(ws["L68"].value, "=0*1000")
+                self.assertEqual(ws["L68"].fill.fgColor.rgb, "00FFC7CE")
             finally:
                 workbook.close()
         finally:
@@ -4583,7 +4696,7 @@ class TestHubBuilderExport(unittest.TestCase):
         tmpdir = _mk_tmpdir()
         try:
             output_path = tmpdir / "out_it_missing_cc.xlsx"
-            with self.assertRaisesRegex(RuntimeError, "Unable to resolve KDC System Cost account"):
+            with self.assertRaisesRegex(RuntimeError, "Không xác định được tài khoản System Cost"):
                 HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
         finally:
             conn.close()

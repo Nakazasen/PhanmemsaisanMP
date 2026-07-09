@@ -13,6 +13,7 @@ from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
 
 TEMPLATE_FILENAME = "event_drivers_manual.csv"
 SOURCE_NAME = "manual_event_driver"
+EXPLICIT_ZERO_COUNT_MARKER = "explicit_zero_count=1"
 
 EVENT_DEFAULTS = (
     {
@@ -273,6 +274,16 @@ def _normalize_unit_price_key(value: Any) -> str:
     return " ".join(text.split())
 
 
+def _is_explicit_zero(value: Any) -> bool:
+    text = str(value or "").strip()
+    if not text:
+        return False
+    try:
+        return abs(float(text.replace(",", ""))) < 1e-9
+    except (TypeError, ValueError):
+        return False
+
+
 def _event_match_text(value: Any) -> str:
     return _normalize_unit_price_key(value).lower()
 
@@ -438,10 +449,11 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                     continue
 
             count = safe_float(row.get("count"))
+            explicit_zero_count = _is_explicit_zero(row.get("count"))
             unit_price = safe_float(row.get("unit_price"))
             amount_vnd = safe_float(row.get("amount_vnd"))
             formula_expr = None
-            if count > 0 and unit_price <= 0:
+            if (count > 0 or explicit_zero_count) and unit_price <= 0:
                 unit_price_key, unit_price_key_ok = _merged_value(row, "unit_price_key", "allocation_content")
                 if not unit_price_key_ok:
                     errors += 1
@@ -458,6 +470,12 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
             if count > 0 and unit_price > 0:
                 amount_vnd = count * unit_price
                 formula_expr = f"{_format_number(count)}*{_format_number(unit_price)}"
+            elif explicit_zero_count:
+                amount_vnd = 0.0
+                if unit_price > 0:
+                    formula_expr = f"0*{_format_number(unit_price)}"
+                else:
+                    formula_expr = "0"
             elif amount_vnd > 0:
                 formula_expr = _format_number(amount_vnd)
             else:
@@ -466,6 +484,8 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
 
             final_description = description or event_name
             final_description = f"{event_name}: {final_description}|formula_expr={formula_expr}{shift_metadata}"
+            if explicit_zero_count:
+                final_description = f"{final_description}|{EXPLICIT_ZERO_COUNT_MARKER}"
             if repeat_all_months:
                 final_description = f"{final_description}|repeat=all_months"
             cursor.executemany(

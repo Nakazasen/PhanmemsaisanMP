@@ -39,6 +39,7 @@ APPEND_LEFT_FILL = "CCFFFF"
 APPEND_MONTH_FILL = "CCFFFF"
 APPEND_NOTE_FILL = "CCFFFF"
 MISSING_SEPARATE_COUNT_MARKER = "missing_separate_count=1"
+EXPLICIT_ZERO_COUNT_MARKER = "explicit_zero_count=1"
 MISSING_SEPARATE_COUNT_FILL = "FFC7CE"
 IT_COMPONENT_ORDER = ("vpn", "mail", "r3", "mes", "plm", "qlik_sense", "vps", "ams")
 IT_SYSTEM_ACCOUNT_CODES = {5005246282, 6005146628, 6005146542}
@@ -153,7 +154,11 @@ class HubBuilder:
                 candidates.append((score, row_index))
 
         if not candidates:
-            raise RuntimeError("Unable to locate System Cost row in FORM template")
+            raise RuntimeError(
+                "Không tìm thấy dòng System Cost trong FORM template. "
+                "Hãy dùng docs/MP2027/FORM.xlsx mới nhất; dòng này phải có tài khoản "
+                "5005246282, 6005146628, 6005146542 hoặc mô tả System Cost/KDC."
+            )
         candidates.sort(key=lambda item: (-item[0], item[1]))
         return candidates[0][1]
 
@@ -326,14 +331,16 @@ class HubBuilder:
         try:
             hub_sheet_name = helpers.find_hub_sheet_name(workbook)
         except ValueError as exc:
-            raise ExportIntegrityError(f"FORM template is missing the MP detail sheet: {template_path}") from exc
+            raise ExportIntegrityError(
+                f"FORM template không có sheet chi tiết MP đúng định dạng: {template_path}"
+            ) from exc
 
         worksheet = workbook[hub_sheet_name]
         if worksheet.max_row < TEMPLATE_ACCOUNT_CLEAR_START_ROW or worksheet.max_column < DESCRIPTION_COL:
             raise ExportIntegrityError(
-                "FORM template is malformed or empty: "
-                f"{template_path} has sheet={hub_sheet_name!r}, "
-                f"max_row={worksheet.max_row}, max_column={worksheet.max_column}"
+                "FORM template sai định dạng hoặc rỗng: "
+                f"{template_path}; sheet={hub_sheet_name!r}; "
+                f"số dòng={worksheet.max_row}; số cột={worksheet.max_column}"
             )
         return hub_sheet_name
 
@@ -772,7 +779,7 @@ class HubBuilder:
             period = str(row["period"])
             amount = float(row["amount"] or 0.0)
             term = self._explicit_formula_term_from_description(description)
-            if MISSING_SEPARATE_COUNT_MARKER in description:
+            if MISSING_SEPARATE_COUNT_MARKER in description or EXPLICIT_ZERO_COUNT_MARKER in description:
                 bucket["highlight_periods"].add(period)
             if term:
                 bucket["terms"][period].append(term)
@@ -807,6 +814,8 @@ class HubBuilder:
             part
             for part in str(description or "").split("|")
             if not part.startswith("formula_expr=")
+            and part != MISSING_SEPARATE_COUNT_MARKER
+            and part != EXPLICIT_ZERO_COUNT_MARKER
         ).strip()
 
     def _parse_it_component_term(self, description: str) -> tuple[str, float, float] | None:
@@ -880,7 +889,10 @@ class HubBuilder:
         row_index = self._find_it_system_total_row(worksheet)
         account_code = self._resolve_it_system_account_code(cc_code, account_codes)
         if account_code is None:
-            raise RuntimeError(f"Unable to resolve KDC System Cost account for cost center {cc_code}")
+            raise RuntimeError(
+                f"Không xác định được tài khoản System Cost cho mã bộ phận {cc_code}. "
+                "Hãy kiểm tra loại chi phí của mã bộ phận trong master CC."
+            )
         worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
 
         self._clear_visible_months(worksheet, row_index)
@@ -1243,7 +1255,7 @@ class HubBuilder:
             )
             period = str(row["period"])
             term = self._explicit_formula_term_from_description(description) or self._alloc_formula_term_from_row(row)
-            if MISSING_SEPARATE_COUNT_MARKER in description:
+            if MISSING_SEPARATE_COUNT_MARKER in description or EXPLICIT_ZERO_COUNT_MARKER in description:
                 bucket["highlight_periods"].add(period)
             if term:
                 bucket["terms"][period].append(term)
@@ -1270,7 +1282,7 @@ class HubBuilder:
             return False
 
         if not os.path.exists(template_path):
-            raise FileNotFoundError(f"FORM template not found: {template_path}")
+            raise FileNotFoundError(f"Không tìm thấy tệp FORM template: {template_path}")
 
         template_workbook = openpyxl.load_workbook(template_path, read_only=True, data_only=False)
         try:
@@ -1307,7 +1319,9 @@ class HubBuilder:
                 current_row = append_start_row
                 for row in self._load_append_rows(target_cc):
                     if current_row > max_data_row:
-                        raise ValueError("FORM detail sheet does not have enough append rows prepared.")
+                        raise ValueError(
+                            "Sheet chi tiết MP trong FORM không còn đủ dòng trống để ghi thêm chi phí phát sinh."
+                        )
                     self._prepare_append_row(worksheet, current_row)
                     worksheet.cell(row=current_row, column=ACCOUNT_COL, value=int(row["account_code"]))
                     worksheet.cell(row=current_row, column=DESCRIPTION_COL, value=row["description"])

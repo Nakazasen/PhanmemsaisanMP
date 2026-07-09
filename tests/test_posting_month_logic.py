@@ -312,7 +312,7 @@ class TestPostingMonthLogic(unittest.TestCase):
             self.assertEqual(_missing_areas(conn, cc), {})
             conn.close()
 
-    def test_my_episode_philosophy_uses_april_headcount_for_july_without_placeholder(self):
+    def test_my_episode_philosophy_creates_manual_count_placeholder_for_july(self):
         conn = _mk_conn()
         cc = _seed_cc(conn)
         _seed_hc(conn, cc, [22, 23, 23, 24, 24, 24, 25, 26, 26, 26, 26, 26])
@@ -327,15 +327,16 @@ class TestPostingMonthLogic(unittest.TestCase):
 
         AllocationEngine(conn)._process_allocation_rules()
 
-        self.assertEqual(_alloc_periods(conn, rid), {"202607": 22 * 100000.0})
+        self.assertEqual(_alloc_periods(conn, rid), {"202607": 0.0})
         row = conn.execute(
             "SELECT description FROM fact_input_data WHERE source=?",
             (f"alloc_{rid}",),
         ).fetchone()
-        self.assertIn("source_month=202604", row["description"])
-        self.assertIn("driver_value=22", row["description"])
-        self.assertIn("formula_expr=22*100000", row["description"])
-        self.assertNotIn("missing_separate_count=1", row["description"])
+        self.assertNotIn("source_month=202604", row["description"])
+        self.assertNotIn("driver_value=22", row["description"])
+        self.assertIn("formula_expr=0*100000", row["description"])
+        self.assertIn("missing_separate_count=1", row["description"])
+        self.assertIn("status=NEEDS_SEPARATE_COUNT", row["description"])
         self.assertEqual(_missing_areas(conn, cc), {})
         conn.close()
 

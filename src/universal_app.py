@@ -5,6 +5,7 @@ MP2027 Manager - ứng dụng giao diện chính.
 import csv
 import hashlib
 import os
+import shutil
 import sqlite3
 import sys
 import threading
@@ -12,6 +13,7 @@ import tkinter as tk
 from datetime import datetime
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
+import openpyxl
 
 def resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
@@ -29,6 +31,39 @@ else:
 
 if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
+
+
+def _copy_missing_tree(source_dir: str, target_dir: str) -> None:
+    if not os.path.isdir(source_dir):
+        return
+    os.makedirs(target_dir, exist_ok=True)
+    for root, _dirs, files in os.walk(source_dir):
+        relative_dir = os.path.relpath(root, source_dir)
+        target_root = target_dir if relative_dir == "." else os.path.join(target_dir, relative_dir)
+        os.makedirs(target_root, exist_ok=True)
+        for filename in files:
+            if filename.startswith("~$"):
+                continue
+            source_file = os.path.join(root, filename)
+            target_file = os.path.join(target_root, filename)
+            if not os.path.exists(target_file):
+                shutil.copy2(source_file, target_file)
+
+
+def _ensure_external_runtime_data() -> None:
+    """Make bundled data editable next to the exe; _internal is fallback only."""
+    if not getattr(sys, "frozen", False):
+        return
+    packaged_docs = resource_path(os.path.join("docs", "MP2027"))
+    packaged_raw = resource_path("raw")
+    external_docs = os.path.join(BASE_DIR, "docs", "MP2027")
+    external_raw = os.path.join(BASE_DIR, "raw")
+    _copy_missing_tree(packaged_docs, external_docs)
+    _copy_missing_tree(packaged_raw, external_raw)
+
+
+_ensure_external_runtime_data()
+
 from scripts.run_e2e import run_universal_pipeline
 from src.config import EXCHANGE_RATE_USD_VND
 from src.db.loader import load_all
@@ -43,7 +78,7 @@ from src.parsers.manual_headcount import (
     resolve_manual_headcount_source_dir,
     validate_manual_headcount_rows,
 )
-from src.utils.excel_helpers import get_fy_months
+from src.utils.excel_helpers import find_hub_sheet_name, get_fy_months
 from src.utils.fiscal_periods import fiscal_month_labels
 from src.utils.source_manifest import (
     DEFAULT_DESCRIPTIONS,
@@ -235,13 +270,180 @@ def _default_template_path() -> str:
     if os.path.exists(packaged_mp2027):
         return packaged_mp2027
 
-    external_root_form = os.path.join(BASE_DIR, "FORM.xlsx")
-    if os.path.exists(external_root_form):
-        return external_root_form
-
     raise FileNotFoundError(
         f"Không tìm thấy tệp mẫu bắt buộc: {external_mp2027}. "
         "Không dùng FORM.xlsx cũ ở thư mục gốc vì tệp đó còn công thức mẫu cũ."
+    )
+
+
+FORM_SYSTEM_ACCOUNT_CODES = {5005246282, 6005146628, 6005146542}
+FORM_SYSTEM_TEXT_TOKENS = ("system cost", "kdc", "システム", "社内システム")
+
+
+def _external_template_path() -> str:
+    return os.path.join(BASE_DIR, "docs", "MP2027", "FORM.xlsx")
+
+
+def _external_source_dir() -> str:
+    return os.path.join(BASE_DIR, "docs", "MP2027")
+
+
+def _is_under_internal(path: str) -> bool:
+    if not path:
+        return False
+    try:
+        absolute_path = os.path.abspath(path)
+        internal_dir = os.path.abspath(os.path.join(BASE_DIR, "_internal"))
+        return os.path.commonpath([absolute_path, internal_dir]) == internal_dir
+    except (OSError, ValueError):
+        return False
+
+
+def _as_int(value) -> int | None:
+    try:
+        if value is None or str(value).strip() == "":
+            return None
+        return int(float(str(value).strip()))
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_form_text(value) -> str:
+    return " ".join(str(value or "").replace("\n", " ").lower().split())
+
+
+def _find_system_cost_row_for_validation(worksheet) -> int | None:
+    for row_index in range(1, worksheet.max_row + 1):
+        account_code = _as_int(worksheet.cell(row=row_index, column=2).value)
+        if account_code in FORM_SYSTEM_ACCOUNT_CODES:
+            return row_index
+        row_text = " ".join(
+            _normalize_form_text(worksheet.cell(row=row_index, column=column_index).value)
+            for column_index in range(1, min(worksheet.max_column, 20) + 1)
+        )
+        if any(token in row_text for token in FORM_SYSTEM_TEXT_TOKENS):
+            return row_index
+    return None
+
+
+def _validate_selected_template(path: str) -> str | None:
+    external_template = _external_template_path()
+    if not os.path.isfile(path):
+        return (
+            "Không tìm thấy tệp mẫu FORM.\n\n"
+            f"Hãy chọn tệp: {external_template}"
+        )
+    if _is_legacy_root_template(path):
+        return (
+            "Không được dùng FORM.xlsx ở thư mục gốc vì tệp này còn công thức mẫu cũ.\n\n"
+            f"Hãy chọn tệp FORM mới nhất: {external_template}"
+        )
+    if _is_under_internal(path) and os.path.exists(external_template):
+        return (
+            "Đường dẫn tệp mẫu đang trỏ vào thư mục _internal của chương trình.\n\n"
+            "Người dùng không cần và không nên quản lý dữ liệu trong _internal.\n"
+            f"Hãy chọn tệp FORM bên ngoài: {external_template}"
+        )
+    try:
+        workbook = openpyxl.load_workbook(path, read_only=True, data_only=False)
+    except Exception:
+        return (
+            "Không mở được tệp FORM. Tệp có thể không phải Excel .xlsx hợp lệ hoặc đang bị hỏng.\n\n"
+            f"Hãy dùng tệp FORM mới nhất: {external_template}"
+        )
+    try:
+        try:
+            sheet_name = find_hub_sheet_name(workbook)
+        except Exception:
+            return (
+                "Tệp FORM không có sheet chi tiết MP đúng định dạng.\n\n"
+                f"Hãy dùng tệp FORM mới nhất: {external_template}"
+            )
+        worksheet = workbook[sheet_name]
+        if _find_system_cost_row_for_validation(worksheet) is None:
+            return (
+                "Tệp FORM không có dòng System Cost cần thiết để xuất chi phí hệ thống.\n\n"
+                "Nguyên nhân thường gặp: đang chọn nhầm FORM.xlsx cũ hoặc tệp FORM không đúng phiên bản.\n"
+                f"Hãy thay bằng tệp FORM mới nhất: {external_template}"
+            )
+    finally:
+        workbook.close()
+    return None
+
+
+def _validate_selected_source_dir(path: str) -> str | None:
+    external_source = _external_source_dir()
+    if not os.path.isdir(path):
+        return (
+            "Không tìm thấy thư mục nguồn.\n\n"
+            f"Hãy chọn thư mục chứa dữ liệu nguồn, ví dụ: {external_source}"
+        )
+    if _is_under_internal(path) and os.path.isdir(external_source):
+        return (
+            "Thư mục nguồn đang trỏ vào _internal của chương trình.\n\n"
+            "Đây là thư mục đóng gói nội bộ, không phải nơi người dùng quản lý dữ liệu.\n"
+            f"Hãy chọn thư mục bên ngoài cạnh file chạy: {external_source}"
+        )
+    return None
+
+
+def _friendly_error_message(error) -> str:
+    text = str(error or "").strip()
+    lower_text = text.lower()
+    external_template = _external_template_path()
+    vietnamese_markers = (
+        "không",
+        "hãy",
+        "tệp",
+        "thư mục",
+        "dữ liệu",
+        "đường dẫn",
+        "lỗi",
+        "mẫu",
+    )
+
+    if "unable to locate system cost row" in lower_text or "không tìm thấy dòng system cost" in lower_text:
+        return (
+            "Không tìm thấy dòng System Cost trong tệp FORM.\n\n"
+            "Nguyên nhân thường gặp: đang dùng FORM.xlsx cũ hoặc FORM không đúng phiên bản.\n"
+            f"Cách xử lý: chọn lại tệp FORM mới nhất tại {external_template}."
+        )
+    if "unable to resolve kdc system cost account" in lower_text or "không xác định được tài khoản system cost" in lower_text:
+        return (
+            "Không xác định được tài khoản System Cost cho một mã bộ phận.\n\n"
+            "Cách xử lý: kiểm tra mã bộ phận trong dữ liệu nguồn và kiểm tra loại chi phí của mã đó trong master CC."
+        )
+    if "form template not found" in lower_text:
+        return (
+            "Không tìm thấy tệp mẫu FORM.\n\n"
+            f"Cách xử lý: chọn lại tệp FORM mới nhất tại {external_template}."
+        )
+    if "missing the mp detail sheet" in lower_text or "không có sheet chi tiết mp" in lower_text:
+        return (
+            "Tệp FORM không có sheet chi tiết MP đúng định dạng.\n\n"
+            f"Cách xử lý: dùng lại tệp FORM mới nhất tại {external_template}."
+        )
+    if "malformed or empty" in lower_text:
+        return (
+            "Tệp FORM sai định dạng hoặc rỗng.\n\n"
+            f"Cách xử lý: thay bằng tệp FORM mới nhất tại {external_template}."
+        )
+    if "append rows prepared" in lower_text or "dòng trống để ghi thêm" in lower_text:
+        return (
+            "Tệp FORM không còn đủ dòng trống để ghi các chi phí phát sinh thêm.\n\n"
+            "Cách xử lý: dùng FORM mới nhất hoặc chuẩn bị thêm vùng dòng trống trong sheet chi tiết MP."
+        )
+    if "not found" in lower_text or "no such file" in lower_text:
+        return (
+            "Không tìm thấy tệp hoặc thư mục cần dùng.\n\n"
+            "Cách xử lý: kiểm tra lại đường dẫn Tệp mẫu FORM và Thư mục nguồn trên màn hình chính."
+        )
+    if text and any(marker in lower_text for marker in vietnamese_markers):
+        return text
+    return (
+        "Đã xảy ra lỗi khi chạy chương trình.\n\n"
+        "Cách xử lý: kiểm tra lại Tệp mẫu FORM, Thư mục nguồn và chạy lại. "
+        "Nếu lỗi vẫn lặp lại, bật MP2027_DEBUG_TRACEBACK=1 để lấy chi tiết kỹ thuật."
     )
 
 
@@ -665,17 +867,19 @@ class MPManagerApp:
     def browse_template(self):
         path = filedialog.askopenfilename(filetypes=[("Tệp Excel", "*.xlsx")])
         if path:
-            if _is_legacy_root_template(path):
-                messagebox.showerror(
-                    "Lỗi",
-                    "Không được dùng FORM.xlsx ở thư mục gốc vì tệp này còn công thức mẫu cũ. Hãy chọn docs/MP2027/FORM.xlsx.",
-                )
+            validation_error = _validate_selected_template(path)
+            if validation_error:
+                messagebox.showerror("Lỗi", validation_error)
                 return
             self.template_path.set(path)
 
     def browse_source_dir(self):
         path = filedialog.askdirectory()
         if path:
+            validation_error = _validate_selected_source_dir(path)
+            if validation_error:
+                messagebox.showerror("Lỗi", validation_error)
+                return
             self.source_dir.set(path)
 
     def open_source_order_editor(self):
@@ -2173,15 +2377,14 @@ class MPManagerApp:
 
             template = self.template_path.get()
             source = self.source_dir.get()
-            if not os.path.exists(template) or not os.path.exists(source):
-                messagebox.showerror("Lỗi", "Đường dẫn tệp mẫu hoặc thư mục nguồn không hợp lệ.")
+            template_error = _validate_selected_template(template)
+            if template_error:
+                messagebox.showerror("Lỗi", template_error)
                 return
 
-            if _is_legacy_root_template(template):
-                messagebox.showerror(
-                    "Lỗi",
-                    "Không được dùng FORM.xlsx ở thư mục gốc vì tệp này còn công thức mẫu cũ. Hãy dùng docs/MP2027/FORM.xlsx.",
-                )
+            source_error = _validate_selected_source_dir(source)
+            if source_error:
+                messagebox.showerror("Lỗi", source_error)
                 return
 
             # Ensure master data is in sync only after the selected paths are validated.
@@ -2196,7 +2399,7 @@ class MPManagerApp:
                 daemon=True,
             ).start()
         except Exception as exc:
-            messagebox.showerror("Lỗi nhập liệu", str(exc))
+            messagebox.showerror("Lỗi nhập liệu", _friendly_error_message(exc))
 
     def run_process(self, fiscal_year: int, template: str, source: str, rate: float, target_cc: int | None):
         success, result = run_universal_pipeline(
@@ -2213,8 +2416,9 @@ class MPManagerApp:
             self.root.after(100, self.load_cc_list)
             messagebox.showinfo("Hoàn tất", f"Quá trình xuất dữ liệu hoàn tất.\n\nKết quả: {result}")
         else:
-            self.log(f"THẤT BẠI: {result}")
-            messagebox.showerror("Thất bại", str(result))
+            message = _friendly_error_message(result)
+            self.log(f"THẤT BẠI: {message}")
+            messagebox.showerror("Thất bại", message)
         self.start_btn.configure(state=tk.NORMAL)
 
 

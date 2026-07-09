@@ -91,6 +91,14 @@ ACTUAL_COUNT_DRIVER_TOKENS = (
     "số người tham gia",
     "số lượng phát thực tế",
 )
+SUPPRESSED_UNIFORM_ITEM_RAW_TOKENS = (
+    "\u5236\u670d",  # 制服
+    "\u9577\u8896",  # 長袖
+)
+SUPPRESSED_UNIFORM_ITEM_NORMALIZED_TOKENS = (
+    "dong phuc",
+    "ao dai tay",
+)
 SEPARATE_COUNT_PLACEHOLDER_MARKER = "missing_separate_count=1"
 SEPARATE_COUNT_PLACEHOLDER_TOKENS = (
     ("部門方針発表会後",),
@@ -147,7 +155,6 @@ COMPANY_TRIP_TOKENS = (
     "du lich cong ty",
 )
 FIXED_HEADCOUNT_RULE_SPECS = (
-    (MY_EPISODE_PHILOSOPHY_TOKENS, 7, 4),
     (MOONCAKE_TOKENS, 9, 9),
     (COMPANY_FOUNDING_THANKS_EVENT_TOKENS, 10, 10),
     (LUCKY_MONEY_TOKENS, 2, 2),
@@ -646,6 +653,13 @@ class AllocationEngine:
             return True
         return False
 
+    def _is_suppressed_uniform_rule(self, rule) -> bool:
+        raw_item_name = str(rule["item_name"] or "")
+        normalized_item_name = self._normalize_text(raw_item_name)
+        if any(token in raw_item_name for token in SUPPRESSED_UNIFORM_ITEM_RAW_TOKENS):
+            return True
+        return any(token in normalized_item_name for token in SUPPRESSED_UNIFORM_ITEM_NORMALIZED_TOKENS)
+
     def _requires_separate_count_placeholder(self, rule) -> bool:
         if self._is_fixed_headcount_override_rule(rule):
             return False
@@ -822,6 +836,8 @@ class AllocationEngine:
 
         for rule in rules:
             if self._bus_rule_kind(rule) is not None:
+                continue
+            if self._is_suppressed_uniform_rule(rule):
                 continue
             if self._requires_separate_count_placeholder(rule):
                 target_periods = self._resolve_target_periods(self._effective_posting_month(rule))

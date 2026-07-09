@@ -4,6 +4,14 @@ import sys
 import shutil
 
 
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+
 def _add_data_args(source: str, target: str) -> list[str]:
     args: list[str] = []
     if os.path.isdir(source):
@@ -69,6 +77,7 @@ def package():
         print(f"Dữ liệu runtime có thể chỉnh sửa đã được chép vào: {dist_docs} và {dist_raw}")
     except subprocess.CalledProcessError as e:
         print(f"\nLỗi khi đóng gói: {e}")
+        raise SystemExit(1)
 
 if __name__ == "__main__":
     package()

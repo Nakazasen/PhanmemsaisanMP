@@ -119,6 +119,57 @@ def _default_source_dir() -> str:
     return BASE_DIR
 
 
+def _friendly_pipeline_error_message(error) -> str:
+    text = str(error or "").strip()
+    lower_text = text.lower()
+    expected_form = os.path.join(BASE_DIR, "docs", "MP2027", "FORM.xlsx")
+    vietnamese_markers = (
+        "không",
+        "hãy",
+        "tệp",
+        "thư mục",
+        "dữ liệu",
+        "đường dẫn",
+        "lỗi",
+        "mẫu",
+    )
+
+    if "unable to locate system cost row" in lower_text or "không tìm thấy dòng system cost" in lower_text:
+        return (
+            "Không tìm thấy dòng System Cost trong tệp FORM. "
+            f"Hãy chọn lại tệp FORM mới nhất tại {expected_form}."
+        )
+    if "unable to resolve kdc system cost account" in lower_text or "không xác định được tài khoản system cost" in lower_text:
+        return (
+            "Không xác định được tài khoản System Cost cho một mã bộ phận. "
+            "Hãy kiểm tra mã bộ phận trong dữ liệu nguồn và loại chi phí trong master CC."
+        )
+    if "form template not found" in lower_text or "không tìm thấy tệp form template" in lower_text:
+        return f"Không tìm thấy tệp mẫu FORM. Hãy chọn lại tệp FORM mới nhất tại {expected_form}."
+    if "missing the mp detail sheet" in lower_text or "không có sheet chi tiết mp" in lower_text:
+        return f"Tệp FORM không có sheet chi tiết MP đúng định dạng. Hãy dùng tệp FORM mới nhất tại {expected_form}."
+    if "malformed or empty" in lower_text or "sai định dạng hoặc rỗng" in lower_text:
+        return f"Tệp FORM sai định dạng hoặc rỗng. Hãy thay bằng tệp FORM mới nhất tại {expected_form}."
+    if "append rows prepared" in lower_text or "không còn đủ dòng trống" in lower_text:
+        return "Tệp FORM không còn đủ dòng trống để ghi thêm chi phí phát sinh. Hãy dùng FORM mới nhất hoặc chuẩn bị thêm vùng dòng trống."
+    if "not found" in lower_text or "no such file" in lower_text:
+        return "Không tìm thấy tệp hoặc thư mục cần dùng. Hãy kiểm tra lại Tệp mẫu FORM và Thư mục nguồn."
+    if text and any(marker in lower_text for marker in vietnamese_markers):
+        return text
+    return (
+        "Đã xảy ra lỗi khi chạy chương trình. "
+        "Hãy kiểm tra lại Tệp mẫu FORM, Thư mục nguồn và chạy lại. "
+        "Nếu cần điều tra sâu, bật MP2027_DEBUG_TRACEBACK=1 để lấy chi tiết kỹ thuật."
+    )
+
+
+def _log_debug_traceback(log_callback) -> None:
+    if os.environ.get("MP2027_DEBUG_TRACEBACK") == "1":
+        log_callback(traceback.format_exc())
+    else:
+        log_callback("Chi tiết kỹ thuật đã được ẩn. Nếu cần điều tra sâu, bật MP2027_DEBUG_TRACEBACK=1 rồi chạy lại.")
+
+
 def _default_reference_map_path() -> str:
     return os.path.join(BASE_DIR, "docs", "config", "reference_workbook_map.csv")
 
@@ -646,15 +697,16 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
 
 
     except (FileNotFoundError, BadZipFile) as e:
-        message = f"Không tìm thấy hoặc tệp mẫu/nguồn không hợp lệ: {e}"
+        message = _friendly_pipeline_error_message(e)
         log_callback(f"LỖI: {message}")
-        log_callback(traceback.format_exc())
+        _log_debug_traceback(log_callback)
         return False, message
 
     except Exception as e:
-        log_callback(f"LỖI: {str(e)}")
-        log_callback(traceback.format_exc())
-        return False, str(e)
+        message = _friendly_pipeline_error_message(e)
+        log_callback(f"LỖI: {message}")
+        _log_debug_traceback(log_callback)
+        return False, message
 
 def main(argv=None):
     import argparse
