@@ -1,4 +1,4 @@
-﻿"""Non-sensitive fixed-assets coverage audit helpers."""
+"""Non-sensitive fixed-assets coverage audit helpers."""
 from __future__ import annotations
 
 import sqlite3
@@ -42,13 +42,16 @@ def fixed_assets_db_coverage(conn: sqlite3.Connection) -> dict[str, Any]:
 def build_fixed_assets_coverage_report(
     conn: sqlite3.Connection,
     workbook_path: str | Path | None,
+    source_inspection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    source = inspect_fixed_assets_workbook(workbook_path) if workbook_path else {
-        "source_rows": 0,
-        "by_cc": {},
-        "by_sheet": {},
-        "skipped_reasons": {"missing_file": 1},
-    }
+    source = source_inspection or (
+        inspect_fixed_assets_workbook(workbook_path) if workbook_path else {
+            "source_rows": 0,
+            "by_cc": {},
+            "by_sheet": {},
+            "skipped_reasons": {"missing_file": 1},
+        }
+    )
     db = fixed_assets_db_coverage(conn)
     source_by_cc = {str(k): int(v) for k, v in source.get("by_cc", {}).items()}
     parsed_series_by_cc = {str(k): int(v) for k, v in db.get("asset_series_by_cc", {}).items()}

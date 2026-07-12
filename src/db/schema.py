@@ -76,11 +76,23 @@ def create_schema(conn: sqlite3.Connection) -> None:
         )''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS fact_monthly_headcount (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, period TEXT NOT NULL, cc_code INTEGER NOT NULL,
-            headcount_all REAL DEFAULT 0, headcount_staff REAL DEFAULT 0, headcount_worker REAL DEFAULT 0,
+            id INTEGER PRIMARY KEY AUTOINCREMENT, period TEXT NOT NULL, cc_code TEXT NOT NULL,
+            headcount_all REAL DEFAULT 0, headcount_expat REAL DEFAULT 0,
+            headcount_staff REAL DEFAULT 0, headcount_worker REAL DEFAULT 0,
             headcount_male REAL DEFAULT 0, headcount_female REAL DEFAULT 0,
-            source TEXT DEFAULT "hr", description TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            split_status TEXT DEFAULT "READY", headcount_local_total REAL,
+            source TEXT DEFAULT "hr", description TEXT, source_file TEXT, source_sheet TEXT,
+            imported_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(period, cc_code, source)
+        )''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS fact_headcount_time_source (
+            period TEXT NOT NULL, cc_code TEXT NOT NULL,
+            fixed_hours_expat REAL DEFAULT 0, fixed_hours_local REAL DEFAULT 0,
+            overtime_hours_expat REAL DEFAULT 0, overtime_hours_local REAL DEFAULT 0,
+            source_file TEXT, source_sheet TEXT, source_cells TEXT,
+            imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY(period, cc_code)
         )''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS fact_bus_headcount_drivers (
@@ -124,6 +136,19 @@ def create_schema(conn: sqlite3.Connection) -> None:
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS audit_headcount_source_decisions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fiscal_year INTEGER NOT NULL,
+            source_file TEXT NOT NULL,
+            cc_code TEXT NOT NULL,
+            displayed_name TEXT,
+            name_jp TEXT,
+            name_vn TEXT,
+            decision TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            decided_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS sys_params (
             key TEXT PRIMARY KEY, value TEXT NOT NULL, description TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
@@ -133,16 +158,29 @@ def create_schema(conn: sqlite3.Connection) -> None:
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_bus_hc_cc ON fact_bus_headcount_drivers(cc_code)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_missing_inputs_source ON fact_missing_inputs(source, cc_code, period)")
 
-    if not _column_exists(conn, "fact_monthly_headcount", "headcount_male"):
-        cursor.execute("ALTER TABLE fact_monthly_headcount ADD COLUMN headcount_male REAL DEFAULT 0")
-    if not _column_exists(conn, "fact_monthly_headcount", "headcount_female"):
-        cursor.execute("ALTER TABLE fact_monthly_headcount ADD COLUMN headcount_female REAL DEFAULT 0")
+    for column_name, definition in (
+        ("headcount_male", "REAL DEFAULT 0"),
+        ("headcount_female", "REAL DEFAULT 0"),
+        ("headcount_expat", "REAL DEFAULT 0"),
+        ("source_file", "TEXT"),
+        ("source_sheet", "TEXT"),
+        ("imported_at", "TIMESTAMP"),
+        ("split_status", "TEXT DEFAULT 'READY'"),
+        ("headcount_local_total", "REAL"),
+    ):
+        if not _column_exists(conn, "fact_monthly_headcount", column_name):
+            cursor.execute(f"ALTER TABLE fact_monthly_headcount ADD COLUMN {column_name} {definition}")
     if not _column_exists(conn, "fact_input_data", "form_row"):
         cursor.execute("ALTER TABLE fact_input_data ADD COLUMN form_row INTEGER DEFAULT NULL")
 
     conn.commit()
 
-def init_sys_params(conn: sqlite3.Connection, exchange_rate: float | None = None, fiscal_year: int = 2027) -> None:
+def init_sys_params(
+    conn: sqlite3.Connection,
+    exchange_rate: float | None = None,
+    fiscal_year: int = 2027,
+    exchange_rate_source: str = "FORM B2",
+) -> None:
     start_year = fiscal_year - 1
     params = [
         ('fiscal_year', f'FY{fiscal_year}', 'Current fiscal year (Apr-Mar)'),
@@ -150,7 +188,8 @@ def init_sys_params(conn: sqlite3.Connection, exchange_rate: float | None = None
         ('fy_end', f'{fiscal_year}03', 'Fiscal year end period (YYYYMM)'),
     ]
     if exchange_rate is not None:
-        params.insert(0, ('exchange_rate_usd_vnd', str(float(exchange_rate)), 'USD/VND rate from Hub B2'))
+        params.insert(0, ('exchange_rate_usd_vnd', str(float(exchange_rate)), f'USD/VND effective rate from {exchange_rate_source}'))
+        params.insert(1, ('exchange_rate_source', str(exchange_rate_source), 'Authority for the effective USD/VND rate'))
     cursor = conn.cursor()
     for key, value, desc in params:
         cursor.execute("INSERT OR REPLACE INTO sys_params (key, value, description, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)", (key, value, desc))

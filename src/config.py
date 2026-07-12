@@ -1,3 +1,5 @@
-# Cấu hình hệ thống MP2027
-# Sửa tỷ giá tại đây và khởi động lại chương trình để áp dụng
-EXCHANGE_RATE_USD_VND = 25450.0
+"""Legacy configuration module.
+
+USD/VND is no longer configured in source code. Each run receives one explicit
+rate from the GUI/CLI and writes it to the output FORM hub-sheet B2.
+"""

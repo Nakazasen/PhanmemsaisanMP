@@ -5,10 +5,11 @@ Loads Cost Centers, Accounts, and Allocation Rules from source Excel files.
 import sqlite3
 import os
 import re
+import unicodedata
 import pandas as pd
 import openpyxl
 from src.db.schema import get_connection, create_schema, init_sys_params
-from src.utils.excel_helpers import normalize_cc_code, read_exchange_rate_from_form
+from src.utils.excel_helpers import normalize_cc_code, read_exchange_rate_from_form, validate_exchange_rate
 from src.utils.source_manifest import resolve_manifest_file
 
 import sys
@@ -437,6 +438,14 @@ def load_allocation_rules(
         driver_raw = str(raw_driver).strip() if len(row) > 9 and not pd.isna(raw_driver) else None
 
         driver_type = _classify_driver(driver_raw)
+        normalized_item = unicodedata.normalize("NFKD", item_str).lower()
+        normalized_item = "".join(ch for ch in normalized_item if not unicodedata.combining(ch))
+        recurring_total_tokens = (
+            "食堂燃料", "gas", "トイレットペーパー", "giay ve sinh", "toilet paper",
+            "手洗い洗剤", "nuoc rua tay", "hand wash", "清掃費", "phi lam sach", "cleaning",
+        )
+        if any(token in normalized_item for token in recurring_total_tokens):
+            driver_type = "headcount_all"
 
         cursor.execute("""
             INSERT INTO map_allocation_rules
@@ -454,22 +463,20 @@ def load_allocation_rules(
 
 def load_all(db_path: str = None, template_path: str = None,
              rules_path: str = None, fiscal_year: int = 2027,
-             exchange_rate: float = 25450.0, search_dir: str | None = None) -> dict:
+             exchange_rate: float | None = None, search_dir: str | None = None,
+             exchange_rate_source: str = "explicit pipeline input") -> dict:
     """Load all master data into the database with dynamic configuration."""
     # Determine actual paths
     t_path = template_path or FORM_PATH
     discovery_dir = search_dir or (os.path.dirname(os.path.abspath(t_path)) if t_path else BASE_DIR)
     r_path = rules_path or ALLOC_PATH
 
-    # SSOT: Always try to read exchange rate from FORM.xlsx B2 as per Spec V4
-    if os.path.exists(t_path):
-        try:
-            excel_rate = read_exchange_rate_from_form(t_path)
-            if excel_rate > 0:
-                print(f"Nguồn chuẩn: dùng tỷ giá từ {os.path.basename(t_path)} [B2]: {excel_rate:,.0f}")
-                exchange_rate = excel_rate
-        except Exception as e:
-            print(f"Cảnh báo: không đọc được tỷ giá từ B2, dùng lại {exchange_rate:,.0f}. Lỗi: {e}")
+    if exchange_rate is None:
+        exchange_rate = read_exchange_rate_from_form(t_path)
+        exchange_rate_source = f"FORM B2 ({os.path.basename(t_path)})"
+    else:
+        exchange_rate = validate_exchange_rate(exchange_rate)
+    print(f"Nguồn tỷ giá hiệu lực: {exchange_rate_source}: {exchange_rate:,.0f}")
 
     conn = get_connection(db_path)
     # Ensure Row factory for Row-based access in loaders if needed (schema.py usually sets this)
@@ -477,7 +484,12 @@ def load_all(db_path: str = None, template_path: str = None,
     create_schema(conn)
     
     # Initialize system params with SSOT rate
-    init_sys_params(conn, exchange_rate=exchange_rate, fiscal_year=fiscal_year)
+    init_sys_params(
+        conn,
+        exchange_rate=exchange_rate,
+        fiscal_year=fiscal_year,
+        exchange_rate_source=exchange_rate_source,
+    )
     
     # Determine actual paths
     t_path = template_path or FORM_PATH

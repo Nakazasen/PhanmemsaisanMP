@@ -1,16 +1,17 @@
 # MP2027 Manager - Quy trình nghiệp vụ, vận hành và handover kỹ thuật
 
-Ngày cập nhật: `2026-06-13`
+Ngày cập nhật: `2026-07-11`
 
 `IMPLEMENTATION_VERIFIED_AT_COMMIT=12d92325a0fffa9b03b6251d27210dbb69e032d0`
 `HANDOVER_CONTENT_BASE_COMMIT=2b87fadbed00b8fe99d371435d8e5bfc43fa9d31`
 `HANDOVER_METADATA_REVIEWED_AFTER_COMMIT=13815d9b2267fac97e2a020ef5044c94942521df`
+`CANONICAL_SOURCE_USER_CONFIRMED_AT=2026-07-11`
 
 `IMPLEMENTATION_VERIFIED_AT_COMMIT` là trạng thái code/test được handover kiểm chứng. `HANDOVER_CONTENT_BASE_COMMIT` là commit tạo bản reconciliation nội dung handover chính. `HANDOVER_METADATA_REVIEWED_AFTER_COMMIT` là commit gần nhất đã review/chỉnh metadata và thuật ngữ.
 
-Tài liệu này là handover tổng hợp cho dự án MP2027 Manager. Canonical business requirement vẫn là workbook Excel ngày `09.06.2026`; Markdown này không thay thế workbook yêu cầu, ảnh minh họa, audit log, hoặc code/test evidence. Khi có mâu thuẫn, thứ tự ưu tiên là:
+Tài liệu này là handover tổng hợp cho dự án MP2027 Manager. Canonical business requirement là workbook Excel ngày `10.07.2026` tại `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`; người dùng đã xác nhận đây là bản mới nhất ngày 11.07.2026. Markdown này không thay thế workbook yêu cầu, ảnh minh họa, audit log, hoặc code/test evidence. Khi có mâu thuẫn, thứ tự ưu tiên là:
 
-1. Workbook canonical ngày `09.06.2026`.
+1. Workbook canonical ngày `10.07.2026`.
 2. Code và test đã commit.
 3. Audit report hoặc knowledge doc có timestamp/commit rõ.
 4. Markdown handover này.
@@ -21,7 +22,7 @@ Thông tin lịch sử không tự động override code hiện tại. Mọi cla
 
 ## Reconcile note - workbook canonical updated
 
-Local reconcile time: `2026-07-07 06:40:00`. Requirement Markdown and machine-readable mapping were refreshed against `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx` after the workbook received additional content. Key refreshed points: workbook inventory is 10 sheets; admin 12-month costs use previous-month total headcount with April exception; bus uses scalar app input; account lookup uses `原価区分` to choose `勘定科目` column `製造`/`一般`/`販売`. Canonical workbook still wins over this Markdown.
+Historical reconcile time: `2026-07-07 06:40:00`. Requirement Markdown and machine-readable mapping were refreshed against the 09.06.2026 workbook. From 11.07.2026, the user-confirmed canonical workbook is `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`; implementation claims based on the historical reconcile require a current audit against that file. The 10.07 workbook retains 10 sheets and adds/reconfirms bus inputs, fixed-assets coverage, health-check de-duplication, new-hire allocation, and source-order output behavior.
 
 ---
 ## 1. Mục tiêu chương trình
@@ -34,9 +35,9 @@ Nguyên tắc nghiệp vụ: chương trình thay thao tác nhập tay lặp l�
 
 | Loại | Đường dẫn | Vai trò | Trạng thái |
 |---|---|---|---|
-| Canonical requirement | `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx` | Nguồn yêu cầu nghiệp vụ cao nhất | CANONICAL |
-| Official visual support | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx` | Ảnh/annotation hỗ trợ đọc yêu cầu | SUPPORTING |
-| Full-coverage duplicate | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_FULL_COVERAGE.xlsx` | Bản duplicate dùng kiểm tra coverage hình ảnh | SUPPORTING |
+| Canonical requirement | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx` | Nguồn yêu cầu nghiệp vụ cao nhất, do người dùng xác nhận | CANONICAL |
+| Historical visual support (09.06) | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx` | Ảnh/annotation của requirement 09.06; không xác minh yêu cầu 10.07 | HISTORICAL |
+| Historical full-coverage duplicate (09.06) | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_FULL_COVERAGE.xlsx` | Bản duplicate kiểm tra coverage hình ảnh cho 09.06 | HISTORICAL |
 | Legacy incomplete visual | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_LEGACY_INCOMPLETE.xlsx` | Bản cũ thiếu coverage | LEGACY |
 | Obsolete visual | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026_ảnh.xlsx` | Bản 04.06 đã bị supersede | OBSOLETE |
 | Handover Markdown | `QUY_TRINH_NGHIEP_VU_MP2027.md` | Tài liệu vận hành/kỹ thuật đã reconcile | DERIVED |
@@ -66,7 +67,7 @@ Repo dev chuẩn: `D:\Sandbox\MP2027`.
 
 | Thành phần | Active path | Ghi chú |
 |---|---|---|
-| FORM template/runtime | `docs/MP2027/FORM.xlsx` | Dùng load master, tỷ giá `B2`, copy/export FORM. |
+| FORM template/runtime | `docs/MP2027/FORM.xlsx` | Dùng load master và làm template. Mỗi lần chạy lấy tỷ giá từ GUI/CLI (hoặc `B2` nếu CLI không truyền giá trị), rồi ghi cùng giá trị vào `B2` của mọi file output. |
 | Source workbook dir | `docs/MP2027` | Facility, fixed assets, IT simulation, GA, birthday, allocation rule, NNN paperwork. |
 | Source order manifest | `docs/MP2027/source_file_order.xlsx` | Người dùng chỉnh bằng Excel hoặc GUI `Thứ tự file nguồn`. |
 | Manual headcount | `raw/headcount_manual.csv` | Active canonical manual headcount input. |
@@ -185,7 +186,7 @@ Người dùng đặt source workbooks trong `docs/MP2027` và kiểm tra `sourc
 
 Pipeline cơ bản:
 
-1. Load `docs/MP2027/FORM.xlsx` để lấy tỷ giá, master Cost Center, account.
+1. Chốt một tỷ giá USD/VND cho lần chạy: GUI/CLI có giá trị thì dùng giá trị đó; CLI không có giá trị thì đọc `B2` của FORM. Ghi tỷ giá hiệu lực vào `sys_params` và `B2` của mọi file output.
 2. Load allocation rules từ workbook FY2027.
 3. Parse source theo manifest:
    - Facility.
@@ -364,7 +365,7 @@ Bạn đang làm trong `D:\Sandbox\MP2027`.
 
 Trạng thái implementation verified tới commit `12d92325a0fffa9b03b6251d27210dbb69e032d0`; nội dung handover chính dựa trên commit `2b87fadbed00b8fe99d371435d8e5bfc43fa9d31`; metadata và thuật ngữ đã được review sau commit `13815d9b2267fac97e2a020ef5044c94942521df`:
 
-- Canonical requirement: `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`.
+- Canonical requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`.
 - Active source workbook dir: `docs/MP2027`.
 - Active FORM: `docs/MP2027/FORM.xlsx`.
 - Active manual headcount: `raw/headcount_manual.csv`.

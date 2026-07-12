@@ -77,6 +77,7 @@ def test_facility_preview_flag_creates_preview_workbook(monkeypatch, tmp_path):
         fiscal_year=2027,
         template_path="FORM.xlsx",
         source_dir="raw",
+        exchange_rate=25450,
         target_cc=1412000040,
         facility_file_order_preview=True,
         facility_preview_output=str(output),

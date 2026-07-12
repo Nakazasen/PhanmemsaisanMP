@@ -4,6 +4,7 @@ Universal helper functions for reading financial workbooks.
 """
 import pandas as pd
 import openpyxl
+import math
 from src.utils.fiscal_periods import fiscal_month_order, fiscal_periods
 from datetime import datetime
 from typing import Optional, Any
@@ -44,16 +45,44 @@ def find_hub_sheet_name(workbook: openpyxl.Workbook) -> str:
         if '内訳' in sheet_name and '4' in sheet_name and '3' in sheet_name: return sheet_name
     raise ValueError('Hub sheet 内訳ﾘｽﾄ(4～3月) not found in FORM.xlsx')
 
+def validate_exchange_rate(value: Any) -> float:
+    """Return a safe USD/VND rate or raise instead of silently substituting one."""
+    if isinstance(value, str):
+        value = value.strip().replace(",", "")
+    try:
+        rate = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Tỷ giá USD/VND phải là một số hợp lệ.") from exc
+    if not math.isfinite(rate) or rate <= 0 or rate > 1_000_000:
+        raise ValueError("Tỷ giá USD/VND phải lớn hơn 0 và không vượt quá 1,000,000.")
+    return rate
+
+
 def read_exchange_rate_from_form(form_path: str) -> float:
-    """SSOT: Read official exchange rate from FORM.xlsx hub sheet B2."""
+    """Read the USD/VND rate from the selected FORM hub-sheet B2 cell."""
     path = Path(form_path)
     if not path.exists(): raise FileNotFoundError(f'FORM.xlsx not found at {path}')
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     try:
         sheet_name = find_hub_sheet_name(wb)
-        rate = safe_float(wb[sheet_name]['B2'].value)
-        return rate if rate > 0 else 25450.0
+        return validate_exchange_rate(wb[sheet_name]['B2'].value)
     finally: wb.close()
+
+
+def write_exchange_rate_to_form(form_path: str, exchange_rate: Any) -> float:
+    """Set the effective rate in a copied output FORM without mutating its template."""
+    rate = validate_exchange_rate(exchange_rate)
+    path = Path(form_path)
+    if not path.exists():
+        raise FileNotFoundError(f'FORM.xlsx not found at {path}')
+    wb = openpyxl.load_workbook(path)
+    try:
+        sheet_name = find_hub_sheet_name(wb)
+        wb[sheet_name]['B2'].value = rate
+        wb.save(path)
+    finally:
+        wb.close()
+    return rate
 
 import re
 

@@ -12,7 +12,9 @@ from typing import Any
 
 from openpyxl import load_workbook
 
+from src.audit.exchange_rate_audit import normalize_exchange_rate_formula
 from src.engine.column_s_normalizer import normalize_output_description_column_s
+from src.utils.excel_helpers import read_exchange_rate_from_form
 
 SHEET_NAME = "内訳ﾘｽﾄ(4～3月)"
 PROVENANCE_LABEL = "REFERENCE_FILLED_FROM_PRIMARY"
@@ -219,11 +221,22 @@ def _next_safe_row(ws, start_row: int) -> int:
     return row
 
 
-def _copy_business_row(primary_ws, target_ws, primary_row: int, target_row: int, scope_reason: str) -> None:
+def _copy_business_row(
+    primary_ws,
+    target_ws,
+    primary_row: int,
+    target_row: int,
+    scope_reason: str,
+    exchange_rate: float | None,
+) -> None:
     for col in BUSINESS_COLUMNS:
         source = primary_ws.cell(primary_row, col)
         dest = target_ws.cell(target_row, col)
-        dest.value = source.value
+        dest.value = (
+            normalize_exchange_rate_formula(source.value, exchange_rate)
+            if exchange_rate is not None
+            else source.value
+        )
         if source.has_style:
             dest._style = copy(source._style)
         if source.number_format:
@@ -255,12 +268,25 @@ def apply_reference_assisted_fill_to_workbook(
     try:
         target_ws = target_wb[SHEET_NAME]
         primary_ws = primary_wb[SHEET_NAME]
+        try:
+            exchange_rate: float | None = read_exchange_rate_from_form(str(workbook_path))
+        except ValueError:
+            # This helper can be used for previews. A real pipeline output has
+            # B2 written before this point and is therefore always normalized.
+            exchange_rate = None
         target_row = _next_safe_row(target_ws, start_row)
         written = 0
         for item in selected:
             if target_row < 213:
                 target_row = 213
-            _copy_business_row(primary_ws, target_ws, item["primary_row"], target_row, item["scope_reason"])
+            _copy_business_row(
+                primary_ws,
+                target_ws,
+                item["primary_row"],
+                target_row,
+                item["scope_reason"],
+                exchange_rate,
+            )
             written += 1
             target_row += 1
         normalize_output_description_column_s(target_ws)

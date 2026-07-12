@@ -12,7 +12,9 @@ from typing import Any
 
 from openpyxl import load_workbook
 
+from src.audit.exchange_rate_audit import normalize_exchange_rate_formula
 from src.engine.column_s_normalizer import cell_has_month_cost, normalize_output_description_column_s
+from src.utils.excel_helpers import read_exchange_rate_from_form
 
 SHEET_NAME = "内訳ﾘｽﾄ(4～3月)"
 TARGET_ACCOUNT = "5005026371"
@@ -89,13 +91,17 @@ def _has_usable_skeleton(candidate: dict[str, str]) -> bool:
     return any(cell_has_month_cost(candidate.get(column)) for column in MONTH_SAMPLE_COLUMNS)
 
 
-def _write_candidate(ws, row_index: int, candidate: dict[str, str]) -> None:
+def _write_candidate(ws, row_index: int, candidate: dict[str, str], exchange_rate: float | None) -> None:
     ws.cell(row_index, 2).value = _norm(candidate.get("account"))
     ws.cell(row_index, 19).value = _norm(candidate.get("description"))
     for csv_column, excel_column in MONTH_SAMPLE_COLUMNS.items():
         value = _norm(candidate.get(csv_column))
         if value:
-            ws.cell(row_index, excel_column).value = value
+            ws.cell(row_index, excel_column).value = (
+                normalize_exchange_rate_formula(value, exchange_rate)
+                if exchange_rate is not None
+                else value
+            )
     ws.cell(row_index, 20).value = PROVENANCE_LABEL
 
 
@@ -111,6 +117,12 @@ def apply_fixed_assets_reference_skeleton_to_workbook(
         if SHEET_NAME not in wb.sheetnames:
             raise ValueError(f"Sheet not found: {SHEET_NAME}")
         ws = wb[SHEET_NAME]
+        try:
+            exchange_rate: float | None = read_exchange_rate_from_form(str(workbook_path))
+        except ValueError:
+            # Test/preview workbooks without a valid B2 are not output artifacts;
+            # retain their formulas instead of inventing a conversion rate.
+            exchange_rate = None
         resolved_start = int(start_row) if start_row is not None else _last_business_row(ws) + 1
         target_row = _next_empty_row(ws, resolved_start)
         written = 0
@@ -123,7 +135,7 @@ def apply_fixed_assets_reference_skeleton_to_workbook(
             if _business_row_present(ws, target_row):
                 skipped_existing += 1
                 target_row = _next_empty_row(ws, target_row + 1)
-            _write_candidate(ws, target_row, candidate)
+            _write_candidate(ws, target_row, candidate, exchange_rate)
             written += 1
             target_row = _next_empty_row(ws, target_row + 1)
         normalize_output_description_column_s(ws)

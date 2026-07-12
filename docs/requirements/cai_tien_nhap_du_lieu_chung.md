@@ -1,27 +1,23 @@
-# Phase 42N3H Source Notice
+# Current Source Authority Notice
 
-Current canonical requirement: `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`.
-Current visual support: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx`.
-Versioned full-coverage duplicate: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_FULL_COVERAGE.xlsx`, retained only as a byte-identical duplicate and never above the official visual-support path.
-Obsolete incomplete visual: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_LEGACY_INCOMPLETE.xlsx`, retained only for historical comparison and not for active requirement interpretation.
-Obsolete old visual requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026_ảnh.xlsx`; do not use it.
-Each canonical source drawing is fully contained in at least one capture; overall coverage is 159/159.
-If there is any conflict, the canonical workbook wins over the visual snapshot, Markdown, audit history, and derived descriptions. Refresh/verify any requirement details from 09.06.2026 before using this document for new decisions.
+Current canonical requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`. The user confirmed it as the newest requirement source on `2026-07-11`.
+No visual snapshot has been confirmed for the 10.07 workbook. Any 09.06 visual snapshot, audit, or derived Markdown is historical evidence only and must not override the 10.07 workbook.
+If there is any conflict, the canonical workbook wins over the visual snapshot, Markdown, audit history, and derived descriptions. Refresh/verify any requirement details from 10.07.2026 before using this document for new decisions.
 
-Current source hierarchy last verified:
+Current source hierarchy:
 
-- `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8`
-- Canonical requirement date: `09.06.2026`
-- Implementation status last verified against code/audits at the same commit unless a row says `STATUS_REQUIRES_CURRENT_CODE_AUDIT`.
-- Historical content, including `HISTORICAL_04_06_CONTEXT`, must not override current audits, code, or the canonical 09.06.2026 workbook.
+- `CANONICAL_SOURCE_USER_CONFIRMED_AT=2026-07-11`
+- Canonical requirement date: `10.07.2026`.
+- Implementation status was last verified against the prior 09.06 source and therefore requires a current audit before being claimed against 10.07.
+- Historical content, including `HISTORICAL_04_06_CONTEXT`, must not override current audits, code, or the canonical 10.07.2026 workbook.
 
 # Cải tiến nhập dữ liệu chung vào file MPnew.xlsx — bản kế hoạch đã kiểm tra, sửa và bổ sung
 
-## 0.0. Reconcile workbook canonical sau cập nhật nội dung
+## 0.0. Historical reconcile of the 09.06 workbook
 
-Ngày reconcile local: `2026-07-07 06:39:28`.
+Ngày reconcile local: `2026-07-07 06:39:28` (historical; current canonical is 10.07.2026).
 
-Đã đọc lại workbook canonical `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx` sau khi người dùng báo file đã bổ sung nội dung. Snapshot trích xuất đầy đủ được lưu ngoài repo tại artifact scratch để audit nội bộ agent, không commit vào project.
+Đã đọc lại workbook 09.06.2026 sau khi người dùng báo file đã bổ sung nội dung. Snapshot trích xuất đầy đủ được lưu ngoài repo tại artifact scratch để audit nội bộ agent, không commit vào project. Section này không xác minh nội dung mới của workbook canonical 10.07.2026.
 
 ### 0.0.1. Inventory workbook hiện tại
 
@@ -58,7 +54,7 @@ Ngày reconcile local: `2026-07-07 06:39:28`.
 ---
 
 > Tài liệu này được viết lại từ file phân tích `cai_tien_nhap_du_lieu_chung.md` do Gemini Flash tạo, dựa trên đối chiếu với file yêu cầu gốc **`Cải tiến nhập dữ liệu chung vào file MPnew.xlsx`**.
-> Bản canonical hiện tại: **`Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`**. Bản **`Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026.xlsx`** chỉ là `HISTORICAL_04_06_CONTEXT` / predecessor để giải thích lineage thay đổi; mọi quyết định mới phải verify lại với canonical 09.06.2026.
+> Bản canonical hiện tại: **`Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`**. Bản **`Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026.xlsx`** và nội dung reconcile 09.06 bên dưới chỉ là historical context; mọi quyết định mới phải verify lại với canonical 10.07.2026.
 > Nguyên tắc chỉnh sửa: **giữ phần Gemini cào đúng**, **sửa phần sai/nguy hiểm**, **bổ sung phần thiếu để agent có thể dùng làm kế hoạch viết chương trình**.
 > Không coi đây là bản “raw dump cell”; đây là **đặc tả nghiệp vụ + kế hoạch triển khai + tiêu chí kiểm thử** cho chương trình **PhanmemsaisanMP / MP2027 Manager**.
 
@@ -140,22 +136,22 @@ Các điểm dưới đây phải được sửa trong kế hoạch để tránh
 5. **Có xung đột trong yêu cầu dòng FORM**
    Ví dụ `Chi phí sinh nhật` vừa có “Nhập vào dòng 63 (G63:Q63)” vừa có “Nhập vào dòng 59, F59:Q59”. Cần ghi rõ đây là **điểm xung đột** và đề xuất cách xử lý an toàn.
 
-6. **HISTORICAL_04_06_CONTEXT — Cụm “6 chi phí / gộp thành 1 dòng chi phí” được ghi nhận trong lineage 04.06 và phải đối chiếu lại với canonical 09.06.2026**
+6. **HISTORICAL_04_06_CONTEXT — Cụm “6 chi phí / gộp thành 1 dòng chi phí” được ghi nhận trong lineage 04.06 và phải đối chiếu lại với canonical 10.07.2026**
    `Hạng mục cần cải tiến!H182` (“6 chi phí”) link tới `Chi phí khấu hao, lãi nhà đất!J65`, nghĩa là Facility có 6 khoản theo thứ tự. `Hạng mục cần cải tiến!K186` (“gộp thành 1 dòng chi phí”) link tới `Chi phí hệ thống!A89`, nghĩa là System Cost phải gộp thành 1 dòng duy nhất. Không được hiểu “6 chi phí” là gộp Facility thành 1 dòng.
 
 ---
 
-## 0.3. HISTORICAL_04_06_CONTEXT — lineage từ MPnew 04.06.2026, chỉ giữ nơi không mâu thuẫn với canonical 09.06.2026
+## 0.3. HISTORICAL_04_06_CONTEXT — lineage từ MPnew 04.06.2026, chỉ giữ nơi không mâu thuẫn với canonical 10.07.2026
 
 | Nguồn xác nhận | Nội dung mới | Ảnh hưởng triển khai |
 |---|---|---|
-| Historical predecessor | `Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026.xlsx` | Chỉ dùng để giải thích lineage thay đổi; canonical hiện tại là `Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`. |
+| Historical predecessor | `Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026.xlsx` | Chỉ dùng để giải thích lineage thay đổi; canonical hiện tại là `Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`. |
 | `Hạng mục cần cải tiến!A179:B180` | Điền dữ liệu theo thứ tự file; thứ tự chi phí chi tiết xem sheet tương ứng | Với nhóm không có row cố định rõ, output theo thứ tự file và sau mỗi file nguồn chừa 1 dòng trống. |
 | `Hạng mục cần cải tiến!H182` → `Chi phí khấu hao, lãi nhà đất!J65` | “6 chi phí” | Facility có 6 khoản theo thứ tự: khấu hao nhà, khấu hao đất, lãi nhà, lãi đất, điện, nước. Không gộp Facility thành 1 dòng. |
 | `Hạng mục cần cải tiến!K186` → `Chi phí hệ thống!A89` | “gộp thành 1 dòng chi phí” / “Nhập vào 1 dòng duy nhất” | System Cost phải gộp thành 1 dòng; không còn hardcode row 75 theo requirement mới. |
 | User confirmation | `社員旅行不参加対象者へのギフト贈呈` không bắt buộc row cố định | Có thể xử lý theo thứ tự file; không dùng row 66; chỉ thêm row test-lock nếu sau này có row cố định được xác nhận. |
 
-Không có dòng nào trong mục này được hiểu là canonical/current nếu mâu thuẫn với Source Notice hoặc workbook 09.06.2026.
+Không có dòng nào trong mục này được hiểu là canonical/current nếu mâu thuẫn với Source Notice hoặc workbook 10.07.2026.
 
 ---
 
@@ -611,7 +607,7 @@ Hình minh họa (xóa nội dung không cần thiết):
 ### 6.6. HISTORICAL_04_06_CONTEXT — lineage 04.06 cho thứ tự file và dòng trống giữa các nhóm file
 
 ChatGPT đã audit trực tiếp 2 workbook requirement tại thời điểm 04.06 và ghi nhận bản 04.06 như historical predecessor.
-Canonical hiện tại là `Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`; các rule dưới đây chỉ được giữ nếu không mâu thuẫn với canonical 09.06.
+Canonical hiện tại là `Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`; các rule dưới đây chỉ được giữ nếu không mâu thuẫn với canonical 10.07.
 Trong sheet `Hạng mục cần cải tiến`, bản mới thêm:
 
 ```text
@@ -751,7 +747,7 @@ Bắt buộc:
 
 ### 7.6. Nhập vào FORM
 
-HISTORICAL_04_06_CONTEXT: lineage 04.06 ghi nhận yêu cầu System Cost như sau, và chỉ dùng nếu không mâu thuẫn với canonical 09.06.2026:
+HISTORICAL_04_06_CONTEXT: lineage 04.06 ghi nhận yêu cầu System Cost như sau, và chỉ dùng nếu không mâu thuẫn với canonical 10.07.2026:
 
 ```text
 Nhập vào 1 dòng duy nhất.
@@ -1971,7 +1967,7 @@ Những điểm này chưa nên tự suy luận nếu không kiểm tra thêm FO
    Mặc định ưu tiên dòng 59 `F59:Q59` vì file ghi “vào file FORM”, nhưng phải đối chiếu `FORM.xlsx`.
 
 3. **“6 chi phí / gộp thành 1 dòng chi phí”**
-   Đã xác nhận lần đầu trong `HISTORICAL_04_06_CONTEXT` và chỉ giữ nếu không mâu thuẫn với canonical 09.06.2026: “6 chi phí” áp dụng cho Facility 6 khoản theo thứ tự; “gộp thành 1 dòng chi phí” áp dụng cho System Cost.
+   Đã xác nhận lần đầu trong `HISTORICAL_04_06_CONTEXT` và chỉ giữ nếu không mâu thuẫn với canonical 10.07.2026: “6 chi phí” áp dụng cho Facility 6 khoản theo thứ tự; “gộp thành 1 dòng chi phí” áp dụng cho System Cost.
 
 4. **Đơn giá khám sức khỏe tuyển dụng**
    Cần xác định nguồn đơn giá trong `FY2027配賦額一覧` hoặc file hành chính.
@@ -2025,7 +2021,7 @@ Không code ngay. Trước tiên lập bảng GAP chi tiết giữa yêu cầu v
 7. Facility.
 8. Fixed Assets.
 
-Sau khi lập GAP, đề xuất kế hoạch sửa nhỏ theo phase, mỗi phase có test gate rõ ràng. Không tự ý gộp 6 chi phí Facility thành 1 dòng; chỉ System Cost phải gộp thành 1 dòng nếu rule này vẫn khớp canonical 09.06.2026. Không nhầm mã 1412... là account code.
+Sau khi lập GAP, đề xuất kế hoạch sửa nhỏ theo phase, mỗi phase có test gate rõ ràng. Không tự ý gộp 6 chi phí Facility thành 1 dòng; chỉ System Cost phải gộp thành 1 dòng nếu rule này vẫn khớp canonical 10.07.2026. Không nhầm mã 1412... là account code.
 ```
 
 ---
@@ -2046,11 +2042,11 @@ File yêu cầu này muốn chương trình MP2027 làm tự động phần nh�
 
 ---
 
-## 22. Yêu cầu layout output từ file gốc 09.06.2026
+## 22. Historical layout output evidence from the 09.06.2026 file
 
-> **Nguồn gốc**: Các rule dưới đây được trích xuất trực tiếp từ workbook canonical
+> **Nguồn gốc**: Các rule dưới đây được trích xuất trực tiếp từ workbook 09.06.2026,
 > `Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`.
-> Đây là yêu cầu người dùng từ Excel gốc, **không phải suy diễn** của agent.
+> Đây là bằng chứng lịch sử, **không phải suy diễn** của agent; phải đối chiếu lại với workbook canonical 10.07.2026 trước khi triển khai.
 
 Hình tổng quan layout output từ Excel gốc:
 
@@ -2098,11 +2094,11 @@ Rule:
 ### 22.5. Workbook Excel gốc thắng markdown khi mâu thuẫn
 
 Khi có mâu thuẫn giữa tài liệu markdown này và workbook Excel canonical
-`Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`,
+`Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`,
 **workbook Excel gốc luôn được ưu tiên** (canonical wins).
 
 Điều này đã được ghi ở Section 0 nhưng được nhắc lại ở đây để nhấn mạnh:
-markdown chỉ là diễn giải; source of truth là workbook 09.06.2026.
+markdown chỉ là diễn giải; source of truth là workbook 10.07.2026.
 
 ### 22.6. Không quay lại cách xuất cố định theo từng dòng
 

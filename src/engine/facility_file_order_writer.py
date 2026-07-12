@@ -58,6 +58,17 @@ def _write_facility_preview_rows(worksheet, facility_source_path: str | Path, co
         _clear_preview_row(worksheet, preview.blank_row_after)
 
 
+def apply_facility_file_order_to_open_workbook(
+    workbook,
+    facility_source_path: str | Path,
+    cost_center: str | int | None = None,
+    start_row: int = 200,
+) -> None:
+    worksheet = workbook[helpers.find_hub_sheet_name(workbook)]
+    _write_facility_preview_rows(worksheet, facility_source_path, cost_center, start_row)
+    normalize_output_description_column_s(worksheet)
+
+
 def apply_facility_file_order_to_workbook(
     workbook_path: str | Path,
     facility_source_path: str | Path,
@@ -74,9 +85,9 @@ def apply_facility_file_order_to_workbook(
 
     workbook = load_workbook(workbook_file)
     try:
-        worksheet = workbook[helpers.find_hub_sheet_name(workbook)]
-        _write_facility_preview_rows(worksheet, facility_source, cost_center, start_row)
-        normalize_output_description_column_s(worksheet)
+        apply_facility_file_order_to_open_workbook(
+            workbook, facility_source, cost_center=cost_center, start_row=start_row
+        )
         workbook.save(workbook_file)
     finally:
         workbook.close()

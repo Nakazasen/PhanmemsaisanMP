@@ -17,6 +17,12 @@ from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 import openpyxl
 
+
+def _default_fiscal_year(today: datetime | None = None) -> int:
+    """Company FY ends in March: Apr-Dec belongs to the following FY."""
+    current = today or datetime.now()
+    return current.year + 1 if current.month >= 4 else current.year
+
 def resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
     try:
@@ -66,9 +72,14 @@ def _ensure_external_runtime_data() -> None:
 
 _ensure_external_runtime_data()
 
-from src.config import EXCHANGE_RATE_USD_VND
 from src.db.loader import load_all
 from src.db.schema import create_schema, get_connection
+from src.services.headcount_source_importer import (
+    cleanup_headcount_truth,
+    count_headcount_truth_rows,
+    import_headcount_time_sources,
+    review_headcount_time_sources,
+)
 from src.parsers.manual_event_drivers import TEMPLATE_COLUMNS, ensure_manual_event_drivers_template
 from src.parsers.manual_headcount import (
     BUS_DRIVER_COLUMNS,
@@ -79,7 +90,12 @@ from src.parsers.manual_headcount import (
     resolve_manual_headcount_source_dir,
     validate_manual_headcount_rows,
 )
-from src.utils.excel_helpers import find_hub_sheet_name, get_fy_months
+from src.utils.excel_helpers import (
+    find_hub_sheet_name,
+    get_fy_months,
+    read_exchange_rate_from_form,
+    validate_exchange_rate,
+)
 from src.utils.fiscal_periods import fiscal_month_labels
 from src.utils.source_manifest import (
     DEFAULT_DESCRIPTIONS,
@@ -278,7 +294,6 @@ def _default_template_path() -> str:
 
 
 FORM_SYSTEM_ACCOUNT_CODES = {5005246282, 6005146628, 6005146542}
-FORM_SYSTEM_TEXT_TOKENS = ("system cost", "kdc", "システム", "社内システム")
 
 
 def _external_template_path() -> str:
@@ -300,77 +315,27 @@ def _is_under_internal(path: str) -> bool:
         return False
 
 
-def _as_int(value) -> int | None:
-    try:
-        if value is None or str(value).strip() == "":
-            return None
-        return int(float(str(value).strip()))
-    except (TypeError, ValueError):
-        return None
-
-
-def _normalize_form_text(value) -> str:
-    return " ".join(str(value or "").replace("\n", " ").lower().split())
-
-
-def _find_system_cost_row_for_validation(worksheet) -> int | None:
-    for row_index in range(1, worksheet.max_row + 1):
-        account_code = _as_int(worksheet.cell(row=row_index, column=2).value)
-        if account_code in FORM_SYSTEM_ACCOUNT_CODES:
-            return row_index
-        row_text = " ".join(
-            _normalize_form_text(worksheet.cell(row=row_index, column=column_index).value)
-            for column_index in range(1, min(worksheet.max_column, 20) + 1)
-        )
-        if any(token in row_text for token in FORM_SYSTEM_TEXT_TOKENS):
-            return row_index
-    return None
-
-
 def _validate_selected_template(path: str) -> str | None:
     external_template = _external_template_path()
     if not os.path.isfile(path):
-        return (
-            "Không tìm thấy tệp mẫu FORM.\n\n"
-            f"Hãy chọn tệp: {external_template}"
-        )
+        return "Không tìm thấy tệp mẫu FORM.\n\n" + f"Hãy chọn tệp: {external_template}"
     if _is_legacy_root_template(path):
-        return (
-            "Không được dùng FORM.xlsx ở thư mục gốc vì tệp này còn công thức mẫu cũ.\n\n"
-            f"Hãy chọn tệp FORM mới nhất: {external_template}"
-        )
+        return "Không được dùng FORM.xlsx ở thư mục gốc vì tệp này còn công thức mẫu cũ.\n\n" + f"Hãy chọn tệp FORM mới nhất: {external_template}"
     if _is_under_internal(path) and os.path.exists(external_template):
-        return (
-            "Đường dẫn tệp mẫu đang trỏ vào thư mục _internal của chương trình.\n\n"
-            "Người dùng không cần và không nên quản lý dữ liệu trong _internal.\n"
-            f"Hãy chọn tệp FORM bên ngoài: {external_template}"
-        )
+        return "Đường dẫn tệp mẫu đang trỏ vào thư mục _internal của chương trình.\n\nNgười dùng không cần và không nên quản lý dữ liệu trong _internal.\n" + f"Hãy chọn tệp FORM bên ngoài: {external_template}"
     try:
         workbook = openpyxl.load_workbook(path, read_only=True, data_only=False)
     except Exception:
-        return (
-            "Không mở được tệp FORM. Tệp có thể không phải Excel .xlsx hợp lệ hoặc đang bị hỏng.\n\n"
-            f"Hãy dùng tệp FORM mới nhất: {external_template}"
-        )
+        return "Không mở được tệp FORM. Tệp có thể không phải Excel .xlsx hợp lệ hoặc đang bị hỏng.\n\n" + f"Hãy dùng tệp FORM mới nhất: {external_template}"
     try:
         try:
             sheet_name = find_hub_sheet_name(workbook)
         except Exception:
-            return (
-                "Tệp FORM không có sheet chi tiết MP đúng định dạng.\n\n"
-                f"Hãy dùng tệp FORM mới nhất: {external_template}"
-            )
-        worksheet = workbook[sheet_name]
-        if _find_system_cost_row_for_validation(worksheet) is None:
-            return (
-                "Tệp FORM không có dòng System Cost cần thiết để xuất chi phí hệ thống.\n\n"
-                "Nguyên nhân thường gặp: đang chọn nhầm FORM.xlsx cũ hoặc tệp FORM không đúng phiên bản.\n"
-                f"Hãy thay bằng tệp FORM mới nhất: {external_template}"
-            )
+            return "Tệp FORM không có sheet chi tiết MP đúng định dạng.\n\n" + f"Hãy dùng tệp FORM mới nhất: {external_template}"
+
     finally:
         workbook.close()
     return None
-
 
 def _validate_selected_source_dir(path: str) -> str | None:
     external_source = _external_source_dir()
@@ -402,6 +367,25 @@ def _friendly_error_message(error) -> str:
         "lỗi",
         "mẫu",
     )
+
+    if "chưa có tổng số người tháng" in lower_text:
+        issue_lines = [
+            line[2:].strip()
+            for line in text.splitlines()
+            if line.strip().startswith("- ") and "chưa có Tổng số người tháng" in line
+        ]
+        details = "\n".join(f"• {line}" for line in issue_lines)
+        if not details:
+            details = text
+        return (
+            "Thiếu dữ liệu nhân sự để xuất báo cáo.\n\n"
+            f"{details}\n\n"
+            "Cách xử lý:\n"
+            "1. Đóng thông báo này.\n"
+            "2. Chọn “Nhập nhân sự thủ công”.\n"
+            "3. Nhập Tổng số người của tháng được thông báo cho đúng phòng.\n"
+            "4. Lưu dữ liệu rồi bấm “CHẠY TÍNH TOÁN” lại."
+        )
 
     if "unable to locate system cost row" in lower_text or "không tìm thấy dòng system cost" in lower_text:
         return (
@@ -511,7 +495,7 @@ Bước 4: Nếu cần, nhập bổ sung nhân sự bằng nút "Nhập nhân s�
 Bước 5: Nếu có khoản chương trình không thể tự biết, bấm "Nhập sự kiện thiếu dữ liệu".
 Bước 6: Nếu chạy riêng, chọn 1 Trung tâm chi phí. Nếu không, để trống.
 Bước 7: Bấm "CHẠY TÍNH TOÁN".
-Bước 8: Mở Dashboard kiểm toán để xem đèn xanh/vàng/đỏ và kiểm tra công thức.
+Bước 8: Xem Nhật ký xử lý và mở báo cáo lần chạy khi cần kiểm tra chi tiết.
 
 4. VÌ SAO CÓ NÚT "NHẬP SỰ KIỆN THIẾU DỮ LIỆU"
 Có những khoản chỉ người làm nghiệp vụ biết số thật, ví dụ:
@@ -554,7 +538,7 @@ Bước 5: Mở tệp kết quả CC để đối chiếu công thức.
 
 7. LỖI THƯỜNG GẶP
 - Lỗi không tìm thấy tệp mẫu: kiểm tra lại đường dẫn FORM.xlsx.
-- Dashboard còn báo VÀNG: đây không phải lỗi. Nghĩa là có dữ liệu cần người dùng xác nhận trước khi tin kết quả.
+- Báo cáo lần chạy còn cảnh báo: đây không phải lỗi. Nghĩa là có dữ liệu cần người dùng xác nhận trước khi tin kết quả.
 - Nhập xong nhưng chưa áp dụng: kiểm tra đã bấm "Lưu tệp" hoặc "Lưu 12 tháng" trước khi chạy tính toán.
 
 8. KHUYẾN NGHỊ VẬN HÀNH
@@ -564,209 +548,328 @@ Bước 5: Mở tệp kết quả CC để đối chiếu công thức.
 """.strip()
 
 USER_GUIDE_TEXT_LATEST = """
-HƯỚNG DẪN SỬ DỤNG MP2027 MANAGER
+HƯỚNG DẪN SỬ DỤNG CHƯƠNG TRÌNH LẬP NGÂN SÁCH
 
-1. MỤC ĐÍCH
-MP2027 Manager dùng để lập ngân sách MP FY2027 theo từng Cost Center.
-Chương trình đọc dữ liệu từ thư mục docs/MP2027, tính phân bổ chi phí, rồi xuất file Excel theo FORM MP2027.
+1. CHƯƠNG TRÌNH DÙNG ĐỂ LÀM GÌ?
 
-Nguyên tắc quan trọng:
-- Chương trình không tự bịa số.
-- Khoản nào thiếu dữ liệu thật sẽ được báo trên Dashboard để người dùng nhập hoặc chốt lại.
-- FORM.xlsx là mẫu xuất kết quả, không phải nơi nhập tay chính cho headcount hoặc sự kiện.
+Chương trình tổng hợp dữ liệu chi phí, nhân sự và thời gian làm việc để lập tệp ngân sách cho từng Trung tâm chi phí.
 
-2. THƯ MỤC ĐÚNG KHI CHẠY
-Khi chạy từ source code:
-- Tệp mẫu FORM: docs/MP2027/FORM.xlsx
-- Thư mục nguồn: docs/MP2027
+Chương trình thực hiện các việc chính:
+- Đọc dữ liệu chi phí từ thư mục nguồn chi phí.
+- Nạp số người, thời gian cố định và thời gian tăng ca từ các tệp kế hoạch của phòng ban.
+- Cho phép nhập các thông tin không có trong tệp nguồn, như số người đi xe buýt, số Nam/Nữ tháng 12 và các khoản phát sinh đặc biệt.
+- Tính toán chi phí và xuất một tệp kết quả cho từng Trung tâm chi phí.
 
-Khi dùng bản đóng gói onefile:
-- Đặt MP2027_Manager.exe trong một thư mục riêng.
-- Bên cạnh exe phải có thư mục docs/MP2027.
-- Người dùng sửa dữ liệu trong docs/MP2027 bên cạnh exe, không sửa dữ liệu bên trong file exe.
+2. Ý NGHĨA CÁC MỤC TRÊN MÀN HÌNH CHÍNH
 
-Ví dụ:
-MP2027_App/
-  MP2027_Manager.exe
-  docs/
-    MP2027/
-      FORM.xlsx
-      source_file_order.xlsx
-      event_drivers_manual.csv
-      special_costs_manual.csv
-  raw/
-    headcount_manual.csv
-      các file Excel nguồn khác
+Năm tài chính:
+- Nhập năm cần lập ngân sách, ví dụ 2027, 2028 hoặc 2029.
+- Năm tài chính bắt đầu từ tháng 4 và kết thúc vào tháng 3 năm sau.
+- Khi thay đổi năm, tiêu đề chương trình và dữ liệu được sử dụng cũng thay đổi theo.
 
-3. CÁC TRƯỜNG TRÊN MÀN HÌNH CHÍNH
-- Năm tài chính:
-  Nhập năm cần chạy, ví dụ 2027.
+Tỷ giá (USD/VND):
+- Là tỷ giá dùng cho lần tính hiện tại.
+- Chương trình đọc tỷ giá ban đầu từ tệp mẫu. Có thể sửa trước khi chạy nếu nghiệp vụ yêu cầu.
 
-- Trung tâm chi phí:
-  Để trống nếu muốn xuất toàn bộ CC có dữ liệu.
-  Chọn một CC nếu chỉ muốn kiểm tra/chạy thử một bộ phận.
+Trung tâm chi phí (Tùy chọn):
+- Để trống nếu muốn chạy tất cả Trung tâm chi phí có dữ liệu.
+- Chọn một mã nếu chỉ muốn kiểm tra hoặc xuất kết quả cho một phòng.
 
-- Tệp mẫu FORM:
-  Phải trỏ tới docs/MP2027/FORM.xlsx.
-  Không dùng FORM.xlsx ở thư mục gốc nếu đó là bản cũ.
+Tệp mẫu FORM:
+- Là tệp Excel mẫu dùng để tạo tệp kết quả.
+- Nhấn "Chọn..." nếu cần đổi tệp.
+- Chương trình ghi nhớ tệp đã chọn cho lần mở sau.
 
-- Thư mục nguồn:
-  Phải trỏ tới docs/MP2027.
-  Đây là nơi chứa FORM, file nguồn, CSV nhập tay và source_file_order.xlsx.
+Thư mục nguồn chi phí:
+- Là thư mục chứa các tệp phục vụ tính chi phí và phân bổ ngân sách.
+- Nhấn "Chọn..." nếu cần đổi thư mục.
+- Chương trình ghi nhớ thư mục đã chọn cho lần mở sau.
 
-4. THỨ TỰ FILE NGUỒN
-Nút "Thứ tự file nguồn" dùng để quy định file nào được đọc và đọc theo thứ tự nào.
+Nguồn nhân sự & thời gian:
+- Là thư mục chứa các tệp kế hoạch nhân sự và thời gian do các phòng ban nộp.
+- Chương trình chỉ nạp tệp đúng năm tài chính đang chọn.
+- Nhấn "Cập nhật CSDL" để quét thư mục và nạp dữ liệu vào cơ sở dữ liệu.
+- Dòng trạng thái bên dưới cho biết số phòng và số kỳ đã nạp.
+- Chương trình ghi nhớ thư mục đã chọn cho lần mở sau.
 
-Cách dùng:
-Bước 1: Bấm "Thứ tự file nguồn".
-Bước 2: Chọn một dòng trong bảng.
-Bước 3: Bấm "Chọn file..." nếu cần đổi file nguồn.
-Bước 4: Bấm "Lên" hoặc "Xuống" để đổi thứ tự.
-Bước 5: Bỏ chọn "Dùng dòng này" nếu muốn tạm thời không đọc một file.
-Bước 6: Bấm "Lưu".
+3. TRÌNH TỰ SỬ DỤNG KHUYẾN NGHỊ
 
-Tệp được lưu là:
-docs/MP2027/source_file_order.xlsx
+Bước 1: Chọn đúng Năm tài chính.
+Bước 2: Kiểm tra Tệp mẫu FORM.
+Bước 3: Kiểm tra Thư mục nguồn chi phí.
+Bước 4: Chọn thư mục Nguồn nhân sự & thời gian.
+Bước 5: Nhấn "Cập nhật CSDL" và đọc Nhật ký xử lý.
+Bước 6: Nhấn "Nhập nhân sự thủ công" để kiểm tra số người, thời gian và nhập các phần bổ sung.
+Bước 7: Nhấn "Nhập sự kiện thiếu dữ liệu" nếu có khoản phát sinh chương trình không thể tự xác định.
+Bước 8: Chọn một Trung tâm chi phí để chạy thử; để trống khi muốn chạy tất cả.
+Bước 9: Nhấn "CHẠY TÍNH TOÁN".
+Bước 10: Đọc Nhật ký xử lý và mở tệp kết quả để đối chiếu.
 
-Không nên sửa source_file_order.csv bằng Excel. CSV chỉ là fallback kỹ thuật và có thể lỗi font nếu mở sai encoding.
+4. CẬP NHẬT NGUỒN NHÂN SỰ VÀ THỜI GIAN
 
-5. QUY TRÌNH CHẠY ĐỀ XUẤT
-Bước 1: Kiểm tra Tệp mẫu FORM là docs/MP2027/FORM.xlsx.
-Bước 2: Kiểm tra Thư mục nguồn là docs/MP2027.
-Bước 3: Bấm "Thứ tự file nguồn" nếu vừa đổi tên file hoặc thêm file nguồn.
-Bước 4: Nếu cần, nhập nhân sự bằng nút "Nhập nhân sự thủ công".
-Bước 5: Nếu có khoản thiếu dữ liệu thật, bấm "Nhập sự kiện thiếu dữ liệu".
-Bước 6: Nếu muốn kiểm tra nhanh, chọn một CC; nếu không thì để trống.
-Bước 7: Bấm "CHẠY TÍNH TOÁN".
-Bước 8: Mở Dashboard kiểm toán.
-Bước 9: Mở file kết quả CC để kiểm tra công thức và số liệu.
+Trước khi cập nhật:
+- Chọn đúng Năm tài chính.
+- Chọn đúng thư mục chứa các tệp kế hoạch của năm đó.
 
-6. NHẬP NHÂN SỰ THỦ CÔNG
-Dùng khi cần chốt số người theo CC/tháng hoặc khi Dashboard báo thiếu headcount.
-
-Cách nhập:
-Bước 1: Bấm "Nhập nhân sự thủ công".
-Bước 2: Chọn CC.
-Bước 3: Nhập số nhân viên và công nhân cho 12 tháng.
-Bước 4: Nếu cần tính health check row 57/58, nhập Nam/Nữ tháng 12.
-Bước 5: Bấm "Lưu 12 tháng".
-Bước 6: Chạy tính toán lại.
-
-Tệp lưu dữ liệu:
-raw/headcount_manual.csv
-
-Lưu ý:
-- Nếu sửa số người trực tiếp trong FORM, lần chạy sau có thể bị ghi đè.
-- Hãy nhập/chốt headcount bằng màn hình này hoặc bằng headcount_manual.csv.
-
-7. NHẬP SỰ KIỆN THIẾU DỮ LIỆU
-Dùng cho các khoản chương trình không thể tự biết số thật, ví dụ:
-- Xe bus JP/VN.
-- Quà cho người không đi du lịch.
-- My Episode.
-- Kỷ niệm 10 năm.
-- Kỷ niệm thành lập công ty.
-- VISA/Passport/GPLD/NNN nếu phải ghi vào row khác row 137.
-
-Cách nhập:
-Bước 1: Bấm "Nhập sự kiện thiếu dữ liệu".
-Bước 2: Chọn CC và tháng ghi chi phí. Ví dụ 202705 là tháng 5 FY2027.
-Bước 3: Nhập tên sự kiện, ví dụ 社員旅行 Du lịch công ty.
-Bước 4: Chọn loại sự kiện. Với event phát sinh riêng theo tháng, dùng month_specific_driver.
-Bước 5: Nếu biết số người/số lượng, nhập count.
-Bước 6: Nếu muốn tự nhập đơn giá, nhập unit_price; đơn giá nhập tay sẽ được ưu tiên.
-Bước 7: Nếu muốn chương trình tự lấy đơn giá từ FY2027配賦額一覧, nhập unit_price_key, ví dụ 社員旅行.
-Bước 8: Có thể bỏ trống account_code nếu nhập account_jp_name/account_name, ví dụ 福利厚生費.
-Bước 9: Nếu biết row FORM cần ghi, nhập row/form_row, ví dụ 66 cho 社員旅行.
-Bước 10: Nếu chỉ biết tổng tiền, nhập amount_vnd.
-Bước 11: Ghi note/description để kiểm toán lại nguồn số liệu, rồi bấm "Thêm/Cập nhật" và "Lưu tệp".
-
-Tệp lưu dữ liệu:
-docs/MP2027/event_drivers_manual.csv
-
-8. CHI PHÍ ĐẶC BIỆT THEO ROW FORM
-Nếu có chi phí cần ghi đúng một row FORM nhưng chưa có parser tự động, dùng:
-docs/MP2027/special_costs_manual.csv
+Khi nhấn "Cập nhật CSDL", chương trình sẽ:
+- Tìm các tệp kế hoạch nhân sự và thời gian đúng năm tài chính.
+- Đọc mã Trung tâm chi phí và tên phòng.
+- Đối chiếu với danh mục Trung tâm chi phí hiện hành.
+- Nạp 12 tháng, từ tháng 4 đến tháng 3, cho từng phòng hợp lệ.
+- Ghi lý do vào Nhật ký nếu có tệp không được nạp.
 
 Ví dụ:
-- Passport/VISA/GPLD cần row khác row 137.
-- Một khoản NNN cần tách riêng theo row đã được finance xác nhận.
+- Chọn năm 2027: chương trình nhận dữ liệu kỳ 202604 đến 202703.
+- Chọn năm 2029: chương trình nhận dữ liệu kỳ 202804 đến 202903.
+- Dữ liệu năm 2027 không được dùng thay cho năm 2029.
 
-Không nhập form_row nếu chưa chắc row đích.
+5. KIỂM TRA VÀ BỔ SUNG NHÂN SỰ
 
-9. CÁCH ĐỌC DASHBOARD KIỂM TOÁN
-- XANH: CC có dữ liệu nền tảng và chưa có cảnh báo cơ bản.
-- VÀNG: CC có dữ liệu nhưng còn điểm cần người dùng xem/chốt.
-- ĐỎ: CC chưa có dữ liệu tính toán sau lần chạy gần nhất.
+Nhấn "Nhập nhân sự thủ công", sau đó chọn mã Trung tâm chi phí.
 
-Khi thấy VÀNG hoặc ĐỎ:
-Bước 1: Chọn dòng CC.
-Bước 2: Đọc cột "Lý do".
-Bước 3: Xem bảng "Việc cần người dùng chốt".
-Bước 4: Nếu thiếu sự kiện, bấm "Nhập dữ liệu thiếu".
-Bước 5: Nếu thiếu nhân sự, bấm "Nhập nhân sự thủ công".
-Bước 6: Chạy lại và kiểm tra file kết quả.
+Thẻ "Số người & bổ sung":
+- JP: số người biệt phái.
+- Nhân viên: số nhân viên người Việt.
+- Công nhân: số công nhân người Việt.
+- Nam (T12), Nữ (T12): chỉ nhập tại tháng 12 khi cần tính các khoản liên quan.
+- Tổng người: chương trình tự tính bằng JP + Nhân viên + Công nhân.
+- Ghi chú: dùng để giải thích dữ liệu bổ sung hoặc điều chỉnh.
 
-Lưu ý:
-XANH không có nghĩa là số liệu đã đúng 100%. XANH chỉ nghĩa là chương trình chưa thấy thiếu input cơ bản.
-Người dùng vẫn cần kiểm tra công thức và nguồn dữ liệu trước khi gửi chính thức.
+Thẻ "Thời gian cố định":
+- Hiển thị giờ cố định của JP và người Việt theo từng tháng.
+- Dữ liệu lấy từ nguồn nhân sự và thời gian đã nạp vào cơ sở dữ liệu.
 
-10. FILE KẾT QUẢ
-Sau khi chạy, kiểm tra thư mục:
-OUTPUT_FY2027
+Thẻ "Thời gian tăng ca":
+- Hiển thị giờ tăng ca của JP và người Việt theo từng tháng.
+- Dữ liệu lấy từ nguồn nhân sự và thời gian đã nạp vào cơ sở dữ liệu.
 
-Các file thường gặp:
-- MP_CC_<mã CC>.xlsx: kết quả theo từng Cost Center.
-- MP2027_MISSING_INPUTS.csv: danh sách dữ liệu còn cần người dùng xem/chốt.
-- MP2027_AUDIT_REPORT.md: báo cáo kiểm toán nếu pipeline sinh ra.
+Thông tin xe buýt:
+- Nhập riêng số người biệt phái đi xe buýt.
+- Nhập riêng số người Việt Nam đi xe buýt.
+- Các số này không có trong tệp nguồn nên người dùng phải nhập và xác nhận.
 
-11. LỖI THƯỜNG GẶP
-- Lỗi "Không được dùng FORM.xlsx...":
-  Tệp mẫu đang trỏ nhầm FORM ở thư mục gốc hoặc bản FORM cũ.
-  Hãy chọn docs/MP2027/FORM.xlsx.
+Lưu ý quan trọng:
+- Cửa sổ chỉ hiển thị dữ liệu thuộc Năm tài chính đang chọn trên màn hình chính.
+- Nếu năm đang chọn chưa có dữ liệu, các bảng thời gian sẽ để trống và chương trình báo chưa có dữ liệu nguồn cho năm đó.
+- Sau khi nhập bổ sung, nhấn "Lưu 12 tháng".
 
-- Mở source_file_order.csv bị lỗi font:
-  Không dùng CSV để chỉnh. Hãy dùng nút "Thứ tự file nguồn" hoặc mở source_file_order.xlsx.
+6. DỮ LIỆU ĐƯỢC GHI VÀO TỆP KẾT QUẢ NHƯ THẾ NÀO?
 
-- Dashboard vẫn VÀNG:
-  Đây không phải lỗi chương trình. Nghĩa là còn dữ liệu cần người dùng xác nhận.
+Khi xuất kết quả, chương trình ghi dữ liệu từ tháng 4 đến tháng 3 vào các cột F đến Q của tệp FORM:
+- Dòng 8: thời gian cố định của JP.
+- Dòng 9: thời gian cố định của người Việt.
+- Dòng 16: thời gian tăng ca của JP.
+- Dòng 17: thời gian tăng ca của người Việt.
+- Dòng 24: số người JP.
+- Dòng 25: tổng số người Việt, bằng Nhân viên + Công nhân.
 
-- Nhập xong nhưng kết quả chưa đổi:
-  Kiểm tra đã bấm "Lưu tệp" hoặc "Lưu 12 tháng", rồi chạy tính toán lại.
+Ví dụ:
+- Tháng 4 được ghi vào cột F.
+- Tháng 3 được ghi vào cột Q.
 
-- Không thấy file output cho một CC:
-  Có thể CC đó chưa có dữ liệu fact để export batch. Hãy chạy riêng CC đó hoặc kiểm tra Dashboard.
+Chương trình chỉ xuất khi Trung tâm chi phí có đủ dữ liệu nguồn của 12 tháng trong năm tài chính đã chọn. Nếu thiếu, chương trình dừng xuất Trung tâm chi phí đó và thông báo rõ các kỳ còn thiếu. Quy tắc này ngăn việc dùng nhầm dữ liệu của năm cũ.
 
-12. KHUYẾN NGHỊ VẬN HÀNH
-- Chạy thử một CC trước khi xuất hàng loạt.
-- Luôn mở Dashboard sau khi chạy.
-- Luôn kiểm tra file Excel kết quả trước khi gửi.
-- Không nhập số ước lượng nếu chưa chắc.
-- Khi thêm file nguồn mới, cập nhật bằng nút "Thứ tự file nguồn" trước khi chạy.
-- Khi bàn giao bản onefile, luôn bàn giao cả thư mục docs/MP2027 cạnh exe.
+7. NHẬP CÁC KHOẢN PHÁT SINH CÒN THIẾU
+
+Nhấn "Nhập sự kiện thiếu dữ liệu" khi có khoản chỉ người làm nghiệp vụ mới biết, chẳng hạn:
+- Quà cho người không tham gia du lịch.
+- Khoản kỷ niệm hoặc sự kiện đặc biệt.
+- Chi phí hộ chiếu, thị thực, giấy phép lao động hoặc nghiệp vụ người nước ngoài cần tách riêng.
+
+Cách thực hiện:
+Bước 1: Chọn Trung tâm chi phí.
+Bước 2: Chọn kỳ phát sinh.
+Bước 3: Chọn loại sự kiện.
+Bước 4: Nhập số lượng và đơn giá nếu biết từng thành phần.
+Bước 5: Nếu chỉ biết tổng tiền, nhập số tiền trực tiếp.
+Bước 6: Nhập mã tài khoản và dòng FORM nếu đã được nghiệp vụ xác nhận.
+Bước 7: Ghi chú rõ nguồn số liệu.
+Bước 8: Nhấn "Thêm/Cập nhật", sau đó nhấn "Lưu tệp".
+
+Không tự chọn dòng FORM hoặc mã tài khoản khi chưa được nghiệp vụ xác nhận.
+
+8. THỨ TỰ TỆP NGUỒN CHI PHÍ
+
+Nút "Thứ tự file nguồn" dùng để chọn các tệp chi phí được đọc và sắp xếp thứ tự xử lý.
+
+Cách sử dụng:
+Bước 1: Nhấn "Thứ tự file nguồn".
+Bước 2: Chọn một dòng.
+Bước 3: Nhấn "Chọn file..." nếu cần thay tệp.
+Bước 4: Dùng "Lên" hoặc "Xuống" để đổi thứ tự.
+Bước 5: Bỏ chọn "Dùng dòng này" nếu muốn tạm thời không đọc tệp đó.
+Bước 6: Nhấn "Lưu".
+
+9. CHẠY TÍNH TOÁN VÀ KIỂM TRA KẾT QUẢ
+
+Trước khi nhấn "CHẠY TÍNH TOÁN", cần kiểm tra:
+- Năm tài chính đã đúng chưa.
+- Tỷ giá đã đúng chưa.
+- Tệp mẫu và các thư mục nguồn đã đúng chưa.
+- Nguồn nhân sự và thời gian đã được cập nhật chưa.
+- Các dữ liệu bổ sung đã được lưu chưa.
+
+Sau khi chạy:
+- Đọc Nhật ký xử lý từ đầu đến cuối.
+- Không bỏ qua các dòng báo thiếu dữ liệu hoặc không xuất được tệp.
+- Mở tệp kết quả của Trung tâm chi phí đã chạy thử.
+- Đối chiếu số người, thời gian cố định và thời gian tăng ca từ tháng 4 đến tháng 3.
+- Kiểm tra các công thức và khoản chi phí trước khi gửi chính thức.
+
+10. CÁC TÌNH HUỐNG THƯỜNG GẶP
+
+Không thấy số người hoặc thời gian sau khi chọn mã Trung tâm chi phí:
+- Kiểm tra Năm tài chính trên màn hình chính.
+- Kiểm tra đã nhấn "Cập nhật CSDL" chưa.
+- Kiểm tra Nhật ký xem tệp của phòng có bị bỏ qua không.
+
+Chọn năm tương lai nhưng bảng thời gian trống:
+- Đây là hành vi đúng nếu chưa có tệp nguồn của năm đó.
+- Chương trình không dùng dữ liệu của năm cũ để thay thế.
+
+Không xuất được tệp kết quả vì thiếu nguồn sự thật:
+- Đọc thông báo để biết Trung tâm chi phí và các kỳ còn thiếu.
+- Chọn đúng thư mục nguồn, cập nhật lại cơ sở dữ liệu rồi chạy lại.
+
+Đã nhập bổ sung nhưng kết quả chưa thay đổi:
+- Kiểm tra đã nhấn "Lưu 12 tháng" hoặc "Lưu tệp" chưa.
+- Chạy tính toán lại sau khi lưu.
+
+Đường dẫn trở về mặc định:
+- Trường hợp này xảy ra khi tệp hoặc thư mục đã lưu không còn tồn tại.
+- Chọn lại đường dẫn hợp lệ; chương trình sẽ ghi nhớ cho lần sau.
+
+11. NGUYÊN TẮC AN TOÀN
+
+- Luôn chạy thử một Trung tâm chi phí trước khi chạy tất cả.
+- Không dùng dữ liệu của năm tài chính khác để bù cho năm đang thiếu.
+- Không nhập số ước lượng nếu chưa được người phụ trách nghiệp vụ xác nhận.
+- Không bỏ qua cảnh báo trong Nhật ký xử lý.
+- Luôn mở và kiểm tra tệp Excel kết quả trước khi gửi chính thức.
 """.strip()
 
 
 class MPManagerApp:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("MP2027 Manager - Quản lý Ngân sách")
         self.root.geometry("980x720")
 
-        self.fiscal_year = tk.StringVar(value="2027")
+        template_path = self._initial_saved_path(
+            "template_path", _default_template_path(), expect_directory=False
+        )
+        self.fiscal_year = tk.StringVar(value=str(_default_fiscal_year()))
+        self.exchange_rate = tk.StringVar(value=self._initial_exchange_rate(template_path))
         self.cc_code_filter = tk.StringVar(value="")
-        self.template_path = tk.StringVar(value=_default_template_path())
-        self.source_dir = tk.StringVar(value=_default_source_dir())
+        self.template_path = tk.StringVar(value=template_path)
+        self.source_dir = tk.StringVar(
+            value=self._initial_saved_path("cost_source_dir", _default_source_dir(), expect_directory=True)
+        )
+        self.headcount_source_dir = tk.StringVar(
+            value=self._initial_saved_path(
+                "headcount_source_dir", os.path.join(BASE_DIR, "raw"), expect_directory=True
+            )
+        )
+        self.headcount_source_status = tk.StringVar(value=self._initial_headcount_source_status())
         self.last_excel_mtime = 0.0
         self.syncing_master = False
         self.ui_thread_id = threading.get_ident()
         self.ui_queue = queue.Queue()
 
+        self.fiscal_year.trace_add("write", self._on_staffing_selection_changed)
         self.setup_styles()
         self.setup_ui()
+        self._refresh_fiscal_year_labels()
         self.set_icon()
         self.root.after(50, self._drain_ui_queue)
         self.root.after(300, self.load_cc_list)
+
+    def _on_staffing_selection_changed(self, *_args):
+        self._refresh_fiscal_year_labels()
+        if hasattr(self, "headcount_source_status"):
+            self.headcount_source_status.set("Cần đồng bộ cho năm tài chính hoặc thư mục mới")
+
+    @staticmethod
+    def _initial_headcount_source_status() -> str:
+        conn = None
+        try:
+            conn = get_connection(os.path.join(BASE_DIR, "mp2027.db"))
+            create_schema(conn)
+            values = {
+                str(row[0]): str(row[1] or "")
+                for row in conn.execute(
+                    "SELECT key,value FROM sys_params WHERE key LIKE 'headcount_source_%'"
+                )
+            }
+            updated = values.get("headcount_source_updated_at", "")
+            if not updated:
+                return "Chưa cập nhật CSDL"
+            imported = values.get("headcount_source_imported_files", "?")
+            total = values.get("headcount_source_files", "?")
+            skipped = values.get("headcount_source_skipped_files", "?")
+            errors = values.get("headcount_source_error_files", "?")
+            fy = values.get("headcount_source_fiscal_year", "?")
+            return f"Đã cập nhật FY{fy}: {imported}/{total} tệp • bỏ qua {skipped} • lỗi {errors} • {updated[:16]}"
+        except Exception:
+            return "Chưa đọc được trạng thái cập nhật CSDL"
+        finally:
+            if conn is not None:
+                conn.close()
+
+    def _refresh_fiscal_year_labels(self, *_args):
+        raw = self.fiscal_year.get().strip()
+        label = raw if raw.isdigit() and len(raw) == 4 else "—"
+        self.root.title(f"MP{label} Manager - Quản lý Ngân sách")
+        if hasattr(self, "main_heading"):
+            self.main_heading.configure(text=f"Tính toán Ngân sách MP{label}")
+
+    @staticmethod
+    def _initial_exchange_rate(template_path: str) -> str:
+        try:
+            return f"{read_exchange_rate_from_form(template_path):.0f}"
+        except Exception:
+            return ""
+
+    @staticmethod
+    def _initial_saved_path(key: str, fallback: str, expect_directory: bool) -> str:
+        conn = None
+        try:
+            conn = get_connection(os.path.join(BASE_DIR, "mp2027.db"))
+            create_schema(conn)
+            row = conn.execute("SELECT value FROM sys_params WHERE key=?", (key,)).fetchone()
+            saved = str(row[0] or "").strip() if row else ""
+            exists = os.path.isdir(saved) if expect_directory else os.path.isfile(saved)
+            return saved if saved and exists else fallback
+        except Exception:
+            return fallback
+        finally:
+            if conn is not None:
+                conn.close()
+
+    @staticmethod
+    def _save_path_preference(key: str, path: str, description: str) -> None:
+        conn = get_connection(os.path.join(BASE_DIR, "mp2027.db"))
+        try:
+            create_schema(conn)
+            with conn:
+                conn.execute(
+                    """INSERT OR REPLACE INTO sys_params(key,value,description,updated_at)
+                    VALUES(?,?,?,CURRENT_TIMESTAMP)""",
+                    (key, os.path.abspath(path), description),
+                )
+        finally:
+            conn.close()
+
+    def _reload_exchange_rate_from_template(self) -> bool:
+        """Refresh the editable rate and never retain a stale value."""
+        rate_text = self._initial_exchange_rate(self.template_path.get())
+        if rate_text:
+            self.exchange_rate.set(rate_text)
+            self.log(f"Đã đọc tỷ giá FORM!B2: {rate_text} USD/VND")
+            return True
+
+        self.exchange_rate.set("")
+        self.log("FORM đang chọn không có tỷ giá hợp lệ tại B2; hãy nhập tỷ giá trước khi chạy.")
+        return False
 
     def set_icon(self):
         icon_path = resource_path(os.path.join("assets", "app_icon.ico"))
@@ -787,59 +890,72 @@ class MPManagerApp:
     def setup_ui(self):
         container = ttk.Frame(self.root, padding=20)
         container.pack(fill=tk.BOTH, expand=True)
+        container.columnconfigure(1, weight=1)
+        container.rowconfigure(12, weight=1)
 
-        ttk.Label(container, text="Tính toán Ngân sách MP2027", style="Header.TLabel").grid(
-            row=0, column=0, columnspan=3, sticky="w", pady=(0, 16)
-        )
+        self.main_heading = ttk.Label(container, text="", style="Header.TLabel")
+        self.main_heading.grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 16))
 
         ttk.Label(container, text="Năm tài chính").grid(row=1, column=0, sticky="w", pady=4)
         ttk.Entry(container, textvariable=self.fiscal_year, width=20).grid(row=1, column=1, sticky="w")
 
-        ttk.Label(container, text="Trung tâm chi phí (Tùy chọn)").grid(row=2, column=0, sticky="w", pady=4)
+        ttk.Label(container, text="Tỷ giá (USD/VND)").grid(row=2, column=0, sticky="w", pady=4)
+        ttk.Entry(container, textvariable=self.exchange_rate, width=20).grid(row=2, column=1, sticky="w")
+        ttk.Label(container, text="Áp dụng cho lần chạy này và ghi vào B2 của file kết quả.").grid(
+            row=2, column=2, sticky="w", padx=(12, 0)
+        )
+
+        ttk.Label(container, text="Trung tâm chi phí (Tùy chọn)").grid(row=3, column=0, sticky="w", pady=4)
         cc_frame = ttk.Frame(container)
-        cc_frame.grid(row=2, column=1, sticky="w")
-        
+        cc_frame.grid(row=3, column=1, sticky="w")
         self.cc_combo = ttk.Combobox(cc_frame, textvariable=self.cc_code_filter, width=40, state="readonly")
         self.cc_combo.pack(side="left")
-        
-        self.refresh_btn = ttk.Button(cc_frame, text="🔄", width=3, command=self.load_cc_list)
-        self.refresh_btn.pack(side="left", padx=2)
-        
-        ttk.Label(container, text="Để trống để xuất toàn bộ").grid(row=2, column=2, sticky="w", padx=8)
+        self.refresh_btn = ttk.Button(cc_frame, text="↻", width=3, command=self.load_cc_list)
+        self.refresh_btn.pack(side="left", padx=(4, 0))
+        ttk.Label(container, text="Để trống để xuất toàn bộ").grid(row=3, column=2, sticky="w", padx=(12, 0))
 
-        ttk.Label(container, text="Tệp mẫu FORM").grid(row=3, column=0, sticky="w", pady=(14, 4))
-        ttk.Entry(container, textvariable=self.template_path, width=70).grid(row=3, column=1, sticky="w")
-        ttk.Button(container, text="Chọn...", command=self.browse_template).grid(row=3, column=2, sticky="w")
+        ttk.Label(container, text="Tệp mẫu FORM").grid(row=4, column=0, sticky="w", pady=(14, 4))
+        ttk.Entry(container, textvariable=self.template_path).grid(row=4, column=1, sticky="ew", padx=(0, 8))
+        ttk.Button(container, text="Chọn...", width=11, command=self.browse_template).grid(row=4, column=2, sticky="w")
 
-        ttk.Label(container, text="Thư mục nguồn").grid(row=4, column=0, sticky="w", pady=4)
-        ttk.Entry(container, textvariable=self.source_dir, width=70).grid(row=4, column=1, sticky="w")
-        ttk.Button(container, text="Chọn...", command=self.browse_source_dir).grid(row=4, column=2, sticky="w")
+        ttk.Label(container, text="Thư mục nguồn chi phí").grid(row=5, column=0, sticky="w", pady=4)
+        ttk.Entry(container, textvariable=self.source_dir).grid(row=5, column=1, sticky="ew", padx=(0, 8))
+        ttk.Button(container, text="Chọn...", width=11, command=self.browse_source_dir).grid(row=5, column=2, sticky="w")
 
+        ttk.Label(container, text="Nguồn nhân sự & thời gian").grid(row=6, column=0, sticky="w", pady=4)
+        ttk.Entry(container, textvariable=self.headcount_source_dir).grid(row=6, column=1, sticky="ew", padx=(0, 8))
+        source_buttons = ttk.Frame(container)
+        source_buttons.grid(row=6, column=2, sticky="w")
+        ttk.Button(source_buttons, text="Chọn...", width=11, command=self.browse_headcount_source_dir).pack(side="left")
         ttk.Button(
-            container,
-            text="Nhập nhân sự thủ công",
-            command=self.open_headcount_editor_v2,
-        ).grid(row=5, column=1, sticky="w", pady=(8, 0))
-
+            source_buttons,
+            text="Cập nhật CSDL",
+            command=self.update_headcount_database,
+        ).pack(side="left", padx=(6, 0))
         ttk.Button(
+            source_buttons,
+            text="Dọn dữ liệu FY",
+            command=self.cleanup_headcount_database,
+        ).pack(side="left", padx=(6, 0))
+        ttk.Label(
             container,
-            text="Nhập sự kiện thiếu dữ liệu",
-            command=self.open_event_driver_editor,
-        ).grid(row=5, column=1, sticky="w", padx=(170, 0), pady=(8, 0))
+            textvariable=self.headcount_source_status,
+            font=("Segoe UI", 9, "italic"),
+        ).grid(row=7, column=1, columnspan=2, sticky="w", pady=(0, 8))
 
-        ttk.Button(
-            container,
-            text="Thứ tự file nguồn",
-            command=self.open_source_order_editor,
-        ).grid(row=5, column=1, sticky="w", padx=(340, 0), pady=(8, 0))
+        actions = ttk.Frame(container)
+        actions.grid(row=8, column=0, columnspan=3, sticky="w", pady=(4, 0))
+        for text, command in (
+            ("Nhập nhân sự thủ công", self.open_headcount_editor_v2),
+            ("Nhập sự kiện thiếu dữ liệu", self.open_event_driver_editor),
+            ("Thứ tự file nguồn", self.open_source_order_editor),
+            ("Hướng dẫn sử dụng chi tiết", self.open_user_guide),
+        ):
+            ttk.Button(actions, text=text, command=command).pack(side="left", padx=(0, 8))
 
-        ttk.Button(
-            container,
-            text="Hướng dẫn sử dụng chi tiết",
-            command=self.open_user_guide,
-        ).grid(row=5, column=2, sticky="w", pady=(8, 0))
-
-        ttk.Separator(container, orient=tk.HORIZONTAL).grid(row=6, column=0, columnspan=3, sticky="ew", pady=16)
+        ttk.Separator(container, orient=tk.HORIZONTAL).grid(
+            row=9, column=0, columnspan=3, sticky="ew", pady=16
+        )
 
         self.start_btn = ttk.Button(
             container,
@@ -847,19 +963,14 @@ class MPManagerApp:
             style="Primary.TButton",
             command=self.start_pipeline,
         )
-        self.start_btn.grid(row=7, column=0, columnspan=3, sticky="w")
-        ttk.Button(
-            container,
-            text="Dashboard kiểm toán",
-            command=self.open_audit_dashboard,
-        ).grid(row=8, column=1, sticky="w", padx=(170, 0))
+        self.start_btn.grid(row=10, column=0, columnspan=3, sticky="w")
 
-        ttk.Label(container, text="Nhật ký xử lý").grid(row=9, column=0, sticky="w", pady=(16, 4))
-        self.log_widget = scrolledtext.ScrolledText(container, height=16, state=tk.DISABLED, font=("Consolas", 9))
-        self.log_widget.grid(row=10, column=0, columnspan=3, sticky="nsew")
+        ttk.Label(container, text="Nhật ký xử lý").grid(row=11, column=0, columnspan=3, sticky="w", pady=(16, 4))
+        self.log_widget = scrolledtext.ScrolledText(
+            container, height=16, state=tk.DISABLED, font=("Consolas", 9)
+        )
+        self.log_widget.grid(row=12, column=0, columnspan=3, sticky="nsew")
 
-        container.rowconfigure(10, weight=1)
-        container.columnconfigure(1, weight=1)
 
     def _run_on_ui_thread(self, callback, *args, **kwargs):
         if threading.get_ident() == self.ui_thread_id:
@@ -886,22 +997,262 @@ class MPManagerApp:
         self.log_widget.configure(state=tk.DISABLED)
 
     def browse_template(self):
-        path = filedialog.askopenfilename(filetypes=[("Tệp Excel", "*.xlsx")])
+        current = self.template_path.get().strip()
+        initial_dir = os.path.dirname(current) if os.path.isfile(current) else BASE_DIR
+        path = filedialog.askopenfilename(initialdir=initial_dir, filetypes=[("Tệp Excel", "*.xlsx")])
         if path:
             validation_error = _validate_selected_template(path)
             if validation_error:
                 messagebox.showerror("Lỗi", validation_error)
                 return
             self.template_path.set(path)
+            self._save_path_preference("template_path", path, "Selected FORM template")
+            self._reload_exchange_rate_from_template()
 
     def browse_source_dir(self):
-        path = filedialog.askdirectory()
+        initial_dir = self.source_dir.get().strip()
+        if not os.path.isdir(initial_dir):
+            initial_dir = BASE_DIR
+        path = filedialog.askdirectory(initialdir=initial_dir)
         if path:
             validation_error = _validate_selected_source_dir(path)
             if validation_error:
                 messagebox.showerror("Lỗi", validation_error)
                 return
             self.source_dir.set(path)
+            self._save_path_preference("cost_source_dir", path, "Selected cost source folder")
+
+    def browse_headcount_source_dir(self):
+        initial_dir = self.headcount_source_dir.get().strip()
+        if not os.path.isdir(initial_dir):
+            initial_dir = BASE_DIR
+        path = filedialog.askdirectory(initialdir=initial_dir)
+        if path:
+            self.headcount_source_dir.set(path)
+            try:
+                self._save_path_preference(
+                    "headcount_source_dir", path, "Department plan source folder"
+                )
+                self.headcount_source_status.set("Cần đồng bộ cho thư mục mới")
+            except Exception as exc:
+                self.log(f"Không lưu được thư mục nguồn nhân sự đã chọn: {exc}")
+
+    def cleanup_headcount_database(self):
+        try:
+            fiscal_year = int(self.fiscal_year.get())
+        except (TypeError, ValueError):
+            messagebox.showerror("Năm tài chính không hợp lệ", "Hãy nhập năm tài chính gồm 4 chữ số.")
+            return
+
+        conn = None
+        try:
+            conn = get_connection(os.path.join(BASE_DIR, "mp2027.db"))
+            create_schema(conn)
+            counts = count_headcount_truth_rows(conn, fiscal_year)
+            if counts["total_rows"] == 0:
+                messagebox.showinfo(
+                    "Không có dữ liệu cần dọn",
+                    f"CSDL không có nguồn sự thật thuộc FY{fiscal_year} "
+                    f"({counts['periods'][0]}–{counts['periods'][-1]}).",
+                )
+                return
+
+            confirmed = messagebox.askyesno(
+                "Xác nhận dọn nguồn sự thật",
+                f"Bạn sắp xóa dữ liệu nguồn sự thật của FY{fiscal_year}\n"
+                f"Phạm vi kỳ: {counts['periods'][0]}–{counts['periods'][-1]}\n\n"
+                f"• Nhân sự kế hoạch phòng ban: {counts['monthly_headcount_rows']} dòng\n"
+                f"• Giờ hành chính và tăng ca: {counts['headcount_time_rows']} dòng\n"
+                f"• Tổng cộng: {counts['total_rows']} dòng\n\n"
+                "Dữ liệu manual, GA, chi phí, danh mục CC và FY khác sẽ được giữ nguyên.\n"
+                "Bạn có chắc chắn muốn tiếp tục?",
+                icon="warning",
+            )
+            if not confirmed:
+                self.log(f"Đã hủy dọn dữ liệu nguồn sự thật FY{fiscal_year}.")
+                return
+
+            result = cleanup_headcount_truth(conn, fiscal_year)
+        except Exception as exc:
+            self.log(f"Dọn nguồn sự thật FY{fiscal_year} thất bại; CSDL đã rollback: {exc}")
+            messagebox.showerror(
+                "Dọn dữ liệu thất bại",
+                f"Không thay đổi dữ liệu trong CSDL.\n\n{exc}",
+            )
+            return
+        finally:
+            if conn is not None:
+                conn.close()
+
+        status = f"Đã dọn dữ liệu FY{fiscal_year} • chưa có nguồn sự thật"
+        self.headcount_source_status.set(status)
+        self.log(
+            f"Đã dọn nguồn sự thật FY{fiscal_year}: "
+            f"{result['monthly_headcount_rows']} dòng nhân sự + "
+            f"{result['headcount_time_rows']} dòng giờ làm."
+        )
+        messagebox.showinfo(
+            "Dọn dữ liệu thành công",
+            f"Đã xóa {result['total_rows']} dòng nguồn sự thật của FY{fiscal_year}.\n\n"
+            "Hãy bấm “Cập nhật CSDL” để nhập nguồn đã sửa.",
+        )
+
+    def _confirm_headcount_source_exceptions(self, review):
+        """Return approved/rejected file sets, or None when the user cancels."""
+        unknown = list(review.get("unknown_cost_centers", []))
+        mismatches = list(review.get("name_mismatches", []))
+        if not unknown and not mismatches:
+            return set(), set(), set()
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Xác nhận nguồn nhân sự cần kiểm tra")
+        dialog.geometry("940x640")
+        dialog.minsize(760, 480)
+        dialog.transient(self.root)
+        dialog.grab_set()
+        outcome = {"value": None}
+
+        outer = ttk.Frame(dialog, padding=14)
+        outer.pack(fill=tk.BOTH, expand=True)
+        ttk.Label(
+            outer,
+            text="Các mục dưới đây mặc định KHÔNG được nhập. Chỉ đánh dấu khi bạn đã kiểm tra A5/B5 trong file nguồn.",
+            wraplength=880,
+            justify=tk.LEFT,
+        ).pack(fill=tk.X, pady=(0, 10))
+
+        canvas = tk.Canvas(outer, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(outer, orient=tk.VERTICAL, command=canvas.yview)
+        content = ttk.Frame(canvas)
+        content.bind("<Configure>", lambda _event: canvas.configure(scrollregion=canvas.bbox("all")))
+        window_id = canvas.create_window((0, 0), window=content, anchor="nw")
+        canvas.bind("<Configure>", lambda event: canvas.itemconfigure(window_id, width=event.width))
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        variables = []
+
+        def add_group(title, items, explanation, kind):
+            if not items:
+                return
+            ttk.Label(content, text=title, font=("Segoe UI", 11, "bold")).pack(anchor="w", pady=(8, 2))
+            ttk.Label(content, text=explanation, wraplength=850, justify=tk.LEFT).pack(anchor="w", pady=(0, 6))
+            for parsed in items:
+                variable = tk.BooleanVar(value=False)
+                expected = " / ".join(
+                    value for value in (
+                        getattr(parsed, "department_name_jp", ""),
+                        getattr(parsed, "department_name_vn", ""),
+                    ) if value
+                )
+                label = (
+                    f"CC {parsed.cc_code} — B5: {parsed.department_name}\n"
+                    f"File: {os.path.basename(parsed.path)}"
+                )
+                if expected:
+                    label += f"\nLookup dự kiến: {expected}"
+                ttk.Checkbutton(content, text=label, variable=variable).pack(
+                    anchor="w", fill=tk.X, padx=(12, 0), pady=5
+                )
+                variables.append((kind, os.path.abspath(parsed.path), variable))
+
+        add_group(
+            "CC chưa có trong master",
+            unknown,
+            "Nếu xác nhận, dữ liệu sẽ được nhập theo nguyên CC trong A5; chương trình không tự tạo master. Sau đó cần đề nghị bổ sung CC vào danh mục.",
+            "unknown",
+        )
+        add_group(
+            "Tên B5 không xác minh tự động được",
+            mismatches,
+            "Chỉ xác nhận nếu CC A5 và tên hiển thị B5 đúng với phòng ban thực tế.",
+            "name",
+        )
+
+        buttons = ttk.Frame(dialog, padding=(14, 8, 14, 14))
+        buttons.pack(fill=tk.X)
+
+        def submit():
+            approved_unknown = {path for kind, path, var in variables if kind == "unknown" and var.get()}
+            rejected_unknown = {path for kind, path, var in variables if kind == "unknown" and not var.get()}
+            approved_names = {path for kind, path, var in variables if kind == "name" and var.get()}
+            outcome["value"] = (approved_unknown, rejected_unknown, approved_names)
+            dialog.destroy()
+
+        ttk.Button(buttons, text="Hủy cập nhật", command=dialog.destroy).pack(side=tk.RIGHT, padx=(8, 0))
+        ttk.Button(buttons, text="Tiếp tục với lựa chọn", command=submit).pack(side=tk.RIGHT)
+        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+        self.root.wait_window(dialog)
+        return outcome["value"]
+
+    def update_headcount_database(self):
+        source_dir = self.headcount_source_dir.get().strip()
+        if not os.path.isdir(source_dir):
+            messagebox.showerror("Nguồn không hợp lệ", "Hãy chọn thư mục nguồn nhân sự & thời gian.")
+            return
+        conn = None
+        try:
+            fiscal_year = int(self.fiscal_year.get())
+            conn = get_connection(os.path.join(BASE_DIR, "mp2027.db"))
+            create_schema(conn)
+            review = review_headcount_time_sources(conn, source_dir, fiscal_year)
+            approvals = self._confirm_headcount_source_exceptions(review)
+            if approvals is None:
+                self.log("Đã hủy cập nhật nguồn nhân sự trước khi ghi CSDL.")
+                return
+            approved_unknown, rejected_unknown, approved_names = approvals
+            result = import_headcount_time_sources(
+                conn,
+                source_dir,
+                fiscal_year,
+                approved_unknown_files=approved_unknown,
+                rejected_unknown_files=rejected_unknown,
+                approved_name_files=approved_names,
+                scan_results=review["results"],
+            )
+        except Exception as exc:
+            self.log(f"Cập nhật nguồn nhân sự thất bại: {exc}")
+            messagebox.showerror("Cập nhật thất bại", str(exc))
+            return
+        finally:
+            if conn is not None:
+                conn.close()
+        for parsed, reason in result["skipped"]:
+            self.log(f"Không nạp {os.path.basename(parsed.path)}: {reason}")
+        for parsed in result["errors"]:
+            self.log(f"Lỗi {os.path.basename(parsed.path)}: {'; '.join(parsed.errors)}")
+        text = (
+            f"Đã nạp {result['imported_files']}/{result['files']} phòng • "
+            f"{result['imported_rows']} kỳ • cần bổ sung tách Nhân viên/Công nhân "
+            f"{result.get('split_required_files', 0)} phòng • bỏ qua {len(result['skipped'])} • "
+            f"lỗi {len(result['errors'])} • {datetime.now():%H:%M}"
+        )
+        self.headcount_source_status.set(text)
+        self.log(f"Cập nhật nguồn nhân sự: {text}")
+        detail_lines = []
+        for parsed, reason in result["skipped"]:
+            detail_lines.append(
+                f"BỎ QUA: {os.path.basename(parsed.path)}\n"
+                f"  CC {parsed.cc_code or 'không đọc được'} - {parsed.department_name or 'không đọc được tên phòng'}\n"
+                f"  Lý do: {reason}"
+            )
+        for parsed in result["errors"]:
+            detail_lines.append(
+                f"LỖI: {os.path.basename(parsed.path)}\n  {'; '.join(parsed.errors) or 'Tệp không hợp lệ'}"
+            )
+        confirmed_unknown = result.get("confirmed_unknown_cost_centers", [])
+        if confirmed_unknown:
+            detail_lines.append(
+                "KHUYẾN NGHỊ BỔ SUNG MASTER:\n  "
+                + "\n  ".join(
+                    f"CC {parsed.cc_code} — {parsed.department_name}" for parsed in confirmed_unknown
+                )
+            )
+        message = text
+        if detail_lines:
+            message += "\n\nCác tệp cần kiểm tra:\n\n" + "\n\n".join(detail_lines)
+        messagebox.showinfo("Đã cập nhật CSDL", message)
 
     def open_source_order_editor(self):
         source_dir = self.source_dir.get() or BASE_DIR
@@ -1436,315 +1787,137 @@ class MPManagerApp:
             fiscal_year = int(self.fiscal_year.get())
         except Exception:
             fiscal_year = 2027
-
-        source_dir = resolve_manual_headcount_source_dir(self.source_dir.get() or BASE_DIR, base_dir=BASE_DIR)
-        os.makedirs(source_dir, exist_ok=True)
-        csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)
-        bus_csv_path = ensure_manual_bus_headcount_template(source_dir)
-
-        editor = tk.Toplevel(self.root)
-        editor.title("Nh\u1eadp li\u1ec7u nh\u00e2n s\u1ef1 12 th\u00e1ng")
-        editor.geometry("1120x760")
-
-        frame = ttk.Frame(editor, padding=10)
-        frame.pack(fill=tk.BOTH, expand=True)
-
-        ttk.Label(frame, text=f"Tệp lưu dữ liệu: {csv_path}", font=("Segoe UI", 9, "italic")).grid(
-            row=0, column=0, columnspan=8, sticky="w"
-        )
-        ttk.Label(
-            frame,
-            text=(
-                "Nh\u1eadp 1 CC cho \u0111\u1ee7 12 th\u00e1ng. Th\u00e1ng 12 c\u00f3 th\u00eam Nam/N\u1eef "
-                "\u0111\u1ec3 ph\u1ee5c v\u1ee5 chi ph\u00ed kh\u00e1m s\u1ee9c kh\u1ecfe."
-            ),
-        ).grid(row=1, column=0, columnspan=8, sticky="w", pady=(4, 10))
-
-        cc_var = tk.StringVar()
-        bus_expat_count_var = tk.StringVar(value="0")
-        bus_vietnamese_count_var = tk.StringVar(value="0")
-        bus_description_var = tk.StringVar()
-        cc_choices = self._get_cc_choices()
         periods = get_required_headcount_periods(fiscal_year)
-        fiscal_months = set(get_fy_months(fiscal_year))
-        label_by_period = {
-            period: (
-                f"Baseline T3 ({period})"
-                if period not in fiscal_months
-                else f"Th\u00e1ng {int(period[-2:])}"
-            )
-            for period in periods
-        }
-
-        ttk.Label(frame, text="M\u00e3 CC").grid(row=2, column=0, sticky="w", pady=(0, 8))
-        cc_combo = ttk.Combobox(frame, textvariable=cc_var, values=cc_choices, width=42, state="readonly")
-        cc_combo.grid(row=2, column=1, sticky="w", pady=(0, 8))
-
-        bus_frame = ttk.LabelFrame(frame, text="Th\u00f4ng tin xe bus - d\u00f9ng chung cho 12 th\u00e1ng")
-        bus_frame.grid(row=3, column=0, columnspan=8, sticky="ew", pady=(0, 10))
-        ttk.Label(bus_frame, text="Ng\u01b0\u1eddi bi\u1ec7t ph\u00e1i \u0111i xe bus").grid(
-            row=0, column=0, sticky="w", padx=(8, 4), pady=(8, 4)
-        )
-        ttk.Entry(bus_frame, textvariable=bus_expat_count_var, width=12).grid(
-            row=0, column=1, sticky="w", padx=(0, 12), pady=(8, 4)
-        )
-        ttk.Label(bus_frame, text="Ng\u01b0\u1eddi Vi\u1ec7t Nam \u0111i xe bus").grid(
-            row=0, column=2, sticky="w", padx=(8, 4), pady=(8, 4)
-        )
-        ttk.Entry(bus_frame, textvariable=bus_vietnamese_count_var, width=12).grid(
-            row=0, column=3, sticky="w", padx=(0, 12), pady=(8, 4)
-        )
-        ttk.Label(bus_frame, text="Ghi ch\u00fa").grid(row=0, column=4, sticky="w", padx=(8, 4), pady=(8, 4))
-        ttk.Entry(bus_frame, textvariable=bus_description_var, width=42).grid(
-            row=0, column=5, sticky="ew", padx=(0, 8), pady=(8, 4)
-        )
-        ttk.Label(
-            bus_frame,
-            text="S\u1ed1 l\u01b0\u1ee3ng n\u00e0y \u0111\u01b0\u1ee3c s\u1eed d\u1ee5ng chung cho 12 th\u00e1ng FY.",
-            font=("Segoe UI", 9, "italic"),
-        ).grid(row=1, column=0, columnspan=6, sticky="w", padx=8, pady=(0, 8))
-        bus_frame.columnconfigure(5, weight=1)
-
-        table = ttk.Frame(frame)
-        table.grid(row=4, column=0, columnspan=8, sticky="nsew")
-        frame.rowconfigure(4, weight=1)
-        frame.columnconfigure(7, weight=1)
-
-        headers = [
-            ("K\u1ef3", 0),
-            ("Nh\u00e2n vi\u00ean", 1),
-            ("C\u00f4ng nh\u00e2n", 2),
-            ("Nam (T12)", 3),
-            ("N\u1eef (T12)", 4),
-            ("Ghi ch\u00fa", 5),
-        ]
-        for text, column_index in headers:
-            ttk.Label(table, text=text).grid(row=0, column=column_index, sticky="w", padx=4, pady=(0, 6))
-
-        month_vars = {}
-        for row_index, period in enumerate(periods, start=1):
-            vars_for_period = {
-                "staff": tk.StringVar(),
-                "worker": tk.StringVar(),
-                "male": tk.StringVar(),
-                "female": tk.StringVar(),
-                "description": tk.StringVar(),
-            }
-            month_vars[period] = vars_for_period
-
-            ttk.Label(table, text=label_by_period[period]).grid(row=row_index, column=0, sticky="w", padx=4, pady=3)
-            ttk.Entry(table, textvariable=vars_for_period["staff"], width=12).grid(row=row_index, column=1, sticky="w", padx=4, pady=3)
-            ttk.Entry(table, textvariable=vars_for_period["worker"], width=12).grid(row=row_index, column=2, sticky="w", padx=4, pady=3)
-            male_entry = ttk.Entry(table, textvariable=vars_for_period["male"], width=12)
-            female_entry = ttk.Entry(table, textvariable=vars_for_period["female"], width=12)
-            male_entry.grid(row=row_index, column=3, sticky="w", padx=4, pady=3)
-            female_entry.grid(row=row_index, column=4, sticky="w", padx=4, pady=3)
-            ttk.Entry(table, textvariable=vars_for_period["description"], width=52).grid(row=row_index, column=5, sticky="ew", padx=4, pady=3)
-
-            if not period.endswith("12"):
-                male_entry.state(["disabled"])
-                female_entry.state(["disabled"])
-
-        table.columnconfigure(5, weight=1)
-
-        def parse_cc_code(text: str) -> str:
-            raw = (text or "").strip()
-            if " - " in raw:
-                raw = raw.split(" - ")[0].strip()
-            return raw
-
-        def clear_table():
-            for vars_for_period in month_vars.values():
-                for field_var in vars_for_period.values():
-                    field_var.set("")
-            bus_expat_count_var.set("0")
-            bus_vietnamese_count_var.set("0")
-            bus_description_var.set("")
-
-        def validate_non_negative_int(raw, label):
-            text = str(raw or "").strip()
-            if not text:
-                raise ValueError(f"{label} ph\u1ea3i l\u00e0 s\u1ed1 nguy\u00ean kh\u00f4ng \u00e2m.")
-            if not text.isdecimal():
-                raise ValueError(f"{label} ph\u1ea3i l\u00e0 s\u1ed1 nguy\u00ean kh\u00f4ng \u00e2m.")
-            return str(int(text))
-
-        def load_selected_cc(*_args):
-            clear_table()
-            cc_code = parse_cc_code(cc_var.get())
-            if not cc_code:
-                return
-            bus_row_map = {
-                str(row.get("cc_code", "")).strip(): row
-                for row in self._read_manual_bus_headcount_rows(bus_csv_path)
-            }
-            bus_row = bus_row_map.get(cc_code)
-            if bus_row:
-                bus_expat_count_var.set(str(bus_row.get("bus_expat_count", "")).strip() or "0")
-                bus_vietnamese_count_var.set(str(bus_row.get("bus_vietnamese_count", "")).strip() or "0")
-                bus_description_var.set(str(bus_row.get("description", "")).strip())
-            row_map = {
-                (str(row.get("cc_code", "")).strip(), str(row.get("period", "")).strip()): row
-                for row in self._read_manual_headcount_rows(csv_path)
-            }
-            for period in periods:
-                row = row_map.get((cc_code, period))
-                if not row:
-                    continue
-                month_vars[period]["staff"].set(str(row.get("headcount_staff", "")).strip())
-                month_vars[period]["worker"].set(str(row.get("headcount_worker", "")).strip())
-                month_vars[period]["male"].set(str(row.get("headcount_male", "")).strip())
-                month_vars[period]["female"].set(str(row.get("headcount_female", "")).strip())
-                month_vars[period]["description"].set(str(row.get("description", "")).strip())
-
-        def save_current_cc():
-            cc_code = parse_cc_code(cc_var.get())
-            if not cc_code:
-                messagebox.showerror("Lỗi", "Hãy chọn mã CC trước khi lưu.")
-                return
-
+        fy_periods = set(get_fy_months(fiscal_year))
+        editor = tk.Toplevel(self.root)
+        editor.title("Nhập liệu nhân sự 12 tháng")
+        editor.geometry("1180x800")
+        frame = ttk.Frame(editor, padding=10); frame.pack(fill=tk.BOTH, expand=True)
+        ttk.Label(frame, text="Số nhân viên, công nhân và tổng người của 12 tháng FY lấy từ kế hoạch phòng ban. Nam/Nữ là dữ liệu bổ sung. Baseline T3 được nhập riêng để tính chi phí tháng 4.", font=("Segoe UI",9,"italic")).pack(anchor="w")
+        top = ttk.Frame(frame); top.pack(fill="x", pady=8)
+        ttk.Label(top,text="Mã CC").pack(side="left")
+        cc_var=tk.StringVar(); cc_combo=ttk.Combobox(top,textvariable=cc_var,values=self._get_cc_choices(),width=42,state="readonly"); cc_combo.pack(side="left",padx=6)
+        source_status=tk.StringVar(value="Chưa có dữ liệu nguồn"); ttk.Label(top,textvariable=source_status).pack(side="left",padx=8)
+        bus_exp=tk.StringVar(value="0"); bus_vn=tk.StringVar(value="0"); bus_note=tk.StringVar()
+        bus=ttk.LabelFrame(frame,text="Thông tin xe buýt — nhập riêng, dùng chung cho 12 tháng"); bus.pack(fill="x",pady=(0,8))
+        for label,var in (("Người biệt phái đi xe buýt",bus_exp),("Người Việt Nam đi xe buýt",bus_vn)):
+            ttk.Label(bus,text=label).pack(side="left",padx=(8,4)); ttk.Entry(bus,textvariable=var,width=10).pack(side="left")
+        ttk.Label(bus,text="Ghi chú").pack(side="left",padx=(12,4)); ttk.Entry(bus,textvariable=bus_note).pack(side="left",fill="x",expand=True,padx=(0,8))
+        notebook=ttk.Notebook(frame); notebook.pack(fill="both",expand=True)
+        people=ttk.Frame(notebook,padding=6); fixed=ttk.Frame(notebook,padding=6); overtime=ttk.Frame(notebook,padding=6)
+        notebook.add(people,text="Số người & bổ sung"); notebook.add(fixed,text="Thời gian cố định"); notebook.add(overtime,text="Thời gian tăng ca")
+        fields=("expat","staff","worker","male","female","total","note"); month_vars={p:{f:tk.StringVar() for f in fields} for p in periods}
+        headers=("Kỳ","JP","Nhân viên","Công nhân","Nam (T12)","Nữ (T12)","Tổng người","Ghi chú")
+        for col,label in enumerate(headers): ttk.Label(people,text=label).grid(row=0,column=col,sticky="w",padx=3)
+        def update_total(period):
+            vals=month_vars[period]
+            try: total=sum(float(vals[k].get() or 0) for k in ("expat","staff","worker")); vals["total"].set(f"{total:g}")
+            except ValueError: vals["total"].set("?")
+        for row,period in enumerate(periods,1):
+            label=f"Tháng {int(period[-2:])}" if period in fy_periods else f"Baseline T3 ({period})"
+            ttk.Label(people,text=label).grid(row=row,column=0,sticky="w",padx=3,pady=2)
+            for col,key,width in ((1,"expat",9),(2,"staff",11),(3,"worker",11),(4,"male",10),(5,"female",10)):
+                entry=ttk.Entry(people,textvariable=month_vars[period][key],width=width); entry.grid(row=row,column=col,padx=3,pady=2)
+                if key in ("expat","staff","worker") and period in fy_periods: entry.state(["readonly"])
+                if key in ("male","female") and not period.endswith("12"): entry.state(["disabled"])
+                if key in ("expat","staff","worker"): month_vars[period][key].trace_add("write",lambda *_args,p=period:update_total(p))
+            total=ttk.Entry(people,textvariable=month_vars[period]["total"],width=11,state="readonly"); total.grid(row=row,column=6,padx=3)
+            ttk.Entry(people,textvariable=month_vars[period]["note"],width=42).grid(row=row,column=7,sticky="ew",padx=3)
+            if period not in fy_periods:
+                ttk.Label(people,text="Dùng tính 4 chi phí của tháng 4",foreground="#8A4B08").grid(row=row,column=8,sticky="w",padx=4)
+        people.columnconfigure(7,weight=1)
+        time_trees={}
+        for tab,kind in ((fixed,"fixed"),(overtime,"overtime")):
+            tree=ttk.Treeview(tab,columns=("period","jp","local","total","source"),show="headings")
+            for col,label,width in (("period","Kỳ",110),("jp","JP",130),("local","Người Việt",150),("total","Tổng giờ",150),("source","Nguồn",520)):
+                tree.heading(col,text=label); tree.column(col,width=width,anchor="w")
+            tree.pack(fill="both",expand=True); time_trees[kind]=tree
+        def cc_code():
+            raw=cc_var.get().strip(); return raw.split(" - ")[0] if " - " in raw else raw
+        def clear():
+            for vals in month_vars.values():
+                for var in vals.values(): var.set("")
+            for tree in time_trees.values():
+                for item in tree.get_children(): tree.delete(item)
+            bus_exp.set("0"); bus_vn.set("0"); bus_note.set("")
+        def load_cc(*_):
+            clear(); cc=cc_code()
+            if not cc:return
+            conn=get_connection(os.path.join(BASE_DIR,"mp2027.db")); create_schema(conn)
             try:
-                int(float(cc_code))
-            except Exception:
-                messagebox.showerror("Lỗi", "Mã CC không hợp lệ.")
-                return
-
-            def show_save_errors(errors):
-                details = format_headcount_save_errors(errors)
-                if details:
-                    details = "\n\n" + details
-                message = f"Lưu chưa hoàn tất cho CC {cc_code}. Không có thay đổi nào được áp dụng.{details}"
-                self.log(message)
-                messagebox.showerror("Lưu chưa hoàn tất", message)
-
-            try:
-                bus_expat_count = validate_non_negative_int(
-                    bus_expat_count_var.get(), "Ng\u01b0\u1eddi bi\u1ec7t ph\u00e1i \u0111i xe bus"
-                )
-                bus_vietnamese_count = validate_non_negative_int(
-                    bus_vietnamese_count_var.get(), "Ng\u01b0\u1eddi Vi\u1ec7t Nam \u0111i xe bus"
-                )
-            except ValueError as exc:
-                show_save_errors(
-                    [
-                        _headcount_save_error(
-                            "bus",
-                            "bus_expat_count/bus_vietnamese_count",
-                            f"{bus_expat_count_var.get()}/{bus_vietnamese_count_var.get()}",
-                            "INTEGER_GTE_0",
-                            str(exc),
-                        )
-                    ]
-                )
-                return
-
-            existing_rows = self._read_manual_headcount_rows(csv_path)
-            existing_bus_rows = self._read_manual_bus_headcount_rows(bus_csv_path)
-            month_inputs = {
-                period: {
-                    "staff": month_vars[period]["staff"].get(),
-                    "worker": month_vars[period]["worker"].get(),
-                    "male": month_vars[period]["male"].get() if period.endswith("12") else "",
-                    "female": month_vars[period]["female"].get() if period.endswith("12") else "",
-                    "description": month_vars[period]["description"].get(),
+                fy_period_list = get_fy_months(fiscal_year)
+                period_placeholders = ",".join("?" for _ in fy_period_list)
+                source_rows=conn.execute(
+                    f"""SELECT * FROM fact_monthly_headcount
+                    WHERE CAST(cc_code AS TEXT)=? AND source='department_plan'
+                    AND period IN ({period_placeholders}) ORDER BY period""",
+                    (cc, *fy_period_list),
+                ).fetchall()
+                manual_periods = periods
+                manual_placeholders = ",".join("?" for _ in manual_periods)
+                manual={
+                    r["period"]:r
+                    for r in conn.execute(
+                        f"""SELECT * FROM fact_monthly_headcount
+                        WHERE CAST(cc_code AS TEXT)=? AND source='manual'
+                        AND period IN ({manual_placeholders})""",
+                        (cc, *manual_periods),
+                    ).fetchall()
                 }
-                for period in periods
-            }
-            period_rows, validation_errors = validate_headcount_save_period_rows(
-                periods,
-                month_inputs,
-                label_by_period,
-            )
-            if validation_errors:
-                show_save_errors(validation_errors)
-                return
-
-            new_rows = [row for row in existing_rows if str(row.get("cc_code", "")).strip() != cc_code]
-            new_bus_rows = [row for row in existing_bus_rows if str(row.get("cc_code", "")).strip() != cc_code]
-            new_bus_rows.append(
-                {
-                    "cc_code": cc_code,
-                    "bus_expat_count": bus_expat_count,
-                    "bus_vietnamese_count": bus_vietnamese_count,
-                    "description": bus_description_var.get().strip(),
-                }
-            )
-            saved_count = len(period_rows)
-
-            for row in period_rows:
-                new_rows.append(
-                    {
-                        "cc_code": cc_code,
-                        "period": row["period"],
-                        "headcount_staff": row["headcount_staff"],
-                        "headcount_worker": row["headcount_worker"],
-                        "headcount_male": row["headcount_male"],
-                        "headcount_female": row["headcount_female"],
-                        "description": row["description"],
-                    }
+                for r in source_rows:
+                    if r["period"] in month_vars:
+                        v=month_vars[r["period"]]; v["expat"].set(f"{float(r['headcount_expat'] or 0):g}"); v["staff"].set(f"{float(r['headcount_staff'] or 0):g}"); v["worker"].set(f"{float(r['headcount_worker'] or 0):g}")
+                for period,r in manual.items():
+                    if period in month_vars:
+                        v=month_vars[period]
+                        if period not in fy_periods:
+                            v["expat"].set(f"{float(r['headcount_expat'] or 0):g}"); v["staff"].set(f"{float(r['headcount_staff'] or 0):g}"); v["worker"].set(f"{float(r['headcount_worker'] or 0):g}")
+                        v["male"].set(f"{float(r['headcount_male'] or 0):g}" if period.endswith("12") else ""); v["female"].set(f"{float(r['headcount_female'] or 0):g}" if period.endswith("12") else ""); v["note"].set(r["description"] or "")
+                busrow=conn.execute("SELECT * FROM fact_bus_headcount_drivers WHERE cc_code=?",(cc,)).fetchone()
+                if busrow: bus_exp.set(f"{float(busrow['bus_expat_count'] or 0):g}"); bus_vn.set(f"{float(busrow['bus_vietnamese_count'] or 0):g}"); bus_note.set(busrow["description"] or "")
+                timerows=conn.execute(
+                    f"""SELECT * FROM fact_headcount_time_source
+                    WHERE cc_code=? AND period IN ({period_placeholders}) ORDER BY period""",
+                    (cc, *fy_period_list),
+                ).fetchall()
+                for r in timerows:
+                    label=f"Tháng {int(r['period'][-2:])}"
+                    for kind,ek,lk in (("fixed","fixed_hours_expat","fixed_hours_local"),("overtime","overtime_hours_expat","overtime_hours_local")):
+                        jp=float(r[ek] or 0); local=float(r[lk] or 0); time_trees[kind].insert("",tk.END,values=(label,f"{jp:g}",f"{local:g}",f"{jp+local:g}",os.path.basename(r["source_file"] or "")))
+                source_status.set(
+                    f"Đã có {len(source_rows)} kỳ nguồn FY{fiscal_year} trong CSDL"
+                    if source_rows
+                    else f"Chưa có dữ liệu nguồn FY{fiscal_year} cho CC này"
                 )
-
-            new_rows.sort(key=lambda row: (str(row.get("cc_code", "")), str(row.get("period", ""))))
-            new_bus_rows.sort(key=lambda row: str(row.get("cc_code", "")))
-
-            valid_cc_codes = {parse_cc_code(choice) for choice in cc_choices if parse_cc_code(choice)}
-            candidate_rows = []
-            for row_number, row in enumerate(new_rows, start=2):
-                candidate = dict(row)
-                candidate["_csv_row"] = row_number
-                candidate_rows.append(candidate)
-            import_validation = validate_manual_headcount_rows(candidate_rows, valid_cc_codes, fiscal_year)
-            if import_validation.get("errors", 0):
-                show_save_errors(import_validation.get("error_details", []))
-                return
-            bus_validation_errors = validate_bus_headcount_save_rows(new_bus_rows, valid_cc_codes)
-            if bus_validation_errors:
-                show_save_errors(bus_validation_errors)
-                return
-
-            self._write_manual_headcount_rows(csv_path, new_rows)
-            self._write_manual_bus_headcount_rows(bus_csv_path, new_bus_rows)
-            db_path = os.path.join(BASE_DIR, "mp2027.db")
-            conn = get_connection(db_path)
+            finally: conn.close()
+        def nonneg(text,label):
+            value=str(text or "").strip() or "0"
+            if not value.isdecimal(): raise ValueError(f"{label} phải là số nguyên không âm")
+            return float(value)
+        def save():
+            cc=cc_code()
+            if not cc:return
+            try: be=nonneg(bus_exp.get(),"Bus JP"); bv=nonneg(bus_vn.get(),"Bus Việt Nam")
+            except ValueError as exc: messagebox.showerror("Dữ liệu không hợp lệ",str(exc)); return
+            conn=get_connection(os.path.join(BASE_DIR,"mp2027.db")); create_schema(conn)
             try:
-                create_schema(conn)
-                result = parse_manual_headcount(conn, source_dir=source_dir)
-            finally:
-                conn.close()
-            self.log(
-                "Lưu nhân sự theo kỳ: mã bộ phận={cc}, số dòng={rows}, tệp={path}; tệp xe bus={bus_path}; đã nạp vào dữ liệu={inserted}, đã nạp xe bus={bus_inserted}, lỗi={errors}".format(
-                    cc=cc_code,
-                    rows=saved_count,
-                    path=csv_path,
-                    bus_path=bus_csv_path,
-                    inserted=result.get("inserted", 0),
-                    bus_inserted=result.get("bus_inserted", 0),
-                    errors=result.get("errors", 0),
-                )
-            )
-            if result.get("errors", 0):
-                show_save_errors(result.get("error_details", []))
-                return
-            messagebox.showinfo(
-                "Đã lưu",
-                "Đã lưu đầy đủ {rows} kỳ cho mã bộ phận {cc}.\nDòng đã ghi vào tệp dữ liệu={rows}; dòng đã nạp vào dữ liệu={inserted}; dòng xe bus đã ghi={bus_inserted}; lỗi=0.".format(
-                    rows=saved_count,
-                    cc=cc_code,
-                    inserted=result.get("inserted", 0),
-                    bus_inserted=result.get("bus_inserted", 0),
-                ),
-            )
-
-        button_row = ttk.Frame(frame)
-        button_row.grid(row=5, column=0, columnspan=8, sticky="w", pady=(12, 0))
-        ttk.Button(button_row, text="Tải dữ liệu CC", command=load_selected_cc).grid(row=0, column=0, padx=(0, 6))
-        ttk.Button(button_row, text="Lưu 12 tháng", command=save_current_cc).grid(row=0, column=1, padx=(0, 6))
-        ttk.Button(button_row, text="Đóng", command=editor.destroy).grid(row=0, column=2, padx=(0, 6))
-
-        cc_combo.bind("<<ComboboxSelected>>", load_selected_cc)
-        if cc_choices:
-            cc_var.set(cc_choices[0])
-            load_selected_cc()
+                with conn:
+                    conn.execute("INSERT INTO fact_bus_headcount_drivers(cc_code,bus_expat_count,bus_vietnamese_count,source,description) VALUES(?,?,?,'manual',?) ON CONFLICT(cc_code) DO UPDATE SET bus_expat_count=excluded.bus_expat_count,bus_vietnamese_count=excluded.bus_vietnamese_count,description=excluded.description",(cc,be,bv,bus_note.get().strip()))
+                    conn.execute("DELETE FROM fact_monthly_headcount WHERE cc_code=? AND source='manual'",(cc,))
+                    for period,v in month_vars.items():
+                        male=nonneg(v["male"].get(),f"Nam {period}") if period.endswith("12") else 0; female=nonneg(v["female"].get(),f"Nữ {period}") if period.endswith("12") else 0
+                        note=v["note"].get().strip()
+                        if period not in fy_periods:
+                            expat=nonneg(v["expat"].get(),f"JP {period}"); staff=nonneg(v["staff"].get(),f"Nhân viên {period}"); worker=nonneg(v["worker"].get(),f"Công nhân {period}"); total=expat+staff+worker
+                            conn.execute("INSERT INTO fact_monthly_headcount(period,cc_code,headcount_all,headcount_expat,headcount_staff,headcount_worker,headcount_male,headcount_female,source,description) VALUES(?,?,?,?,?,?,0,0,'manual',?)",(period,cc,total,expat,staff,worker,note))
+                        elif male or female or note:
+                            conn.execute("INSERT INTO fact_monthly_headcount(period,cc_code,headcount_all,headcount_expat,headcount_staff,headcount_worker,headcount_male,headcount_female,source,description) VALUES(?,?,0,0,0,0,?,?,'manual',?)",(period,cc,male,female,note))
+            except ValueError as exc: conn.rollback(); messagebox.showerror("Dữ liệu không hợp lệ",str(exc)); return
+            finally: conn.close()
+            messagebox.showinfo("Đã lưu","Đã lưu phần dữ liệu bổ sung và thông tin xe buýt.")
+        buttons=ttk.Frame(frame); buttons.pack(fill="x",pady=(8,0)); ttk.Button(buttons,text="Tải dữ liệu CC",command=load_cc).pack(side="left"); ttk.Button(buttons,text="Lưu phần bổ sung",style="Primary.TButton",command=save).pack(side="left",padx=6); ttk.Button(buttons,text="Đóng",command=editor.destroy).pack(side="left")
+        cc_combo.bind("<<ComboboxSelected>>",load_cc)
+        if cc_combo["values"]: cc_var.set(cc_combo["values"][0]); load_cc()
 
     def open_event_driver_editor(self):
         try:
@@ -1909,7 +2082,7 @@ class MPManagerApp:
         for col, width, text in headings:
             tree.heading(col, text=text)
             tree.column(col, width=width, anchor="w")
-        tree.grid(row=8, column=0, columnspan=8, sticky="nsew", pady=(12, 0))
+        tree.grid(row=12, column=0, columnspan=8, sticky="nsew", pady=(12, 0))
         scroll = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
         tree.configure(yscrollcommand=scroll.set)
         scroll.grid(row=8, column=8, sticky="ns", pady=(12, 0))
@@ -2072,7 +2245,7 @@ class MPManagerApp:
             messagebox.showinfo("Đã lưu", f"Đã lưu {len(rows)} dòng sự kiện.")
 
         button_row = ttk.Frame(frame)
-        button_row.grid(row=7, column=0, columnspan=8, sticky="w", pady=(10, 0))
+        button_row.grid(row=9, column=0, columnspan=8, sticky="w", pady=(10, 0))
         ttk.Button(button_row, text="Thêm/Cập nhật", command=add_or_update).grid(row=0, column=0, padx=(0, 6))
         ttk.Button(button_row, text="Xóa đã chọn", command=remove_selected).grid(row=0, column=1, padx=(0, 6))
         ttk.Button(button_row, text="Lưu tệp", command=save_file).grid(row=0, column=2, padx=(0, 6))
@@ -2108,8 +2281,25 @@ class MPManagerApp:
             return 2027
 
     def _read_missing_inputs(self) -> list[dict[str, str]]:
-        missing_path = os.path.join(self._audit_output_dir(), "MP2027_MISSING_INPUTS.csv")
-        return self._read_csv_rows(missing_path)
+        missing_path = os.path.join(
+            self._audit_output_dir(), "BAO_CAO_KIEM_TRA", "DU_LIEU_CON_THIEU.xlsx"
+        )
+        if not os.path.exists(missing_path):
+            return []
+        workbook = load_workbook(missing_path, read_only=True, data_only=True)
+        try:
+            sheet = workbook.active
+            rows = list(sheet.iter_rows(min_row=7, values_only=True))
+            return [
+                {
+                    "severity": str(row[0] or ""), "cc_code": str(row[1] or ""),
+                    "period": str(row[2] or ""), "area": str(row[3] or ""),
+                    "message": str(row[3] or ""), "action": str(row[4] or ""),
+                }
+                for row in rows if any(value not in (None, "") for value in row)
+            ]
+        finally:
+            workbook.close()
 
     def _manual_event_ccs(self) -> set[str]:
         source_dir = self.source_dir.get() or BASE_DIR
@@ -2120,267 +2310,11 @@ class MPManagerApp:
             if str(row.get("cc_code", "")).strip()
         }
 
-    def _dashboard_cc_rows(self):
-        db_path = os.path.join(BASE_DIR, "mp2027.db")
-        if not os.path.exists(db_path):
-            return []
-
-        source_dir = self.source_dir.get() or BASE_DIR
-        conn = get_connection(db_path)
-        try:
-            rows = conn.execute(
-                """
-                SELECT
-                    cc.code,
-                    cc.name_jp,
-                    COALESCE(fid.fact_rows, 0) AS fact_rows,
-                    COALESCE(fid.birthday_rows, 0) AS birthday_rows,
-                    COALESCE(fid.nnn_rows, 0) AS nnn_rows,
-                    COALESCE(fid.manual_event_rows, 0) AS manual_event_rows,
-                    COALESCE(hc.manual_headcount_rows, 0) AS manual_headcount_rows
-                FROM dim_cost_centers cc
-                LEFT JOIN (
-                    SELECT
-                        CAST(cc_code AS TEXT) AS cc_code,
-                        COUNT(*) AS fact_rows,
-                        SUM(CASE WHEN source = 'birthday_workbook' THEN 1 ELSE 0 END) AS birthday_rows,
-                        SUM(CASE WHEN source = 'nnn_paperwork' THEN 1 ELSE 0 END) AS nnn_rows,
-                        SUM(CASE WHEN source = 'manual_event_driver' THEN 1 ELSE 0 END) AS manual_event_rows
-                    FROM fact_input_data
-                    GROUP BY CAST(cc_code AS TEXT)
-                ) fid ON fid.cc_code = CAST(cc.code AS TEXT)
-                LEFT JOIN (
-                    SELECT CAST(cc_code AS TEXT) AS cc_code, COUNT(*) AS manual_headcount_rows
-                    FROM fact_monthly_headcount
-                    WHERE source = 'manual'
-                    GROUP BY CAST(cc_code AS TEXT)
-                ) hc ON hc.cc_code = CAST(cc.code AS TEXT)
-                ORDER BY cc.code
-                """
-            ).fetchall()
-        finally:
-            conn.close()
-
-        result = []
-        for row in rows:
-            fact_rows = int(row["fact_rows"] or 0)
-            manual_hc = int(row["manual_headcount_rows"] or 0)
-            manual_event = int(row["manual_event_rows"] or 0)
-            if fact_rows <= 0:
-                status = "ĐỎ"
-                reason = "Chưa có dữ liệu tính toán sau lần chạy gần nhất"
-            elif manual_event <= 0:
-                status = "VÀNG"
-                reason = "Cần rà soát sự kiện riêng; chưa có dữ liệu sự kiện nhập tay cho CC này"
-            elif manual_hc <= 0:
-                status = "VÀNG"
-                reason = "Chưa có dữ liệu nhân sự nhập tay riêng cho CC này"
-            else:
-                status = "XANH"
-                reason = "Có dữ liệu và không có cảnh báo cơ bản"
-            result.append(
-                (
-                    status,
-                    str(row["code"]),
-                    str(row["name_jp"] or ""),
-                    fact_rows,
-                    manual_hc,
-                    int(row["birthday_rows"] or 0),
-                    int(row["nnn_rows"] or 0),
-                    manual_event,
-                    reason,
-                )
-            )
-        return result
-
-    def _preview_formula_rows(self, cc_code: str | None):
-        if not cc_code:
-            cc_code = self._parse_selected_cc_code()
-        if not cc_code:
-            return []
-        path = os.path.join(self._audit_output_dir(), f"MP_CC_{cc_code}.xlsx")
-        if not os.path.exists(path):
-            return []
-
-        try:
-            import openpyxl
-
-            wb = openpyxl.load_workbook(path, data_only=False)
-            try:
-                ws = wb["内訳ﾘｽﾄ(4～3月)"] if "内訳ﾘｽﾄ(4～3月)" in wb.sheetnames else wb[wb.sheetnames[0]]
-                result = []
-                for row_index in [44, 45, 59, 75, 97, 98, 137]:
-                    result.append(
-                        (
-                            row_index,
-                            ws.cell(row_index, 19).value or "",
-                            ws.cell(row_index, 6).value or "",
-                            ws.cell(row_index, 7).value or "",
-                            ws.cell(row_index, 17).value or "",
-                            ws.cell(row_index, 18).value or "",
-                        )
-                    )
-                return result
-            finally:
-                wb.close()
-        except Exception:
-            return []
-
-    def open_audit_dashboard(self):
-        dashboard = tk.Toplevel(self.root)
-        dashboard.title("Dashboard kiểm toán - MP2027")
-        dashboard.geometry("1280x820")
-
-        frame = ttk.Frame(dashboard, padding=12)
-        frame.pack(fill=tk.BOTH, expand=True)
-
-        ttk.Label(frame, text="Dashboard kiểm toán", style="Header.TLabel").grid(row=0, column=0, sticky="w")
-        ttk.Label(
-            frame,
-            text=(
-                "Mục tiêu: nhìn một lần là biết CC nào dùng được, CC nào cần kiểm tra, CC nào chưa có dữ liệu. "
-                "Chương trình không tự bịa số; chỗ nào thiếu sẽ yêu cầu người dùng nhập/chốt."
-            ),
-            wraplength=1180,
-        ).grid(row=1, column=0, columnspan=4, sticky="w", pady=(4, 6))
-
-        legend = ttk.LabelFrame(frame, text="Cách đọc đèn")
-        legend.grid(row=2, column=0, columnspan=4, sticky="ew", pady=(0, 8))
-        ttk.Label(legend, text="XANH: có thể mở tệp kết quả để kiểm tra công thức.").grid(row=0, column=0, sticky="w", padx=8, pady=4)
-        ttk.Label(legend, text="VÀNG: có dữ liệu nhưng còn việc cần người dùng chốt.").grid(row=0, column=1, sticky="w", padx=18, pady=4)
-        ttk.Label(legend, text="ĐỎ: chưa có dữ liệu tính toán cho CC này.").grid(row=0, column=2, sticky="w", padx=18, pady=4)
-
-        summary_var = tk.StringVar(value="")
-        ttk.Label(frame, textvariable=summary_var, font=("Segoe UI", 10, "bold")).grid(row=3, column=0, columnspan=4, sticky="w", pady=(0, 8))
-
-        cc_columns = ("status", "cc_code", "name", "fact_rows", "manual_hc", "birthday", "nnn", "manual_event", "reason")
-        cc_tree = ttk.Treeview(frame, columns=cc_columns, show="headings", height=14)
-        for col, width, text in [
-            ("status", 70, "Đèn"),
-            ("cc_code", 110, "CC"),
-            ("name", 230, "Tên phòng"),
-            ("fact_rows", 95, "Dòng dữ liệu"),
-            ("manual_hc", 110, "Dòng nhân sự"),
-            ("birthday", 95, "Sinh nhật"),
-            ("nnn", 65, "NNN"),
-            ("manual_event", 115, "Sự kiện nhập tay"),
-            ("reason", 360, "Lý do"),
-        ]:
-            cc_tree.heading(col, text=text)
-            cc_tree.column(col, width=width, anchor="w")
-        cc_tree.tag_configure("XANH", background="#e8f5e9")
-        cc_tree.tag_configure("VÀNG", background="#fff8dc")
-        cc_tree.tag_configure("ĐỎ", background="#fdecea")
-        cc_tree.grid(row=4, column=0, columnspan=4, sticky="nsew")
-        cc_scroll = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=cc_tree.yview)
-        cc_tree.configure(yscrollcommand=cc_scroll.set)
-        cc_scroll.grid(row=4, column=4, sticky="ns")
-
-        ttk.Label(frame, text="Việc cần người dùng chốt").grid(row=5, column=0, sticky="w", pady=(12, 4))
-        missing_columns = ("severity", "cc_code", "period", "area", "action")
-        missing_tree = ttk.Treeview(frame, columns=missing_columns, show="headings", height=6)
-        for col, width, text in [
-            ("severity", 85, "Mức"),
-            ("cc_code", 120, "CC"),
-            ("period", 180, "Kỳ"),
-            ("area", 180, "Hạng mục"),
-            ("action", 650, "Cần làm"),
-        ]:
-            missing_tree.heading(col, text=text)
-            missing_tree.column(col, width=width, anchor="w")
-        missing_tree.grid(row=6, column=0, columnspan=4, sticky="nsew")
-
-        ttk.Label(frame, text="Xem trước công thức trong tệp kết quả của CC đã chọn").grid(row=7, column=0, sticky="w", pady=(12, 4))
-        preview_columns = ("row", "description", "F", "G", "Q", "R")
-        preview_tree = ttk.Treeview(frame, columns=preview_columns, show="headings", height=8)
-        for col, width, text in [
-            ("row", 60, "Dòng"),
-            ("description", 360, "Nội dung"),
-            ("F", 210, "F"),
-            ("G", 210, "G"),
-            ("Q", 210, "Q"),
-            ("R", 160, "Tổng"),
-        ]:
-            preview_tree.heading(col, text=text)
-            preview_tree.column(col, width=width, anchor="w")
-        preview_tree.grid(row=8, column=0, columnspan=4, sticky="nsew")
-
-        frame.rowconfigure(4, weight=2)
-        frame.rowconfigure(6, weight=1)
-        frame.rowconfigure(8, weight=1)
-        frame.columnconfigure(3, weight=1)
-
-        def selected_dashboard_cc():
-            selected = cc_tree.selection()
-            if selected:
-                return str(cc_tree.item(selected[0], "values")[1])
-            return self._parse_selected_cc_code()
-
-        def refresh_dashboard():
-            for tree in (cc_tree, missing_tree, preview_tree):
-                for item in tree.get_children():
-                    tree.delete(item)
-
-            rows = self._dashboard_cc_rows()
-            counts = {"XANH": 0, "VÀNG": 0, "ĐỎ": 0}
-            for row in rows:
-                counts[row[0]] = counts.get(row[0], 0) + 1
-                cc_tree.insert("", tk.END, values=row, tags=(row[0],))
-            summary_var.set(
-                f"XANH={counts.get('XANH', 0)} | VÀNG={counts.get('VÀNG', 0)} | ĐỎ={counts.get('ĐỎ', 0)} | Tổng CC={len(rows)}"
-            )
-
-            for row in self._read_missing_inputs():
-                missing_tree.insert(
-                    "",
-                    tk.END,
-                    values=(
-                        row.get("severity", ""),
-                        row.get("cc_code", ""),
-                        row.get("period", ""),
-                        row.get("area", ""),
-                        row.get("action", ""),
-                    ),
-                )
-
-            refresh_preview()
-
-        def refresh_preview(*_args):
-            for item in preview_tree.get_children():
-                preview_tree.delete(item)
-            cc_code = selected_dashboard_cc()
-            for row in self._preview_formula_rows(cc_code):
-                preview_tree.insert("", tk.END, values=row)
-
-        def open_audit_report():
-            self._open_path(os.path.join(self._audit_output_dir(), "MP2027_AUDIT_REPORT.md"))
-
-        def open_missing_csv():
-            self._open_path(os.path.join(self._audit_output_dir(), "MP2027_MISSING_INPUTS.csv"))
-
-        def open_output_workbook():
-            cc_code = selected_dashboard_cc()
-            if not cc_code:
-                messagebox.showwarning("Chưa chọn CC", "Hãy chọn CC trên Dashboard trước.")
-                return
-            self._open_path(os.path.join(self._audit_output_dir(), f"MP_CC_{cc_code}.xlsx"))
-
-        button_row = ttk.Frame(frame)
-        button_row.grid(row=9, column=0, columnspan=4, sticky="w", pady=(12, 0))
-        ttk.Button(button_row, text="Tải lại Dashboard", command=refresh_dashboard).grid(row=0, column=0, padx=(0, 6))
-        ttk.Button(button_row, text="Nhập dữ liệu thiếu", command=self.open_event_driver_editor).grid(row=0, column=1, padx=(0, 6))
-        ttk.Button(button_row, text="Mở báo cáo kiểm toán", command=open_audit_report).grid(row=0, column=2, padx=(0, 6))
-        ttk.Button(button_row, text="Mở danh sách thiếu", command=open_missing_csv).grid(row=0, column=3, padx=(0, 6))
-        ttk.Button(button_row, text="Mở tệp kết quả CC", command=open_output_workbook).grid(row=0, column=4, padx=(0, 6))
-        ttk.Button(button_row, text="Đóng", command=dashboard.destroy).grid(row=0, column=5, padx=(0, 6))
-
-        cc_tree.bind("<<TreeviewSelect>>", refresh_preview)
-        refresh_dashboard()
 
     def start_pipeline(self):
         try:
             fiscal_year = int(self.fiscal_year.get())
-            exchange_rate = float(EXCHANGE_RATE_USD_VND)
+            exchange_rate = validate_exchange_rate(self.exchange_rate.get())
 
             cc_raw = self.cc_code_filter.get().strip()
             target_cc = None
@@ -2406,21 +2340,39 @@ class MPManagerApp:
                 )
                 return
 
+            headcount_source = self.headcount_source_dir.get().strip()
+            if not os.path.isdir(headcount_source):
+                messagebox.showerror("Lỗi", "Hãy chọn thư mục nguồn nhân sự & thời gian hợp lệ.")
+                return
+            if target_cc is None:
+                proceed = messagebox.askokcancel(
+                    "Xuất toàn bộ Trung tâm chi phí",
+                    "Bạn đang để trống Trung tâm chi phí.\n\n"
+                    "Chương trình sẽ tự đồng bộ nguồn nhân sự, kiểm tra toàn bộ CC dự kiến xuất "
+                    "và dừng trước khi xuất nếu có bất kỳ CC nào thiếu dữ liệu.\n\nTiếp tục?",
+                )
+                if not proceed:
+                    return
+
             self.start_btn.configure(state=tk.DISABLED)
             self.log("--- BẮT ĐẦU TÍNH TOÁN ---")
             self.log(f"Tệp mẫu xác nhận chạy: {template}")
             self.log(f"Thư mục nguồn xác nhận chạy: {source}")
+            self.log(f"Nguồn nhân sự & thời gian xác nhận chạy: {headcount_source}")
+            self.log(f"Tỷ giá hiệu lực cho lần chạy này: {exchange_rate:,.0f} USD/VND")
             threading.Thread(
                 target=self.run_process,
-                args=(fiscal_year, template, source, exchange_rate, target_cc),
+                args=(fiscal_year, template, source, headcount_source, exchange_rate, target_cc),
                 daemon=True,
             ).start()
         except Exception as exc:
             messagebox.showerror("Lỗi nhập liệu", _friendly_error_message(exc))
 
-    def run_process(self, fiscal_year: int, template: str, source: str, rate: float, target_cc: int | None):
+    def run_process(self, fiscal_year: int, template: str, source: str, headcount_source: str, rate: float, target_cc: int | None):
         try:
-            cmd = self._pipeline_subprocess_command(fiscal_year, template, source, rate, target_cc)
+            cmd = self._pipeline_subprocess_command(
+                fiscal_year, template, source, headcount_source, rate, target_cc
+            )
             env = os.environ.copy()
             env["PYTHONIOENCODING"] = "utf-8"
             env["PYTHONUTF8"] = "1"
@@ -2457,6 +2409,7 @@ class MPManagerApp:
         fiscal_year: int,
         template: str,
         source: str,
+        headcount_source: str,
         rate: float,
         target_cc: int | str | None,
     ) -> list[str]:
@@ -2472,6 +2425,8 @@ class MPManagerApp:
                 template,
                 "--source",
                 source,
+                "--headcount-source",
+                headcount_source,
                 "--exchange-rate",
                 str(rate),
             ]

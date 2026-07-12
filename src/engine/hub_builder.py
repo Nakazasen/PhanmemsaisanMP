@@ -20,7 +20,11 @@ from openpyxl.utils import get_column_letter
 
 from src.engine.column_s_normalizer import normalize_output_description_column_s
 from src.engine.output_mode import OutputGroupSpec, get_default_output_group_specs
+from src.engine.source_order_output import CANONICAL_SOURCE_FILE_ORDER
+from src.parsers.fixed_assets import CATEGORY_SPECS, INTEREST_ACCOUNT
+from src.services.headcount_source_policy import HeadcountSourceError, load_canonical_headcount
 from src.utils import excel_helpers as helpers
+from src.utils.fiscal_periods import fiscal_baseline_period
 
 
 VISIBLE_MONTH_START_COL = 6   # F
@@ -41,6 +45,14 @@ APPEND_NOTE_FILL = "CCFFFF"
 MISSING_SEPARATE_COUNT_MARKER = "missing_separate_count=1"
 EXPLICIT_ZERO_COUNT_MARKER = "explicit_zero_count=1"
 MISSING_SEPARATE_COUNT_FILL = "FFC7CE"
+FORM_SOURCE_DRIVER_ROWS = {
+    "fixed_hours_expat": 8,
+    "fixed_hours_local": 9,
+    "overtime_hours_expat": 16,
+    "overtime_hours_local": 17,
+    "headcount_expat": 24,
+    "headcount_local": 25,
+}
 IT_COMPONENT_ORDER = ("vpn", "mail", "r3", "mes", "plm", "qlik_sense", "vps", "ams")
 IT_SYSTEM_ACCOUNT_CODES = {5005246282, 6005146628, 6005146542}
 IT_SYSTEM_ACCOUNT_BY_COST_TYPE = {
@@ -76,10 +88,6 @@ FIXED_ALLOCATION_ROW_MATCHERS = {
     57: {
         "tokens": ("kham suc khoe (cho cnv nam)", "kham suc khoe (cho cnv nu)", "health check"),
         "exclude_tokens": ("tuyen dung", "gpld"),
-    },
-    58: {
-        "tokens": ("kham suc khoe khi tuyen dung", "tuyen dung"),
-        "exclude_tokens": (),
     },
     59: {
         "tokens": ("sinh nhat", "birthday"),
@@ -123,6 +131,10 @@ class HubBuilder:
         self.fy_months = helpers.get_fy_months(fiscal_year)
         self.rule_unit_price_by_source = self._load_rule_unit_price_by_source()
         self.rule_identity_by_source = self._load_rule_identity_by_source()
+        try:
+            self.canonical_headcount = load_canonical_headcount(conn, fiscal_year)
+        except HeadcountSourceError as exc:
+            raise ExportIntegrityError(str(exc)) from exc
 
     def _output_group_specs(self) -> tuple[OutputGroupSpec, ...]:
         """Return canonical output group specs for future row-placement planning."""
@@ -184,6 +196,34 @@ class HubBuilder:
             )
         candidates.sort(key=lambda item: (-item[0], item[1]))
         return candidates[0][1]
+
+    def _find_recurring_admin_rows(self, worksheet) -> dict[str, int]:
+        specs = {
+            "gas": (5005056281, ("ガス代", "食堂燃料", "tien gas", "gas")),
+            "handwash": (5005016372, ("手洗い", "nuoc rua tay", "hand wash")),
+            "toilet_paper": (5005016372, ("トイレット", "giay ve sinh", "toilet paper")),
+            "cleaning": (5005246286, ("清掃", "lam sach", "cleaning fee")),
+        }
+        resolved: dict[str, int] = {}
+        for item_key, (account_code, tokens) in specs.items():
+            normalized_tokens = tuple(self._normalize_text(token) for token in tokens)
+            matches: list[int] = []
+            for row_index in range(1, worksheet.max_row + 1):
+                if self._as_int(worksheet.cell(row=row_index, column=ACCOUNT_COL).value) != account_code:
+                    continue
+                text = " ".join(
+                    self._normalize_text(worksheet.cell(row=row_index, column=column).value)
+                    for column in (DESCRIPTION_COL, WBS_COL)
+                )
+                if any(token in text for token in normalized_tokens):
+                    matches.append(row_index)
+            if len(matches) != 1:
+                detail = "không tìm thấy" if not matches else f"tìm thấy nhiều dòng {matches}"
+                raise ExportIntegrityError(
+                    f"FORM không xác định duy nhất dòng {item_key} theo mã tài khoản và tên khoản chi phí: {detail}."
+                )
+            resolved[item_key] = matches[0]
+        return resolved
 
     def _resolve_it_system_account_code(self, cc_code: int, fact_account_codes: set[int]) -> int | None:
         valid_fact_accounts = fact_account_codes & IT_SYSTEM_ACCOUNT_CODES
@@ -569,21 +609,23 @@ class HubBuilder:
         row_index: int,
         unit_prices: dict[str, float],
         cc_code: object,
+        item_label: str = "Chi phí cần số người",
     ) -> None:
-        # Business sheet requires recurring admin costs to use previous-month
-        # configured headcount. April falls back to April because prior-March
-        # data is not available in the FY output file.
+        """Write current-month price multiplied by canonical prior-month total."""
         self._clear_visible_months(worksheet, row_index)
         headcount_by_period = self._monthly_headcount_series(cc_code, "headcount_all")
-        for offset, period in enumerate(self.fy_months):
-            unit_price = float(unit_prices.get(period, 0.0))
-            if unit_price <= 0:
+        baseline = fiscal_baseline_period(self.fiscal_year)
+        previous_periods = [baseline, *self.fy_months[:-1]]
+        for offset, (period, source_period) in enumerate(zip(self.fy_months, previous_periods)):
+            if period not in unit_prices:
                 continue
-            source_offset = offset if offset == 0 else offset - 1
-            source_period = self.fy_months[source_offset]
+            unit_price = float(unit_prices[period] or 0.0)
             headcount = headcount_by_period.get(source_period)
             if headcount is None:
-                continue
+                raise ExportIntegrityError(
+                    f"Không thể xuất CC {cc_code}. {item_label} tháng {period[-2:]}/{period[:4]} "
+                    f"cần Tổng người kỳ {source_period} nhưng dữ liệu này chưa có theo đúng nguồn quy định."
+                )
             worksheet.cell(
                 row=row_index,
                 column=VISIBLE_MONTH_START_COL + offset,
@@ -592,29 +634,52 @@ class HubBuilder:
         worksheet.cell(row=row_index, column=TOTAL_COL, value=f"=SUM(F{row_index}:Q{row_index})")
 
     def _monthly_headcount_series(self, cc_code: object, driver_type: str) -> dict[str, float]:
-        rows = self.conn.execute(
-            """
-            SELECT
-                period, headcount_all, headcount_staff, headcount_worker,
-                headcount_male, headcount_female, source
-            FROM fact_monthly_headcount
-            WHERE CAST(cc_code AS TEXT) = ?
-            ORDER BY
-                CASE source
-                    WHEN 'manual' THEN 3
-                    WHEN 'ga' THEN 2
-                    ELSE 1
-                END
-            """,
-            (str(cc_code).strip(),),
-        ).fetchall()
         result: dict[str, float] = {}
-        for row in rows:
-            value = row[driver_type] if driver_type in row.keys() else row["headcount_all"]
-            if value is None and driver_type != "headcount_all":
-                value = row["headcount_all"]
-            result[str(row["period"])] = float(value or 0.0)
+        normalized_cc = str(cc_code).strip()
+        for (row_cc, period), row in self.canonical_headcount.items():
+            if row_cc != normalized_cc:
+                continue
+            value = getattr(row, driver_type, row.headcount_all)
+            result[period] = float(value)
         return result
+
+    def _write_source_staffing_time_rows(self, worksheet, cc_code: object) -> None:
+        """Write complete selected-FY staffing/time source series to FORM F:Q."""
+        marks = ",".join("?" for _ in self.fy_months)
+        headcount_rows = self.conn.execute(
+            f"SELECT period,headcount_expat,headcount_staff,headcount_worker,headcount_local_total "
+            f"FROM fact_monthly_headcount WHERE CAST(cc_code AS TEXT)=? "
+            f"AND source='department_plan' AND period IN ({marks})",
+            (str(cc_code), *self.fy_months),
+        ).fetchall()
+        time_rows = self.conn.execute(
+            f"SELECT period,fixed_hours_expat,fixed_hours_local,overtime_hours_expat,overtime_hours_local FROM fact_headcount_time_source WHERE CAST(cc_code AS TEXT)=? AND period IN ({marks})",
+            (str(cc_code), *self.fy_months),
+        ).fetchall()
+        headcount = {str(row["period"]): row for row in headcount_rows}
+        time = {str(row["period"]): row for row in time_rows}
+        missing_h = [p for p in self.fy_months if p not in headcount]
+        missing_t = [p for p in self.fy_months if p not in time]
+        if missing_h or missing_t:
+            details = []
+            if missing_h: details.append("số người: " + ", ".join(missing_h))
+            if missing_t: details.append("thời gian: " + ", ".join(missing_t))
+            raise ExportIntegrityError(f"CC {cc_code} thiếu nguồn sự thật FY{self.fiscal_year} ({'; '.join(details)}). Không xuất FORM để tránh dùng dữ liệu sai năm.")
+        for offset, period in enumerate(self.fy_months):
+            h, t = headcount[period], time[period]
+            local_total = h["headcount_local_total"]
+            if local_total is None:
+                local_total = float(h["headcount_staff"] or 0) + float(h["headcount_worker"] or 0)
+            values = {
+                "headcount_expat": float(h["headcount_expat"] or 0),
+                "headcount_local": float(local_total),
+                "fixed_hours_expat": float(t["fixed_hours_expat"] or 0),
+                "fixed_hours_local": float(t["fixed_hours_local"] or 0),
+                "overtime_hours_expat": float(t["overtime_hours_expat"] or 0),
+                "overtime_hours_local": float(t["overtime_hours_local"] or 0),
+            }
+            for metric, row_index in FORM_SOURCE_DRIVER_ROWS.items():
+                worksheet.cell(row=row_index, column=VISIBLE_MONTH_START_COL + offset, value=values[metric])
 
     def _match_description(self, description: str, tokens: tuple[str, ...], exclude_tokens: tuple[str, ...]) -> bool:
         normalized_description = self._normalize_text(description)
@@ -710,6 +775,10 @@ class HubBuilder:
         return dict(result)
 
     def _alloc_formula_term_from_row(self, row: sqlite3.Row) -> str | None:
+        description = str(row["description"] or "")
+        explicit_formula = self._explicit_formula_term_from_description(description)
+        if explicit_formula and "business_identity=recruitment_health" in self._normalize_text(description):
+            return explicit_formula
         source = str(row["source"] or "")
         if not source.startswith("alloc_"):
             return None
@@ -791,10 +860,75 @@ class HubBuilder:
         return None
 
     def _fixed_row_for_description(self, description: str) -> int | None:
+        normalized = self._normalize_text(description)
+        if "business_identity=recruitment_health" in normalized or self._match_description(
+            description,
+            ("採用の健康診断費", "採用時健診", "kham suc khoe tuyen dung", "kham suc khoe khi tuyen dung"),
+            ("hang nam", "dinh ky", "cho cnv nam", "cho cnv nu"),
+        ):
+            return -1  # Semantically managed inside the health group; never append.
         for row_index, matcher in FIXED_ALLOCATION_ROW_MATCHERS.items():
             if self._match_description(description, matcher["tokens"], matcher["exclude_tokens"]):
                 return row_index
         return None
+
+    def _find_recruitment_health_row(self, worksheet) -> int:
+        recruitment_tokens = (
+            "採用の健康診断費", "採用時健診", "kham suc khoe tuyen dung", "kham suc khoe khi tuyen dung"
+        )
+        annual_tokens = ("定年の健康診断費", "kham suc khoe hang nam", "health check")
+        recruitment_rows: list[int] = []
+        annual_rows: list[int] = []
+        for row_index in range(1, worksheet.max_row + 1):
+            row_text = " ".join(
+                self._normalize_text(worksheet.cell(row=row_index, column=column).value)
+                for column in (DESCRIPTION_COL, WBS_COL)
+                if worksheet.cell(row=row_index, column=column).value is not None
+            )
+            if any(self._normalize_text(token) in row_text for token in recruitment_tokens):
+                recruitment_rows.append(row_index)
+            if any(self._normalize_text(token) in row_text for token in annual_tokens) and "tuyen dung" not in row_text:
+                annual_rows.append(row_index)
+        if len(recruitment_rows) == 1:
+            return recruitment_rows[0]
+        if len(recruitment_rows) > 1:
+            raise ExportIntegrityError("FORM có nhiều dòng khám sức khỏe tuyển dụng; không thể xác định vị trí an toàn.")
+        if len(annual_rows) != 1:
+            raise ExportIntegrityError("Không xác định được nhóm chi phí sức khỏe trong FORM để đặt khám sức khỏe tuyển dụng.")
+        target_row = annual_rows[0] + 1
+        existing_text = " ".join(
+            self._normalize_text(worksheet.cell(row=target_row, column=column).value)
+            for column in (DESCRIPTION_COL, WBS_COL)
+            if worksheet.cell(row=target_row, column=column).value is not None
+        )
+        if existing_text and not any(self._normalize_text(token) in existing_text for token in recruitment_tokens):
+            worksheet.insert_rows(target_row, 1)
+            self._copy_row_style(worksheet, annual_rows[0], target_row)
+        return target_row
+
+    def _write_recruitment_health_row(self, worksheet, cc_code: int) -> None:
+        tokens = (
+            "business_identity=recruitment_health",
+            "採用の健康診断費",
+            "採用時健診",
+            "kham suc khoe tuyen dung",
+            "kham suc khoe khi tuyen dung",
+        )
+        exclude_tokens = ("hang nam", "dinh ky", "cho cnv nam", "cho cnv nu")
+        terms_by_period, numeric_values = self._alloc_formula_series_from_tokens(
+            cc_code, tokens=tokens, exclude_tokens=exclude_tokens
+        )
+        if not self._formula_series_has_output(terms_by_period, numeric_values):
+            return
+        row_index = self._find_recruitment_health_row(worksheet)
+        account_code = self._account_code_from_tokens(cc_code, tokens=tokens, exclude_tokens=())
+        self._clear_visible_months(worksheet, row_index)
+        if account_code:
+            worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
+            self._write_lookup_formulas(worksheet, row_index)
+        worksheet.cell(row=row_index, column=DESCRIPTION_COL, value="採用の健康診断費/Chi phí khám sức khỏe tuyển dụng")
+        worksheet.cell(row=row_index, column=WBS_COL, value="business_identity=recruitment_health; placement=health_group")
+        self._write_formula_series(worksheet, row_index, terms_by_period, numeric_values)
 
     def _load_explicit_form_rows(self, cc_code: int) -> list[dict[str, object]]:
         rows = self.conn.execute(
@@ -1128,10 +1262,6 @@ class HubBuilder:
             42: 9114120007,
             44: 5005066281,
             45: 5005066282,
-            46: 5005056281,
-            48: 5005016372,
-            49: 5005016372,
-            51: 5005246286,
             57: 5004086291,
             58: 5004086291,
             59: 5004086291,
@@ -1139,6 +1269,14 @@ class HubBuilder:
             98: 5005246288,
             137: 5005246286,
         }
+        recurring_rows = getattr(self, "_resolved_recurring_rows", None) or self._find_recurring_admin_rows(worksheet)
+        for item_key, account_code in {
+            "gas": 5005056281,
+            "handwash": 5005016372,
+            "toilet_paper": 5005016372,
+            "cleaning": 5005246286,
+        }.items():
+            fixed_account_codes[recurring_rows[item_key]] = account_code
         for row_index in MANAGED_FIXED_ROWS:
             self._clear_managed_fixed_row(worksheet, row_index)
 
@@ -1161,32 +1299,32 @@ class HubBuilder:
 
         gas_series = self._ga_unit_price_series(("gas|headcount_per_person", "食堂燃料費"))
         if self._series_has_output(gas_series):
-            _set_fixed_row(46)
-            self._write_prev_month_headcount_formula_series(worksheet, 46, gas_series, cc_code)
+            _set_fixed_row(recurring_rows["gas"], FIXED_ROW_DESCRIPTIONS[46])
+            self._write_prev_month_headcount_formula_series(worksheet, recurring_rows["gas"], gas_series, cc_code, "Tiền gas")
 
         legacy_cleaning_series = self._ga_unit_price_series(("清掃費", "chi ph\u00ed l\u00e0m s\u1ea1ch|headcount_per_person"))
         if self._series_has_output(legacy_cleaning_series):
-            _set_fixed_row(51)
-            self._write_prev_month_headcount_formula_series(worksheet, 51, legacy_cleaning_series, cc_code)
+            _set_fixed_row(recurring_rows["cleaning"], FIXED_ROW_DESCRIPTIONS[51])
+            self._write_prev_month_headcount_formula_series(worksheet, recurring_rows["cleaning"], legacy_cleaning_series, cc_code, "Chi phí làm sạch")
 
         cleaning_series = self._ga_unit_price_series(("cleaning|headcount_per_person",))
         if self._series_has_output(cleaning_series):
-            _set_fixed_row(51)
-            self._write_prev_month_headcount_formula_series(worksheet, 51, cleaning_series, cc_code)
+            _set_fixed_row(recurring_rows["cleaning"], FIXED_ROW_DESCRIPTIONS[51])
+            self._write_prev_month_headcount_formula_series(worksheet, recurring_rows["cleaning"], cleaning_series, cc_code, "Chi phí làm sạch")
 
         handwash_series = self._ga_unit_price_series(
             ("手洗い洗剤", "nuoc rua tay|headcount_per_person", "nước rửa tay|headcount_per_person")
         )
         if self._series_has_output(handwash_series):
-            _set_fixed_row(48)
-            self._write_prev_month_headcount_formula_series(worksheet, 48, handwash_series, cc_code)
+            _set_fixed_row(recurring_rows["handwash"], FIXED_ROW_DESCRIPTIONS[48])
+            self._write_prev_month_headcount_formula_series(worksheet, recurring_rows["handwash"], handwash_series, cc_code, "Nước rửa tay")
 
         toilet_paper_series = self._ga_unit_price_series(
             ("トイレットペーパー", "giay ve sinh|headcount_per_person", "giấy vệ sinh|headcount_per_person")
         )
         if self._series_has_output(toilet_paper_series):
-            _set_fixed_row(49)
-            self._write_prev_month_headcount_formula_series(worksheet, 49, toilet_paper_series, cc_code)
+            _set_fixed_row(recurring_rows["toilet_paper"], FIXED_ROW_DESCRIPTIONS[49])
+            self._write_prev_month_headcount_formula_series(worksheet, recurring_rows["toilet_paper"], toilet_paper_series, cc_code, "Giấy vệ sinh")
 
         building_depr_series = self._month_series(
             cc_code,
@@ -1287,7 +1425,64 @@ class HubBuilder:
             else:
                 self._write_numeric_series(worksheet, row_index, series)
 
+        self._write_recruitment_health_row(worksheet, cc_code)
         self._write_explicit_form_rows(worksheet, cc_code)
+
+    def _load_fixed_asset_source_order_rows(self, cc_code: int) -> list[dict[str, object]]:
+        """Aggregate asset USD by Category/month; VND rounding is deferred to Excel."""
+        category_order = tuple(CATEGORY_SPECS)
+        rows = self.conn.execute(
+            """
+            SELECT description, account_code, period, SUM(COALESCE(amount_usd, 0)) AS amount_usd
+            FROM fact_input_data
+            WHERE CAST(cc_code AS TEXT) = ? AND source = 'fixed_assets'
+              AND amount_usd IS NOT NULL AND amount_usd > 0
+            GROUP BY description, account_code, period
+            ORDER BY description, period
+            """,
+            (str(cc_code),),
+        ).fetchall()
+        grouped: dict[tuple[str, str], dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        for row in rows:
+            description = str(row["description"] or "")
+            parts = description.split("|", 2)
+            if len(parts) < 3:
+                continue
+            kind_token, category_key = parts[0], parts[1]
+            if category_key not in CATEGORY_SPECS:
+                continue
+            kind = "depreciation" if kind_token == "fixed_assets_depr" else "interest" if kind_token == "fixed_assets_interest" else ""
+            if not kind:
+                continue
+            grouped[(kind, category_key)][str(row["period"])] += float(row["amount_usd"] or 0.0)
+
+        payload: list[dict[str, object]] = []
+        for kind in ("depreciation", "interest"):
+            for category_key in category_order:
+                months = dict(grouped.get((kind, category_key), {}))
+                if not any(amount > 0 for amount in months.values()):
+                    continue
+                spec = CATEGORY_SPECS[category_key]
+                account_code = int(spec["depreciation_account"] if kind == "depreciation" else INTEREST_ACCOUNT)
+                label = str(spec["label"])
+                description = (
+                    f"Khấu hao tài sản cố định - {label}"
+                    if kind == "depreciation"
+                    else f"Lãi tài sản cố định - {label}"
+                )
+                terms = {
+                    period: [f"ROUND({self._format_number(amount_usd)}*$B$2,0)"]
+                    for period, amount_usd in months.items()
+                    if amount_usd > 0
+                }
+                payload.append({
+                    "source_file": CANONICAL_SOURCE_FILE_ORDER[1],
+                    "account_code": account_code,
+                    "description": description,
+                    "terms": terms,
+                    "provenance": f"fixed_assets_accounting|{kind}|{category_key}",
+                })
+        return payload
 
     def _load_append_rows(self, cc_code: int) -> list[dict[str, object]]:
         rows = self.conn.execute(
@@ -1333,7 +1528,8 @@ class HubBuilder:
                 amount = float(row["amount"] or 0.0)
                 bucket["numeric_months"][period] += amount
                 bucket["months"][period] = bucket["numeric_months"][period]
-        return list(grouped.values())
+        allocation_rows = list(grouped.values())
+        return self._load_fixed_asset_source_order_rows(cc_code) + allocation_rows
 
     def export_to_template(
         self,
@@ -1380,7 +1576,9 @@ class HubBuilder:
                     column=ACCOUNT_COL,
                     value=int(target_cc) if target_cc.isdigit() else target_cc,
                 )
+                self._resolved_recurring_rows = self._find_recurring_admin_rows(worksheet)
                 self._clear_template_account_column(worksheet)
+                self._write_source_staffing_time_rows(worksheet, target_cc)
                 self._write_fixed_rows(worksheet, target_cc)
 
                 append_start_row = self._resolve_append_start_row(worksheet, start_row)

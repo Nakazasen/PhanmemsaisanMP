@@ -112,13 +112,20 @@ def _target_ccs(conn: sqlite3.Connection, target_cc: object | None) -> list[str]
     ]
 
 
-def _recorded_missing_inputs(conn: sqlite3.Connection) -> list[dict[str, str]]:
+def _recorded_missing_inputs(conn: sqlite3.Connection, target_cc: object | None = None) -> list[dict[str, str]]:
+    conditions = ""
+    params: tuple[object, ...] = ()
+    if target_cc:
+        conditions = "WHERE CAST(cc_code AS TEXT) = ?"
+        params = (str(target_cc).strip(),)
     rows = conn.execute(
-        """
+        f"""
         SELECT severity, cc_code, period, area, message, action
         FROM fact_missing_inputs
+        {conditions}
         ORDER BY id
-        """
+        """,
+        params,
     ).fetchall()
     return [
         {
@@ -149,8 +156,8 @@ def write_pipeline_audit_report(
     """
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    report_path = out_dir / "MP2027_AUDIT_REPORT.md"
-    missing_csv_path = out_dir / "MP2027_MISSING_INPUTS.csv"
+    report_path = out_dir / "BAO_CAO_LAN_CHAY.xlsx"
+    missing_csv_path = out_dir / "DU_LIEU_CON_THIEU.xlsx"
 
     fy_months = get_fy_months(fiscal_year)
     manual_hc_ccs = _manual_headcount_ccs(conn)
@@ -158,7 +165,11 @@ def write_pipeline_audit_report(
     cc_list = _target_ccs(conn, target_cc)
     manual_event_count = _manual_event_rows(source_dir)
     fixed_assets_workbook = find_fixed_assets_file(source_dir)
-    fixed_assets_coverage = build_fixed_assets_coverage_report(conn, fixed_assets_workbook)
+    fixed_assets_coverage = build_fixed_assets_coverage_report(
+        conn,
+        fixed_assets_workbook,
+        source_inspection=parser_results.get("fixed_assets"),
+    )
 
     missing_rows: list[dict[str, str]] = []
     for cc_code in cc_list:
@@ -205,7 +216,7 @@ def write_pipeline_audit_report(
             }
         )
 
-    missing_rows.extend(_recorded_missing_inputs(conn))
+    missing_rows.extend(_recorded_missing_inputs(conn, target_cc))
 
     source_summary = {
         "manual_event_driver": _count_rows(conn, "manual_event_driver"),
@@ -217,115 +228,83 @@ def write_pipeline_audit_report(
         "fixed_assets": _count_rows(conn, "fixed_assets"),
     }
 
-    with missing_csv_path.open("w", encoding="utf-8-sig", newline="") as f:
-        fieldnames = ["severity", "cc_code", "period", "area", "message", "action"]
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(missing_rows)
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
 
-    lines = [
-        "# MP2027 Audit Report",
-        "",
-        f"- Fiscal year: `FY{fiscal_year}`",
-        f"- Target CC: `{target_cc or 'ALL'}`",
-        f"- Source folder: `{source_dir}`",
-        f"- Output folder: `{output_dir}`",
-        "",
-        "## Nguyên tắc an toàn",
-        "",
-        "- Chương trình không tự bịa số liệu.",
-        "- Nếu có file nguồn máy đọc được, chương trình lấy từ file nguồn và để lại công thức trong FORM khi có thể.",
-        "- Nếu thiếu số liệu không thể suy luận, chương trình dựa vào danh sách cần người dùng nhập/chốt.",
-        "",
-        "## Dữ liệu đã nạp",
-        "",
-        "| Nguồn | Số record | Số CC | Ghi chú |",
-        "|---|---:|---:|---|",
-    ]
-    source_notes = {
-        "manual_event_driver": "Dữ liệu người dùng nhập cho sự kiện không thể suy luận.",
-        "nnn_paperwork": "Workbook NNN/VISA/GPLD/Passport FY2027 vào row 137.",
-        "birthday_workbook": "Workbook sinh nhật vào row 59, công thức count*152000.",
-        "manual_special_cost": "Override thủ công theo form_row.",
-        "it_sim": "Chi phí hệ thống.",
-        "facility": "Khấu hao/lãi nhà đất/điện/nước.",
-        "fixed_assets": "Tài sản cố định.",
+    area_names = {
+        "manual_event_driver": "Khoản phát sinh cần nhập",
+        "headcount": "Số người",
+        "headcount_series": "Số người theo tháng",
+        "headcount_event_delta": "Biến động số người",
+        "health_check_gender_split": "Số Nam/Nữ tháng 12",
+    }
+    severity_names = {"action": "Cần bổ sung", "review": "Cần xem lại", "warning": "Cảnh báo"}
+
+    # Gộp các cảnh báo trùng để báo cáo không trở thành ma trận hàng nghìn dòng.
+    grouped: dict[tuple[str, str, str, str], dict[str, str]] = {}
+    for row in missing_rows:
+        key = (row["cc_code"], row["area"], row["message"], row["action"])
+        if key not in grouped:
+            grouped[key] = dict(row)
+        else:
+            periods = {p for p in grouped[key]["period"].split(",") if p}
+            periods.update(p for p in row["period"].split(",") if p)
+            grouped[key]["period"] = ", ".join(sorted(periods))
+    concise_rows = list(grouped.values())
+
+    missing_book = Workbook()
+    missing_sheet = missing_book.active
+    missing_sheet.title = "Dữ liệu còn thiếu"
+    missing_sheet.append(["DỮ LIỆU CẦN BỔ SUNG HOẶC XÁC NHẬN"])
+    missing_sheet.append(["Năm tài chính", fiscal_year])
+    missing_sheet.append(["Phạm vi", str(target_cc) if target_cc else "Tất cả Trung tâm chi phí"])
+    missing_sheet.append(["Tổng số vấn đề", len(concise_rows)])
+    missing_sheet.append([])
+    missing_sheet.append(["Mức độ", "Trung tâm chi phí", "Kỳ liên quan", "Nội dung", "Việc cần làm"])
+    for row in concise_rows:
+        missing_sheet.append([
+            severity_names.get(row["severity"], "Cần xem lại"), row["cc_code"], row["period"],
+            area_names.get(row["area"], row["message"] or "Dữ liệu chưa đầy đủ"), row["action"],
+        ])
+    if not concise_rows:
+        missing_sheet.append(["Không có", "", "", "Chưa phát hiện dữ liệu cần bổ sung", "Không cần xử lý"])
+
+    report_book = Workbook()
+    report_sheet = report_book.active
+    report_sheet.title = "Báo cáo lần chạy"
+    report_sheet.append(["BÁO CÁO TÓM TẮT LẦN CHẠY"])
+    report_sheet.append(["Năm tài chính", fiscal_year])
+    report_sheet.append(["Phạm vi", str(target_cc) if target_cc else "Tất cả Trung tâm chi phí"])
+    report_sheet.append(["Thư mục nguồn", source_dir])
+    report_sheet.append(["Số vấn đề cần xem", len(concise_rows)])
+    report_sheet.append(["Kết luận", "Đã hoàn thành, cần xử lý các mục còn thiếu" if concise_rows else "Đã hoàn thành, chưa phát hiện dữ liệu thiếu"])
+    report_sheet.append([])
+    report_sheet.append(["Nguồn dữ liệu", "Số dòng đã đọc", "Số Trung tâm chi phí"])
+    source_names = {
+        "manual_event_driver": "Khoản phát sinh nhập bổ sung", "nnn_paperwork": "Giấy tờ người nước ngoài",
+        "birthday_workbook": "Chi phí sinh nhật", "manual_special_cost": "Chi phí đặc biệt nhập bổ sung",
+        "it_sim": "Chi phí hệ thống", "facility": "Nhà xưởng, điện và nước", "fixed_assets": "Tài sản cố định",
     }
     for source, count in source_summary.items():
-        lines.append(f"| `{source}` | {count} | {_distinct_cc_count(conn, source)} | {source_notes[source]} |")
+        report_sheet.append([source_names[source], count, _distinct_cc_count(conn, source)])
 
-    lines.extend(
-        [
-            "",
-            "## Kết quả parser",
-            "",
-            "| Parser | Inserted | Skipped | Errors | File |",
-            "|---|---:|---:|---:|---|",
-        ]
-    )
-    for name, result in parser_results.items():
-        path = result.get("path") or result.get("template_path") or ""
-        lines.append(
-            "| `{name}` | {inserted} | {skipped} | {errors} | `{path}` |".format(
-                name=name,
-                inserted=result.get("inserted", result.get("total", 0)),
-                skipped=result.get("skipped", 0),
-                errors=result.get("errors", 0),
-                path=path,
-            )
-        )
-
-
-    fixed_source = fixed_assets_coverage.get("source", {})
-    fixed_db = fixed_assets_coverage.get("db", {})
-    fixed_mismatches = fixed_assets_coverage.get("mismatches", {})
-    lines.extend([
-        "",
-        "## Fixed assets coverage theo CC",
-        "",
-        "| Chỉ số | Giá trị |",
-        "|---|---:|",
-        f"| Source asset rows | {fixed_source.get('source_rows', 0)} |",
-        f"| CC có source fixed assets | {len(fixed_source.get('by_cc', {}))} |",
-        f"| Parsed fixed asset series trong DB | {sum(fixed_db.get('asset_series_by_cc', {}).values())} |",
-        f"| Parsed period rows trong DB | {sum(fixed_db.get('period_rows_by_cc', {}).values())} |",
-        f"| CC có source nhưng chưa có parsed series | {len(fixed_mismatches)} |",
-    ])
-    skipped_reasons = fixed_source.get("skipped_reasons", {})
-    if skipped_reasons:
-        lines.append("")
-        lines.append("Skipped source rows được tổng hợp theo lý do, không dump dữ liệu raw:")
-        for reason, count in skipped_reasons.items():
-            lines.append(f"- `{reason}`: {count}")
-    if fixed_mismatches:
-        lines.append("")
-        lines.append("> [!WARNING]")
-        lines.append("> Có CC xuất hiện trong source fixed assets nhưng chưa có parsed series trong DB. Cần kiểm tra parser/header/source workbook.")
-
-    lines.extend(["", "## Cần người dùng xem/chốt", ""])
-    if missing_rows:
-        lines.extend(
-            [
-                "| Mức độ | CC | Kỳ | Khu vực | Cần làm |",
-                "|---|---|---|---|---|",
-            ]
-        )
-        for row in missing_rows:
-            lines.append(
-                f"| `{row['severity']}` | `{row['cc_code']}` | `{row['period']}` | {row['area']} | {row['action']} |"
-            )
-    else:
-        lines.append("- Chưa phát hiện missing input trong các check hiện tại.")
-
-    lines.extend(
-        [
-            "",
-            "## File liên quan",
-            "",
-            f"- Missing-input CSV: `{missing_csv_path}`",
-            f"- Manual event input: `{Path(source_dir) / EVENT_DRIVER_FILENAME}`",
-            "",
-        ]
-    )
-    report_path.write_text("\n".join(lines), encoding="utf-8")
+    for sheet in (missing_sheet, report_sheet):
+        sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=sheet.max_column)
+        sheet["A1"].font = Font(bold=True, size=14, color="FFFFFF")
+        sheet["A1"].fill = PatternFill("solid", fgColor="1F4E78")
+        sheet["A1"].alignment = Alignment(horizontal="center")
+        header_row = 6 if sheet is missing_sheet else 8
+        for cell in sheet[header_row]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="4472C4")
+            cell.alignment = Alignment(horizontal="center", wrap_text=True)
+        sheet.freeze_panes = f"A{header_row + 1}"
+    for column, width in zip("ABCDE", (18, 22, 30, 42, 70)):
+        missing_sheet.column_dimensions[column].width = width
+    for column, width in zip("ABC", (42, 20, 24)):
+        report_sheet.column_dimensions[column].width = width
+    missing_book.save(missing_csv_path)
+    report_book.save(report_path)
+    missing_book.close()
+    report_book.close()
     return {"report_path": str(report_path), "missing_csv_path": str(missing_csv_path)}

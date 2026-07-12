@@ -1,18 +1,14 @@
-# Phase 42N3H Source Notice
+# Current Source Authority Notice
 
-Current canonical requirement: `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`. If a raw-root copy exists at `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`, it may be used as the same current requirement.
-Current visual support: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx`.
-Versioned full-coverage duplicate: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_FULL_COVERAGE.xlsx`, retained only as a byte-identical duplicate and never above the official visual-support path.
-Obsolete incomplete visual: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_LEGACY_INCOMPLETE.xlsx`, retained only for historical comparison and not for active requirement interpretation.
-Obsolete old visual requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026_ảnh.xlsx`; do not use it.
-If there is any conflict, the canonical workbook wins over the visual snapshot, Markdown, audit history, and derived descriptions.
+Current canonical requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`. The user confirmed it as the newest requirement source on `2026-07-11`.
+No visual snapshot has been confirmed for the 10.07 workbook. Any 09.06 visual snapshot, audit, or derived Markdown is historical evidence only and must not override the 10.07 workbook.
 
-Current source hierarchy last verified:
+Current source hierarchy:
 
-- `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8`
-- Canonical requirement date: `09.06.2026`
-- Implementation status last verified against code/audits at the same commit unless a row says `STATUS_REQUIRES_CURRENT_CODE_AUDIT`.
-- Historical content must not override current audits, code, or the canonical 09.06.2026 workbook.
+- `CANONICAL_SOURCE_USER_CONFIRMED_AT=2026-07-11`
+- Canonical requirement date: `10.07.2026`.
+- Implementation status was last verified against the prior 09.06 source and therefore requires a current audit before being claimed against 10.07.
+- Historical content must not override current audits, code, or the canonical 10.07.2026 workbook.
 
 # MP Saisan Business Knowledge Base
 
@@ -30,10 +26,10 @@ Mục tiêu kỹ thuật là sinh workbook MP FY2027 có sheet nghiệp vụ nh�
 
 Các nguồn requirement chính:
 
-- Current canonical: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`
-- Current visual support: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx`
-- Versioned full-coverage duplicate: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_FULL_COVERAGE.xlsx` (byte-identical duplicate; official path remains the visual-support path)
-- Obsolete incomplete visual: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_LEGACY_INCOMPLETE.xlsx` (historical 34-image artifact; not for active requirement interpretation)
+- Current canonical: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`
+- Historical visual support: 09.06 visual artifacts; they do not verify the 10.07 requirement
+- Historical 09.06 full-coverage duplicate: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_FULL_COVERAGE.xlsx` (historical visual artifact only)
+- Historical 09.06 incomplete visual: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_LEGACY_INCOMPLETE.xlsx` (not for active requirement interpretation)
 - Obsolete visual support: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026_ảnh.xlsx`
 - `docs/requirements/cai_tien_nhap_du_lieu_chung.md`
 

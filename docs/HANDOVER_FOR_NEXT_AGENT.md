@@ -6,7 +6,7 @@ MP2027 Manager là app Python/Tkinter cho Windows để gom dữ liệu budget M
 
 ## File nghiệp vụ đọc đầu tiên
 
-1. `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx` nếu có local/repo.
+1. `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx` — canonical hiện tại, được người dùng xác nhận là bản mới nhất ngày 11.07.2026.
 2. `docs/requirements/cai_tien_nhap_du_lieu_chung.md`.
 3. `QUY_TRINH_NGHIEP_VU_MP2027.md`.
 4. `docs/knowledge/mp_saisan_business_knowledge_base_v2.md`.
@@ -25,7 +25,7 @@ py -m pytest
 - Thiếu dữ liệu thì để trống, ghi missing input, hoặc hỏi user.
 - Không fallback Cost Center khác nếu không có rule rõ.
 - Không biến blank thành zero.
-- Markdown là derived; workbook canonical 09.06.2026 thắng.
+- Markdown là derived; workbook canonical 10.07.2026 thắng.
 
 ## Phần chưa chắc cần user xác nhận
 

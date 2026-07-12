@@ -62,6 +62,57 @@ def _seed_cc(conn, code=1412000004, cost_type="一般"):
     return code
 
 
+def _seed_complete_staffing_time(conn, cc_code, fiscal_year=2027):
+    for period in get_fy_months(fiscal_year):
+        conn.execute(
+            """
+            INSERT INTO fact_monthly_headcount
+            (period, cc_code, headcount_expat, headcount_staff, headcount_worker, source)
+            VALUES (?, ?, 0, 0, 0, 'department_plan')
+            """,
+            (period, cc_code),
+        )
+        conn.execute(
+            """
+            INSERT INTO fact_headcount_time_source
+            (period, cc_code, fixed_hours_expat, fixed_hours_local,
+             overtime_hours_expat, overtime_hours_local, source_file)
+            VALUES (?, ?, 0, 0, 0, 0, 'test_fixture.xls')
+            """,
+            (period, cc_code),
+        )
+    conn.commit()
+
+
+
+
+def _seed_conflicting_headcount_sources(conn, cc_code, periods):
+    department_values = ((22, 0), (22, 0), (26, 0), (27, 0))
+    manual_values = ((22, 0), (23, 0), (23, 0), (24, 0))
+    for period, (staff, worker), (manual_staff, manual_worker) in zip(
+        periods, department_values, manual_values
+    ):
+        conn.execute(
+            """
+            INSERT INTO fact_monthly_headcount
+            (period,cc_code,headcount_all,headcount_expat,headcount_staff,
+             headcount_worker,headcount_male,headcount_female,source)
+            VALUES (?,?,?,0,?,?,0,0,'department_plan')
+            """,
+            (period, cc_code, staff + worker, staff, worker),
+        )
+        conn.execute(
+            """
+            INSERT INTO fact_monthly_headcount
+            (period,cc_code,headcount_all,headcount_expat,headcount_staff,
+             headcount_worker,headcount_male,headcount_female,source)
+            VALUES (?,?,?,0,?,?,20,6,'manual')
+            """,
+            (period, cc_code, manual_staff + manual_worker, manual_staff, manual_worker),
+        )
+    conn.commit()
+
+
 def _find_system_cost_rows(ws):
     rows = []
     for row_index in range(1, ws.max_row + 1):
@@ -73,6 +124,44 @@ def _find_system_cost_rows(ws):
         if "system cost" in row_text:
             rows.append(row_index)
     return rows
+
+
+
+
+class TestCanonicalHeadcountSourcePolicy(unittest.TestCase):
+    def test_department_plan_owns_staff_worker_and_total_manual_only_supplements_gender(self):
+        conn = _mk_conn()
+        try:
+            cc_code = _seed_cc(conn)
+            periods = get_fy_months(2027)[:4]
+            _seed_conflicting_headcount_sources(conn, cc_code, periods)
+            engine = AllocationEngine(conn)
+
+            self.assertEqual(engine._get_monthly_hc(cc_code, periods[2], "headcount_staff"), 26)
+            self.assertEqual(engine._get_monthly_hc(cc_code, periods[2], "headcount_worker"), 0)
+            self.assertEqual(engine._get_monthly_hc(cc_code, periods[2], "headcount_all"), 26)
+            self.assertEqual(engine._get_monthly_hc(cc_code, periods[2], "headcount_male"), 20)
+            self.assertEqual(engine._get_monthly_hc(cc_code, periods[2], "headcount_female"), 6)
+            self.assertEqual(engine.hc_cache[(str(cc_code), periods[2])]["staffing_source"], "department_plan")
+            self.assertEqual(engine.hc_cache[(str(cc_code), periods[2])]["gender_source"], "manual")
+        finally:
+            conn.close()
+
+    def test_recruitment_health_uses_department_plan_delta_despite_manual_conflict(self):
+        conn = _mk_conn()
+        try:
+            cc_code = _seed_cc(conn)
+            periods = get_fy_months(2027)[:4]
+            _seed_conflicting_headcount_sources(conn, cc_code, periods)
+            engine = AllocationEngine(conn)
+
+            staff_new, worker_new = engine._recruitment_health_new_hires(
+                cc_code, periods[2], {"id": 1, "item_name": "採用時健診"}
+            )
+            self.assertEqual(staff_new, 4)
+            self.assertEqual(worker_new, 0)
+        finally:
+            conn.close()
 
 
 class TestExportIntegrityGuard(unittest.TestCase):
@@ -1834,6 +1923,71 @@ class TestNewHireAllocationIdentityDedupe(unittest.TestCase):
         self.assertEqual(alloc_rows, 0, "配布数 and photo-only rules must not auto-allocate")
         conn.close()
 
+    def test_recruitment_health_uses_separate_staff_worker_increases_and_posts_next_month(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        staff_values = {period: 20 for period in ["202603", *periods]}
+        worker_values = {period: 80 for period in ["202603", *periods]}
+        staff_values.update({"202605": 20, "202606": 22})
+        worker_values.update({"202605": 80, "202606": 83})
+        self._insert_full_headcount_series(conn, cc_code, staff_values=staff_values, worker_values=worker_values)
+        rule_id = self._insert_allocation_rule(
+            conn, item_name="採用時健診 Khám sức khỏe khi tuyển dụng",
+            posting_month="翌月", unit_price=0,
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        july = conn.execute(
+            "SELECT amount_vnd,description,form_row FROM fact_input_data WHERE source=? AND period='202607'",
+            (f"alloc_{rule_id}",),
+        ).fetchone()
+        self.assertIsNotNone(july)
+        self.assertEqual(float(july["amount_vnd"]), 0.0)
+        self.assertIsNone(july["form_row"])
+        self.assertIn("new_staff=2", july["description"])
+        self.assertIn("new_worker=3", july["description"])
+        self.assertIn("source_month=202606", july["description"])
+        self.assertIn("formula_expr=(2+3)*0", july["description"])
+        conn.close()
+
+    def test_recruitment_health_does_not_offset_staff_decrease(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        staff_values = {period: 20 for period in ["202603", *periods]}
+        worker_values = {period: 80 for period in ["202603", *periods]}
+        staff_values.update({"202605": 20, "202606": 18})
+        worker_values.update({"202605": 80, "202606": 83})
+        self._insert_full_headcount_series(conn, cc_code, staff_values=staff_values, worker_values=worker_values)
+        rule_id = self._insert_allocation_rule(
+            conn, item_name="採用の健康診断費 Chi phí khám sức khỏe tuyển dụng",
+            posting_month="翌月", unit_price=0,
+        )
+        AllocationEngine(conn)._process_allocation_rules()
+        row = conn.execute(
+            "SELECT description FROM fact_input_data WHERE source=? AND period='202607'",
+            (f"alloc_{rule_id}",),
+        ).fetchone()
+        self.assertIn("new_staff=0", row["description"])
+        self.assertIn("new_worker=3", row["description"])
+        self.assertIn("formula_expr=(0+3)*0", row["description"])
+        conn.close()
+
+    def test_recruitment_health_row_is_found_by_identity_after_rows_move(self):
+        conn = _mk_conn()
+        builder = HubBuilder(conn, fiscal_year=2027)
+        workbook = openpyxl.Workbook()
+        ws = workbook.active
+        ws.cell(71, 19, "定年の健康診断費/Chi phí khám sức khỏe hàng năm")
+        ws.cell(72, 19, "採用の健康診断費/Chi phí khám sức khỏe tuyển dụng")
+        self.assertEqual(builder._find_recruitment_health_row(ws), 72)
+        ws.insert_rows(60, 4)
+        self.assertEqual(builder._find_recruitment_health_row(ws), 76)
+        workbook.close()
+        conn.close()
+
     def test_same_amount_staff_and_worker_notebooks_are_not_over_deduped(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
@@ -2586,6 +2740,7 @@ class TestManualSpecialCosts(unittest.TestCase):
             self.assertIn("shifted_to=202607", fact_row["description"])
 
             template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+            _seed_complete_staffing_time(conn, cc_code)
             output_path = tmpdir / "out_manual_recruitment_health.xlsx"
             ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
             self.assertTrue(ok)
@@ -4437,11 +4592,12 @@ class TestHubBuilderExport(unittest.TestCase):
             try:
                 ws = workbook[find_hub_sheet_name(workbook)]
                 system_rows = _find_system_cost_rows(ws)
-                self.assertEqual(system_rows, [76])
-                self.assertEqual(ws["B76"].value, 5005246282)
+                self.assertEqual(system_rows, [179])
+                self.assertEqual(ws["B179"].value, 5005246282)
                 self.assertIsNone(ws["F75"].value)
-                self.assertEqual(ws["F76"].value, "=ROUND((10*3.19)*$B$2,0)")
-                self.assertEqual(ws["R76"].value, "=SUM(F76:Q76)")
+                self.assertIsNone(ws["F76"].value)
+                self.assertEqual(ws["F179"].value, "=ROUND((10*3.19)*$B$2,0)")
+                self.assertEqual(ws["R179"].value, "=SUM(F179:Q179)")
             finally:
                 workbook.close()
         finally:
@@ -4527,6 +4683,7 @@ class TestHubBuilderExport(unittest.TestCase):
         template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
         tmpdir = _mk_tmpdir()
         try:
+            _seed_complete_staffing_time(conn, cc_code)
             output_path = tmpdir / "out_health_check_dedup.xlsx"
             ok = HubBuilder(conn, fiscal_year=2027).export_to_template(str(template_path), str(output_path), cc_code=cc_code)
             self.assertTrue(ok)

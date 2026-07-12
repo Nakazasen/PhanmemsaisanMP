@@ -409,6 +409,7 @@ def _collect_preserved_unmanaged_rows(
     return preserved
 
 
+
 def _collect_dynamic_allocation_rows(
     dynamic_allocation_rows: Iterable[dict[str, object]] | None,
     fiscal_periods: Iterable[str] | None,
@@ -416,9 +417,11 @@ def _collect_dynamic_allocation_rows(
     if not dynamic_allocation_rows or not fiscal_periods:
         return []
     period_to_col = {str(period): MONTH_START_COL + index for index, period in enumerate(fiscal_periods)}
-    source_file = CANONICAL_SOURCE_FILE_ORDER[5]
+    default_source_file = CANONICAL_SOURCE_FILE_ORDER[5]
     staged: list[StagedWorkbookRow] = []
     for index, row in enumerate(dynamic_allocation_rows, start=1):
+        source_file = str(row.get("source_file") or default_source_file)
+        synthetic_row = 10000 + index
         values: dict[int, object] = {
             ACCOUNT_COL: row.get("account_code"),
             DESCRIPTION_COL: row.get("description"),
@@ -438,13 +441,14 @@ def _collect_dynamic_allocation_rows(
                 values[col] = numeric_value
             if period in highlight_periods:
                 red_month_cols.add(col)
+        values[TOTAL_COL] = f"=SUM(F{synthetic_row}:Q{synthetic_row})"
         if not _norm(values.get(DESCRIPTION_COL)) or not _norm(values.get(ACCOUNT_COL)):
             continue
         staged.append(
             StagedWorkbookRow(
                 source_file=source_file,
-                original_row=10000 + index,
-                source_row=10000 + index,
+                original_row=synthetic_row,
+                source_row=synthetic_row,
                 values=values,
                 styles={},
                 number_formats={},
@@ -526,6 +530,18 @@ def apply_complete_v1_source_order_to_workbook(
         if not staged:
             staged = _collect_staged_rows(ws)
         dynamic_staged = _collect_dynamic_allocation_rows(dynamic_allocation_rows, fiscal_periods)
+        has_dynamic_fixed_assets = any(
+            row.source_file == CANONICAL_SOURCE_FILE_ORDER[1] for row in dynamic_staged
+        )
+        if has_dynamic_fixed_assets:
+            staged = [
+                row
+                for row in staged
+                if not (
+                    row.source_file == CANONICAL_SOURCE_FILE_ORDER[1]
+                    and row.original_row in (38, 42)
+                )
+            ]
         staged = _drop_staged_rows_duplicated_by_dynamic(staged, dynamic_staged)
         staged.extend(dynamic_staged)
         preserved = _collect_preserved_unmanaged_rows(

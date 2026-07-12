@@ -1,23 +1,19 @@
-# Phase 42N3H Source Notice
+# Current Source Authority Notice
 
-Current canonical requirement: `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`.
-Current visual support: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx`.
-Versioned full-coverage duplicate: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_FULL_COVERAGE.xlsx`, retained only as a byte-identical duplicate and never above the official visual-support path.
-Obsolete incomplete visual: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_LEGACY_INCOMPLETE.xlsx`, retained only for historical comparison and not for active requirement interpretation.
-Obsolete old visual requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026_ảnh.xlsx`; do not use it.
-If there is any conflict, the canonical workbook wins over the visual snapshot, Markdown, audit history, and derived descriptions.
+Current canonical requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`. The user confirmed it as the newest requirement source on `2026-07-11`.
+No visual snapshot has been confirmed for the 10.07 workbook. Any 09.06 visual snapshot, audit, or derived Markdown is historical evidence only and must not override the 10.07 workbook.
 
-Current source hierarchy last verified:
+Current source hierarchy:
 
-- `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8`
-- Canonical requirement date: `09.06.2026`
-- Implementation status last verified against code/audits at the same commit unless a row says `STATUS_REQUIRES_CURRENT_CODE_AUDIT`.
-- Historical content must not override current audits, code, or the canonical 09.06.2026 workbook.
+- `CANONICAL_SOURCE_USER_CONFIRMED_AT=2026-07-11`
+- Canonical requirement date: `10.07.2026`.
+- Implementation status was last verified against the prior 09.06 source and therefore requires a current audit before being claimed against 10.07.
+- Historical content must not override current audits, code, or the canonical 10.07.2026 workbook.
 
 
-## Reconcile note - workbook canonical updated
+## Historical reconcile note - 09.06 workbook
 
-Local reconcile time: `2026-07-07 06:40:00`. Requirement Markdown and machine-readable mapping were refreshed against `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx` after the workbook received additional content. Key refreshed points: workbook inventory is 10 sheets; admin 12-month costs use previous-month total headcount with April exception; bus uses scalar app input; account lookup uses `原価区分` to choose `勘定科目` column `製造`/`一般`/`販売`. Canonical workbook still wins over this Markdown.
+Local reconcile time: `2026-07-07 06:40:00`. The Markdown and machine-readable mapping were refreshed against the 09.06 workbook after it received additional content. This is historical context only: the 10.07 workbook is now canonical and all implementation claims require a current audit against it.
 
 ---
 # MP Saisan Business Knowledge Base v2 - Full Business Specification
@@ -32,10 +28,10 @@ Physical row-count gap `136` là counting fact giữa generated v1 và primary r
 
 | Source layer | Path | Role | Trust rule |
 | ------------ | ---- | ---- | ---------- |
-| Excel canonical requirement | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx` | Source of truth requirement | Thắng visual snapshot, Markdown, audit history, và derived descriptions nếu conflict. |
-| Official visual support snapshot | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx` | Audit visual support only | Dùng để kiểm visual/layout/ảnh; không thay Excel gốc. Each canonical source drawing is fully contained in at least one capture; overall coverage is 159/159. |
-| Versioned full-coverage duplicate | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_FULL_COVERAGE.xlsx` | Duplicate visual support artifact | Byte-identical duplicate of the official visual-support path; không outrank official path. |
-| Obsolete incomplete visual | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_LEGACY_INCOMPLETE.xlsx` | Historical visual reference only | Incomplete 34-image artifact; not for active requirement interpretation. |
+| Excel canonical requirement | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx` | Source of truth requirement | Thắng visual snapshot, Markdown, audit history, và derived descriptions nếu conflict. |
+| Historical visual support snapshot (09.06) | 09.06 visual artifacts | Audit context for the previous requirement only | Không thay Excel gốc và không xác minh yêu cầu 10.07. |
+| Historical full-coverage duplicate (09.06) | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_FULL_COVERAGE.xlsx` | Historical visual artifact | Không xác minh yêu cầu 10.07. |
+| Historical incomplete visual (09.06) | `raw/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh_LEGACY_INCOMPLETE.xlsx` | Historical visual reference only | Không xác minh yêu cầu 10.07. |
 | Derived MD | `docs/requirements/cai_tien_nhap_du_lieu_chung.md` | Search/helper | Chỉ là bản dẫn xuất. |
 | FORM template | `raw/FORM.xlsx` | Template/output structure | Hướng dẫn target rows/formula style, không tự là amount source. |
 | Primary reference | `reference_outputs/primary/16.KDTVN 電気製造技術課_MP FY2027_各予定(Ver01).xlsx` | Output chuẩn tham khảo | Guide skeleton/formula/order, không là raw amount proof nếu chưa proven. |
@@ -156,7 +152,7 @@ Source files:
 
 Historical fixed-row note: row `211`, item_id `system_cost_combined`, blank row `212`. Treat this as historical implementation context until a fresh code/output audit confirms it.
 
-Status: STATUS_REQUIRES_CURRENT_CODE_AUDIT. Historical notes describe a combined system cost row, but current docs must not treat it as complete until a fresh code/output audit verifies it against canonical 09.06.2026.
+Status: STATUS_REQUIRES_CURRENT_CODE_AUDIT. Historical notes describe a combined system cost row, but current docs must not treat it as complete until a fresh code/output audit verifies it against canonical 10.07.2026.
 
 System Cost formula policy:
 

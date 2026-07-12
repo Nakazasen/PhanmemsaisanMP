@@ -550,6 +550,63 @@ def test_complete_v1_writer_drops_legacy_staged_row_when_dynamic_allocation_repl
         wb.close()
 
 
+def test_complete_v1_writer_replaces_legacy_asset_totals_but_preserves_manual_asset_row(tmp_path):
+    path = tmp_path / "out_fixed_assets_dynamic.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    for row, description in ((38, "legacy depreciation total"), (42, "legacy interest total")):
+        ws.cell(row, 2).value = 5006016244 if row == 38 else 9114120007
+        ws.cell(row, 6).value = 999
+        ws.cell(row, 19).value = description
+    ws.cell(50, 2).value = 5006016242
+    ws.cell(50, 6).value = 123
+    ws.cell(50, 19).value = "manual planned machine"
+    ws.cell(50, 20).value = (
+        f"source_file={CANONICAL_SOURCE_FILE_ORDER[1]}; original_row=500; source-order-complete-v1"
+    )
+    wb.save(path)
+    wb.close()
+
+    periods = ["202604", "202605", "202606", "202607", "202608", "202609", "202610", "202611", "202612", "202701", "202702", "202703"]
+    result = apply_complete_v1_source_order_to_workbook(
+        path,
+        start_row=30,
+        clear_until_row=90,
+        dynamic_allocation_rows=[
+            {
+                "source_file": CANONICAL_SOURCE_FILE_ORDER[1],
+                "account_code": 5006016242,
+                "description": "Khấu hao tài sản cố định - Machinery and Equipment",
+                "terms": {"202604": ["ROUND(12.75*$B$2,0)"]},
+            },
+            {
+                "source_file": CANONICAL_SOURCE_FILE_ORDER[1],
+                "account_code": 9114120007,
+                "description": "Lãi tài sản cố định - Machinery and Equipment",
+                "terms": {"202604": ["ROUND(1.5*$B$2,0)"]},
+            },
+        ],
+        fiscal_periods=periods,
+    )
+
+    assert result["rows_written"] == 3
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        descriptions = [ws.cell(row, 19).value for row in range(30, 33)]
+        assert "manual planned machine" in descriptions
+        assert "Khấu hao tài sản cố định - Machinery and Equipment" in descriptions
+        assert "Lãi tài sản cố định - Machinery and Equipment" in descriptions
+        assert "legacy depreciation total" not in descriptions
+        assert "legacy interest total" not in descriptions
+        depreciation_row = descriptions.index("Khấu hao tài sản cố định - Machinery and Equipment") + 30
+        assert ws.cell(depreciation_row, 6).value == "=ROUND(12.75*$B$2,0)"
+        assert ws.cell(depreciation_row, 18).value == f"=SUM(F{depreciation_row}:Q{depreciation_row})"
+    finally:
+        wb.close()
+
+
 def test_complete_v1_writer_preserves_unmanaged_business_rows_inside_clear_range(tmp_path):
     path = tmp_path / "out.xlsx"
     wb = Workbook()
@@ -750,6 +807,10 @@ def test_run_e2e_complete_v1_final_source_order_writer_runs_after_reference_fill
     text = Path("scripts/run_e2e.py").read_text(encoding="utf-8")
 
     assert "_apply_complete_v1_source_order(out_path, log_callback, phase=\"pre-reference\")" in text
-    assert "_apply_complete_v1_source_order(out_path, log_callback, phase=\"final\")" in text
+    assert "phase=\"final\"" in text
+    assert "dynamic_allocation_rows=complete_v1_dynamic_allocation_rows" in text
+    assert "dynamic_allocation_rows=complete_v1_dynamic_rows" in text
+    assert "fiscal_periods=complete_v1_fiscal_periods" in text
+    assert "fiscal_periods=complete_v1_periods" in text
     assert text.index("phase=\"pre-reference\"") < text.index("apply_mp_saisan_complete_v1(")
     assert text.index("apply_mp_saisan_complete_v1(") < text.index("phase=\"final\"")

@@ -6,10 +6,12 @@ Compatibility guard: facility file-order export remains explicit via
 `if facility_file_order_export:`; runtime adds workbook-existence checks.
 """
 import sqlite3
+import argparse
 import csv
 import inspect
 import os
 import sys
+import time
 import traceback
 from zipfile import BadZipFile
 
@@ -48,6 +50,7 @@ if BASE_DIR not in sys.path:
 from src.db.schema import get_connection, create_schema, init_sys_params
 from src.db.loader import load_all
 from src.audit.pipeline_audit import write_pipeline_audit_report
+from src.audit.exchange_rate_audit import audit_exchange_rate_workbook, write_exchange_rate_audit_report
 from src.parsers.facility import parse_facility
 from src.parsers.ga import parse_ga
 from src.parsers.birthday import parse_birthday_workbook
@@ -70,7 +73,9 @@ from src.engine.fixed_assets_reference_skeleton import apply_fixed_assets_refere
 from src.engine.complete_v1_source_order_writer import apply_complete_v1_source_order_to_workbook
 from src.engine.mp_saisan_complete_export import apply_mp_saisan_complete_v1
 from src.utils.excel_helpers import get_fy_months
+from src.utils.fiscal_periods import fiscal_baseline_period
 from src.utils.source_manifest import describe_manifest
+from src.services.headcount_source_importer import import_headcount_time_sources
 
 COMPLETE_V1_SOURCE_ORDER_START_ROW = 30
 COMPLETE_V1_SOURCE_ORDER_CLEAR_UNTIL_ROW = 199
@@ -85,9 +90,27 @@ def _safe_console_print(message):
             pass
     encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
     try:
-        print(text)
+        print(text, flush=True)
     except UnicodeEncodeError:
-        print(text.encode(encoding, errors="replace").decode(encoding, errors="replace"))
+        print(text.encode(encoding, errors="replace").decode(encoding, errors="replace"), flush=True)
+
+
+def _timed_call(log_callback, label: str, function, *args, **kwargs):
+    started = time.perf_counter()
+    try:
+        return function(*args, **kwargs)
+    finally:
+        log_callback(f"Thời gian {label}: {time.perf_counter() - started:.3f} giây")
+
+
+def _create_allocation_engine(conn, target_cc=None):
+    try:
+        parameters = inspect.signature(AllocationEngine).parameters
+    except (TypeError, ValueError):
+        parameters = {}
+    if target_cc is not None and "target_cc" in parameters:
+        return AllocationEngine(conn, target_cc=target_cc)
+    return AllocationEngine(conn)
 
 
 def _default_template_path() -> str:
@@ -293,9 +316,98 @@ def _parse_manual_headcount(conn, source_dir: str):
     return parse_manual_headcount(conn, source_dir=source_dir)
 
 
+def _staffing_sync_log_lines(result: dict) -> list[str]:
+    lines = [
+        f"Nguồn nhân sự: nạp {result['imported_files']}/{result['files']} tệp, "
+        f"bỏ qua {len(result['skipped'])}, lỗi {len(result['errors'])}."
+    ]
+    for parsed in result.get("results", []):
+        if parsed.status == "valid" and not any(parsed is item for item, _ in result["skipped"]):
+            lines.append(
+                f"  ĐÃ NẠP: {os.path.basename(parsed.path)} | CC {parsed.cc_code} | "
+                f"{parsed.department_name} | {len(parsed.rows)} tháng"
+            )
+    for parsed, reason in result["skipped"]:
+        lines.append(
+            f"  BỎ QUA: {os.path.basename(parsed.path)} | CC {parsed.cc_code or 'không đọc được'} | "
+            f"{parsed.department_name or 'không đọc được tên phòng'} | {reason}"
+        )
+    for parsed in result["errors"]:
+        lines.append(
+            f"  LỖI: {os.path.basename(parsed.path)} | CC {parsed.cc_code or 'không đọc được'} | "
+            f"{'; '.join(parsed.errors) or 'Tệp không hợp lệ'}"
+        )
+    return lines
+
+
+def _staffing_preflight(conn, fiscal_year: int, target_cc=None) -> list[str]:
+    periods = get_fy_months(fiscal_year)
+    baseline = fiscal_baseline_period(fiscal_year)
+    if target_cc:
+        cc_codes = [str(target_cc)]
+    else:
+        cc_codes = [
+            str(row[0]) for row in conn.execute(
+                "SELECT DISTINCT CAST(cc_code AS TEXT) FROM fact_input_data WHERE account_code > 0 ORDER BY 1"
+            )
+        ]
+    issues: list[str] = []
+    for cc_code in cc_codes:
+        department_row = conn.execute(
+            """SELECT name_jp,name_vn FROM dim_cost_centers
+               WHERE CAST(code AS TEXT)=? LIMIT 1""",
+            (cc_code,),
+        ).fetchone()
+        department_names = []
+        if department_row:
+            for value in department_row:
+                name = str(value or "").strip()
+                if name and name not in department_names:
+                    department_names.append(name)
+        department = f"Phòng {cc_code}"
+        if department_names:
+            department += " – " + " / ".join(department_names)
+
+        headcount_periods = {
+            str(row[0]) for row in conn.execute(
+                "SELECT period FROM fact_monthly_headcount WHERE CAST(cc_code AS TEXT)=? AND source='department_plan'",
+                (cc_code,),
+            )
+        }
+        baseline_available = conn.execute(
+            "SELECT 1 FROM fact_monthly_headcount WHERE CAST(cc_code AS TEXT)=? AND period=? AND source='manual' LIMIT 1",
+            (cc_code, baseline),
+        ).fetchone() is not None
+        time_periods = {
+            str(row[0]) for row in conn.execute(
+                "SELECT period FROM fact_headcount_time_source WHERE CAST(cc_code AS TEXT)=?",
+                (cc_code,),
+            )
+        }
+        missing_headcount = [period for period in periods if period not in headcount_periods]
+        missing_time = [period for period in periods if period not in time_periods]
+        if missing_headcount or missing_time or not baseline_available:
+            parts = []
+            if not baseline_available:
+                baseline_label = f"{baseline[-2:]}/{baseline[:4]}"
+                first_fy_label = f"{periods[0][-2:]}/{periods[0][:4]}"
+                parts.append(
+                    f"chưa có Tổng số người tháng {baseline_label}. "
+                    f"Dữ liệu này cần để tính chi phí tháng {first_fy_label}. "
+                    "Hãy chọn “Nhập nhân sự thủ công”, nhập dữ liệu tháng này và lưu lại"
+                )
+            if missing_headcount:
+                parts.append("thiếu số người kế hoạch các tháng: " + ", ".join(missing_headcount))
+            if missing_time:
+                parts.append("thiếu thời gian làm việc các tháng: " + ", ".join(missing_time))
+            issues.append(department + ": " + "; ".join(parts))
+    return issues
+
+
 def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str, 
                            exchange_rate: float = 25450.0,
                            target_cc: int = None,
+                           headcount_source_dir: str | None = None,
                            log_callback=None,
                            facility_file_order_preview: bool = False,
                            facility_preview_output: str | None = None,
@@ -390,22 +502,39 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             exchange_rate=exchange_rate,
             search_dir=source_dir,
         )
+
+        staffing_dir = os.path.abspath(headcount_source_dir or source_dir)
+        if not os.path.isdir(staffing_dir):
+            raise FileNotFoundError(f"Thư mục nguồn nhân sự & thời gian không tồn tại: {staffing_dir}")
+        log_callback(f"Đang đồng bộ nguồn nhân sự & thời gian FY{fiscal_year}: {staffing_dir}")
+        staffing_result = import_headcount_time_sources(conn, staffing_dir, fiscal_year)
+        parser_results = {"headcount_time_sources": staffing_result}
+        for line in _staffing_sync_log_lines(staffing_result):
+            log_callback(line)
+
+        if staffing_result["files"] == 0:
+            raise ValueError(
+                f"Không tìm thấy tệp kế hoạch nhân sự & thời gian FY{fiscal_year} trong {staffing_dir}."
+            )
         
         # 3. Parsers
-        parser_results = {}
         manifest_lines = describe_manifest(source_dir)
         if manifest_lines:
             log_callback("Thứ tự tệp nguồn đã cấu hình:")
             for line in manifest_lines:
                 log_callback(f"  {line}")
 
-        facility_result = parse_facility(conn, source_dir=source_dir)
+        facility_result = _timed_call(log_callback, "đọc Cơ sở vật chất", parse_facility, conn, source_dir=source_dir)
         parser_results["facility"] = facility_result
-        fixed_assets_result = parse_fixed_assets(conn, source_dir=source_dir)
+        fixed_assets_result = _timed_call(
+            log_callback, "đọc Tài sản cố định", parse_fixed_assets, conn, source_dir=source_dir
+        )
         parser_results["fixed_assets"] = fixed_assets_result
-        it_result = parse_it_simulation(conn, source_dir=source_dir)
+        it_result = _timed_call(
+            log_callback, "đọc Mô phỏng hệ thống", parse_it_simulation, conn, source_dir=source_dir
+        )
         parser_results["it_simulation"] = it_result
-        ga_result = parse_ga(conn, source_dir=source_dir)
+        ga_result = _timed_call(log_callback, "đọc Tổng vụ", parse_ga, conn, source_dir=source_dir)
         parser_results["ga"] = ga_result
         log_callback(f"Dữ liệu Tổng vụ: đơn giá={ga_result.get('total', 0)}, nhân sự={ga_result.get('headcount', 0)}")
         birthday_result = parse_birthday_workbook(conn, source_dir=source_dir)
@@ -421,10 +550,12 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         manual_hc_result = _parse_manual_headcount(conn, source_dir)
         parser_results["manual_headcount"] = manual_hc_result
         log_callback(
-            "Nhân sự nhập tay: thêm={inserted}, bỏ qua={skipped}, lỗi={errors}, tệp={path}".format(
+            "Nhân sự nhập tay: thêm={inserted}, bỏ qua={skipped}, lỗi={errors}, "
+            "chỉ bổ sung Nam/Nữ={supplemental_only}, tệp={path}".format(
                 inserted=manual_hc_result.get("inserted", 0),
                 skipped=manual_hc_result.get("skipped", 0),
                 errors=manual_hc_result.get("errors", 0),
+                supplemental_only=manual_hc_result.get("supplemental_only", 0),
                 path=manual_hc_result.get("template_path", ""),
             )
         )
@@ -459,10 +590,39 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             )
         )
 
-        # 4. Allocation Engine
+        # 4. Kiểm tra nguồn sự thật trước khi tính phân bổ
+        staffing_issues = _staffing_preflight(conn, fiscal_year, target_cc=target_cc)
+        if staffing_issues:
+            scope = f"CC {target_cc}" if target_cc else "toàn bộ CC dự kiến xuất"
+            details = "\n".join(f"- {issue}" for issue in staffing_issues)
+            raise ValueError(
+                f"Kiểm tra nguồn nhân sự & thời gian FY{fiscal_year} không đạt cho {scope}.\n"
+                f"Chương trình dừng trước khi tính phân bổ và xuất FORM để tránh kết quả sai.\n{details}"
+            )
+        supplemental_rows = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM fact_monthly_headcount AS manual
+            WHERE manual.source='manual'
+              AND EXISTS (
+                  SELECT 1 FROM fact_monthly_headcount AS source
+                  WHERE source.source='department_plan'
+                    AND CAST(source.cc_code AS TEXT)=CAST(manual.cc_code AS TEXT)
+                    AND source.period=manual.period
+              )
+            """
+        ).fetchone()[0]
+        log_callback(
+            f"Kiểm tra nguồn nhân sự & thời gian đạt: "
+            f"{'CC ' + str(target_cc) if target_cc else 'toàn bộ CC dự kiến xuất'}. "
+            f"Có {supplemental_rows} dòng nhập tay chỉ được dùng bổ sung Nam/Nữ; "
+            "không thay số nhân viên, công nhân hoặc tổng người."
+        )
+
+        # 5. Allocation Engine
         log_callback("Đang tính phân bổ...")
-        engine = AllocationEngine(conn)
-        engine.run_allocation()
+        engine = _create_allocation_engine(conn, target_cc=target_cc)
+        _timed_call(log_callback, "xác định tài khoản và tính phân bổ", engine.run_allocation)
         
         # 5. Export Logic
         builder = HubBuilder(conn, fiscal_year=fiscal_year)
@@ -648,6 +808,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                         )
                         log_callback(f"Đã áp dụng khung tham chiếu tài sản cố định: {skeleton_result}")
                     if mp_saisan_complete_v1:
+                        complete_v1_dynamic_rows = _load_complete_v1_dynamic_allocation_rows(builder, cc)
+                        complete_v1_periods = get_fy_months(fiscal_year)
                         complete_v1_primary_path = _try_resolve_primary_reference_path(
                             target_cc=cc,
                             primary_reference_path=primary_reference_path,
@@ -669,21 +831,48 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                                 ),
                             )
                             log_callback(f"Đã áp dụng hoàn chỉnh MP Saisan v1: {complete_result}")
-                        _apply_complete_v1_source_order(out_path, log_callback, phase="final")
+                        _apply_complete_v1_source_order(
+                            out_path,
+                            log_callback,
+                            phase="final",
+                            dynamic_allocation_rows=complete_v1_dynamic_rows,
+                            fiscal_periods=complete_v1_periods,
+                        )
                     count += 1
             
             log_callback(f"Đã xuất thành công {count} tệp vào: {output_dir}")
 
-        audit_result = write_pipeline_audit_report(
+        report_dir = os.path.join(output_dir, "BAO_CAO_KIEM_TRA")
+        os.makedirs(report_dir, exist_ok=True)
+        output_workbooks = [
+            os.path.join(output_dir, name)
+            for name in os.listdir(output_dir)
+            if name.lower().endswith(".xlsx") and name.startswith("MP_CC_")
+        ]
+        exchange_results = [
+            audit_exchange_rate_workbook(path, exchange_rate) for path in output_workbooks
+        ]
+        exchange_report = write_exchange_rate_audit_report(
+            os.path.join(report_dir, "KIEM_TRA_TY_GIA.xlsx"),
+            exchange_rate,
+            "Tỷ giá người dùng chọn cho lần chạy này",
+            exchange_results,
+        )
+        log_callback(f"Báo cáo kiểm tra tỷ giá: {exchange_report}")
+
+        audit_result = _timed_call(
+            log_callback,
+            "lập báo cáo kiểm tra",
+            write_pipeline_audit_report,
             conn=conn,
-            output_dir=output_dir,
+            output_dir=report_dir,
             source_dir=source_dir,
             fiscal_year=fiscal_year,
             target_cc=target_cc,
             parser_results=parser_results,
         )
-        log_callback(f"Báo cáo kiểm tra: {audit_result['report_path']}")
-        log_callback(f"Tệp dữ liệu thiếu: {audit_result['missing_csv_path']}")
+        log_callback(f"Báo cáo tóm tắt lần chạy: {audit_result['report_path']}")
+        log_callback(f"Báo cáo dữ liệu cần bổ sung: {audit_result['missing_csv_path']}")
 
         if facility_file_order_preview:
             preview_output = facility_preview_output or os.path.join(
@@ -727,6 +916,7 @@ def main(argv=None):
     parser.add_argument('--fy', type=int, default=2027)
     parser.add_argument('--template', type=str, default=_default_template_path())
     parser.add_argument('--source', type=str, default=_default_source_dir())
+    parser.add_argument('--headcount-source', type=str, default=None)
     parser.add_argument('--exchange-rate', type=float, default=25450.0)
     parser.add_argument('--target-cc', type=int, default=None)
     parser.add_argument(
@@ -807,6 +997,7 @@ def main(argv=None):
         source_dir=args.source,
         exchange_rate=args.exchange_rate,
         target_cc=args.target_cc,
+        headcount_source_dir=args.headcount_source,
         facility_file_order_preview=args.facility_file_order_preview,
         facility_preview_output=args.facility_preview_output,
         facility_preview_start_row=args.facility_preview_start_row,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+from functools import lru_cache
 from pathlib import Path
 
 import openpyxl
@@ -277,6 +278,7 @@ def write_source_manifest_xlsx(source_dir: str | None, entries: list[dict[str, s
         worksheet.column_dimensions[column].width = width
     path = base_dir / MANIFEST_XLSX_FILENAME
     workbook.save(path)
+    _cached_manifest_snapshot.cache_clear()
     return str(path)
 
 
@@ -292,15 +294,20 @@ def ensure_source_manifest(source_dir: str | None, *, refresh: bool = True) -> s
     return str(base_dir / MANIFEST_XLSX_FILENAME)
 
 
+@lru_cache(maxsize=16)
+def _cached_manifest_snapshot(source_dir: str) -> tuple[tuple[tuple[str, str], ...], ...]:
+    entries = merge_manifest_with_detected(source_dir)
+    return tuple(tuple(sorted((str(key), str(value)) for key, value in entry.items())) for entry in entries)
+
+
 def read_source_manifest(source_dir: str | None, include_missing: bool = False) -> list[dict[str, str]]:
-    """Read source file entries sorted by their explicit order."""
+    """Read source file entries without rewriting the manifest on disk."""
     base_dir = _source_dir_path(source_dir)
     if base_dir is None:
         return []
 
-    entries = merge_manifest_with_detected(source_dir)
-    if entries:
-        write_source_manifest_xlsx(source_dir, entries)
+    snapshot = _cached_manifest_snapshot(str(base_dir.resolve()))
+    entries = [dict(items) for items in snapshot]
     if include_missing:
         return entries
     return _existing_enabled_entries(entries)

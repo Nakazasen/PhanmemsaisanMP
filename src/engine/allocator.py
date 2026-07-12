@@ -11,6 +11,7 @@ import sqlite3
 import unicodedata
 
 from src.engine.account_resolver import AccountResolutionError, resolve_account_code_for_source
+from src.services.headcount_source_policy import HeadcountSourceError, load_canonical_headcount
 from src.utils import excel_helpers as helpers
 
 HEALTH_CHECK_KEYWORDS = ("kham suc khoe", "khám sức khỏe", "健康診断")
@@ -52,9 +53,6 @@ MANUAL_EVENT_ITEM_TOKENS = (
     "会社設立記念",
     "sự kiện tri ân",
     "su kien tri an",
-    "採用時健診",
-    "khám sức khỏe khi tuyển dụng",
-    "kham suc khoe khi tuyen dung",
 )
 EVENT_MONTH_TOKENS = (
     "\u5165\u793e\u6708",
@@ -90,6 +88,14 @@ ACTUAL_COUNT_DRIVER_TOKENS = (
     "so luong phat thuc te",
     "số người tham gia",
     "số lượng phát thực tế",
+)
+RECRUITMENT_HEALTH_TOKENS = (
+    "採用の健康診断費",
+    "採用時健診",
+    "khám sức khỏe tuyển dụng",
+    "khám sức khỏe khi tuyển dụng",
+    "kham suc khoe tuyen dung",
+    "kham suc khoe khi tuyen dung",
 )
 SUPPRESSED_UNIFORM_ITEM_RAW_TOKENS = (
     "\u5236\u670d",  # 制服
@@ -189,17 +195,22 @@ BUS_UNIT_PRICE_SPECS = {
 
 
 class AllocationEngine:
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection, target_cc: object | None = None):
         self.conn = conn
+        self.target_cc = str(target_cc).strip() if target_cc is not None else None
         self.sys_params = self._load_sys_params()
         self.cost_centers = self._load_cost_centers()
+        if self.target_cc and not self.cost_centers:
+            raise ValueError(f"Không tìm thấy mã bộ phận trong danh mục hiện hành: {self.target_cc}")
         fy_str = self.sys_params.get("fiscal_year", "FY2027")
-        self.fy_months = helpers.get_fy_months(int(fy_str.replace("FY", "")))
+        self.fiscal_year = int(fy_str.replace("FY", ""))
+        self.fy_months = helpers.get_fy_months(self.fiscal_year)
         self.period_index = {p: i for i, p in enumerate(self.fy_months)}
         self.hc_cache = self._load_headcount_cache()
         self.bus_driver_cache = self._load_bus_driver_cache()
         self.bus_unit_price_cache = self._load_bus_unit_price_cache()
         self._missing_input_keys: set[tuple[str, str, str, str]] = set()
+        self._account_resolution_cache: dict[tuple[str, str, str, int | None], int | None] = {}
 
     def _normalize_text(self, value: str) -> str:
         text = unicodedata.normalize("NFKD", str(value or ""))
@@ -212,34 +223,30 @@ class AllocationEngine:
         return {row["key"]: row["value"] for row in rows}
 
     def _load_cost_centers(self):
+        if self.target_cc:
+            return self.conn.execute(
+                "SELECT * FROM dim_cost_centers WHERE CAST(code AS TEXT) = ? ORDER BY seq_no",
+                (self.target_cc,),
+            ).fetchall()
         return self.conn.execute("SELECT * FROM dim_cost_centers ORDER BY seq_no").fetchall()
 
-    def _load_headcount_cache(self) -> dict[tuple[str, str], dict[str, float]]:
-        # Priority: manual > ga > others
-        rows = self.conn.execute(
-            """
-            SELECT
-                cc_code, period, headcount_all, headcount_staff, headcount_worker,
-                headcount_male, headcount_female, source
-            FROM fact_monthly_headcount
-            ORDER BY
-                CASE source
-                    WHEN 'manual' THEN 3
-                    WHEN 'ga' THEN 2
-                    ELSE 1
-                END
-            """
-        ).fetchall()
-        cache: dict[tuple[str, str], dict[str, float]] = {}
-        for row in rows:
-            cache[(str(row["cc_code"]).strip(), str(row["period"]))] = {
-                "headcount_all": float(row["headcount_all"] or 0.0),
-                "headcount_staff": float(row["headcount_staff"] or 0.0),
-                "headcount_worker": float(row["headcount_worker"] or 0.0),
-                "headcount_male": float(row["headcount_male"] or 0.0),
-                "headcount_female": float(row["headcount_female"] or 0.0),
+    def _load_headcount_cache(self) -> dict[tuple[str, str], dict[str, float | str]]:
+        """Load staffing through the canonical field-level source policy."""
+        canonical = load_canonical_headcount(self.conn, self.fiscal_year)
+        return {
+            key: {
+                "headcount_all": row.headcount_all,
+                "headcount_expat": row.headcount_expat,
+                "headcount_staff": row.headcount_staff,
+                "headcount_worker": row.headcount_worker,
+                "headcount_male": row.headcount_male,
+                "headcount_female": row.headcount_female,
+                "staffing_source": row.staffing_source,
+                "split_status": row.split_status,
+                "gender_source": row.gender_source,
             }
-        return cache
+            for key, row in canonical.items()
+        }
 
     def _load_bus_driver_cache(self) -> dict[str, dict[str, float]]:
         rows = self.conn.execute(
@@ -334,6 +341,11 @@ class AllocationEngine:
             return None
         value = row.get(driver_type)
         if value is None:
+            if driver_type in ("headcount_staff", "headcount_worker"):
+                raise HeadcountSourceError(
+                    f"CC {cc_key}, kỳ {period}: nguồn chỉ có tổng người local; "
+                    f"chưa có tách Nhân viên/Công nhân cho driver {driver_type}."
+                )
             value = row.get("headcount_all", 0.0)
         return float(value or 0.0)
 
@@ -441,6 +453,12 @@ class AllocationEngine:
         return True
 
     def _clear_allocator_missing_inputs(self) -> None:
+        if self.target_cc:
+            self.conn.execute(
+                "DELETE FROM fact_missing_inputs WHERE source = 'allocator' AND CAST(cc_code AS TEXT) = ?",
+                (self.target_cc,),
+            )
+            return
         self.conn.execute("DELETE FROM fact_missing_inputs WHERE source = 'allocator'")
 
     def _record_event_delta_missing(
@@ -642,7 +660,18 @@ class AllocationEngine:
         raw_posting_month = str(rule["posting_month"] or "").strip()
         return raw_posting_month or None
 
+    def _is_recruitment_health_rule(self, rule) -> bool:
+        item_name = self._normalize_text(rule["item_name"] or "")
+        return any(self._normalize_text(token) in item_name for token in RECRUITMENT_HEALTH_TOKENS)
+
+    def _recruitment_health_new_hires(self, cc_code: object, source_period: str, rule) -> tuple[float, float]:
+        staff_new = self._get_event_delta(cc_code, source_period, "headcount_staff", rule=rule)
+        worker_new = self._get_event_delta(cc_code, source_period, "headcount_worker", rule=rule)
+        return staff_new, worker_new
+
     def _requires_manual_event_source(self, rule) -> bool:
+        if self._is_recruitment_health_rule(rule):
+            return False
         if self._is_fixed_headcount_override_rule(rule):
             return False
         raw_item_name = str(rule["item_name"] or "")
@@ -799,34 +828,53 @@ class AllocationEngine:
         self.conn.commit()
         return {"status": "success"}
 
-    def _map_direct_costs(self):
+    def _map_direct_costs(self) -> dict[str, int]:
         cursor = self.conn.cursor()
+        where = "(account_code IS NULL OR account_code = 0) AND source <> 'ga_unit_price'"
+        params: tuple[object, ...] = ()
+        if self.target_cc:
+            where += " AND CAST(cc_code AS TEXT) = ?"
+            params = (self.target_cc,)
         raw_rows = cursor.execute(
-            """
+            f"""
             SELECT id, source, cc_code, description, form_row
             FROM fact_input_data
-            WHERE account_code IS NULL OR account_code = 0
-            """
+            WHERE {where}
+            """,
+            params,
         ).fetchall()
 
         updates: list[tuple[int, int]] = []
-
+        unresolved = 0
         for row in raw_rows:
-            try:
-                target_code = resolve_account_code_for_source(
-                    self.conn,
-                    str(row["source"] or ""),
-                    row["cc_code"],
-                    description=row["description"],
-                    form_row=row["form_row"],
-                )
-            except AccountResolutionError:
+            cache_key = (
+                str(row["source"] or ""),
+                str(row["cc_code"] or "").strip(),
+                str(row["description"] or ""),
+                int(row["form_row"]) if row["form_row"] is not None else None,
+            )
+            if cache_key not in self._account_resolution_cache:
+                try:
+                    self._account_resolution_cache[cache_key] = resolve_account_code_for_source(
+                        self.conn,
+                        cache_key[0],
+                        cache_key[1],
+                        description=cache_key[2],
+                        form_row=cache_key[3],
+                    )
+                except AccountResolutionError:
+                    self._account_resolution_cache[cache_key] = None
+            target_code = self._account_resolution_cache[cache_key]
+            if target_code is None:
+                unresolved += 1
                 continue
             updates.append((target_code, int(row["id"])))
 
         if updates:
             cursor.executemany("UPDATE fact_input_data SET account_code = ? WHERE id = ?", updates)
-            print(f"Đã ánh xạ {len(updates)} bản ghi chi phí trực tiếp.")
+        scope = f" của CC {self.target_cc}" if self.target_cc else ""
+        print(f"Đã xác định tài khoản kế toán cho {len(updates)} bản ghi{scope}; chưa xác định: {unresolved}.")
+        return {"examined": len(raw_rows), "mapped": len(updates), "unresolved": unresolved}
 
     def _process_allocation_rules(self):
         self._missing_input_keys.clear()
@@ -867,6 +915,45 @@ class AllocationEngine:
                     reason="actual participant/distribution count cannot be inferred from headcount",
                     periods=target_periods or None,
                 )
+                continue
+
+            if self._is_recruitment_health_rule(rule):
+                unit_price = float(rule["unit_price"] or 0.0)
+                for target_period in self.fy_months:
+                    source_period = self._get_prev_period(target_period)
+                    if not source_period:
+                        continue
+                    for cc in self.cost_centers:
+                        staff_new, worker_new = self._recruitment_health_new_hires(cc["code"], source_period, rule)
+                        total_new = staff_new + worker_new
+                        target_acc = self._get_account_for_cc(
+                            str(cc["cost_type"]), rule["mfg_account"], rule["ga_account"], rule["sales_account"]
+                        )
+                        if not target_acc:
+                            continue
+                        formula = (
+                            f"({self._format_formula_number(staff_new)}+"
+                            f"{self._format_formula_number(worker_new)})*"
+                            f"{self._format_formula_number(unit_price)}"
+                        )
+                        description = (
+                            f"Alloc: {rule['item_name']}|business_identity=recruitment_health|"
+                            f"source_month={source_period}|posting_rule=next_month|"
+                            f"new_staff={self._format_formula_number(staff_new)}|"
+                            f"new_worker={self._format_formula_number(worker_new)}|"
+                            f"driver_value={self._format_formula_number(total_new)}|formula_expr={formula}"
+                        )
+                        cursor.execute(
+                            """
+                            INSERT INTO fact_input_data
+                            (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
+                            VALUES (?, ?, ?, ?, ?, NULL, 'base', ?)
+                            """,
+                            (
+                                f"alloc_{int(rule['id'])}", target_period, total_new * unit_price,
+                                str(cc["code"]).strip(), int(target_acc), description,
+                            ),
+                        )
                 continue
 
             unit_price = float(rule["unit_price"] or 0.0)

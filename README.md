@@ -29,7 +29,7 @@ Các input đang được repo kỳ vọng gồm:
 - `docs/MP2027/special_costs_manual.csv`: special costs nhập tay.
 - Các source workbook trong `docs/MP2027`: facility, fixed assets, IT/system cost, GA/admin, birthday, NNN paperwork và các workbook liên quan.
 
-> **Nguyên tắc:** workbook `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx` là nguồn nghiệp vụ canonical cao nhất nếu có trong local/repo. Markdown chỉ là tài liệu diễn giải/handover.
+> **Nguyên tắc:** workbook `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx` là nguồn nghiệp vụ canonical cao nhất. File này được người dùng xác nhận là bản mới nhất ngày 11.07.2026. Markdown chỉ là tài liệu diễn giải/handover.
 
 ## Output chính
 
@@ -42,7 +42,7 @@ Output runtime mặc định không nên commit:
 ## Nguyên tắc nghiệp vụ an toàn
 
 - Không tự bịa dữ liệu.
-- Canonical workbook ngày `09.06.2026` thắng mọi mô tả Markdown.
+- Canonical workbook ngày `10.07.2026` thắng mọi mô tả Markdown.
 - Thiếu input thì fail-closed: để trống, ghi missing input, hoặc yêu cầu người dùng xác nhận.
 - Không fallback bừa từ Cost Center khác.
 - Không tự biến blank thành zero.

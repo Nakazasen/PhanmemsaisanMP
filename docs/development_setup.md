@@ -43,6 +43,6 @@ Repo có `packaging/mp2027_portable_entry.py` và spec PyInstaller. Nếu cần 
 
 ## Quy tắc dữ liệu
 
-- Canonical requirement: workbook `raw/requirements/Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx`.
+- Canonical requirement: workbook `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx` (được người dùng xác nhận là bản mới nhất ngày 11.07.2026).
 - Không commit source/output nhạy cảm nếu chưa được xác nhận.
 - Không đổi rule tiền/phân bổ nếu chưa có test và bằng chứng từ workbook canonical.

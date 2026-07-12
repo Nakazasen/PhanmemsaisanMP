@@ -88,10 +88,14 @@ SOURCE_ACCOUNT_POLICIES: dict[str, SourceAccountPolicy] = {
     "fixed_assets": SourceAccountPolicy(
         strategy=ACCOUNT_STRATEGY_DESCRIPTION_BASE_ACCOUNT,
         base_account_by_description={
-            "fixed_assets_depr|": 5006016244,
+            "fixed_assets_depr|machinery_equipment|": 5006016242,
+            "fixed_assets_depr|vehicles|": 5006016243,
+            "fixed_assets_depr|tools_furniture_fixtures|": 5006016244,
+            "fixed_assets_depr|other_tangible_fixed_assets|": 5006016247,
+            "fixed_assets_depr|mold|": 5005036246,
             "fixed_assets_interest|": 9114120007,
         },
-        notes="Fixed-assets parser emits CC plus depreciation/interest descriptor.",
+        notes="Fixed-assets parser emits Category-specific depreciation accounts and one shared interest account.",
     ),
     "ga_unit_price": SourceAccountPolicy(
         strategy=ACCOUNT_STRATEGY_NOT_APPLICABLE,

@@ -718,7 +718,22 @@ def parse_manual_headcount(
     cursor.execute("DELETE FROM fact_bus_headcount_drivers WHERE source = 'manual'")
 
     inserted = 0
+    supplemental_only = 0
     for row in validation["valid_rows"]:
+        has_department_plan = conn.execute(
+            """
+            SELECT 1 FROM fact_monthly_headcount
+            WHERE CAST(cc_code AS TEXT)=? AND period=? AND source='department_plan'
+            LIMIT 1
+            """,
+            (str(row["cc_code"]), str(row["period"])),
+        ).fetchone() is not None
+        headcount_all = 0 if has_department_plan else row["headcount_all"]
+        headcount_staff = 0 if has_department_plan else row["headcount_staff"]
+        headcount_worker = 0 if has_department_plan else row["headcount_worker"]
+        description = row["description"]
+        if has_department_plan:
+            supplemental_only += 1
         cursor.execute(
             """
             INSERT INTO fact_monthly_headcount
@@ -738,12 +753,12 @@ def parse_manual_headcount(
             (
                 row["period"],
                 row["cc_code"],
-                row["headcount_all"],
-                row["headcount_staff"],
-                row["headcount_worker"],
+                headcount_all,
+                headcount_staff,
+                headcount_worker,
                 row["headcount_male"],
                 row["headcount_female"],
-                row["description"],
+                description,
             ),
         )
         inserted += 1
@@ -775,4 +790,5 @@ def parse_manual_headcount(
         "bus_inserted": bus_inserted,
         "bus_errors": 0,
         "bus_template_path": str(bus_template_path),
+        "supplemental_only": supplemental_only,
     }

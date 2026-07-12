@@ -123,6 +123,7 @@ def test_complete_v1_single_export_finalizes_source_order_after_reference_layer(
         fiscal_year=2027,
         template_path="FORM.xlsx",
         source_dir="raw",
+        exchange_rate=25450,
         target_cc=1412000040,
         primary_reference_path=str(tmp_path / "ref.xlsx"),
         reference_map_path=str(tmp_path / "map.csv"),
@@ -206,6 +207,7 @@ def test_complete_v1_single_export_without_reference_still_finalizes_source_orde
         fiscal_year=2027,
         template_path="FORM.xlsx",
         source_dir="raw",
+        exchange_rate=25450,
         target_cc=1412000006,
         reference_map_path=None,
     )

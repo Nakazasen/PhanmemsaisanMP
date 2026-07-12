@@ -186,7 +186,14 @@ def test_cli_flag_default_off(monkeypatch, tmp_path):
         def close(self): return None
 
     monkeypatch.setattr("scripts.run_e2e.get_connection", lambda path: Conn())
-    ok, _ = run_universal_pipeline(2027, __file__, str(tmp_path), target_cc=1412000040, mp_saisan_complete_v1=False)
+    ok, _ = run_universal_pipeline(
+        2027,
+        __file__,
+        str(tmp_path),
+        exchange_rate=25450,
+        target_cc=1412000040,
+        mp_saisan_complete_v1=False,
+    )
     assert ok is True
     assert calls == []
 
