@@ -30,6 +30,8 @@ Các input đang được repo kỳ vọng gồm:
 - Các source workbook trong `docs/MP2027`: facility, fixed assets, IT/system cost, GA/admin, birthday, NNN paperwork và các workbook liên quan.
 
 > **Nguyên tắc:** workbook `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx` là nguồn nghiệp vụ canonical cao nhất. File này được người dùng xác nhận là bản mới nhất ngày 11.07.2026. Markdown chỉ là tài liệu diễn giải/handover.
+>
+> Bộ nguồn ngày `09.06.2026` được giữ như mốc lịch sử/legacy để truy vết yêu cầu; khi có khác biệt, workbook canonical `10.07.2026` được ưu tiên.
 
 ## Output chính
 
@@ -48,15 +50,26 @@ Output runtime mặc định không nên commit:
 - Không tự biến blank thành zero.
 - Giữ format/formula của FORM; chỉ thay đổi logic tính toán khi có test/bằng chứng bảo vệ.
 
-## Cài môi trường Windows
+## Cài môi trường Windows sau khi clone
 
 ```powershell
+git clone https://github.com/Nakazasen/PhanmemsaisanMP
+Set-Location PhanmemsaisanMP
 py -m venv .venv
 .\.venv\Scripts\activate
 py -m pip install -U pip
 pip install -r requirements.txt
+py -m compileall src scripts packaging
+py -m pytest -m "not requires_raw_excel"
 ```
 
+Fresh clone phải có trực tiếp workbook canonical:
+
+```text
+raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx
+```
+
+Không cần sao chép `build/`, `dist/`, CSDL local hoặc output từ máy cũ.
 Nếu máy có lệnh `python` trỏ sai Microsoft Store, dùng `py` như các ví dụ trên.
 
 ## Cách chạy
@@ -114,10 +127,22 @@ Các test được đánh dấu `requires_raw_excel` cần workbook thật trong
 ## Không được commit
 
 - DB runtime: `mp2027.db`, `*.db`, `*.sqlite`, `*.sqlite3`.
-- Output export mới trong `OUTPUT_FY2027/`.
+- Mọi output runtime trong `OUTPUT_FY2027/`.
 - Source Excel công ty/private chưa được xác nhận là curated input.
-- File tạm/cache/build: `__pycache__`, `.pytest_cache`, `.venv`, `build`, `dist`, `~$*`, `*.tmp`, `*.bak`.
+- File tạm/cache/build: `__pycache__`, `.pytest_cache`, `.venv`, `.tmp_test_artifacts`, `build`, `dist`, `~$*`, `*.tmp`, `*.bak`.
+- Script điều tra dùng một lần ở root: `.inspect_*.py`, `.compare_*.py`.
 - Secret: `.env`, key/token/credential file.
+
+## Dọn artifact local an toàn
+
+Các thư mục/file sau được tái tạo tự động và có thể xóa khi cần giải phóng dung lượng:
+
+```powershell
+Remove-Item -Recurse -Force build, dist, .tmp_test_artifacts -ErrorAction SilentlyContinue
+Remove-Item -Force mp2027.db, mp2027_before_optimization.db -ErrorAction SilentlyContinue
+```
+
+Sau khi dọn, source code và input canonical trong Git không bị ảnh hưởng.
 
 ## Tài liệu nghiệp vụ cần đọc trước
 

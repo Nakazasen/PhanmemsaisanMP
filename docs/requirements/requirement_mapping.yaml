@@ -2,6 +2,7 @@
 # Canonical rule: raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx wins over all derived Markdown.
 canonical_source_of_truth: "raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx"
 canonical_reconciled_at_local: "2026-07-11 (user-confirmed source authority; implementation re-audit pending)"
+legacy_source_snapshot: "09.06.2026 (historical trace only; superseded by canonical 10.07.2026 workbook)"
 canonical_workbook_inventory:
   - sheet: "Sheet1"
     max_row: 55

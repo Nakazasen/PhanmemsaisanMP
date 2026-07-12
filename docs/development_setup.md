@@ -4,13 +4,21 @@
 
 Dùng Python 3.10+ trên Windows. Nếu lệnh `python` mở Microsoft Store, dùng `py`.
 
-## Tạo môi trường
+## Fresh clone và tạo môi trường
 
 ```powershell
+git clone https://github.com/Nakazasen/PhanmemsaisanMP
+Set-Location PhanmemsaisanMP
 py -m venv .venv
 .\.venv\Scripts\activate
 py -m pip install -U pip
 pip install -r requirements.txt
+```
+
+Xác nhận workbook canonical có sẵn sau clone:
+
+```text
+raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx
 ```
 
 ## Kiểm tra nhanh
@@ -18,10 +26,10 @@ pip install -r requirements.txt
 ```powershell
 py -m compileall src scripts packaging
 py -m pytest -m "not requires_raw_excel"
-py -m pytest
 ```
 
-GitHub CI chạy `py -m pytest -m "not requires_raw_excel"` để loại các integration test cần workbook Excel thật trong `raw/`. Local máy có đủ dữ liệu raw vẫn chạy `py -m pytest` để kiểm tra toàn bộ. Test có marker `requires_raw_excel` không được skip âm thầm nếu raw workbook tồn tại.
+GitHub CI chạy nhóm test trên để loại các integration test cần workbook Excel phòng ban trong `raw/`.
+Máy có đầy đủ dữ liệu nguồn có thể chạy thêm `py -m pytest`.
 
 ## Chạy GUI
 
@@ -29,20 +37,31 @@ GitHub CI chạy `py -m pytest -m "not requires_raw_excel"` để loại các in
 run_MP2027.bat
 ```
 
-## Chạy E2E smoke an toàn
+## Chạy E2E smoke
 
 ```powershell
 py scripts/run_e2e.py --target-cc 1412000040
 ```
 
-Chỉ chạy khi có `docs/MP2027/FORM.xlsx` và source workbook hợp lệ. Nếu thiếu dữ liệu thật, ghi nhận missing input hoặc lỗi rõ; không tạo dữ liệu giả.
+Nếu thiếu dữ liệu thật, pipeline phải ghi missing input hoặc lỗi rõ; không tạo dữ liệu giả.
 
 ## Build portable
 
-Repo có `packaging/mp2027_portable_entry.py` và spec PyInstaller. Nếu cần build, kiểm tra spec hiện tại rồi chạy PyInstaller trong venv đã cài requirements. Không commit `build/`, `dist/`, DB runtime hoặc output Excel sinh ra.
+Cài PyInstaller trong venv sạch chỉ có dependency cần thiết, sau đó chạy spec hiện tại.
+Spec loại các package ML/CV không được ứng dụng sử dụng để tránh bundle phình lớn do môi trường build bị nhiễm package.
+Không commit `build/` hoặc `dist/`.
+
+## Cleanup local an toàn
+
+```powershell
+Remove-Item -Recurse -Force build, dist, .tmp_test_artifacts -ErrorAction SilentlyContinue
+Remove-Item -Force mp2027.db, mp2027_before_optimization.db -ErrorAction SilentlyContinue
+```
+
+Các artifact trên tái tạo được và không cần chuyển sang máy mới.
 
 ## Quy tắc dữ liệu
 
-- Canonical requirement: workbook `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx` (được người dùng xác nhận là bản mới nhất ngày 11.07.2026).
+- Canonical requirement: workbook `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`.
 - Không commit source/output nhạy cảm nếu chưa được xác nhận.
 - Không đổi rule tiền/phân bổ nếu chưa có test và bằng chứng từ workbook canonical.
