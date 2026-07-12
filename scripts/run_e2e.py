@@ -340,16 +340,23 @@ def _staffing_sync_log_lines(result: dict) -> list[str]:
     return lines
 
 
-def _staffing_preflight(conn, fiscal_year: int, target_cc=None) -> list[str]:
+def _staffing_preflight(
+    conn,
+    fiscal_year: int,
+    target_cc=None,
+    excluded_ccs: set[str] | None = None,
+) -> list[str]:
     periods = get_fy_months(fiscal_year)
     baseline = fiscal_baseline_period(fiscal_year)
     if target_cc:
         cc_codes = [str(target_cc)]
     else:
+        excluded = excluded_ccs or set()
         cc_codes = [
             str(row[0]) for row in conn.execute(
                 "SELECT DISTINCT CAST(cc_code AS TEXT) FROM fact_input_data WHERE account_code > 0 ORDER BY 1"
             )
+            if str(row[0]) not in excluded
         ]
     issues: list[str] = []
     for cc_code in cc_codes:
@@ -404,6 +411,93 @@ def _staffing_preflight(conn, fiscal_year: int, target_cc=None) -> list[str]:
     return issues
 
 
+def _simulate_missing_baseline_from_april(
+    conn,
+    fiscal_year: int,
+    target_cc: object | None = None,
+) -> int:
+    """Create an explicitly marked manual T3 baseline from April for audit-only runs."""
+    baseline_period = f"{fiscal_year - 1}03"
+    april_period = f"{fiscal_year - 1}04"
+    target_clause = "AND CAST(april.cc_code AS TEXT) = ?" if target_cc is not None else ""
+    params: list[object] = [baseline_period, april_period]
+    if target_cc is not None:
+        params.append(str(target_cc).strip())
+
+    cursor = conn.execute(
+        f"""
+        INSERT INTO fact_monthly_headcount (
+            period, cc_code, headcount_all, headcount_expat,
+            headcount_staff, headcount_worker, headcount_male, headcount_female,
+            split_status, headcount_local_total, source, description,
+            source_file, source_sheet, imported_at
+        )
+        SELECT
+            ?, april.cc_code, april.headcount_all, april.headcount_expat,
+            april.headcount_staff, april.headcount_worker,
+            april.headcount_male, april.headcount_female,
+            april.split_status, april.headcount_local_total,
+            'manual', 'SIMULATED_BASELINE_T3_FROM_T4',
+            april.source_file, april.source_sheet, CURRENT_TIMESTAMP
+        FROM fact_monthly_headcount AS april
+        WHERE april.period = ?
+          AND april.source = 'department_plan'
+          {target_clause}
+          AND NOT EXISTS (
+              SELECT 1
+              FROM fact_monthly_headcount AS baseline
+              WHERE baseline.period = ?
+                AND baseline.source = 'manual'
+                AND CAST(baseline.cc_code AS TEXT) = CAST(april.cc_code AS TEXT)
+          )
+        """,
+        params + [baseline_period],
+    )
+    conn.commit()
+    return max(int(cursor.rowcount or 0), 0)
+
+
+def _exclude_incomplete_staffing_ccs_for_audit(conn, fiscal_year: int) -> list[str]:
+    """Remove incomplete CCs from allocation scope in an isolated audit database."""
+    fiscal_periods = get_fy_months(fiscal_year)
+    placeholders = ",".join("?" for _ in fiscal_periods)
+    complete_headcount = {
+        str(row[0])
+        for row in conn.execute(
+            f"""
+            SELECT CAST(cc_code AS TEXT)
+            FROM fact_monthly_headcount
+            WHERE source = 'department_plan' AND period IN ({placeholders})
+            GROUP BY CAST(cc_code AS TEXT)
+            HAVING COUNT(DISTINCT period) = ?
+            """,
+            [*fiscal_periods, len(fiscal_periods)],
+        ).fetchall()
+    }
+    complete_time = {
+        str(row[0])
+        for row in conn.execute(
+            f"""
+            SELECT CAST(cc_code AS TEXT)
+            FROM fact_headcount_time_source
+            WHERE period IN ({placeholders})
+            GROUP BY CAST(cc_code AS TEXT)
+            HAVING COUNT(DISTINCT period) = ?
+            """,
+            [*fiscal_periods, len(fiscal_periods)],
+        ).fetchall()
+    }
+    master_ccs = {
+        str(row[0])
+        for row in conn.execute("SELECT CAST(code AS TEXT) FROM dim_cost_centers").fetchall()
+    }
+    excluded = sorted(master_ccs - (complete_headcount & complete_time))
+    if excluded:
+        conn.executemany("DELETE FROM dim_cost_centers WHERE CAST(code AS TEXT) = ?", [(cc,) for cc in excluded])
+        conn.commit()
+    return excluded
+
+
 def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str, 
                            exchange_rate: float = 25450.0,
                            target_cc: int = None,
@@ -427,10 +521,16 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            fixed_assets_reference_skeleton_export: bool = False,
                            fixed_assets_skeleton_csv: str | None = None,
                            fixed_assets_skeleton_start_row: int | None = None,
-                           mp_saisan_complete_v1: bool = True):
+                           mp_saisan_complete_v1: bool = True,
+                           db_path: str | None = None,
+                           output_dir: str | None = None,
+                           simulate_baseline_t3_from_t4: bool = False,
+                           audit_exclude_incomplete_staffing: bool = False):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
-    - target_cc: if None, exports all 62 CCs.
+    - target_cc: if None, exports every CC represented by generated facts.
+    - db_path/output_dir: optional isolation paths; production defaults are unchanged.
+    - simulate_baseline_t3_from_t4: audit-only fallback with explicit provenance.
     """
     if log_callback is None:
         log_callback = _safe_console_print
@@ -472,14 +572,22 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         system_cost_export = True
         system_cost_start_row = 179
 
+    production_db_path = os.path.abspath(os.path.join(BASE_DIR, "mp2027.db"))
+    requested_db_path = os.path.abspath(db_path) if db_path else None
+    if simulate_baseline_t3_from_t4 or audit_exclude_incomplete_staffing:
+        if requested_db_path is None or os.path.normcase(requested_db_path) == os.path.normcase(production_db_path):
+            return False, (
+                "Các tùy chọn audit chỉ được phép chạy với db_path cô lập, khác production mp2027.db."
+            )
+
     try:
         log_callback(f"Quy trình năm tài chính {fiscal_year} (Tỷ giá: {exchange_rate:,.0f})")
         
         # 1. Setup Environment
-        db_path = os.path.join(BASE_DIR, 'mp2027.db')
-        
+        db_path = requested_db_path or production_db_path
+
         # Output Directory
-        output_dir = os.path.join(os.getcwd(), f"OUTPUT_FY{fiscal_year}")
+        output_dir = os.path.abspath(output_dir or os.path.join(os.getcwd(), f"OUTPUT_FY{fiscal_year}"))
         os.makedirs(output_dir, exist_ok=True)
         
         # 2. Database & Loading
@@ -591,7 +699,30 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         )
 
         # 4. Kiểm tra nguồn sự thật trước khi tính phân bổ
-        staffing_issues = _staffing_preflight(conn, fiscal_year, target_cc=target_cc)
+        audit_excluded_ccs: list[str] = []
+        if audit_exclude_incomplete_staffing:
+            audit_excluded_ccs = _exclude_incomplete_staffing_ccs_for_audit(conn, fiscal_year)
+            log_callback(
+                "Audit staffing scope: loại khỏi lần chạy "
+                f"{len(audit_excluded_ccs)} CC thiếu kế hoạch 12 tháng/time: "
+                + (", ".join(audit_excluded_ccs) if audit_excluded_ccs else "không có")
+            )
+        if simulate_baseline_t3_from_t4:
+            simulated_count = _simulate_missing_baseline_from_april(
+                conn,
+                fiscal_year,
+                target_cc=target_cc,
+            )
+            log_callback(
+                "Audit baseline simulation: "
+                f"đã tạo {simulated_count} dòng SIMULATED_BASELINE_T3_FROM_T4."
+            )
+        staffing_issues = _staffing_preflight(
+            conn,
+            fiscal_year,
+            target_cc=target_cc,
+            excluded_ccs=set(audit_excluded_ccs),
+        )
         if staffing_issues:
             scope = f"CC {target_cc}" if target_cc else "toàn bộ CC dự kiến xuất"
             details = "\n".join(f"- {issue}" for issue in staffing_issues)
@@ -745,7 +876,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             # Batch Export
             log_callback("Đang xuất hàng loạt...")
             cursor.execute("SELECT DISTINCT cc_code FROM fact_input_data WHERE account_code > 0")
-            all_ccs = [row[0] for row in cursor.fetchall()]
+            excluded_set = set(audit_excluded_ccs)
+            all_ccs = [row[0] for row in cursor.fetchall() if str(row[0]) not in excluded_set]
             
             count = 0
             for cc in all_ccs:

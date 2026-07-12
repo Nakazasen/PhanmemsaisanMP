@@ -72,7 +72,7 @@ def _ensure_external_runtime_data() -> None:
 
 _ensure_external_runtime_data()
 
-from src.db.loader import load_all
+from src.db.loader import load_all, load_cost_centers
 from src.db.schema import create_schema, get_connection
 from src.services.headcount_source_importer import (
     cleanup_headcount_truth,
@@ -910,7 +910,11 @@ class MPManagerApp:
         cc_frame.grid(row=3, column=1, sticky="w")
         self.cc_combo = ttk.Combobox(cc_frame, textvariable=self.cc_code_filter, width=40, state="readonly")
         self.cc_combo.pack(side="left")
-        self.refresh_btn = ttk.Button(cc_frame, text="↻", width=3, command=self.load_cc_list)
+        self.refresh_btn = ttk.Button(
+            cc_frame,
+            text="Nạp lại CC từ FORM",
+            command=self.refresh_cost_centers_from_form,
+        )
         self.refresh_btn.pack(side="left", padx=(4, 0))
         ttk.Label(container, text="Để trống để xuất toàn bộ").grid(row=3, column=2, sticky="w", padx=(12, 0))
 
@@ -1456,7 +1460,7 @@ class MPManagerApp:
         db_path = os.path.join(BASE_DIR, "mp2027.db")
 
         if not os.path.exists(db_path):
-            self.log("Chưa có dữ liệu nền. Hãy bấm CHẠY TÍNH TOÁN để chương trình nạp nguồn và xuất kết quả.")
+            self.log("Chưa có dữ liệu nền. Hãy bấm 'Nạp lại CC từ FORM'.")
             return
 
         try:
@@ -1464,13 +1468,58 @@ class MPManagerApp:
             rows = conn.execute("SELECT code, name_jp FROM dim_cost_centers ORDER BY code").fetchall()
             if not rows:
                 conn.close()
-                self.log("Danh sách CC trong DB đang trống. Hãy bấm CHẠY TÍNH TOÁN để nạp lại dữ liệu nguồn.")
+                self.cc_combo["values"] = []
+                self.log("Danh sách CC trong DB đang trống. Hãy bấm 'Nạp lại CC từ FORM'.")
                 return
-            
+
             self.cc_combo["values"] = [f"{row['code']} - {row['name_jp']}" for row in rows]
             conn.close()
         except Exception as exc:
             self.log(f"Lỗi khi nạp danh sách CC: {exc}")
+
+    def refresh_cost_centers_from_form(self):
+        """Refresh existing CCs, or seed an empty master from the selected FORM."""
+        db_path = os.path.join(BASE_DIR, "mp2027.db")
+        conn = None
+        self.refresh_btn.configure(state=tk.DISABLED)
+        try:
+            conn = get_connection(db_path)
+            create_schema(conn)
+            current_count = int(conn.execute("SELECT COUNT(*) FROM dim_cost_centers").fetchone()[0])
+            if current_count:
+                rows = conn.execute(
+                    "SELECT code, name_jp FROM dim_cost_centers ORDER BY code"
+                ).fetchall()
+                self.cc_combo["values"] = [f"{row['code']} - {row['name_jp']}" for row in rows]
+                self.log(f"Đã làm mới danh sách {current_count} Trung tâm chi phí từ CSDL.")
+                return
+
+            template = self.template_path.get().strip()
+            template_error = _validate_selected_template(template)
+            if template_error:
+                raise ValueError(template_error)
+
+            loaded_count = load_cost_centers(conn, template)
+            if loaded_count <= 0:
+                raise RuntimeError("FORM không chứa Trung tâm chi phí hợp lệ để nạp vào CSDL.")
+
+            rows = conn.execute(
+                "SELECT code, name_jp FROM dim_cost_centers ORDER BY code"
+            ).fetchall()
+            self.cc_combo["values"] = [f"{row['code']} - {row['name_jp']}" for row in rows]
+            self.log(f"Đã nạp {loaded_count} Trung tâm chi phí từ FORM và làm mới danh sách.")
+            messagebox.showinfo(
+                "Nạp Trung tâm chi phí thành công",
+                f"Đã nạp {loaded_count} Trung tâm chi phí từ:\n{template}",
+            )
+        except Exception as exc:
+            message = _friendly_error_message(exc)
+            self.log(f"Không thể nạp Trung tâm chi phí từ FORM: {message}")
+            messagebox.showerror("Không thể nạp Trung tâm chi phí", message)
+        finally:
+            if conn is not None:
+                conn.close()
+            self.refresh_btn.configure(state=tk.NORMAL)
 
     def auto_init_master_data(self):
         """Automatically load master data if FORM.xlsx is available in current dir."""

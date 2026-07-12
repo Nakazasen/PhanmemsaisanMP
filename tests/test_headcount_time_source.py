@@ -12,6 +12,12 @@ from src.services.headcount_source_importer import (
     fiscal_year_periods,
     import_headcount_time_sources,
 )
+from scripts.run_e2e import (
+    _exclude_incomplete_staffing_ccs_for_audit,
+    _simulate_missing_baseline_from_april,
+    _staffing_preflight,
+    run_universal_pipeline,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "raw" / "10.07.2026"
@@ -236,6 +242,87 @@ class HeadcountTimeSourceTests(unittest.TestCase):
         self.assertEqual(audit["decision"], "CONFIRMED_IMPORT")
         self.assertEqual(audit["cc_code"], parsed.cc_code)
         self.assertEqual(audit["source_file"], os.path.abspath(parsed.path))
+
+    def test_audit_baseline_simulation_uses_canonical_period_and_preserves_observed(self):
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        create_schema(conn)
+        conn.executemany(
+            """INSERT INTO fact_monthly_headcount
+            (period,cc_code,headcount_staff,headcount_worker,headcount_all,source,description)
+            VALUES(?,?,?,?,?,?,?)""",
+            (
+                ("202604", "CC_SIM", 3, 7, 10, "department_plan", "April"),
+                ("202604", "CC_OBS", 4, 8, 12, "department_plan", "April"),
+                ("202603", "CC_OBS", 5, 8, 13, "manual", "Observed baseline"),
+            ),
+        )
+        conn.commit()
+
+        inserted = _simulate_missing_baseline_from_april(conn, 2027)
+
+        self.assertEqual(inserted, 1)
+        simulated = conn.execute(
+            """SELECT period,headcount_staff,headcount_worker,headcount_all,description
+            FROM fact_monthly_headcount WHERE cc_code='CC_SIM' AND source='manual'"""
+        ).fetchone()
+        self.assertEqual(tuple(simulated), ("202603", 3.0, 7.0, 10.0, "SIMULATED_BASELINE_T3_FROM_T4"))
+        observed = conn.execute(
+            "SELECT headcount_all,description FROM fact_monthly_headcount WHERE cc_code='CC_OBS' AND period='202603'"
+        ).fetchall()
+        self.assertEqual([tuple(row) for row in observed], [(13.0, "Observed baseline")])
+
+    def test_audit_scope_excludes_incomplete_cc_from_preflight(self):
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        create_schema(conn)
+        periods = fiscal_year_periods(2027)
+        conn.executemany(
+            "INSERT INTO dim_cost_centers(code,name_jp,saisan_type,cost_type) VALUES(?,?,'MFG','Fixed')",
+            (("CC_OK", "Complete"), ("CC_BLOCKED", "Incomplete")),
+        )
+        for period in periods:
+            conn.execute(
+                "INSERT INTO fact_monthly_headcount(period,cc_code,headcount_all,source) VALUES(?,?,10,'department_plan')",
+                (period, "CC_OK"),
+            )
+            conn.execute(
+                "INSERT INTO fact_headcount_time_source(period,cc_code,fixed_hours_local) VALUES(?,?,100)",
+                (period, "CC_OK"),
+            )
+        conn.executemany(
+            "INSERT INTO fact_input_data(source,period,amount_vnd,cc_code,account_code) VALUES('test','202604',1,?,1)",
+            (("CC_OK",), ("CC_BLOCKED",)),
+        )
+        conn.execute(
+            "INSERT INTO fact_monthly_headcount(period,cc_code,headcount_all,source) VALUES('202603','CC_OK',9,'manual')"
+        )
+        conn.commit()
+
+        excluded = _exclude_incomplete_staffing_ccs_for_audit(conn, 2027)
+        issues = _staffing_preflight(conn, 2027, excluded_ccs=set(excluded))
+
+        self.assertEqual(excluded, ["CC_BLOCKED"])
+        self.assertEqual(issues, [])
+        self.assertIsNone(conn.execute("SELECT 1 FROM dim_cost_centers WHERE code='CC_BLOCKED'").fetchone())
+
+    def test_audit_flags_require_nonproduction_database_path(self):
+        common = {
+            "fiscal_year": 2027,
+            "template_path": "unused-form.xlsx",
+            "source_dir": "unused-source",
+            "simulate_baseline_t3_from_t4": True,
+        }
+        missing_path = run_universal_pipeline(**common)
+        production_path = run_universal_pipeline(
+            **common,
+            db_path=str(ROOT / "mp2027.db"),
+        )
+
+        self.assertFalse(missing_path[0])
+        self.assertFalse(production_path[0])
+        self.assertIn("db_path cô lập", missing_path[1])
+        self.assertIn("db_path cô lập", production_path[1])
 
 
 if __name__ == "__main__": unittest.main()
