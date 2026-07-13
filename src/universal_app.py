@@ -2055,8 +2055,8 @@ class MPManagerApp:
                 "event_type có thể dùng month_specific_driver cho event theo tháng riêng.  "
                 "Nếu nhập unit_price thì đơn giá nhập tay được ưu tiên; nếu bỏ trống unit_price, nhập unit_price_key/allocation_content để tự lấy đơn giá từ FY2027配賦額一覧.  "
                 "Có thể bỏ trống account_code nếu nhập account_jp_name/account_name, ví dụ 福利厚生費.  "
-                "row/form_row = dòng FORM cần ghi, ví dụ 66 cho 社員旅行.  "
-                "Sample help-only: 1412000089,202705,社員旅行 Du lịch công ty,month_specific_driver,111,社員旅行,福利厚生費,66,Sample: company trip May driver."
+                "Vị trí ghi trong FORM được xác định tự động theo nhóm nguồn và thứ tự dữ liệu; không nhập dòng Excel.  "
+                "Sample help-only: 1412000089,202705,Du lịch công ty,month_specific_driver,111,account_jp_name,Sample: company trip May driver."
             ),
             wraplength=1160,
         ).grid(row=0, column=0, sticky="w", padx=8, pady=(6, 2))
@@ -2082,7 +2082,6 @@ class MPManagerApp:
         bus_vietnamese_people_var = tk.StringVar(value="0")
         account_var = tk.StringVar()
         account_jp_name_var = tk.StringVar()
-        form_row_var = tk.StringVar()
         desc_var = tk.StringVar()
 
         cc_choices = self._get_cc_choices()
@@ -2143,9 +2142,8 @@ class MPManagerApp:
         add_label_entry(5, 2, "Người Việt Nam đi xe bus", bus_vietnamese_people_var, width=16)
         add_label_entry(6, 0, "Mã tài khoản", account_var, width=16)
         add_label_entry(6, 2, "Tên TK Nhật", account_jp_name_var, width=18)
-        add_label_entry(6, 4, "Dòng FORM", form_row_var, width=12)
-        ttk.Label(frame, text="Ghi chú").grid(row=6, column=6, sticky="w", padx=(0, 4), pady=3)
-        ttk.Entry(frame, textvariable=desc_var, width=32).grid(row=6, column=7, sticky="w", pady=3)
+        ttk.Label(frame, text="Ghi chú").grid(row=6, column=4, sticky="w", padx=(0, 4), pady=3)
+        ttk.Entry(frame, textvariable=desc_var, width=32).grid(row=6, column=5, columnspan=3, sticky="w", pady=3)
 
         columns = tuple(TEMPLATE_COLUMNS)
         tree = ttk.Treeview(frame, columns=columns, show="headings", height=20)
@@ -2166,8 +2164,6 @@ class MPManagerApp:
             ("account_jp_name", 120, "Tên TK Nhật"),
             ("account_name", 120, "Alias TK"),
             ("account_group", 100, "Nhóm TK"),
-            ("form_row", 75, "Form row"),
-            ("row", 65, "Row"),
             ("source_month", 100, "Source month"),
             ("headcount_basis", 120, "Headcount basis"),
             ("description", 180, "Description"),
@@ -2203,7 +2199,6 @@ class MPManagerApp:
                 bus_vietnamese_people_var,
                 account_var,
                 account_jp_name_var,
-                form_row_var,
                 desc_var,
             ):
                 variable.set("")
@@ -2220,8 +2215,6 @@ class MPManagerApp:
                     value = str(row.get(col, "") or "").strip()
                     if col == "target_month" and not value:
                         value = str(row.get("period", "") or "").strip()
-                    elif col == "row" and not value:
-                        value = str(row.get("form_row", "") or "").strip()
                     elif col == "note" and not value:
                         value = str(row.get("description", "") or "").strip()
                     values.append(value)
@@ -2263,7 +2256,6 @@ class MPManagerApp:
                 )
                 account_code = validate_numeric(account_var.get(), "mã tài khoản")
                 account_jp_name = account_jp_name_var.get().strip()
-                form_row = validate_numeric(form_row_var.get(), "dòng FORM")
                 if not account_code and not account_jp_name:
                     raise ValueError("Cần nhập Mã tài khoản, hoặc Tên TK Nhật để tự resolve account_code.")
                 if not ((count and (unit_price or unit_price_key)) or amount_vnd):
@@ -2290,8 +2282,6 @@ class MPManagerApp:
                     "account_code": account_code,
                     "account_jp_name": account_jp_name,
                     "account_name": account_jp_name,
-                    "form_row": form_row,
-                    "row": form_row,
                     "description": desc_var.get().strip(),
                     "note": desc_var.get().strip(),
                 }
@@ -2326,7 +2316,6 @@ class MPManagerApp:
             bus_vietnamese_people_var.set(row_data.get("bus_vietnamese_people", "") or "0")
             account_var.set(row_data.get("account_code", ""))
             account_jp_name_var.set(row_data.get("account_jp_name") or row_data.get("account_name", ""))
-            form_row_var.set(row_data.get("row") or row_data.get("form_row", ""))
             desc_var.set(row_data.get("note") or row_data.get("description", ""))
 
         def save_file():

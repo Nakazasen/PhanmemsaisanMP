@@ -48,6 +48,12 @@ def test_canonical_path_is_one_dynamic_write_without_legacy_staging():
     assert "apply_facility_file_order_to_workbook" not in source
 
 
+def test_manual_event_ui_cannot_choose_a_form_row():
+    source = _source("src/universal_app.py")
+    assert "form_row_var" not in source
+    assert "row/form_row" not in source
+
+
 def test_source_workbooks_are_resolved_from_manifest():
     source = _source("scripts/run_e2e.py")
     assert "read_source_manifest(source_dir)" in source

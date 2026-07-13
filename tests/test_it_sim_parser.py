@@ -8,7 +8,6 @@ import sqlite3
 import pandas as pd
 
 from src.db.schema import create_schema, init_sys_params
-from src.engine.hub_builder import HubBuilder
 from src.parsers.it_sim import (
     _join_description,
     _metadata_parts,
@@ -44,11 +43,11 @@ class TestItSimParserAuditMetadata(unittest.TestCase):
         self.assertIn("source_sheet=VPN%20detail", description)
         self.assertIn("source_filter=cc:1412000006", description)
 
-        builder = object.__new__(HubBuilder)
-        component_key, quantity, unit_usd = builder._parse_it_component_term(description)
-        self.assertEqual(component_key, "vpn")
-        self.assertEqual(quantity, 10.0)
-        self.assertEqual(unit_usd, 3.19)
+        # The dynamic exporter preserves this parser metadata as provenance;
+        # it no longer delegates term parsing to the retired fixed-row writer.
+        self.assertIn("component_term|vpn", description)
+        self.assertIn("qty=10", description)
+        self.assertIn("unit_usd=3.19", description)
 
     def test_it_sim_records_include_audit_metadata(self):
         df = pd.DataFrame(

@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 from src.db.schema import create_schema
 from src.parsers.headcount_time_plan import parse_headcount_time_plan
 from src.services.headcount_source_importer import (
@@ -23,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "raw" / "10.07.2026"
 
 class HeadcountTimeSourceTests(unittest.TestCase):
+    @pytest.mark.requires_raw_excel
     def test_department_16_parses_all_months_and_metrics(self):
         path = next(SOURCE.glob("16.*.xls"))
         result = parse_headcount_time_plan(str(path), 2027)
@@ -35,6 +38,7 @@ class HeadcountTimeSourceTests(unittest.TestCase):
         self.assertEqual(result.rows[0]["fixed_hours_expat"], 153)
         self.assertEqual(result.rows[0]["overtime_hours_local"], 186)
 
+    @pytest.mark.requires_raw_excel
     def test_import_is_idempotent_and_skips_unknown_cc(self):
         conn=sqlite3.connect(":memory:"); conn.row_factory=sqlite3.Row; create_schema(conn)
         departments = (
@@ -136,6 +140,7 @@ class HeadcountTimeSourceTests(unittest.TestCase):
         )
         self.assertEqual(cleanup_headcount_truth(conn, 2027)["total_rows"], 0)
 
+    @pytest.mark.requires_raw_excel
     def test_cleanup_then_import_recreates_truth_rows(self):
         conn = sqlite3.connect(":memory:")
         conn.row_factory = sqlite3.Row
@@ -170,6 +175,7 @@ class HeadcountTimeSourceTests(unittest.TestCase):
             36,
         )
 
+    @pytest.mark.requires_raw_excel
     def test_real_bilingual_duplicate_corrupt_and_xlsx_cases(self):
         vietnamese = parse_headcount_time_plan(str(next(SOURCE.glob("12.*.xls"))), 2027)
         duplicate_cc = parse_headcount_time_plan(str(next(SOURCE.glob("15.*.xls"))), 2027)
@@ -187,6 +193,7 @@ class HeadcountTimeSourceTests(unittest.TestCase):
         self.assertEqual(missing_lookup.status, "valid", missing_lookup.errors)
         self.assertEqual(missing_lookup.lookup_status, "missing")
 
+    @pytest.mark.requires_raw_excel
     def test_xlsx_missing_lookup_uses_matching_master_fallback(self):
         parsed = parse_headcount_time_plan(str(next(SOURCE.glob("64.*.xlsx"))), 2027)
         conn = sqlite3.connect(":memory:")
@@ -207,6 +214,7 @@ class HeadcountTimeSourceTests(unittest.TestCase):
             conn.execute("SELECT COUNT(*) FROM fact_monthly_headcount").fetchone()[0], 12
         )
 
+    @pytest.mark.requires_raw_excel
     def test_unknown_cc_requires_confirmation_then_imports_without_master_and_audits(self):
         parsed = parse_headcount_time_plan(str(next(SOURCE.glob("72.*.xls"))), 2027)
         self.assertEqual(parsed.status, "valid", parsed.errors)

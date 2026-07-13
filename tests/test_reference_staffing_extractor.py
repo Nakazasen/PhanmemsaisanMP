@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from openpyxl import Workbook
+import pytest
 
 from src.parsers.extracted_headcount_time_plan import parse_extracted_headcount_time_plan
 from src.services.reference_staffing_extractor import evaluate_cell, extract_reference_staffing_sources
@@ -22,6 +23,7 @@ class FormulaEvaluatorTests(unittest.TestCase):
 
 
 class ReferenceExtractionTests(unittest.TestCase):
+    @pytest.mark.requires_raw_excel
     def test_real_65_file_extraction_is_complete_and_traceable(self):
         with tempfile.TemporaryDirectory() as tmp:
             result=extract_reference_staffing_sources(REFERENCE,tmp,2027,OFFICIAL)

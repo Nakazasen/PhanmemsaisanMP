@@ -180,7 +180,7 @@ def _log_debug_traceback(log_callback) -> None:
         log_callback("Chi tiết kỹ thuật đã được ẩn. Nếu cần điều tra sâu, bật MP2027_DEBUG_TRACEBACK=1 rồi chạy lại.")
 
 
-def _format_complete_v1_result_vi(result: dict[str, int]) -> str:
+def _format_dynamic_export_result_vi(result: dict[str, int]) -> str:
     labels = {
         "source_blocks_written": "nhóm nguồn",
         "rows_written": "dòng ghi",
@@ -628,7 +628,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             )
             log_callback(
                 "Đã xuất động theo thứ tự nguồn: "
-                + _format_complete_v1_result_vi(dynamic_result)
+                + _format_dynamic_export_result_vi(dynamic_result)
             )
             log_callback(f"Hoàn tất: {output_dir}")
         else:

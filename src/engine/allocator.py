@@ -892,6 +892,8 @@ class AllocationEngine:
 
             if self._is_recruitment_health_rule(rule):
                 unit_price = float(rule["unit_price"] or 0.0)
+                if unit_price <= 0:
+                    continue
                 for target_period in self.fy_months:
                     source_period = self._get_prev_period(target_period)
                     if not source_period:
@@ -899,6 +901,8 @@ class AllocationEngine:
                     for cc in self.cost_centers:
                         staff_new, worker_new = self._recruitment_health_new_hires(cc["code"], source_period, rule)
                         total_new = staff_new + worker_new
+                        if total_new <= 0:
+                            continue
                         target_acc = self._get_account_for_cc(
                             str(cc["cost_type"]), rule["mfg_account"], rule["ga_account"], rule["sales_account"]
                         )
