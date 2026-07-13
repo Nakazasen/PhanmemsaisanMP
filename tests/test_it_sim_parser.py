@@ -142,7 +142,14 @@ class TestItSimAccountCodeMapping(unittest.TestCase):
             source_path = Path(temp_dir) / "システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls"
             source_path.write_bytes(b"placeholder")
 
-            with patch(
+            manifest = [{
+                "category": "it_simulation",
+                "filename": source_path.name,
+                "_path": str(source_path),
+                "period_start": "202604",
+                "period_end": "202703",
+            }]
+            with patch("src.parsers.it_sim.read_source_manifest", return_value=manifest), patch(
                 "src.parsers.it_sim.parse_it_sim_file",
                 return_value=[
                     {

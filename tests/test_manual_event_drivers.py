@@ -73,8 +73,6 @@ def _write_event_csv(tmp_path, rows):
         "account_jp_name",
         "account_name",
         "account_group",
-        "form_row",
-        "row",
         "headcount_basis",
         "description",
         "note",
@@ -98,7 +96,6 @@ def test_manual_event_driver_resolves_account_name_by_cost_type(tmp_path):
                 "count": "2",
                 "unit_price": "1000",
                 "account_jp_name": ACCOUNT_WELFARE,
-                "form_row": "59",
             }
         ],
     )
@@ -122,7 +119,6 @@ def test_manual_event_driver_missing_account_reports_clear_error(tmp_path):
                 "count": "1",
                 "unit_price": "1000",
                 "account_jp_name": ACCOUNT_MISSING,
-                "form_row": "59",
             }
         ],
     )
@@ -145,7 +141,6 @@ def test_manual_event_driver_does_not_fallback_to_wrong_account_column(tmp_path)
                 "count": "1",
                 "unit_price": "1000",
                 "account_jp_name": ACCOUNT_MFG_ONLY,
-                "form_row": "59",
             }
         ],
     )
@@ -180,7 +175,7 @@ def test_manual_event_driver_applies_reference_defaults_for_known_event(tmp_path
     ).fetchone()
     assert row["period"] == "202609"
     assert row["account_code"] == 5004086291
-    assert row["form_row"] == 71
+    assert row["form_row"] is None
     assert row["amount_vnd"] == 168000
     assert "formula_expr=3*56000" in row["description"]
     conn.close()
