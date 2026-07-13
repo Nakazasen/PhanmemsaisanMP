@@ -1,0 +1,75 @@
+{
+  "reference_workbooks": 65,
+  "reference_ccs": 65,
+  "runnable_ccs": 61,
+  "observed_ccs": 3,
+  "simulated_ccs": 58,
+  "blocked_reference_ccs": [
+    "1412000034",
+    "1412000070",
+    "1412000106",
+    "1412000108"
+  ],
+  "fixed_asset_source_coverage": {
+    "source_rows": 1141,
+    "by_cc": {
+      "1412000034": 86,
+      "1412000056": 39,
+      "1412000004": 166,
+      "1412000005": 381,
+      "1412000044": 2,
+      "1412000013": 2,
+      "1412000081": 269,
+      "1412000018": 28,
+      "1412000103": 87,
+      "1412000098": 13,
+      "1412000083": 14,
+      "1412000050": 16,
+      "1412000036": 8,
+      "1412000040": 2,
+      "1412000057": 16,
+      "1412000019": 6,
+      "1412000069": 1,
+      "1412000039": 1,
+      "1412000094": 1,
+      "1412000096": 1,
+      "1412000099": 1,
+      "1412000078": 1
+    },
+    "by_category": {
+      "machinery_equipment": 99,
+      "vehicles": 15,
+      "mold": 490,
+      "tools_furniture_fixtures": 533,
+      "other_tangible_fixed_assets": 4
+    },
+    "by_sheet": {
+      "2025.11": {
+        "mode": "header",
+        "selected": true,
+        "source_rows": 1141,
+        "skipped_reasons": {
+          "out_of_scope_category": 125,
+          "missing_depreciation_cc": 1
+        }
+      }
+    },
+    "selected_sheets": [
+      "2025.11"
+    ],
+    "skipped_reasons": {
+      "out_of_scope_category": 125,
+      "missing_depreciation_cc": 1
+    }
+  },
+  "fixed_asset_comparison_rows": 1145,
+  "fixed_asset_classifications": {
+    "AMOUNT_MISMATCH": 403,
+    "FX_RATE_ONLY": 244,
+    "MATCH_VND": 24,
+    "SOURCE_OR_SCOPE_GAP": 474
+  },
+  "unresolved_reference_interest_rows": 148,
+  "uniform_rows": 146,
+  "workbook_export_status": "BLOCKED_BY_UNRELATED_FORM_GAS_IDENTITY"
+}

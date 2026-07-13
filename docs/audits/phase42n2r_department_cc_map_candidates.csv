@@ -1,0 +1,7 @@
+﻿department_no,department_name,department_jp_name,target_cc,cost_type,source_file,source_sheet,source_row,confidence,reason
+,,,,,raw\FORM.xlsx,,,PENDING_SAFE_SCAN,Trusted source queued; previous direct open scan was cancelled because it showed no progress. Use safe scanner subprocess timeout next.
+,,,,,raw\Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026.xlsx,,,PENDING_SAFE_SCAN,Trusted source queued; previous direct open scan was cancelled because it showed no progress. Use safe scanner subprocess timeout next.
+,,,,,raw\Cải tiến nhập dữ liệu chung vào file MPnew 04.06.2026_ảnh.xlsx,,,PENDING_SAFE_SCAN,Trusted source queued; previous direct open scan was cancelled because it showed no progress. Use safe scanner subprocess timeout next.
+,,,,,raw\source_file_order.csv,,,PENDING_SAFE_SCAN,Trusted source queued; previous direct open scan was cancelled because it showed no progress. Use safe scanner subprocess timeout next.
+,,,,,raw\source_file_order.xlsx,,,PENDING_SAFE_SCAN,Trusted source queued; previous direct open scan was cancelled because it showed no progress. Use safe scanner subprocess timeout next.
+,,,,,raw\FY2027配賦額一覧 (2025.12.29).xlsx,,,PENDING_SAFE_SCAN,Trusted source queued; previous direct open scan was cancelled because it showed no progress. Use safe scanner subprocess timeout next.

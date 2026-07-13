@@ -1,0 +1,115 @@
+{
+  "workspace_path": "D:\\Sandbox\\MP2027",
+  "abw_version": "0.6.2",
+  "timestamp": "2026-04-29T10:22:28.842809",
+  "harness_runtime_status": "completed",
+  "retrieval_quality_status": "partial",
+  "reason": "applicable checks passed with some corpus gaps or not-applicable questions",
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "warnings": 5
+  },
+  "scores": {
+    "average_grounding": 0.5,
+    "average_missing_evidence": 2.5,
+    "average_bounded_summary": 0.17
+  },
+  "details": [
+    {
+      "id": "MOM-TARGET-001",
+      "question": "What documents describe AGV communication?",
+      "passed": true,
+      "grounding_score": 0,
+      "missing_evidence_score": 3,
+      "bounded_summary_score": 0,
+      "harness_runtime_status": "completed",
+      "retrieval_quality_status": "not_applicable",
+      "reason": "expected sources or context not present in this workspace (not_applicable)",
+      "failures": [],
+      "warnings": [
+        "missing_gap_logging: reported missing evidence but did not explicitly log a gap"
+      ],
+      "citations_count": 0
+    },
+    {
+      "id": "MOM-TARGET-002",
+      "question": "Which sources mention MOM WMS workflow constraints?",
+      "passed": true,
+      "grounding_score": 0,
+      "missing_evidence_score": 3,
+      "bounded_summary_score": 0,
+      "harness_runtime_status": "completed",
+      "retrieval_quality_status": "not_applicable",
+      "reason": "expected sources or context not present in this workspace (not_applicable)",
+      "failures": [],
+      "warnings": [
+        "missing_gap_logging: reported missing evidence but did not explicitly log a gap"
+      ],
+      "citations_count": 0
+    },
+    {
+      "id": "MOM-SUMMARY-001",
+      "question": "Summarize MOM WMS workflow constraints.",
+      "passed": true,
+      "grounding_score": 0,
+      "missing_evidence_score": 3,
+      "bounded_summary_score": 1,
+      "harness_runtime_status": "completed",
+      "retrieval_quality_status": "not_applicable",
+      "reason": "expected sources or context not present in this workspace (not_applicable)",
+      "failures": [],
+      "warnings": [
+        "missing_gap_logging: reported missing evidence but did not explicitly log a gap"
+      ],
+      "citations_count": 0
+    },
+    {
+      "id": "MOM-NEGATIVE-001",
+      "question": "What is the approved production cutover date for the MOM WMS system?",
+      "passed": true,
+      "grounding_score": 0,
+      "missing_evidence_score": 3,
+      "bounded_summary_score": 0,
+      "harness_runtime_status": "completed",
+      "retrieval_quality_status": "not_applicable",
+      "reason": "expected sources or context not present in this workspace (not_applicable)",
+      "failures": [],
+      "warnings": [
+        "missing_gap_logging: reported missing evidence but did not explicitly log a gap"
+      ],
+      "citations_count": 0
+    },
+    {
+      "id": "MP2027-TARGET-001",
+      "question": "What spreadsheet or CSV sources are available for MP2027 budgeting or simulation?",
+      "passed": true,
+      "grounding_score": 3,
+      "missing_evidence_score": 0,
+      "bounded_summary_score": 0,
+      "harness_runtime_status": "completed",
+      "retrieval_quality_status": "pass",
+      "reason": "grounding score met threshold",
+      "failures": [],
+      "warnings": [],
+      "citations_count": 1
+    },
+    {
+      "id": "WEB-UNSUPPORTED-001",
+      "question": "What do the DOCX source files say about website content?",
+      "passed": true,
+      "grounding_score": 0,
+      "missing_evidence_score": 3,
+      "bounded_summary_score": 0,
+      "harness_runtime_status": "completed",
+      "retrieval_quality_status": "not_applicable",
+      "reason": "expected sources or context not present in this workspace (not_applicable)",
+      "failures": [],
+      "warnings": [
+        "missing_gap_logging: reported missing evidence but did not explicitly log a gap"
+      ],
+      "citations_count": 0
+    }
+  ]
+}

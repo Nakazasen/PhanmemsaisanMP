@@ -1,0 +1,678 @@
+{
+  "items": [
+    {
+      "id": "ingest-c14b7fe5ca509fcb",
+      "raw": "raw/Cải tiến nhập dữ liệu chung vào file MPnew.xlsx",
+      "draft": "drafts/c-i-ti-n-nh-p-d-li-u-chung-v-o-file-mpnew_draft.md",
+      "status": "review_needed",
+      "confidence": 0.166,
+      "perception": {
+        "version": "enterprise_ingest_perception_v2",
+        "document_type": {
+          "type": "spreadsheet",
+          "confidence": 0.77,
+          "signals": [
+            "xlsx_container",
+            "cells",
+            "charts",
+            "comments",
+            "sheets",
+            "textboxes"
+          ]
+        },
+        "stage_scores": {
+          "native_structured": 0.78,
+          "ocr": 0.0,
+          "vision_layout": 0.0,
+          "document_classifier": 0.77,
+          "provider_semantic": 0.0
+        },
+        "stages": [
+          {
+            "stage": "native_structured",
+            "confidence": 0.78
+          },
+          {
+            "stage": "ocr",
+            "confidence": 0.0
+          },
+          {
+            "stage": "vision_layout",
+            "confidence": 0.0
+          },
+          {
+            "stage": "document_classifier",
+            "confidence": 0.77
+          },
+          {
+            "stage": "provider_semantic",
+            "confidence": 0.0
+          }
+        ],
+        "confidence": 0.166
+      },
+      "review_reason": "low_confidence"
+    },
+    {
+      "id": "ingest-63a7048bdb38c562",
+      "raw": "raw/Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx",
+      "draft": "drafts/d-t-nh-chi-ph-l-m-gi-y-t-cho-nnn-fy2027_draft.md",
+      "status": "review_needed",
+      "confidence": 0.166,
+      "perception": {
+        "version": "enterprise_ingest_perception_v2",
+        "document_type": {
+          "type": "spreadsheet",
+          "confidence": 0.77,
+          "signals": [
+            "xlsx_container",
+            "cells",
+            "charts",
+            "comments",
+            "sheets",
+            "textboxes"
+          ]
+        },
+        "stage_scores": {
+          "native_structured": 0.78,
+          "ocr": 0.0,
+          "vision_layout": 0.0,
+          "document_classifier": 0.77,
+          "provider_semantic": 0.0
+        },
+        "stages": [
+          {
+            "stage": "native_structured",
+            "confidence": 0.78
+          },
+          {
+            "stage": "ocr",
+            "confidence": 0.0
+          },
+          {
+            "stage": "vision_layout",
+            "confidence": 0.0
+          },
+          {
+            "stage": "document_classifier",
+            "confidence": 0.77
+          },
+          {
+            "stage": "provider_semantic",
+            "confidence": 0.0
+          }
+        ],
+        "confidence": 0.166
+      },
+      "review_reason": "low_confidence"
+    },
+    {
+      "id": "ingest-3cb4f6e82f501ac3",
+      "raw": "raw/event_drivers_manual.csv",
+      "draft": "drafts/event-drivers-manual_draft.md",
+      "status": "review_needed",
+      "confidence": 0.645,
+      "perception": {
+        "version": "enterprise_ingest_perception_v2",
+        "document_type": {
+          "type": "text_document",
+          "confidence": 0.5800000000000001,
+          "signals": [
+            "text_file",
+            "text"
+          ]
+        },
+        "stage_scores": {
+          "native_structured": 0.645,
+          "ocr": 0.0,
+          "vision_layout": 0.0,
+          "document_classifier": 0.58,
+          "provider_semantic": 0.0
+        },
+        "stages": [
+          {
+            "stage": "native_structured",
+            "confidence": 0.645
+          },
+          {
+            "stage": "ocr",
+            "confidence": 0.0
+          },
+          {
+            "stage": "vision_layout",
+            "confidence": 0.0
+          },
+          {
+            "stage": "document_classifier",
+            "confidence": 0.58
+          },
+          {
+            "stage": "provider_semantic",
+            "confidence": 0.0
+          }
+        ],
+        "confidence": 0.645
+      },
+      "review_reason": "low_confidence"
+    },
+    {
+      "id": "ingest-d98dd6f6bff32688",
+      "raw": "raw/FORM.xlsx",
+      "draft": "drafts/form_draft.md",
+      "status": "candidate_promoted",
+      "confidence": 0.82,
+      "perception": {
+        "version": "enterprise_ingest_perception_v2",
+        "document_type": {
+          "type": "spreadsheet",
+          "confidence": 0.77,
+          "signals": [
+            "xlsx_container",
+            "cells",
+            "charts",
+            "comments",
+            "sheets",
+            "textboxes"
+          ]
+        },
+        "stage_scores": {
+          "native_structured": 0.78,
+          "ocr": 0.0,
+          "vision_layout": 0.0,
+          "document_classifier": 0.77,
+          "provider_semantic": 0.0
+        },
+        "stages": [
+          {
+            "stage": "native_structured",
+            "confidence": 0.78
+          },
+          {
+            "stage": "ocr",
+            "confidence": 0.0
+          },
+          {
+            "stage": "vision_layout",
+            "confidence": 0.0
+          },
+          {
+            "stage": "document_classifier",
+            "confidence": 0.77
+          },
+          {
+            "stage": "provider_semantic",
+            "confidence": 0.0
+          }
+        ],
+        "confidence": 0.82
+      },
+      "review_reason": "high_confidence"
+    },
+    {
+      "id": "ingest-639bf6c7232b9910",
+      "raw": "raw/FY2027配賦額一覧 (2025.12.29).xlsx",
+      "draft": "drafts/fy2027-2025-12-29_draft.md",
+      "status": "candidate_promoted",
+      "confidence": 0.82,
+      "perception": {
+        "version": "enterprise_ingest_perception_v2",
+        "document_type": {
+          "type": "spreadsheet",
+          "confidence": 0.77,
+          "signals": [
+            "xlsx_container",
+            "cells",
+            "charts",
+            "comments",
+            "sheets",
+            "textboxes"
+          ]
+        },
+        "stage_scores": {
+          "native_structured": 0.78,
+          "ocr": 0.0,
+          "vision_layout": 0.0,
+          "document_classifier": 0.77,
+          "provider_semantic": 0.0
+        },
+        "stages": [
+          {
+            "stage": "native_structured",
+            "confidence": 0.78
+          },
+          {
+            "stage": "ocr",
+            "confidence": 0.0
+          },
+          {
+            "stage": "vision_layout",
+            "confidence": 0.0
+          },
+          {
+            "stage": "document_classifier",
+            "confidence": 0.77
+          },
+          {
+            "stage": "provider_semantic",
+            "confidence": 0.0
+          }
+        ],
+        "confidence": 0.82
+      },
+      "review_reason": "high_confidence"
+    },
+    {
+      "id": "ingest-e0d8ce7ee56d80bd",
+      "raw": "raw/headcount_manual.csv",
+      "draft": "drafts/headcount-manual_draft.md",
+      "status": "review_needed",
+      "confidence": 0.18,
+      "perception": {
+        "version": "enterprise_ingest_perception_v2",
+        "document_type": {
+          "type": "text_document",
+          "confidence": 0.5800000000000001,
+          "signals": [
+            "text_file",
+            "text"
+          ]
+        },
+        "stage_scores": {
+          "native_structured": 0.18,
+          "ocr": 0.0,
+          "vision_layout": 0.0,
+          "document_classifier": 0.58,
+          "provider_semantic": 0.0
+        },
+        "stages": [
+          {
+            "stage": "native_structured",
+            "confidence": 0.18
+          },
+          {
+            "stage": "ocr",
+            "confidence": 0.0
+          },
+          {
+            "stage": "vision_layout",
+            "confidence": 0.0
+          },
+          {
+            "stage": "document_classifier",
+            "confidence": 0.58
+          },
+          {
+            "stage": "provider_semantic",
+            "confidence": 0.0
+          }
+        ],
+        "confidence": 0.18
+      },
+      "review_reason": "low_confidence"
+    },
+    {
+      "id": "ingest-fef159b871941bb5",
+      "raw": "raw/Sinh nhật MP FY2027.xlsx",
+      "draft": "drafts/sinh-nh-t-mp-fy2027_draft.md",
+      "status": "review_needed",
+      "confidence": 0.166,
+      "perception": {
+        "version": "enterprise_ingest_perception_v2",
+        "document_type": {
+          "type": "spreadsheet",
+          "confidence": 0.77,
+          "signals": [
+            "xlsx_container",
+            "cells",
+            "charts",
+            "comments",
+            "sheets",
+            "textboxes"
+          ]
+        },
+        "stage_scores": {
+          "native_structured": 0.78,
+          "ocr": 0.0,
+          "vision_layout": 0.0,
+          "document_classifier": 0.77,
+          "provider_semantic": 0.0
+        },
+        "stages": [
+          {
+            "stage": "native_structured",
+            "confidence": 0.78
+          },
+          {
+            "stage": "ocr",
+            "confidence": 0.0
+          },
+          {
+            "stage": "vision_layout",
+            "confidence": 0.0
+          },
+          {
+            "stage": "document_classifier",
+            "confidence": 0.77
+          },
+          {
+            "stage": "provider_semantic",
+            "confidence": 0.0
+          }
+        ],
+        "confidence": 0.166
+      },
+      "review_reason": "low_confidence"
+    },
+    {
+      "id": "ingest-d77ebc9147437e03",
+      "raw": "raw/source_file_order.csv",
+      "draft": "drafts/source-file-order_draft.md",
+      "status": "candidate_promoted",
+      "confidence": 0.86,
+      "perception": {
+        "version": "enterprise_ingest_perception_v2",
+        "document_type": {
+          "type": "text_document",
+          "confidence": 0.5800000000000001,
+          "signals": [
+            "text_file",
+            "text"
+          ]
+        },
+        "stage_scores": {
+          "native_structured": 0.86,
+          "ocr": 0.0,
+          "vision_layout": 0.0,
+          "document_classifier": 0.58,
+          "provider_semantic": 0.0
+        },
+        "stages": [
+          {
+            "stage": "native_structured",
+            "confidence": 0.86
+          },
+          {
+            "stage": "ocr",
+            "confidence": 0.0
+          },
+          {
+            "stage": "vision_layout",
+            "confidence": 0.0
+          },
+          {
+            "stage": "document_classifier",
+            "confidence": 0.58
+          },
+          {
+            "stage": "provider_semantic",
+            "confidence": 0.0
+          }
+        ],
+        "confidence": 0.86
+      },
+      "review_reason": "high_confidence"
+    },
+    {
+      "id": "ingest-5cbbce9923c1e246",
+      "raw": "raw/source_file_order.xlsx",
+      "draft": "drafts/source-file-order_draft.md",
+      "status": "candidate_promoted",
+      "confidence": 0.82,
+      "perception": {
+        "version": "enterprise_ingest_perception_v2",
+        "document_type": {
+          "type": "spreadsheet",
+          "confidence": 0.77,
+          "signals": [
+            "xlsx_container",
+            "cells",
+            "charts",
+            "comments",
+            "sheets",
+            "textboxes"
+          ]
+        },
+        "stage_scores": {
+          "native_structured": 0.78,
+          "ocr": 0.0,
+          "vision_layout": 0.0,
+          "document_classifier": 0.77,
+          "provider_semantic": 0.0
+        },
+        "stages": [
+          {
+            "stage": "native_structured",
+            "confidence": 0.78
+          },
+          {
+            "stage": "ocr",
+            "confidence": 0.0
+          },
+          {
+            "stage": "vision_layout",
+            "confidence": 0.0
+          },
+          {
+            "stage": "document_classifier",
+            "confidence": 0.77
+          },
+          {
+            "stage": "provider_semantic",
+            "confidence": 0.0
+          }
+        ],
+        "confidence": 0.82
+      },
+      "review_reason": "high_confidence"
+    },
+    {
+      "id": "ingest-9a838349bf57b802",
+      "raw": "raw/special_costs_manual.csv",
+      "draft": "drafts/special-costs-manual_draft.md",
+      "status": "review_needed",
+      "confidence": 0.645,
+      "perception": {
+        "version": "enterprise_ingest_perception_v2",
+        "document_type": {
+          "type": "text_document",
+          "confidence": 0.5800000000000001,
+          "signals": [
+            "text_file",
+            "text"
+          ]
+        },
+        "stage_scores": {
+          "native_structured": 0.645,
+          "ocr": 0.0,
+          "vision_layout": 0.0,
+          "document_classifier": 0.58,
+          "provider_semantic": 0.0
+        },
+        "stages": [
+          {
+            "stage": "native_structured",
+            "confidence": 0.645
+          },
+          {
+            "stage": "ocr",
+            "confidence": 0.0
+          },
+          {
+            "stage": "vision_layout",
+            "confidence": 0.0
+          },
+          {
+            "stage": "document_classifier",
+            "confidence": 0.58
+          },
+          {
+            "stage": "provider_semantic",
+            "confidence": 0.0
+          }
+        ],
+        "confidence": 0.645
+      },
+      "review_reason": "low_confidence"
+    },
+    {
+      "id": "ingest-ce9923444ba146d7",
+      "raw": "raw/固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx",
+      "draft": "drafts/fixed-assets-information-2025-11-nov_draft.md",
+      "status": "review_needed",
+      "confidence": 0.166,
+      "perception": {
+        "version": "enterprise_ingest_perception_v2",
+        "document_type": {
+          "type": "spreadsheet",
+          "confidence": 0.77,
+          "signals": [
+            "xlsx_container",
+            "cells",
+            "charts",
+            "comments",
+            "sheets",
+            "textboxes"
+          ]
+        },
+        "stage_scores": {
+          "native_structured": 0.78,
+          "ocr": 0.0,
+          "vision_layout": 0.0,
+          "document_classifier": 0.77,
+          "provider_semantic": 0.0
+        },
+        "stages": [
+          {
+            "stage": "native_structured",
+            "confidence": 0.78
+          },
+          {
+            "stage": "ocr",
+            "confidence": 0.0
+          },
+          {
+            "stage": "vision_layout",
+            "confidence": 0.0
+          },
+          {
+            "stage": "document_classifier",
+            "confidence": 0.77
+          },
+          {
+            "stage": "provider_semantic",
+            "confidence": 0.0
+          }
+        ],
+        "confidence": 0.166
+      },
+      "review_reason": "low_confidence"
+    },
+    {
+      "id": "ingest-1ae1945dcc2b904e",
+      "raw": "raw/施設課　MPFY2027.xlsx",
+      "draft": "drafts/mpfy2027_draft.md",
+      "status": "review_needed",
+      "confidence": 0.166,
+      "perception": {
+        "version": "enterprise_ingest_perception_v2",
+        "document_type": {
+          "type": "spreadsheet",
+          "confidence": 0.77,
+          "signals": [
+            "xlsx_container",
+            "cells",
+            "charts",
+            "comments",
+            "sheets",
+            "textboxes"
+          ]
+        },
+        "stage_scores": {
+          "native_structured": 0.78,
+          "ocr": 0.0,
+          "vision_layout": 0.0,
+          "document_classifier": 0.77,
+          "provider_semantic": 0.0
+        },
+        "stages": [
+          {
+            "stage": "native_structured",
+            "confidence": 0.78
+          },
+          {
+            "stage": "ocr",
+            "confidence": 0.0
+          },
+          {
+            "stage": "vision_layout",
+            "confidence": 0.0
+          },
+          {
+            "stage": "document_classifier",
+            "confidence": 0.77
+          },
+          {
+            "stage": "provider_semantic",
+            "confidence": 0.0
+          }
+        ],
+        "confidence": 0.166
+      },
+      "review_reason": "low_confidence"
+    },
+    {
+      "id": "ingest-0662bba8cc287c5e",
+      "raw": "raw/総務課 FY2027 MP 振替予定.xlsx",
+      "draft": "drafts/fy2027-mp_draft.md",
+      "status": "review_needed",
+      "confidence": 0.166,
+      "perception": {
+        "version": "enterprise_ingest_perception_v2",
+        "document_type": {
+          "type": "spreadsheet",
+          "confidence": 0.77,
+          "signals": [
+            "xlsx_container",
+            "cells",
+            "charts",
+            "comments",
+            "sheets",
+            "textboxes"
+          ]
+        },
+        "stage_scores": {
+          "native_structured": 0.78,
+          "ocr": 0.0,
+          "vision_layout": 0.0,
+          "document_classifier": 0.77,
+          "provider_semantic": 0.0
+        },
+        "stages": [
+          {
+            "stage": "native_structured",
+            "confidence": 0.78
+          },
+          {
+            "stage": "ocr",
+            "confidence": 0.0
+          },
+          {
+            "stage": "vision_layout",
+            "confidence": 0.0
+          },
+          {
+            "stage": "document_classifier",
+            "confidence": 0.77
+          },
+          {
+            "stage": "provider_semantic",
+            "confidence": 0.0
+          }
+        ],
+        "confidence": 0.166
+      },
+      "review_reason": "low_confidence"
+    }
+  ],
+  "updated_at": "2026-04-28T10:12:07Z"
+}

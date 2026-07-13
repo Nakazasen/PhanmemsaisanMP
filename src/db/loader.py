@@ -1,0 +1,529 @@
+"""
+MP2027 Manager - Master Data Loader
+Loads Cost Centers, Accounts, and Allocation Rules from source Excel files.
+"""
+import sqlite3
+import os
+import re
+import unicodedata
+import pandas as pd
+import openpyxl
+from src.db.schema import get_connection, create_schema, init_sys_params
+from src.utils.excel_helpers import normalize_cc_code, read_exchange_rate_from_form, validate_exchange_rate
+from src.utils.source_manifest import resolve_manifest_file
+
+import sys
+
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def _packaged_base_dir() -> str:
+    return getattr(sys, "_MEIPASS", BASE_DIR)
+
+
+def _resolve_mp2027_docs_dir() -> str:
+    external_docs_dir = os.path.join(BASE_DIR, 'docs', 'MP2027')
+    if os.path.isdir(external_docs_dir):
+        return external_docs_dir
+
+    packaged_docs_dir = os.path.join(_packaged_base_dir(), 'docs', 'MP2027')
+    if os.path.isdir(packaged_docs_dir):
+        return packaged_docs_dir
+
+    raise FileNotFoundError(
+        f"Missing required source directory: {external_docs_dir}. "
+        "Expected docs/MP2027 either next to the app or bundled inside the executable."
+    )
+
+
+# Source file paths
+MP2027_DOCS_DIR = _resolve_mp2027_docs_dir()
+FORM_PATH = os.path.join(MP2027_DOCS_DIR, 'FORM.xlsx')
+ALLOC_PATH = os.path.join(MP2027_DOCS_DIR, 'FY2027配賦額一覧 (2025.12.29).xlsx')
+
+
+def _normalize_text(value) -> str:
+    text = str(value or "").replace("\n", " ").replace("\u3000", " ").strip().lower()
+    return " ".join(text.split())
+
+
+def _looks_like_allocation_rules_workbook(path: str) -> bool:
+    try:
+        workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    except Exception:
+        return False
+
+    try:
+        worksheet = workbook[workbook.sheetnames[0]]
+        if worksheet.max_row < 20 or worksheet.max_column < 10:
+            return False
+
+        header_cells: list[str] = []
+        for row in worksheet.iter_rows(min_row=1, max_row=6, max_col=10, values_only=True):
+            for value in row:
+                if value is not None:
+                    header_cells.append(_normalize_text(value))
+        header_blob = " | ".join(header_cells)
+        return (
+            "vnd" in header_blob
+            and ("don gia" in header_blob or "単価" in header_blob)
+            and ("ma tai khoan" in header_blob or "tai khoan" in header_blob or "計上月" in header_blob)
+        )
+    finally:
+        workbook.close()
+
+
+def find_allocation_rules_file(search_dir: str | None = None, fiscal_year: int = 2027) -> str | None:
+    manifest_path = resolve_manifest_file(search_dir, "allocation_rules")
+    if manifest_path:
+        return manifest_path
+
+    candidates: list[tuple[int, str]] = []
+    base_search_dir = search_dir or BASE_DIR
+    if not os.path.isdir(base_search_dir):
+        return None
+
+    for name in os.listdir(base_search_dir):
+        lower_name = name.lower()
+        if not lower_name.endswith(".xlsx") or lower_name.startswith("~$"):
+            continue
+        path = os.path.join(base_search_dir, name)
+        if not _looks_like_allocation_rules_workbook(path):
+            continue
+
+        score = 0
+        if f"fy{fiscal_year}".lower() in lower_name:
+            score += 3
+        if "配賦" in name or "allocation" in lower_name:
+            score += 2
+        if "2025.12.29" in name:
+            score += 1
+        candidates.append((score, path))
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: (-item[0], os.path.basename(item[1]).lower()))
+    return candidates[0][1]
+
+
+def _classify_driver(raw_text: str) -> str:
+    """Classify allocation driver from raw Japanese/Vietnamese text."""
+    if not raw_text or pd.isna(raw_text):
+        return 'unknown'
+    text = str(raw_text).strip()
+    if 'G7社員' in text or '公nhân' in text.lower() or 'công nhân' in text.lower():
+        return 'headcount_worker'
+    elif 'スタッフ' in text or 'nhân viên' in text.lower():
+        return 'headcount_staff'
+    elif '配属人数' in text or '人数' in text or 'số người' in text.lower():
+        return 'headcount_all'
+    elif '稼働日数' in text or 'ngày' in text.lower():
+        return 'working_days'
+    elif '固定' in text or 'tỷ lệ' in text.lower():
+        return 'fixed_ratio'
+    else:
+        return 'headcount_all'  # Default fallback
+
+
+def _parse_unit_price(value) -> float | None:
+    """Parse numeric unit prices such as `145$`, `1,259,500`, or plain floats."""
+    if pd.isna(value):
+        return None
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    text = str(value).strip().replace(",", "")
+    if not text:
+        return None
+    if re.fullmatch(r"[※*＊]\s*\d+", text):
+        return None
+
+    match = re.search(r"[-+]?\d+(?:\.\d+)?", text)
+    if not match:
+        return None
+
+    try:
+        return float(match.group(0))
+    except (ValueError, TypeError):
+        return None
+
+
+def _is_footnote_unit_price(value) -> bool:
+    if pd.isna(value):
+        return False
+    return re.fullmatch(r"[※*＊]\s*\d+", str(value).strip()) is not None
+
+
+MP2026_REFERENCE_UNIT_PRICES = (
+    (("月餅", "bánh trung thu", "banh trung thu", "luna cake"), 56000.0),
+    (("運動会", "đại hội thể thao", "dai hoi the thao", "sports day"), 107000.0),
+)
+
+
+def _apply_mp2026_reference_unit_price(item_name: str, unit_price: float) -> float:
+    """Use audited FY2026 FORM notes only when FY2027 rule price is blank/zero."""
+    if float(unit_price or 0.0) > 0:
+        return float(unit_price)
+    normalized_item = _normalize_text(item_name)
+    for tokens, reference_price in MP2026_REFERENCE_UNIT_PRICES:
+        if any(_normalize_text(token) in normalized_item for token in tokens):
+            return reference_price
+    return float(unit_price or 0.0)
+
+
+def load_cost_centers(conn: sqlite3.Connection, form_path: str = None) -> int:
+    """Load cost centers from FORM.xlsx 原価センタ sheet."""
+    path = form_path or FORM_PATH
+    if not os.path.exists(path):
+        print(f"Không tìm thấy FORM.xlsx tại {path}")
+        return 0
+
+    xl = pd.ExcelFile(path, engine='openpyxl')
+    # Find the cost center sheet (原価センタ)
+    cc_sheet = None
+    for name in xl.sheet_names:
+        if '原価' in name or 'センタ' in name or 'cost' in name.lower():
+            cc_sheet = name
+            break
+
+    if not cc_sheet:
+        # Fall back to known index from extract_samples.py (index 5)
+        if len(xl.sheet_names) > 5:
+            cc_sheet = xl.sheet_names[5]
+            print(f"Thông tin: đang dùng trang tính theo vị trí: {cc_sheet}")
+        else:
+            print("Cảnh báo: không tìm thấy trang tính mã bộ phận")
+            return 0
+
+    print(f"Đang đọc mã bộ phận từ trang tính: {cc_sheet}")
+    df = pd.read_excel(path, sheet_name=cc_sheet, engine='openpyxl')
+
+    cursor = conn.cursor()
+    # PRE-SYNC: Clear existing cost centers
+    cursor.execute("DELETE FROM dim_cost_centers")
+    count = 0
+    for _, row in df.iterrows():
+        raw_code = row.iloc[0]  # Unnamed: 0 = code
+        if pd.isna(raw_code):
+            continue
+        code = normalize_cc_code(raw_code)
+        if not code:
+            continue
+
+        name_jp = str(row.iloc[1]).strip() if not pd.isna(row.iloc[1]) else ''
+        seq_no = float(row.iloc[2]) if not pd.isna(row.iloc[2]) else None
+        saisan = str(row.iloc[3]).strip() if len(row) > 3 and not pd.isna(row.iloc[3]) else ''
+        cost_type = str(row.iloc[4]).strip() if len(row) > 4 and not pd.isna(row.iloc[4]) else ''
+
+        if not name_jp:
+            continue
+
+        cursor.execute("""
+            INSERT OR REPLACE INTO dim_cost_centers
+            (code, name_jp, seq_no, saisan_type, cost_type)
+            VALUES (?, ?, ?, ?, ?)
+        """, (code, name_jp, seq_no, saisan, cost_type))
+        count += 1
+
+    conn.commit()
+    print(f"Đã nạp {count} mã bộ phận.")
+    return count
+
+
+def load_accounts(conn: sqlite3.Connection, form_path: str = None) -> int:
+    """Load accounts from FORM.xlsx 勘定科目 sheet."""
+    path = form_path or FORM_PATH
+    if not os.path.exists(path):
+        return 0
+
+    xl = pd.ExcelFile(path, engine='openpyxl')
+    # Find the account sheet (勘定科目)
+    acc_sheet = None
+    for name in xl.sheet_names:
+        if '勘定' in name or '科目' in name:
+            acc_sheet = name
+            break
+
+    if not acc_sheet:
+        if len(xl.sheet_names) > 4:
+            acc_sheet = xl.sheet_names[4]
+            print(f" Đang dùng trang tính theo vị trí: {acc_sheet}")
+        else:
+            print("Cảnh báo: không tìm thấy trang tính tài khoản")
+            return 0
+
+    print(f" Đang đọc tài khoản từ trang tính: {acc_sheet}")
+    df = pd.read_excel(path, sheet_name=acc_sheet, engine='openpyxl')
+
+    cursor = conn.cursor()
+    # PRE-SYNC: Clear existing accounts
+    cursor.execute("DELETE FROM dim_accounts")
+    count = 0
+    for _, row in df.iterrows():
+        code = row.get('Account_Code', row.iloc[0] if len(row) > 0 else None)
+        if pd.isna(code):
+            continue
+        try:
+            code = int(float(code))
+        except (ValueError, TypeError):
+            continue
+
+        name_jp = str(row.iloc[1]).strip() if len(row) > 1 and not pd.isna(row.iloc[1]) else ''
+        name_vn = str(row.iloc[2]).strip() if len(row) > 2 and not pd.isna(row.iloc[2]) else None
+        group_name = str(row.iloc[3]).strip() if len(row) > 3 and not pd.isna(row.iloc[3]) else None
+        group_vn = str(row.iloc[4]).strip() if len(row) > 4 and not pd.isna(row.iloc[4]) else None
+
+        # 製造/一般/販売 codes (columns 5, 6, 7)
+        mfg_code = None
+        ga_code = None
+        sales_code = None
+        if len(row) > 5 and not pd.isna(row.iloc[5]):
+            try:
+                mfg_code = int(float(row.iloc[5]))
+            except (ValueError, TypeError):
+                pass
+        if len(row) > 6 and not pd.isna(row.iloc[6]):
+            try:
+                ga_code = int(float(row.iloc[6]))
+            except (ValueError, TypeError):
+                pass
+        if len(row) > 7 and not pd.isna(row.iloc[7]):
+            try:
+                sales_code = int(float(row.iloc[7]))
+            except (ValueError, TypeError):
+                pass
+
+        remark = str(row.iloc[8]).strip() if len(row) > 8 and not pd.isna(row.iloc[8]) else None
+
+        if not name_jp:
+            continue
+
+        cursor.execute("""
+            INSERT OR REPLACE INTO dim_accounts
+            (code, name_jp, name_vn, group_name, group_vn, mfg_code, ga_code, sales_code, remark)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (code, name_jp, name_vn, group_name, group_vn, mfg_code, ga_code, sales_code, remark))
+        count += 1
+
+    conn.commit()
+    print(f"Đã nạp {count} tài khoản.")
+    return count
+
+def _select_allocation_rules_sheet(sheet_names: list[str], fiscal_year: int) -> str:
+    """Select the fiscal-year allocation sheet instead of blindly using the first sheet."""
+    fiscal_token = f"FY{fiscal_year}"
+    for sheet_name in sheet_names:
+        if fiscal_token in sheet_name:
+            return sheet_name
+
+    for sheet_name in sheet_names:
+        if "配賦額一覧" in sheet_name or "allocation" in sheet_name.lower():
+            return sheet_name
+
+    return sheet_names[0]
+
+
+def load_allocation_rules(
+    conn: sqlite3.Connection,
+    alloc_path: str = None,
+    search_dir: str | None = None,
+    fiscal_year: int = 2027,
+) -> int:
+    """Load allocation rules from FY2027配賦額一覧."""
+    path = alloc_path or ALLOC_PATH
+    if not path or not os.path.exists(path):
+        discovered = find_allocation_rules_file(search_dir=search_dir, fiscal_year=fiscal_year)
+        if discovered:
+            path = discovered
+    if not os.path.exists(path):
+        print(f"Cảnh báo: không tìm thấy tệp quy tắc phân bổ tại {path}")
+        return 0
+
+    print(f"Đang đọc quy tắc phân bổ từ: {os.path.basename(path)}")
+    xl = pd.ExcelFile(path, engine='openpyxl')
+    target_sheet = _select_allocation_rules_sheet(xl.sheet_names, fiscal_year)
+    print(f"Đang đọc quy tắc phân bổ từ trang tính: {target_sheet}")
+    df = pd.read_excel(path, sheet_name=target_sheet, engine='openpyxl')
+
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM map_allocation_rules")
+    count = 0
+    current_dept = None
+    current_item = None
+    current_account_name = None
+    current_mfg_acc = None
+    current_ga_acc = None
+    current_sales_acc = None
+    current_posting_month = None
+
+    for _, row in df.iterrows():
+        # Column mapping from master data:
+        # 0: 配布元 (source dept) - may be NaN for continuation rows
+        # 1: 内容 (item name)
+        # 2: 科目名称 (account name)
+        # 3: 製造コード
+        # 4: 間接コード
+        # 5: 販売コード
+        # 6: 計上月 (posting month)
+        # 7: 単価 (unit price)
+        # 8: 単位 (unit)
+        # 9: 計上基準 (driver/criteria)
+
+        dept = row.iloc[0] if not pd.isna(row.iloc[0]) else current_dept
+        raw_item = row.iloc[1] if len(row) > 1 and not pd.isna(row.iloc[1]) else None
+
+        # Skip header rows
+        item_str = str(raw_item or current_item or "")
+        if not item_str:
+            continue
+        if '内　容' in item_str or 'Nội dung' in item_str:
+            continue
+
+        if not pd.isna(row.iloc[0]):
+            current_dept = str(row.iloc[0]).strip()
+
+        if not current_dept:
+            continue
+
+        # Keep footnote-only rows as metadata with unit_price=0 so downstream
+        # allocation can fail closed and report the missing unit price.
+        raw_unit_price = row.iloc[7] if len(row) > 7 else None
+        raw_unit = row.iloc[8] if len(row) > 8 else None
+        raw_driver = row.iloc[9] if len(row) > 9 else None
+        if raw_item is None and pd.isna(raw_unit) and pd.isna(raw_driver):
+            continue
+        unit_price = _parse_unit_price(raw_unit_price)
+        if unit_price is None:
+            if _is_footnote_unit_price(raw_unit_price):
+                unit_price = 0.0
+            else:
+                continue
+        unit_price = _apply_mp2026_reference_unit_price(item_str, unit_price)
+
+        def _safe_int(val):
+            """Convert value to int, handling '-', empty strings, etc."""
+            if pd.isna(val):
+                return None
+            try:
+                return int(float(val))
+            except (ValueError, TypeError):
+                return None
+
+        if raw_item is not None:
+            current_item = item_str.strip()
+            current_account_name = str(row.iloc[2]).strip() if len(row) > 2 and not pd.isna(row.iloc[2]) else None
+            current_mfg_acc = _safe_int(row.iloc[3]) if len(row) > 3 else None
+            current_ga_acc = _safe_int(row.iloc[4]) if len(row) > 4 else None
+            current_sales_acc = _safe_int(row.iloc[5]) if len(row) > 5 else None
+            current_posting_month = str(row.iloc[6]).strip() if len(row) > 6 and not pd.isna(row.iloc[6]) else None
+
+        account_name = (
+            str(row.iloc[2]).strip()
+            if len(row) > 2 and not pd.isna(row.iloc[2])
+            else current_account_name
+        )
+        mfg_acc = _safe_int(row.iloc[3]) if len(row) > 3 and not pd.isna(row.iloc[3]) else current_mfg_acc
+        ga_acc = _safe_int(row.iloc[4]) if len(row) > 4 and not pd.isna(row.iloc[4]) else current_ga_acc
+        sales_acc = _safe_int(row.iloc[5]) if len(row) > 5 and not pd.isna(row.iloc[5]) else current_sales_acc
+        posting_month = (
+            str(row.iloc[6]).strip()
+            if len(row) > 6 and not pd.isna(row.iloc[6])
+            else current_posting_month
+        )
+        unit = str(raw_unit).strip() if len(row) > 8 and not pd.isna(raw_unit) else None
+        driver_raw = str(raw_driver).strip() if len(row) > 9 and not pd.isna(raw_driver) else None
+
+        driver_type = _classify_driver(driver_raw)
+        normalized_item = unicodedata.normalize("NFKD", item_str).lower()
+        normalized_item = "".join(ch for ch in normalized_item if not unicodedata.combining(ch))
+        recurring_total_tokens = (
+            "食堂燃料", "gas", "トイレットペーパー", "giay ve sinh", "toilet paper",
+            "手洗い洗剤", "nuoc rua tay", "hand wash", "清掃費", "phi lam sach", "cleaning",
+        )
+        if any(token in normalized_item for token in recurring_total_tokens):
+            driver_type = "headcount_all"
+
+        cursor.execute("""
+            INSERT INTO map_allocation_rules
+            (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
+             posting_month, unit_price, unit, driver_type, driver_raw)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (current_dept, item_str.strip(), account_name, mfg_acc, ga_acc, sales_acc,
+              posting_month, unit_price, unit, driver_type, driver_raw))
+        count += 1
+
+    conn.commit()
+    print(f"Đã nạp {count} quy tắc phân bổ.")
+    return count
+
+
+def load_all(db_path: str = None, template_path: str = None,
+             rules_path: str = None, fiscal_year: int = 2027,
+             exchange_rate: float | None = None, search_dir: str | None = None,
+             exchange_rate_source: str = "explicit pipeline input") -> dict:
+    """Load all master data into the database with dynamic configuration."""
+    # Determine actual paths
+    t_path = template_path or FORM_PATH
+    discovery_dir = search_dir or (os.path.dirname(os.path.abspath(t_path)) if t_path else BASE_DIR)
+    r_path = rules_path or ALLOC_PATH
+
+    if exchange_rate is None:
+        exchange_rate = read_exchange_rate_from_form(t_path)
+        exchange_rate_source = f"FORM B2 ({os.path.basename(t_path)})"
+    else:
+        exchange_rate = validate_exchange_rate(exchange_rate)
+    print(f"Nguồn tỷ giá hiệu lực: {exchange_rate_source}: {exchange_rate:,.0f}")
+
+    conn = get_connection(db_path)
+    # Ensure Row factory for Row-based access in loaders if needed (schema.py usually sets this)
+    conn.row_factory = sqlite3.Row 
+    create_schema(conn)
+    
+    # Initialize system params with SSOT rate
+    init_sys_params(
+        conn,
+        exchange_rate=exchange_rate,
+        fiscal_year=fiscal_year,
+        exchange_rate_source=exchange_rate_source,
+    )
+    
+    # Determine actual paths
+    t_path = template_path or FORM_PATH
+    discovery_dir = search_dir or (os.path.dirname(os.path.abspath(t_path)) if t_path else BASE_DIR)
+    r_path = rules_path or ALLOC_PATH
+    
+    # If the rules file contains the fiscal year in its name, 
+    # and we didn't get an explicit path, let's try to be smart
+    if not rules_path and not os.path.exists(r_path):
+        # Try finding a file like "FY2028配賦額一覧..." if current is 2027
+        potential_name = ALLOC_PATH.replace('2027', str(fiscal_year))
+        if os.path.exists(potential_name):
+            r_path = potential_name
+        else:
+            discovered = find_allocation_rules_file(search_dir=discovery_dir, fiscal_year=fiscal_year)
+            if discovered:
+                r_path = discovered
+
+    results = {
+        'cost_centers': load_cost_centers(conn, t_path),
+        'accounts': load_accounts(conn, t_path),
+        'allocation_rules': load_allocation_rules(
+            conn,
+            r_path,
+            search_dir=discovery_dir,
+            fiscal_year=fiscal_year,
+        ),
+    }
+
+    conn.close()
+    return results
+
+
+if __name__ == '__main__':
+    results = load_all()
+    print(f"\nTóm tắt: {results}")
+

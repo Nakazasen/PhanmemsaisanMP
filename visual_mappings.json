@@ -1,0 +1,232 @@
+[
+  {
+    "visual_sheet": "MANIFEST",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "VISUAL SUPPORT ONLY — NOT CANONICAL SOURCE"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V01_MASTER",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A1:F55 | Requirement: General overview | Source sheet: Sheet1 | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Workbook overview and high-level data-entry workflow"
+      },
+      {
+        "cell": "A7",
+        "text": "ZOOM | Source range: A50:F55 | Requirement: General overview | Source sheet: Sheet1 | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Workbook overview and high-level data-entry workflow"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V02_0906_LIST",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A176:N233 | Requirement: 09.06 change list | Source sheet: Hạng mục cần cải tiến | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Current 09.06 issue list: headcount input, fixed assets, health check, stationery, admin allocation, descriptions, separator rows"
+      },
+      {
+        "cell": "A5",
+        "text": "ZOOM | Source range: A194:N218 | Requirement: 09.06 change list | Source sheet: Hạng mục cần cải tiến | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Current 09.06 issue list: headcount input, fixed assets, health check, stationery, admin allocation, descriptions, separator rows"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V03_GUI_INPUT",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A70:N110 | Requirement: Requirement 6 | Source sheet: Hạng mục cần cải tiến | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: GUI/input headcount: 12 months and December male/female split"
+      },
+      {
+        "cell": "A5",
+        "text": "ZOOM | Source range: A87:N93 | Requirement: Requirement 6 | Source sheet: Hạng mục cần cải tiến | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: GUI/input headcount: 12 months and December male/female split"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V04_HEADCOUNT",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A143:N171 | Requirement: 09.06 headcount inputs | Source sheet: Hạng mục cần cải tiến | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Replacement manual headcount inputs used by allocation rules"
+      },
+      {
+        "cell": "A5",
+        "text": "ZOOM | Source range: A156:N169 | Requirement: 09.06 headcount inputs | Source sheet: Hạng mục cần cải tiến | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Replacement manual headcount inputs used by allocation rules"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V05_SEPARATOR",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A176:N218 | Requirement: Requirement 7-8 | Source sheet: Hạng mục cần cải tiến | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Additional description and one blank row between each source-file block"
+      },
+      {
+        "cell": "A5",
+        "text": "ZOOM | Source range: A216:N218 | Requirement: Requirement 7-8 | Source sheet: Hạng mục cần cải tiến | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Additional description and one blank row between each source-file block"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V06_ADMIN_OV",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A1:V40 | Requirement: Admin allocation overview | Source sheet: Chi phí phân bổ từ hành chính  | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Administrative allocation sheet overview plus 12-month allocation formula notes"
+      },
+      {
+        "cell": "A5",
+        "text": "ZOOM | Source range: A31:T40 | Requirement: Admin allocation overview | Source sheet: Chi phí phân bổ từ hành chính  | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Administrative allocation sheet overview plus 12-month allocation formula notes"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V07_ADMIN_CC",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A68:V141 | Requirement: Admin cost center/account mapping | Source sheet: Chi phí phân bổ từ hành chính  | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Cost center group and account-code lookup instructions"
+      },
+      {
+        "cell": "A7",
+        "text": "ZOOM | Source range: A95:V141 | Requirement: Admin cost center/account mapping | Source sheet: Chi phí phân bổ từ hành chính  | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Cost center group and account-code lookup instructions"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V08_ADMIN_A144",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A141:V182 | Requirement: Admin A144:A169 | Source sheet: Chi phí phân bổ từ hành chính  | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Administrative allocation items from A144 through A169 and related right-side columns"
+      },
+      {
+        "cell": "A5",
+        "text": "ZOOM | Source range: A144:V169 | Requirement: Admin A144:A169 | Source sheet: Chi phí phân bổ từ hành chính  | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Administrative allocation items from A144 through A169 and related right-side columns"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V09_ADMIN_HEALTH",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A171:V182 | Requirement: Health-check periodic | Source sheet: Chi phí phân bổ từ hành chính  | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Male/female regular health-check allocation notes"
+      },
+      {
+        "cell": "A3",
+        "text": "ZOOM | Source range: A174:V180 | Requirement: Health-check periodic | Source sheet: Chi phí phân bổ từ hành chính  | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Male/female regular health-check allocation notes"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V10_ADMIN_NEW",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A192:V215 | Requirement: New-hire stationery and recruitment health check | Source sheet: Chi phí phân bổ từ hành chính  | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: New-hire monthly delta, stationery unit prices, and recruitment health-check instructions"
+      },
+      {
+        "cell": "A4",
+        "text": "ZOOM | Source range: A195:V215 | Requirement: New-hire stationery and recruitment health check | Source sheet: Chi phí phân bổ từ hành chính  | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: New-hire monthly delta, stationery unit prices, and recruitment health-check instructions"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V11_FIXED_ASSET",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A1:AF66 | Requirement: Fixed asset instructions | Source sheet: Chi phí tài sản cố định | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Fixed asset depreciation and interest instructions including right-side callouts"
+      },
+      {
+        "cell": "A6",
+        "text": "ZOOM | Source range: A41:AF66 | Requirement: Fixed asset instructions | Source sheet: Chi phí tài sản cố định | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Fixed asset depreciation and interest instructions including right-side callouts"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V12_SYSTEM",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A1:I97 | Requirement: System cost instructions | Source sheet: Chi phí hệ thống | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: System-cost calculation and formula workflow"
+      },
+      {
+        "cell": "A9",
+        "text": "ZOOM | Source range: A86:I97 | Requirement: System cost instructions | Source sheet: Chi phí hệ thống | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: System-cost calculation and formula workflow"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V13_DEPR_LAND",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A1:V131 | Requirement: Depreciation/land/water instructions | Source sheet: Chi phí khấu hao, lãi nhà đất | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Depreciation, land interest, electricity and water instructions"
+      },
+      {
+        "cell": "A10",
+        "text": "ZOOM | Source range: A60:V104 | Requirement: Depreciation/land/water instructions | Source sheet: Chi phí khấu hao, lãi nhà đất | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Depreciation, land interest, electricity and water instructions"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V14_NNN",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A1:Q48 | Requirement: NNN paperwork | Source sheet: Chi phí làm giấy tờ cho NNN | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Foreign worker paperwork cost month/account instructions"
+      },
+      {
+        "cell": "A6",
+        "text": "ZOOM | Source range: A16:Q24 | Requirement: NNN paperwork | Source sheet: Chi phí làm giấy tờ cho NNN | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Foreign worker paperwork cost month/account instructions"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V15_BIRTHDAY",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A1:P48 | Requirement: Birthday/new-hire add-on | Source sheet: Chi phí sinh nhật | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Birthday cost with same-month new-hire add-on"
+      },
+      {
+        "cell": "A6",
+        "text": "ZOOM | Source range: A43:P48 | Requirement: Birthday/new-hire add-on | Source sheet: Chi phí sinh nhật | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Birthday cost with same-month new-hire add-on"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V16_CC_LOOKUP",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A1:E66 | Requirement: Cost center lookup | Source sheet: 原価センタ | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Cost center lookup sheet used by admin allocation instructions"
+      },
+      {
+        "cell": "A7",
+        "text": "ZOOM | Source range: A1:E66 | Requirement: Cost center lookup | Source sheet: 原価センタ | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Cost center lookup sheet used by admin allocation instructions"
+      }
+    ]
+  },
+  {
+    "visual_sheet": "V17_ACCOUNT",
+    "captions": [
+      {
+        "cell": "A1",
+        "text": "OVERVIEW | Source range: A1:I244 | Requirement: Account lookup | Source sheet: 勘定科目 | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Account-code lookup sheet used by admin allocation instructions"
+      },
+      {
+        "cell": "A17",
+        "text": "ZOOM | Source range: A1:I80 | Requirement: Account lookup | Source sheet: 勘定科目 | Canonical source: Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx | Description: Account-code lookup sheet used by admin allocation instructions"
+      }
+    ]
+  }
+]

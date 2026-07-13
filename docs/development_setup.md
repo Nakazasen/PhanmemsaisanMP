@@ -1,0 +1,67 @@
+# Development setup MP2027
+
+## Python khuyến nghị
+
+Dùng Python 3.10+ trên Windows. Nếu lệnh `python` mở Microsoft Store, dùng `py`.
+
+## Fresh clone và tạo môi trường
+
+```powershell
+git clone https://github.com/Nakazasen/PhanmemsaisanMP
+Set-Location PhanmemsaisanMP
+py -m venv .venv
+.\.venv\Scripts\activate
+py -m pip install -U pip
+pip install -r requirements.txt
+```
+
+Xác nhận workbook canonical có sẵn sau clone:
+
+```text
+raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx
+```
+
+## Kiểm tra nhanh
+
+```powershell
+py -m compileall src scripts packaging
+py -m pytest -m "not requires_raw_excel"
+```
+
+GitHub CI chạy nhóm test trên để loại các integration test cần workbook Excel phòng ban trong `raw/`.
+Máy có đầy đủ dữ liệu nguồn có thể chạy thêm `py -m pytest`.
+
+## Chạy GUI
+
+```powershell
+run_MP2027.bat
+```
+
+## Chạy E2E smoke
+
+```powershell
+py scripts/run_e2e.py --target-cc 1412000040
+```
+
+Nếu thiếu dữ liệu thật, pipeline phải ghi missing input hoặc lỗi rõ; không tạo dữ liệu giả.
+
+## Build portable
+
+Cài PyInstaller trong venv sạch chỉ có dependency cần thiết, sau đó chạy spec hiện tại.
+Spec loại các package ML/CV không được ứng dụng sử dụng để tránh bundle phình lớn do môi trường build bị nhiễm package.
+Không commit `build/` hoặc `dist/`.
+
+## Cleanup local an toàn
+
+```powershell
+Remove-Item -Recurse -Force build, dist, .tmp_test_artifacts -ErrorAction SilentlyContinue
+Remove-Item -Force mp2027.db, mp2027_before_optimization.db -ErrorAction SilentlyContinue
+```
+
+Các artifact trên tái tạo được và không cần chuyển sang máy mới.
+
+## Quy tắc dữ liệu
+
+- Canonical requirement: workbook `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`.
+- Không commit source/output nhạy cảm nếu chưa được xác nhận.
+- Không đổi rule tiền/phân bổ nếu chưa có test và bằng chứng từ workbook canonical.

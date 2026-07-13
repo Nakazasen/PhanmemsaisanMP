@@ -1,0 +1,28 @@
+{
+  "communication": {
+    "tone": "friendly",
+    "persona": "assistant"
+  },
+  "technical": {
+    "technical_level": "basic",
+    "detail_level": "simple",
+    "autonomy": "ask_often",
+    "quality": "production"
+  },
+  "style": {
+    "personality": "default"
+  },
+  "working_style": {
+    "pace": "careful",
+    "feedback": "gentle"
+  },
+  "autosave": {
+    "enabled": true,
+    "triggers": [
+      "workflow_end",
+      "decision_made",
+      "checkpoint",
+      "context_warning"
+    ]
+  }
+}

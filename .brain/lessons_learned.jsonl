@@ -1,0 +1,3 @@
+{"lesson":"[EXAMPLE] Verify schema fields from the actual ORM/model file before assuming a column exists.","source":"user_correction","scope":"database","priority":"high","expires_at":null,"status":"active"}
+{"lesson":"[EXAMPLE] For destructive file operations, state the target path and expected effect before execution.","source":"safety_review","scope":"filesystem","priority":"high","expires_at":null,"status":"active"}
+{"lesson":"[EXAMPLE] Do not refactor legacy modules unless the user explicitly includes them in scope.","source":"user_instruction","scope":"refactor","priority":"medium","expires_at":"2026-12-31T00:00:00Z","status":"active"}

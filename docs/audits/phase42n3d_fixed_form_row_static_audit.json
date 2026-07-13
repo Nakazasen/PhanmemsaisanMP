@@ -1,0 +1,4478 @@
+[
+  {
+    "file": "src\\universal_app.py",
+    "line": 289,
+    "token": "row 137",
+    "text": "- VISA/Passport/GPLD/NNN nếu phải ghi vào row khác row 137."
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 300,
+    "token": "form_row",
+    "text": "Bước 9: Nếu biết row FORM cần ghi, nhập row/form_row, ví dụ 66 cho 社員旅行."
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 312,
+    "token": "row 137",
+    "text": "- Passport/VISA/GPLD cần row khác row 137."
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 315,
+    "token": "form_row",
+    "text": "Không nhập form_row nếu chưa chắc row đích."
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1236,
+    "token": "form_row",
+    "text": "\"row/form_row = dòng FORM cần ghi, ví dụ 66 cho 社員旅行.  \""
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1261,
+    "token": "form_row",
+    "text": "form_row_var = tk.StringVar()"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1320,
+    "token": "form_row",
+    "text": "add_label_entry(5, 4, \"Dòng FORM\", form_row_var, width=12)"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1341,
+    "token": "form_row",
+    "text": "(\"form_row\", 75, \"Form row\"),"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1376,
+    "token": "form_row",
+    "text": "form_row_var,"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1392,
+    "token": "form_row",
+    "text": "value = str(row.get(\"form_row\", \"\") or \"\").strip()"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1420,
+    "token": "form_row",
+    "text": "form_row = validate_numeric(form_row_var.get(), \"dòng FORM\")"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1445,
+    "token": "form_row",
+    "text": "\"form_row\": form_row,"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1446,
+    "token": "form_row",
+    "text": "\"row\": form_row,"
+  },
+  {
+    "file": "src\\universal_app.py",
+    "line": 1479,
+    "token": "form_row",
+    "text": "form_row_var.set(row_data.get(\"row\") or row_data.get(\"form_row\", \"\"))"
+  },
+  {
+    "file": "src\\audit\\pipeline_audit.py",
+    "line": 173,
+    "token": "row 137",
+    "text": "\"nnn_paperwork\": \"Workbook NNN/VISA/GPLD/Passport FY2027 vào row 137.\","
+  },
+  {
+    "file": "src\\audit\\pipeline_audit.py",
+    "line": 174,
+    "token": "row 59",
+    "text": "\"birthday_workbook\": \"Workbook sinh nhật vào row 59, công thức count*152000.\","
+  },
+  {
+    "file": "src\\audit\\pipeline_audit.py",
+    "line": 175,
+    "token": "form_row",
+    "text": "\"manual_special_cost\": \"Override thủ công theo form_row.\","
+  },
+  {
+    "file": "src\\db\\schema.py",
+    "line": 91,
+    "token": "form_row",
+    "text": "account_code INTEGER NOT NULL, form_row INTEGER DEFAULT NULL,"
+  },
+  {
+    "file": "src\\db\\schema.py",
+    "line": 116,
+    "token": "form_row",
+    "text": "if not _column_exists(conn, \"fact_input_data\", \"form_row\"):"
+  },
+  {
+    "file": "src\\db\\schema.py",
+    "line": 117,
+    "token": "form_row",
+    "text": "cursor.execute(\"ALTER TABLE fact_input_data ADD COLUMN form_row INTEGER DEFAULT NULL\")"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 21,
+    "token": "form_row",
+    "text": "ACCOUNT_STRATEGY_FORM_ROW_BASE_ACCOUNT = \"form_row_base_account\""
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 32,
+    "token": "form_row",
+    "text": "fixed_form_row: int | None = None"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 34,
+    "token": "form_row",
+    "text": "base_account_by_form_row: Mapping[int, int] = field(default_factory=dict)"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 58,
+    "token": "form_row",
+    "text": "fixed_form_row=59,"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 64,
+    "token": "form_row",
+    "text": "base_account_by_form_row={"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 74,
+    "token": "form_row",
+    "text": "notes=\"GA admin rows choose a logical base account by form_row, then resolve by CC cost_type.\","
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 220,
+    "token": "form_row",
+    "text": "form_row: int | None = None,"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 229,
+    "token": "form_row",
+    "text": "if policy.base_account_by_form_row:"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 230,
+    "token": "form_row",
+    "text": "if form_row is None:"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 231,
+    "token": "form_row",
+    "text": "raise AccountResolutionError(f\"Missing form_row for source account policy: {source}\")"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 232,
+    "token": "form_row",
+    "text": "account_code = policy.base_account_by_form_row.get(int(form_row))"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 234,
+    "token": "form_row",
+    "text": "raise AccountResolutionError(f\"Unsupported form_row for source account policy: {source}:{form_row}\")"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 309,
+    "token": "form_row",
+    "text": "form_row: int | None = None,"
+  },
+  {
+    "file": "src\\engine\\account_resolver.py",
+    "line": 317,
+    "token": "form_row",
+    "text": "form_row=form_row,"
+  },
+  {
+    "file": "src\\engine\\allocator.py",
+    "line": 263,
+    "token": "form_row",
+    "text": "SELECT id, source, cc_code, description, form_row"
+  },
+  {
+    "file": "src\\engine\\allocator.py",
+    "line": 278,
+    "token": "form_row",
+    "text": "form_row=row[\"form_row\"],"
+  },
+  {
+    "file": "src\\engine\\complete_v1_source_order_writer.py",
+    "line": 94,
+    "token": "target_row",
+    "text": "def _write_staged_row(ws, target_row: int, staged: StagedWorkbookRow) -> None:"
+  },
+  {
+    "file": "src\\engine\\complete_v1_source_order_writer.py",
+    "line": 96,
+    "token": "target_row",
+    "text": "cell = ws.cell(target_row, col)"
+  },
+  {
+    "file": "src\\engine\\complete_v1_source_order_writer.py",
+    "line": 104,
+    "token": "target_row",
+    "text": "note = _norm(ws.cell(target_row, NOTE_COL).value)"
+  },
+  {
+    "file": "src\\engine\\complete_v1_source_order_writer.py",
+    "line": 106,
+    "token": "target_row",
+    "text": "ws.cell(target_row, NOTE_COL).value = f\"{note} | {source_note}\" if note else source_note"
+  },
+  {
+    "file": "src\\engine\\fixed_assets_reference_skeleton.py",
+    "line": 112,
+    "token": "target_row",
+    "text": "target_row = _next_empty_row(ws, resolved_start)"
+  },
+  {
+    "file": "src\\engine\\fixed_assets_reference_skeleton.py",
+    "line": 120,
+    "token": "target_row",
+    "text": "if _business_row_present(ws, target_row):"
+  },
+  {
+    "file": "src\\engine\\fixed_assets_reference_skeleton.py",
+    "line": 122,
+    "token": "target_row",
+    "text": "target_row = _next_empty_row(ws, target_row + 1)"
+  },
+  {
+    "file": "src\\engine\\fixed_assets_reference_skeleton.py",
+    "line": 123,
+    "token": "target_row",
+    "text": "_write_candidate(ws, target_row, candidate)"
+  },
+  {
+    "file": "src\\engine\\fixed_assets_reference_skeleton.py",
+    "line": 125,
+    "token": "target_row",
+    "text": "target_row = _next_empty_row(ws, target_row + 1)"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 230,
+    "token": "target_row",
+    "text": "def _copy_row_style(self, worksheet, source_row: int, target_row: int) -> None:"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 231,
+    "token": "target_row",
+    "text": "worksheet.row_dimensions[target_row].height = worksheet.row_dimensions[source_row].height"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 234,
+    "token": "target_row",
+    "text": "target_cell = worksheet.cell(row=target_row, column=column_index)"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 603,
+    "token": "form_row",
+    "text": "def _load_explicit_form_rows(self, cc_code: int) -> list[dict[str, object]]:"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 606,
+    "token": "form_row",
+    "text": "SELECT form_row, account_code, description, period, SUM(amount_vnd) AS amount"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 610,
+    "token": "form_row",
+    "text": "AND form_row IS NOT NULL"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 611,
+    "token": "form_row",
+    "text": "GROUP BY form_row, account_code, description, period"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 612,
+    "token": "form_row",
+    "text": "ORDER BY form_row, account_code, description, period"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 619,
+    "token": "form_row",
+    "text": "row_index = int(row[\"form_row\"] or 0)"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 625,
+    "token": "form_row",
+    "text": "\"form_row\": row_index,"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 695,
+    "token": "form_row",
+    "text": "def _write_explicit_form_rows(self, worksheet, cc_code: int) -> None:"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 696,
+    "token": "form_row",
+    "text": "for row in self._load_explicit_form_rows(cc_code):"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 697,
+    "token": "form_row",
+    "text": "row_index = int(row[\"form_row\"])"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 889,
+    "token": "form_row",
+    "text": "self._write_explicit_form_rows(worksheet, cc_code)"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 1046,
+    "token": "form_row",
+    "text": "self._write_explicit_form_rows(worksheet, cc_code)"
+  },
+  {
+    "file": "src\\engine\\hub_builder.py",
+    "line": 1055,
+    "token": "form_row",
+    "text": "AND form_row IS NULL"
+  },
+  {
+    "file": "src\\engine\\output_mode.py",
+    "line": 119,
+    "token": "row 137",
+    "text": "notes=\"Source-file-order row; legacy FORM row 137 is not a placement target.\","
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 94,
+    "token": "target_row",
+    "text": "def _copy_business_row(primary_ws, target_ws, primary_row: int, target_row: int) -> None:"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 97,
+    "token": "target_row",
+    "text": "dest = target_ws.cell(target_row, col)"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 103,
+    "token": "target_row",
+    "text": "note_cell = target_ws.cell(target_row, 20)"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 124,
+    "token": "target_row",
+    "text": "target_row = _next_safe_row(target_ws, start_row)"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 127,
+    "token": "target_row",
+    "text": "if target_row < 213:"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 128,
+    "token": "target_row",
+    "text": "target_row = 213"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 129,
+    "token": "target_row",
+    "text": "_copy_business_row(primary_ws, target_ws, item[\"primary_row\"], target_row)"
+  },
+  {
+    "file": "src\\engine\\reference_assisted_fill.py",
+    "line": 131,
+    "token": "target_row",
+    "text": "target_row += 1"
+  },
+  {
+    "file": "src\\parsers\\birthday.py",
+    "line": 34,
+    "token": "row 59",
+    "text": "\"\"\"Load birthday workbook amounts into explicit FORM row 59.\"\"\""
+  },
+  {
+    "file": "src\\parsers\\birthday.py",
+    "line": 76,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 326,
+    "token": "form_row",
+    "text": "def _admin_match_form_row(text: str) -> int | None:"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 344,
+    "token": "form_row",
+    "text": "if any(token in text for token in (\"form_row\", \"form row\", \"row\", \"dòng\", \"dong\")):"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 345,
+    "token": "form_row",
+    "text": "return \"form_row\""
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 395,
+    "token": "form_row",
+    "text": "form_row: int,"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 409,
+    "token": "form_row",
+    "text": "form_row=form_row,"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 413,
+    "token": "form_row",
+    "text": "final_description = f\"Admin allocation: {description or form_row}\""
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 419,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 422,
+    "token": "form_row",
+    "text": "(ADMIN_SOURCE_NAME, period, amount_vnd, cc_code, final_account, form_row, final_description),"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 448,
+    "token": "form_row",
+    "text": "if \"cc_code\" in header_map and (\"form_row\" in header_map or detected_months):"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 463,
+    "token": "form_row",
+    "text": "form_row = None"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 464,
+    "token": "form_row",
+    "text": "form_row_index = active_header.get(\"form_row\")"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 465,
+    "token": "form_row",
+    "text": "if form_row_index is not None and form_row_index < len(row):"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 466,
+    "token": "form_row",
+    "text": "maybe_row = safe_float(row[form_row_index])"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 468,
+    "token": "form_row",
+    "text": "form_row = int(maybe_row)"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 469,
+    "token": "form_row",
+    "text": "if form_row is None:"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 470,
+    "token": "form_row",
+    "text": "form_row = _admin_match_form_row(row_text)"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 471,
+    "token": "form_row",
+    "text": "if form_row not in ADMIN_BASE_ACCOUNT_BY_ROW:"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 492,
+    "token": "form_row",
+    "text": "form_row=form_row,"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 516,
+    "token": "form_row",
+    "text": "unit = float(ADMIN_DEFAULT_UNIT_PRICE_BY_ROW.get(form_row, 0))"
+  },
+  {
+    "file": "src\\parsers\\ga.py",
+    "line": 524,
+    "token": "form_row",
+    "text": "form_row=form_row,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 21,
+    "token": "form_row",
+    "text": "\"form_row\": 54,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 28,
+    "token": "form_row",
+    "text": "\"form_row\": 54,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 35,
+    "token": "form_row",
+    "text": "\"form_row\": 66,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 42,
+    "token": "form_row",
+    "text": "\"form_row\": 81,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 49,
+    "token": "form_row",
+    "text": "\"form_row\": 66,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 56,
+    "token": "form_row",
+    "text": "\"form_row\": 71,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 63,
+    "token": "form_row",
+    "text": "\"form_row\": 64,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 70,
+    "token": "form_row",
+    "text": "\"form_row\": 65,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 77,
+    "token": "form_row",
+    "text": "\"form_row\": 68,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 84,
+    "token": "form_row",
+    "text": "\"form_row\": 82,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 91,
+    "token": "form_row",
+    "text": "\"form_row\": 67,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 98,
+    "token": "form_row",
+    "text": "\"form_row\": 70,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 105,
+    "token": "form_row",
+    "text": "\"form_row\": 63,"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 128,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 151,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 367,
+    "token": "form_row",
+    "text": "if event_default and not str(row.get(\"form_row\", \"\") or \"\").strip() and not str(row.get(\"row\", \"\") or \"\").strip():"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 368,
+    "token": "form_row",
+    "text": "row[\"form_row\"] = str(event_default[\"form_row\"])"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 411,
+    "token": "form_row",
+    "text": "form_row_text, form_row_ok = _merged_value(row, \"form_row\", \"row\")"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 412,
+    "token": "form_row",
+    "text": "if not form_row_ok:"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 419,
+    "token": "form_row",
+    "text": "form_row = None"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 420,
+    "token": "form_row",
+    "text": "if form_row_text:"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 422,
+    "token": "form_row",
+    "text": "form_row = int(float(form_row_text))"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 426,
+    "token": "form_row",
+    "text": "if form_row <= 0:"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 464,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "src\\parsers\\manual_event_drivers.py",
+    "line": 468,
+    "token": "form_row",
+    "text": "(SOURCE_NAME, period, amount_vnd, cc_code, account_code, form_row, final_description)"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 24,
+    "token": "form_row",
+    "text": "REQUIRED_COLUMNS = (\"cc_code\", \"period\", \"form_row\", \"account_code\", \"amount_vnd\", \"description\")"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 48,
+    "token": "form_row",
+    "text": "writer.writerow([\"cc_code\", \"period\", \"form_row\", \"account_code\", \"amount_vnd\", \"description\"])"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 88,
+    "token": "form_row",
+    "text": "raw_form_row = str(row.get(\"form_row\", \"\")).strip()"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 97,
+    "token": "form_row",
+    "text": "if not raw_cc and not str(raw_period).strip() and not raw_form_row and not raw_account_code and not str(raw_amount).strip():"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 103,
+    "token": "form_row",
+    "text": "form_row = int(float(raw_form_row))"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 109,
+    "token": "form_row",
+    "text": "if cc_code not in valid_cc_codes or form_row <= 0 or account_code <= 0:"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 126,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "src\\parsers\\manual_special_costs.py",
+    "line": 129,
+    "token": "form_row",
+    "text": "(period, amount_vnd, cc_code, account_code, form_row, description),"
+  },
+  {
+    "file": "src\\parsers\\nnn_paperwork.py",
+    "line": 146,
+    "token": "row 137",
+    "text": "\"\"\"Load NNN/VISA/GPLD/Passport paperwork workbook into explicit FORM row 137.\"\"\""
+  },
+  {
+    "file": "src\\parsers\\nnn_paperwork.py",
+    "line": 260,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "tests\\test_account_resolver.py",
+    "line": 380,
+    "token": "form_row",
+    "text": "def test_source_policy_resolves_ga_admin_form_row_by_cc_cost_type(self):"
+  },
+  {
+    "file": "tests\\test_account_resolver.py",
+    "line": 394,
+    "token": "form_row",
+    "text": "resolve_account_code_for_source(conn, \"ga_admin_allocation\", \"1412000040\", form_row=97),"
+  },
+  {
+    "file": "tests\\test_account_resolver.py",
+    "line": 398,
+    "token": "form_row",
+    "text": "resolve_account_code_for_source(conn, \"ga_admin_allocation\", \"1412000099\", form_row=97),"
+  },
+  {
+    "file": "tests\\test_account_resolver.py",
+    "line": 402,
+    "token": "form_row",
+    "text": "resolve_account_code_for_source(conn, \"ga_admin_allocation\", \"1412000100\", form_row=97),"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 290,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 304,
+    "token": "form_row",
+    "text": "\"form_row\": \"137\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 378,
+    "token": "form_row",
+    "text": "SELECT source, period, cc_code, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 387,
+    "token": "form_row",
+    "text": "self.assertEqual(int(fact_row[\"form_row\"]), 66)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 447,
+    "token": "row 97",
+    "text": "\"note\": \"Staff notebook row 97 test\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 457,
+    "token": "form_row",
+    "text": "SELECT period, cc_code, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 466,
+    "token": "form_row",
+    "text": "self.assertEqual(int(fact_row[\"form_row\"]), 97)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 480,
+    "token": "F97",
+    "text": "self.assertEqual(ws[\"R97\"].value, \"=SUM(F97:Q97)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 481,
+    "token": "F97",
+    "text": "other_month_cells = [\"F97\", \"H97\", \"I97\", \"J97\", \"K97\", \"L97\", \"M97\", \"N97\", \"O97\", \"P97\", \"Q97\"]"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 527,
+    "token": "row 98",
+    "text": "\"note\": \"Worker notebook row 98 test\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 537,
+    "token": "form_row",
+    "text": "SELECT period, cc_code, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 546,
+    "token": "form_row",
+    "text": "self.assertEqual(int(fact_row[\"form_row\"]), 98)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 560,
+    "token": "F98",
+    "text": "self.assertEqual(ws[\"R98\"].value, \"=SUM(F98:Q98)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 561,
+    "token": "F98",
+    "text": "other_month_cells = [\"F98\", \"H98\", \"I98\", \"J98\", \"K98\", \"L98\", \"M98\", \"N98\", \"O98\", \"P98\", \"Q98\"]"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 618,
+    "token": "form_row",
+    "text": "SELECT period, cc_code, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 627,
+    "token": "form_row",
+    "text": "self.assertEqual(int(fact_row[\"form_row\"]), 58)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 645,
+    "token": "F58",
+    "text": "self.assertEqual(ws[\"R58\"].value, \"=SUM(F58:Q58)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 701,
+    "token": "form_row",
+    "text": "\"SELECT COUNT(*) FROM fact_input_data WHERE source = 'manual_event_driver' AND form_row = 58\""
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 767,
+    "token": "form_row",
+    "text": "SELECT period, cc_code, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 776,
+    "token": "form_row",
+    "text": "self.assertEqual(int(fact_row[\"form_row\"]), 66)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1089,
+    "token": "form_row",
+    "text": "SELECT source, period, cc_code, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1099,
+    "token": "form_row",
+    "text": "self.assertIsNone(fact_row[\"form_row\"])"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1150,
+    "token": "form_row",
+    "text": "SELECT period, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1159,
+    "token": "form_row",
+    "text": "self.assertEqual(int(row[\"form_row\"]), 53)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1225,
+    "token": "form_row",
+    "text": "SELECT period, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1234,
+    "token": "form_row",
+    "text": "self.assertEqual(int(row[\"form_row\"]), 54)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1367,
+    "token": "form_row",
+    "text": "def test_manual_event_driver_without_form_row_appends_with_formula(self):"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1390,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1404,
+    "token": "form_row",
+    "text": "\"form_row\": \"\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1462,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1520,
+    "token": "form_row",
+    "text": "SELECT period, amount_vnd, form_row, description"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1528,
+    "token": "form_row",
+    "text": "self.assertEqual(int(row[\"form_row\"]), 137)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1557,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1571,
+    "token": "form_row",
+    "text": "\"form_row\": \"46\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1584,
+    "token": "form_row",
+    "text": "\"form_row\": \"46\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1685,
+    "token": "F137",
+    "text": "self.assertEqual(ws[\"F137\"].value, \"=1000\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1732,
+    "token": "F59",
+    "text": "self.assertEqual(ws[\"F59\"].value, \"=3*152000\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1740,
+    "token": "form_row",
+    "text": "def test_manual_special_cost_parser_and_export_to_explicit_form_row(self):"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1751,
+    "token": "form_row",
+    "text": "fieldnames=[\"cc_code\", \"period\", \"form_row\", \"account_code\", \"amount_vnd\", \"description\"],"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1758,
+    "token": "form_row",
+    "text": "\"form_row\": \"113\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1894,
+    "token": "form_row",
+    "text": "def test_export_routes_fixed_items_to_form_rows_and_clears_sample_rows(self):"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 1958,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, amount_usd, cc_code, account_code, form_row, description)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2033,
+    "token": "F38",
+    "text": "self.assertEqual(ws[\"F38\"].value, \"=ROUND(3.5*$B$2,0)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2036,
+    "token": "F42",
+    "text": "self.assertEqual(ws[\"F42\"].value, \"=ROUND(6.5*$B$2,0)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2044,
+    "token": "F58",
+    "text": "self.assertEqual(ws[\"F58\"].value, \"=800\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2045,
+    "token": "F59",
+    "text": "self.assertEqual(ws[\"F59\"].value, \"=900\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2048,
+    "token": "F97",
+    "text": "self.assertEqual(ws[\"F97\"].value, \"=1000\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2049,
+    "token": "F98",
+    "text": "self.assertEqual(ws[\"F98\"].value, \"=1100\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2050,
+    "token": "F137",
+    "text": "self.assertEqual(ws[\"F137\"].value, \"=1200\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2090,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2173,
+    "token": "form_row",
+    "text": "ws.append([\"cc_code\", \"form_row\", \"account_code\", \"description\", *months])"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2182,
+    "token": "form_row",
+    "text": "ws.append([\"cc_code\", \"form_row\", \"account_code\", \"description\", \"period\", \"quantity\", \"unit_price\", \"amount\"])"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2211,
+    "token": "F97",
+    "text": "self.assertEqual(ws[\"R97\"].value, \"=SUM(F97:Q97)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2212,
+    "token": "F98",
+    "text": "self.assertEqual(ws[\"R98\"].value, \"=SUM(F98:Q98)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2213,
+    "token": "F58",
+    "text": "self.assertEqual(ws[\"R58\"].value, \"=SUM(F58:Q58)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2279,
+    "token": "F38",
+    "text": "self.assertEqual(ws[\"R38\"].value, \"=SUM(F38:Q38)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2280,
+    "token": "F42",
+    "text": "self.assertEqual(ws[\"R42\"].value, \"=SUM(F42:Q42)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2399,
+    "token": "form_row",
+    "text": "ws.append([\"cc_code\", \"form_row\", \"account_code\", \"description\", *months])"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2412,
+    "token": "form_row",
+    "text": "SELECT account_code, form_row"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2420,
+    "token": "form_row",
+    "text": "self.assertEqual(int(row[\"form_row\"]), 54)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2695,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2716,
+    "token": "F137",
+    "text": "self.assertEqual(ws[\"F137\"].value, \"=1000000\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2718,
+    "token": "Q137",
+    "text": "self.assertEqual(ws[\"Q137\"].value, \"=12000000\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2719,
+    "token": "F137",
+    "text": "self.assertEqual(ws[\"R137\"].value, \"=SUM(F137:Q137)\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2736,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2756,
+    "token": "F137",
+    "text": "self.assertEqual(ws[\"F137\"].value, \"=1000000+2000*3\")"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2771,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2783,
+    "token": "form_row",
+    "text": "(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)"
+  },
+  {
+    "file": "tests\\test_headcount_and_export.py",
+    "line": 2801,
+    "token": "F137",
+    "text": "self.assertIsNone(ws[\"F137\"].value)"
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 76,
+    "token": "form_row",
+    "text": "\"form_row\","
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 101,
+    "token": "form_row",
+    "text": "\"form_row\": \"59\","
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 125,
+    "token": "form_row",
+    "text": "\"form_row\": \"59\","
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 148,
+    "token": "form_row",
+    "text": "\"form_row\": \"59\","
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 176,
+    "token": "form_row",
+    "text": "SELECT period, account_code, form_row, amount_vnd, description"
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 183,
+    "token": "form_row",
+    "text": "assert row[\"form_row\"] == 71"
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 205,
+    "token": "form_row",
+    "text": "\"SELECT period, form_row, amount_vnd, description FROM fact_input_data WHERE source='manual_event_driver'\""
+  },
+  {
+    "file": "tests\\test_manual_event_drivers.py",
+    "line": 208,
+    "token": "form_row",
+    "text": "assert row[\"form_row\"] == 81"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 103,
+    "token": "form_row",
+    "text": "SELECT period, amount_vnd, cc_code, account_code, form_row, description"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 117,
+    "token": "form_row",
+    "text": "self.assertEqual(rows[0][\"form_row\"], 137)"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 125,
+    "token": "form_row",
+    "text": "self.assertEqual(rows[1][\"form_row\"], 137)"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 157,
+    "token": "form_row",
+    "text": "SELECT period, amount_vnd, cc_code, account_code, form_row"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 171,
+    "token": "form_row",
+    "text": "self.assertEqual(rows[0][\"form_row\"], 137)"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 178,
+    "token": "form_row",
+    "text": "self.assertEqual(rows[1][\"form_row\"], 137)"
+  },
+  {
+    "file": "tests\\test_nnn_paperwork.py",
+    "line": 210,
+    "token": "form_row",
+    "text": "SELECT period, amount_vnd, cc_code, account_code, form_row, description"
+  },
+  {
+    "file": "tests\\test_output_mode.py",
+    "line": 89,
+    "token": "row 137",
+    "text": "assert \"legacy FORM row 137\" in spec.notes"
+  },
+  {
+    "file": "tests\\test_output_placement.py",
+    "line": 99,
+    "token": "row 137",
+    "text": "assert \"legacy FORM row 137\" in planned[\"nnn_paperwork\"].notes"
+  },
+  {
+    "file": "tests\\test_primary_reference_compare.py",
+    "line": 394,
+    "token": "F59",
+    "text": "\"F59\": \"=2*152000\","
+  },
+  {
+    "file": "tests\\test_primary_reference_compare.py",
+    "line": 399,
+    "token": "F59",
+    "text": "\"F59\": \"=6*2150000\","
+  },
+  {
+    "file": "tests\\test_source_order_output.py",
+    "line": 46,
+    "token": "form_row",
+    "text": "def test_no_fixed_form_rows_are_required_by_policy():"
+  },
+  {
+    "file": "docs\\audits\\phase42n1i_strict_diff_classification.md",
+    "line": 42,
+    "token": "row 59",
+    "text": "| 59 | 269 | Birthday | 2 | `J, R` | `NEED_SOURCE_WORKBOOK_CHECK` | Medium | Inspect birthday source counts/new joiners/unit price and FORM row 59/63 conflict context. | Do not assert missing input solely from primary diff; birthday has known row 63 vs 59 requ"
+  },
+  {
+    "file": "docs\\audits\\phase42n1i_strict_diff_classification.md",
+    "line": 62,
+    "token": "F38",
+    "text": "- Requirement note: 42R0-G1: Fixed asset depreciation target F38:Q38; NEED_FORM_TEMPLATE_CHECK; compare to primary must be identity-aware."
+  },
+  {
+    "file": "docs\\audits\\phase42n1i_strict_diff_classification.md",
+    "line": 82,
+    "token": "F42",
+    "text": "- Requirement note: 42R0-G2: Fixed asset interest target F42:Q42; NEED_FORM_TEMPLATE_CHECK; compare to primary must be identity-aware."
+  },
+  {
+    "file": "docs\\audits\\phase42n1i_strict_diff_classification.md",
+    "line": 102,
+    "token": "F59",
+    "text": "- Requirement note: 42R0-D1: Birthday accepted target F59:Q59 but row 63 conflict remains MD_INTERPRETATION_RISK."
+  },
+  {
+    "file": "docs\\audits\\phase42n1i_strict_diff_classification.md",
+    "line": 116,
+    "token": "row 59",
+    "text": "1. Inspect source workbooks for row 51 Cleaning/admin allocation and row 59 Birthday before claiming input mismatch or code bug."
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 24,
+    "token": "F38",
+    "text": "| 38 | `FORM_root` | 5006016244 | 減価償却費（設備）/Khấu hao (Thiết bị) | `` | `` | `=SUM(F38:Q38)` | `TEMPLATE_CONFIRMED` |"
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 25,
+    "token": "F38",
+    "text": "| 38 | `generated` | 5006016244 | 減価償却費（設備）/Khấu hao (Thiết bị) | `=ROUND(165.39*$B$2,0)` | `=ROUND(165.39*$B$2,0)` | `=SUM(F38:Q38)` | `BAM_THEO_FORM_TEMPLATE` |"
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 30,
+    "token": "F42",
+    "text": "| 42 | `FORM_root` | 9114120007 | 固定資産金利（設備）/Lãi (Thiết bị) | `` | `` | `=SUM(F42:Q42)` | `TEMPLATE_CONFIRMED` |"
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 31,
+    "token": "F42",
+    "text": "| 42 | `generated` | 9114120007 | 固定資産金利（設備）/Lãi (Thiết bị) | `=ROUND(17.88*$B$2,0)` | `=ROUND(14.9*$B$2,0)` | `=SUM(F42:Q42)` | `BAM_THEO_FORM_TEMPLATE` |"
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 36,
+    "token": "row 38",
+    "text": "### A. FORM/template row 38"
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 38,
+    "token": "F38",
+    "text": "FORM row 38 is confirmed as fixed asset depreciation/equipment: `減価償却費（設備）/Khấu hao (Thiết bị)`, account `5006016244`, R formula `=SUM(F38:Q38)`. Generated row 38 keeps the same account/description/R formula and fills F:Q formulas. Primary same identity is row"
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 40,
+    "token": "row 42",
+    "text": "### B. FORM/template row 42"
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 42,
+    "token": "F42",
+    "text": "FORM row 42 is confirmed as fixed asset interest/equipment: `固定資産金利（設備）/Lãi (Thiết bị)`, account `9114120007`, R formula `=SUM(F42:Q42)`. Generated row 42 keeps the same account/description/R formula and fills F:Q formulas. Primary same identity is row 302."
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 54,
+    "token": "row 38",
+    "text": "- Generated row 38 matches primary row 40 by depreciation/tool-equipment identity."
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 55,
+    "token": "row 42",
+    "text": "- Generated row 42 matches primary row 302 by fixed-asset interest/tool-jig identity."
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 56,
+    "token": "row 42",
+    "text": "- Primary row 303 is building/land interest and matches generated row 40, not generated row 42."
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 66,
+    "token": "row 38",
+    "text": "| 38 | `TEMPLATE_CONFIRMED` + `NEED_SOURCE_WORKBOOK_CHECK` | FORM confirms row 38 is fixed asset depreciation; source workbook is still needed to judge F:Q formula/value differences. |"
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 67,
+    "token": "row 42",
+    "text": "| 42 | `TEMPLATE_CONFIRMED` + `NEED_SOURCE_WORKBOOK_CHECK` | FORM confirms row 42 is fixed asset equipment interest; source workbook is still needed to judge F:Q formula/value differences. |"
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 75,
+    "token": "row 38",
+    "text": "- Do not call row 38/42 a code bug from strict diff alone."
+  },
+  {
+    "file": "docs\\audits\\phase42n1j_form_template_check_rows_38_42.md",
+    "line": 77,
+    "token": "row 38",
+    "text": "- Do not compare generated row 38 to primary row 38 or generated row 42 to primary row 42 as fixed-row business evidence."
+  },
+  {
+    "file": "docs\\audits\\phase42n1k_source_trace_rows_38_40_42.md",
+    "line": 121,
+    "token": "F137",
+    "text": "| NNN | Requirement mentions F137:Q137 but NNN is also in file-order list. | Decide if NNN remains row-fixed or moves to file-order block. |"
+  },
+  {
+    "file": "docs\\audits\\phase42n1k_source_trace_rows_38_40_42.md",
+    "line": 127,
+    "token": "F38",
+    "text": "| 38 | Fixed asset depreciation / equipment | Fixed Assets | `2025.11` row 1105 gives depreciation `165.39`; row 620 has last depreciation month before FY2027, so not active monthly depreciation. | Row 38 uses `=ROUND(165.39*$B$2,0)` in F:Q and `=SUM(F38:Q38)`"
+  },
+  {
+    "file": "docs\\audits\\phase42n1k_source_trace_rows_38_40_42.md",
+    "line": 136,
+    "token": "row 38",
+    "text": "row 1105 contains depreciation `165.39`, matching generated row 38."
+  },
+  {
+    "file": "docs\\audits\\phase42n1k_source_trace_rows_38_40_42.md",
+    "line": 150,
+    "token": "row 42",
+    "text": "`17.88`, matching generated row 42 F. However, primary row 302 includes"
+  },
+  {
+    "file": "docs\\audits\\phase42n1k_source_trace_rows_38_40_42.md",
+    "line": 159,
+    "token": "row 42",
+    "text": "- A code trace showing which fixed-assets rows are included/excluded for row 42."
+  },
+  {
+    "file": "docs\\audits\\phase42n1k_source_trace_rows_38_40_42.md",
+    "line": 173,
+    "token": "row 42",
+    "text": "- Do not call row 42 a code bug until fixed-assets aggregation logic and output mode are traced."
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 82,
+    "token": "form_row",
+    "text": "`src/db/schema.py` includes `fact_input_data.form_row`."
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 84,
+    "token": "form_row",
+    "text": "Current writer uses `form_row` only through explicit fixed-form row handling:"
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 86,
+    "token": "form_row",
+    "text": "- `_load_explicit_form_rows()` reads rows with `form_row IS NOT NULL`."
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 87,
+    "token": "form_row",
+    "text": "- `_write_explicit_form_rows()` writes those rows directly to their form row."
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 88,
+    "token": "form_row",
+    "text": "- `_load_append_rows()` only appends rows where `form_row IS NULL`."
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 116,
+    "token": "row 38",
+    "text": "| Fixed Assets | `src/parsers/fixed_assets.py`, `hub_builder.py` | Fixed-row | 38, 42 | Fixed rows keep template style | No | High: old row 38/42 requirement conflicts with new file-order confirmation. |"
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 120,
+    "token": "F137",
+    "text": "| NNN | `src/parsers/nnn_paperwork.py`, `hub_builder.py` | Row 137 compatibility / explicit row capable | 137 | Fixed row or explicit row | No | Medium: F137:Q137 requirement conflicts with file-order list. |"
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 128,
+    "token": "row 38",
+    "text": "| Fixed Assets | `MIXED_TRANSITION` / `FILE_ORDER_GROUP_PENDING` | Second source-file group, pending transition decision | Requirement/audits mention row 38/42, but new confirmation says file-order is acceptable. Keep row compatibility until migration is expli"
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 131,
+    "token": "legacy row",
+    "text": "| Birthday | `FILE_ORDER_OR_ROW59_COMPAT` | Fifth source-file group or legacy row 59 compatibility | Keep row 59/63 conflict note. File-order may reduce row dependence but do not remove compatibility yet. |"
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 133,
+    "token": "F137",
+    "text": "| NNN | `ROW137_COMPAT_OR_FILE_ORDER_PENDING` | Seventh source-file group or row 137 compatibility | Requirement has F137:Q137 but NNN is also in file-order list. Needs explicit compatibility decision. |"
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 143,
+    "token": "form_row",
+    "text": "optional legacy `form_row`."
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 186,
+    "token": "row 59",
+    "text": "- Decide whether Birthday stays row 59 compatible or moves fully to file-order."
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 187,
+    "token": "row 137",
+    "text": "- Decide whether NNN keeps row 137 compatibility or moves to file-order."
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 215,
+    "token": "form_row",
+    "text": "- Existing `form_row` data may conflict with file-order placement if both are active."
+  },
+  {
+    "file": "docs\\audits\\phase42n1l_output_mode_architecture.md",
+    "line": 222,
+    "token": "row 38",
+    "text": "- Do not remove row 38/42/59/137 compatibility until transition is decided."
+  },
+  {
+    "file": "docs\\audits\\phase42n1z_a_gap136_trace_matrix.csv",
+    "line": 47,
+    "token": "form_row",
+    "text": "80,5005026371,BRIGE UNIT DBU – 120A購入,,,C1_fixed_assets_detail_5005026371,PARTIAL_SOURCE_FOUND,raw\\event_drivers_manual.csv,csv,1,row-level scan,\"fuzzy token: ﻿cc_code,period,event_name,count,unit_price,amount_vnd,account_code,form_row,description\",not enough "
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 5,
+    "token": "row 137",
+    "text": "\"token\": \"row 137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 6,
+    "token": "row 137",
+    "text": "\"text\": \"- VISA/Passport/GPLD/NNN nếu phải ghi vào row khác row 137.\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 11,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 12,
+    "token": "form_row",
+    "text": "\"text\": \"Bước 9: Nếu biết row FORM cần ghi, nhập row/form_row, ví dụ 66 cho 社員旅行.\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 17,
+    "token": "row 137",
+    "text": "\"token\": \"row 137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 18,
+    "token": "row 137",
+    "text": "\"text\": \"- Passport/VISA/GPLD cần row khác row 137.\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 23,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 24,
+    "token": "form_row",
+    "text": "\"text\": \"Không nhập form_row nếu chưa chắc row đích.\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 29,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 30,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"row/form_row = dòng FORM cần ghi, ví dụ 66 cho 社員旅行.  \\\"\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 35,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 36,
+    "token": "form_row",
+    "text": "\"text\": \"form_row_var = tk.StringVar()\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 41,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 42,
+    "token": "form_row",
+    "text": "\"text\": \"add_label_entry(5, 4, \\\"Dòng FORM\\\", form_row_var, width=12)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 47,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 48,
+    "token": "form_row",
+    "text": "\"text\": \"(\\\"form_row\\\", 75, \\\"Form row\\\"),\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 53,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 54,
+    "token": "form_row",
+    "text": "\"text\": \"form_row_var,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 59,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 60,
+    "token": "form_row",
+    "text": "\"text\": \"value = str(row.get(\\\"form_row\\\", \\\"\\\") or \\\"\\\").strip()\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 65,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 66,
+    "token": "form_row",
+    "text": "\"text\": \"form_row = validate_numeric(form_row_var.get(), \\\"dòng FORM\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 71,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 72,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": form_row,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 77,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 78,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"row\\\": form_row,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 83,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 84,
+    "token": "form_row",
+    "text": "\"text\": \"form_row_var.set(row_data.get(\\\"row\\\") or row_data.get(\\\"form_row\\\", \\\"\\\"))\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 89,
+    "token": "row 137",
+    "text": "\"token\": \"row 137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 90,
+    "token": "row 137",
+    "text": "\"text\": \"\\\"nnn_paperwork\\\": \\\"Workbook NNN/VISA/GPLD/Passport FY2027 vào row 137.\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 95,
+    "token": "row 59",
+    "text": "\"token\": \"row 59\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 96,
+    "token": "row 59",
+    "text": "\"text\": \"\\\"birthday_workbook\\\": \\\"Workbook sinh nhật vào row 59, công thức count*152000.\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 101,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 102,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"manual_special_cost\\\": \\\"Override thủ công theo form_row.\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 107,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 108,
+    "token": "form_row",
+    "text": "\"text\": \"account_code INTEGER NOT NULL, form_row INTEGER DEFAULT NULL,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 113,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 114,
+    "token": "form_row",
+    "text": "\"text\": \"if not _column_exists(conn, \\\"fact_input_data\\\", \\\"form_row\\\"):\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 119,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 120,
+    "token": "form_row",
+    "text": "\"text\": \"cursor.execute(\\\"ALTER TABLE fact_input_data ADD COLUMN form_row INTEGER DEFAULT NULL\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 125,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 126,
+    "token": "form_row",
+    "text": "\"text\": \"ACCOUNT_STRATEGY_FORM_ROW_BASE_ACCOUNT = \\\"form_row_base_account\\\"\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 131,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 132,
+    "token": "form_row",
+    "text": "\"text\": \"fixed_form_row: int | None = None\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 137,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 138,
+    "token": "form_row",
+    "text": "\"text\": \"base_account_by_form_row: Mapping[int, int] = field(default_factory=dict)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 143,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 144,
+    "token": "form_row",
+    "text": "\"text\": \"fixed_form_row=59,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 149,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 150,
+    "token": "form_row",
+    "text": "\"text\": \"base_account_by_form_row={\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 155,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 156,
+    "token": "form_row",
+    "text": "\"text\": \"notes=\\\"GA admin rows choose a logical base account by form_row, then resolve by CC cost_type.\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 161,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 162,
+    "token": "form_row",
+    "text": "\"text\": \"form_row: int | None = None,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 167,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 168,
+    "token": "form_row",
+    "text": "\"text\": \"if policy.base_account_by_form_row:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 173,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 174,
+    "token": "form_row",
+    "text": "\"text\": \"if form_row is None:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 179,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 180,
+    "token": "form_row",
+    "text": "\"text\": \"raise AccountResolutionError(f\\\"Missing form_row for source account policy: {source}\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 185,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 186,
+    "token": "form_row",
+    "text": "\"text\": \"account_code = policy.base_account_by_form_row.get(int(form_row))\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 191,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 192,
+    "token": "form_row",
+    "text": "\"text\": \"raise AccountResolutionError(f\\\"Unsupported form_row for source account policy: {source}:{form_row}\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 197,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 198,
+    "token": "form_row",
+    "text": "\"text\": \"form_row: int | None = None,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 203,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 204,
+    "token": "form_row",
+    "text": "\"text\": \"form_row=form_row,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 209,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 210,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT id, source, cc_code, description, form_row\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 215,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 216,
+    "token": "form_row",
+    "text": "\"text\": \"form_row=row[\\\"form_row\\\"],\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 221,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 222,
+    "token": "target_row",
+    "text": "\"text\": \"def _write_staged_row(ws, target_row: int, staged: StagedWorkbookRow) -> None:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 227,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 228,
+    "token": "target_row",
+    "text": "\"text\": \"cell = ws.cell(target_row, col)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 233,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 234,
+    "token": "target_row",
+    "text": "\"text\": \"note = _norm(ws.cell(target_row, NOTE_COL).value)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 239,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 240,
+    "token": "target_row",
+    "text": "\"text\": \"ws.cell(target_row, NOTE_COL).value = f\\\"{note} | {source_note}\\\" if note else source_note\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 245,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 246,
+    "token": "target_row",
+    "text": "\"text\": \"target_row = _next_empty_row(ws, resolved_start)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 251,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 252,
+    "token": "target_row",
+    "text": "\"text\": \"if _business_row_present(ws, target_row):\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 257,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 258,
+    "token": "target_row",
+    "text": "\"text\": \"target_row = _next_empty_row(ws, target_row + 1)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 263,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 264,
+    "token": "target_row",
+    "text": "\"text\": \"_write_candidate(ws, target_row, candidate)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 269,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 270,
+    "token": "target_row",
+    "text": "\"text\": \"target_row = _next_empty_row(ws, target_row + 1)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 275,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 276,
+    "token": "target_row",
+    "text": "\"text\": \"def _copy_row_style(self, worksheet, source_row: int, target_row: int) -> None:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 281,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 282,
+    "token": "target_row",
+    "text": "\"text\": \"worksheet.row_dimensions[target_row].height = worksheet.row_dimensions[source_row].height\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 287,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 288,
+    "token": "target_row",
+    "text": "\"text\": \"target_cell = worksheet.cell(row=target_row, column=column_index)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 293,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 294,
+    "token": "form_row",
+    "text": "\"text\": \"def _load_explicit_form_rows(self, cc_code: int) -> list[dict[str, object]]:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 299,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 300,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT form_row, account_code, description, period, SUM(amount_vnd) AS amount\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 305,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 306,
+    "token": "form_row",
+    "text": "\"text\": \"AND form_row IS NOT NULL\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 311,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 312,
+    "token": "form_row",
+    "text": "\"text\": \"GROUP BY form_row, account_code, description, period\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 317,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 318,
+    "token": "form_row",
+    "text": "\"text\": \"ORDER BY form_row, account_code, description, period\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 323,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 324,
+    "token": "form_row",
+    "text": "\"text\": \"row_index = int(row[\\\"form_row\\\"] or 0)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 329,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 330,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": row_index,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 335,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 336,
+    "token": "form_row",
+    "text": "\"text\": \"def _write_explicit_form_rows(self, worksheet, cc_code: int) -> None:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 341,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 342,
+    "token": "form_row",
+    "text": "\"text\": \"for row in self._load_explicit_form_rows(cc_code):\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 347,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 348,
+    "token": "form_row",
+    "text": "\"text\": \"row_index = int(row[\\\"form_row\\\"])\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 353,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 354,
+    "token": "form_row",
+    "text": "\"text\": \"self._write_explicit_form_rows(worksheet, cc_code)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 359,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 360,
+    "token": "form_row",
+    "text": "\"text\": \"self._write_explicit_form_rows(worksheet, cc_code)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 365,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 366,
+    "token": "form_row",
+    "text": "\"text\": \"AND form_row IS NULL\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 371,
+    "token": "row 137",
+    "text": "\"token\": \"row 137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 372,
+    "token": "row 137",
+    "text": "\"text\": \"notes=\\\"Source-file-order row; legacy FORM row 137 is not a placement target.\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 377,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 378,
+    "token": "target_row",
+    "text": "\"text\": \"def _copy_business_row(primary_ws, target_ws, primary_row: int, target_row: int) -> None:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 383,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 384,
+    "token": "target_row",
+    "text": "\"text\": \"dest = target_ws.cell(target_row, col)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 389,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 390,
+    "token": "target_row",
+    "text": "\"text\": \"note_cell = target_ws.cell(target_row, 20)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 395,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 396,
+    "token": "target_row",
+    "text": "\"text\": \"target_row = _next_safe_row(target_ws, start_row)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 401,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 402,
+    "token": "target_row",
+    "text": "\"text\": \"if target_row < 213:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 407,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 408,
+    "token": "target_row",
+    "text": "\"text\": \"target_row = 213\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 413,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 414,
+    "token": "target_row",
+    "text": "\"text\": \"_copy_business_row(primary_ws, target_ws, item[\\\"primary_row\\\"], target_row)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 419,
+    "token": "target_row",
+    "text": "\"token\": \"target_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 420,
+    "token": "target_row",
+    "text": "\"text\": \"target_row += 1\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 425,
+    "token": "row 59",
+    "text": "\"token\": \"row 59\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 426,
+    "token": "row 59",
+    "text": "\"text\": \"\\\"\\\"\\\"Load birthday workbook amounts into explicit FORM row 59.\\\"\\\"\\\"\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 431,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 432,
+    "token": "form_row",
+    "text": "\"text\": \"(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 437,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 438,
+    "token": "form_row",
+    "text": "\"text\": \"def _admin_match_form_row(text: str) -> int | None:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 443,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 444,
+    "token": "form_row",
+    "text": "\"text\": \"if any(token in text for token in (\\\"form_row\\\", \\\"form row\\\", \\\"row\\\", \\\"dòng\\\", \\\"dong\\\")):\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 449,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 450,
+    "token": "form_row",
+    "text": "\"text\": \"return \\\"form_row\\\"\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 455,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 456,
+    "token": "form_row",
+    "text": "\"text\": \"form_row: int,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 461,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 462,
+    "token": "form_row",
+    "text": "\"text\": \"form_row=form_row,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 467,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 468,
+    "token": "form_row",
+    "text": "\"text\": \"final_description = f\\\"Admin allocation: {description or form_row}\\\"\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 473,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 474,
+    "token": "form_row",
+    "text": "\"text\": \"(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 479,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 480,
+    "token": "form_row",
+    "text": "\"text\": \"(ADMIN_SOURCE_NAME, period, amount_vnd, cc_code, final_account, form_row, final_description),\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 485,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 486,
+    "token": "form_row",
+    "text": "\"text\": \"if \\\"cc_code\\\" in header_map and (\\\"form_row\\\" in header_map or detected_months):\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 491,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 492,
+    "token": "form_row",
+    "text": "\"text\": \"form_row = None\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 497,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 498,
+    "token": "form_row",
+    "text": "\"text\": \"form_row_index = active_header.get(\\\"form_row\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 503,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 504,
+    "token": "form_row",
+    "text": "\"text\": \"if form_row_index is not None and form_row_index < len(row):\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 509,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 510,
+    "token": "form_row",
+    "text": "\"text\": \"maybe_row = safe_float(row[form_row_index])\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 515,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 516,
+    "token": "form_row",
+    "text": "\"text\": \"form_row = int(maybe_row)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 521,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 522,
+    "token": "form_row",
+    "text": "\"text\": \"if form_row is None:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 527,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 528,
+    "token": "form_row",
+    "text": "\"text\": \"form_row = _admin_match_form_row(row_text)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 533,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 534,
+    "token": "form_row",
+    "text": "\"text\": \"if form_row not in ADMIN_BASE_ACCOUNT_BY_ROW:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 539,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 540,
+    "token": "form_row",
+    "text": "\"text\": \"form_row=form_row,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 545,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 546,
+    "token": "form_row",
+    "text": "\"text\": \"unit = float(ADMIN_DEFAULT_UNIT_PRICE_BY_ROW.get(form_row, 0))\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 551,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 552,
+    "token": "form_row",
+    "text": "\"text\": \"form_row=form_row,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 557,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 558,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": 54,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 563,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 564,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": 54,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 569,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 570,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": 66,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 575,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 576,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": 81,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 581,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 582,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": 66,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 587,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 588,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": 71,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 593,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 594,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": 64,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 599,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 600,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": 65,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 605,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 606,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": 68,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 611,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 612,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": 82,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 617,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 618,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": 67,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 623,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 624,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": 70,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 629,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 630,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": 63,\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 635,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 636,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 641,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 642,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 647,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 648,
+    "token": "form_row",
+    "text": "\"text\": \"if event_default and not str(row.get(\\\"form_row\\\", \\\"\\\") or \\\"\\\").strip() and not str(row.get(\\\"row\\\", \\\"\\\") or \\\"\\\").strip():\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 653,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 654,
+    "token": "form_row",
+    "text": "\"text\": \"row[\\\"form_row\\\"] = str(event_default[\\\"form_row\\\"])\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 659,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 660,
+    "token": "form_row",
+    "text": "\"text\": \"form_row_text, form_row_ok = _merged_value(row, \\\"form_row\\\", \\\"row\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 665,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 666,
+    "token": "form_row",
+    "text": "\"text\": \"if not form_row_ok:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 671,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 672,
+    "token": "form_row",
+    "text": "\"text\": \"form_row = None\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 677,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 678,
+    "token": "form_row",
+    "text": "\"text\": \"if form_row_text:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 683,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 684,
+    "token": "form_row",
+    "text": "\"text\": \"form_row = int(float(form_row_text))\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 689,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 690,
+    "token": "form_row",
+    "text": "\"text\": \"if form_row <= 0:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 695,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 696,
+    "token": "form_row",
+    "text": "\"text\": \"(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 701,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 702,
+    "token": "form_row",
+    "text": "\"text\": \"(SOURCE_NAME, period, amount_vnd, cc_code, account_code, form_row, final_description)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 707,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 708,
+    "token": "form_row",
+    "text": "\"text\": \"REQUIRED_COLUMNS = (\\\"cc_code\\\", \\\"period\\\", \\\"form_row\\\", \\\"account_code\\\", \\\"amount_vnd\\\", \\\"description\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 713,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 714,
+    "token": "form_row",
+    "text": "\"text\": \"writer.writerow([\\\"cc_code\\\", \\\"period\\\", \\\"form_row\\\", \\\"account_code\\\", \\\"amount_vnd\\\", \\\"description\\\"])\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 719,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 720,
+    "token": "form_row",
+    "text": "\"text\": \"raw_form_row = str(row.get(\\\"form_row\\\", \\\"\\\")).strip()\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 725,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 726,
+    "token": "form_row",
+    "text": "\"text\": \"if not raw_cc and not str(raw_period).strip() and not raw_form_row and not raw_account_code and not str(raw_amount).strip():\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 731,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 732,
+    "token": "form_row",
+    "text": "\"text\": \"form_row = int(float(raw_form_row))\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 737,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 738,
+    "token": "form_row",
+    "text": "\"text\": \"if cc_code not in valid_cc_codes or form_row <= 0 or account_code <= 0:\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 743,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 744,
+    "token": "form_row",
+    "text": "\"text\": \"(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 749,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 750,
+    "token": "form_row",
+    "text": "\"text\": \"(period, amount_vnd, cc_code, account_code, form_row, description),\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 755,
+    "token": "row 137",
+    "text": "\"token\": \"row 137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 756,
+    "token": "row 137",
+    "text": "\"text\": \"\\\"\\\"\\\"Load NNN/VISA/GPLD/Passport paperwork workbook into explicit FORM row 137.\\\"\\\"\\\"\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 761,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 762,
+    "token": "form_row",
+    "text": "\"text\": \"(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 767,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 768,
+    "token": "form_row",
+    "text": "\"text\": \"def test_source_policy_resolves_ga_admin_form_row_by_cc_cost_type(self):\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 773,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 774,
+    "token": "form_row",
+    "text": "\"text\": \"resolve_account_code_for_source(conn, \\\"ga_admin_allocation\\\", \\\"1412000040\\\", form_row=97),\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 779,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 780,
+    "token": "form_row",
+    "text": "\"text\": \"resolve_account_code_for_source(conn, \\\"ga_admin_allocation\\\", \\\"1412000099\\\", form_row=97),\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 785,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 786,
+    "token": "form_row",
+    "text": "\"text\": \"resolve_account_code_for_source(conn, \\\"ga_admin_allocation\\\", \\\"1412000100\\\", form_row=97),\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 791,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 792,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 797,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 798,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": \\\"137\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 803,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 804,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT source, period, cc_code, account_code, form_row, amount_vnd, description\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 809,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 810,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertEqual(int(fact_row[\\\"form_row\\\"]), 66)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 815,
+    "token": "row 97",
+    "text": "\"token\": \"row 97\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 816,
+    "token": "row 97",
+    "text": "\"text\": \"\\\"note\\\": \\\"Staff notebook row 97 test\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 821,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 822,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT period, cc_code, account_code, form_row, amount_vnd, description\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 827,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 828,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertEqual(int(fact_row[\\\"form_row\\\"]), 97)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 833,
+    "token": "F97",
+    "text": "\"token\": \"F97\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 834,
+    "token": "F97",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"R97\\\"].value, \\\"=SUM(F97:Q97)\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 839,
+    "token": "F97",
+    "text": "\"token\": \"F97\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 840,
+    "token": "F97",
+    "text": "\"text\": \"other_month_cells = [\\\"F97\\\", \\\"H97\\\", \\\"I97\\\", \\\"J97\\\", \\\"K97\\\", \\\"L97\\\", \\\"M97\\\", \\\"N97\\\", \\\"O97\\\", \\\"P97\\\", \\\"Q97\\\"]\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 845,
+    "token": "row 98",
+    "text": "\"token\": \"row 98\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 846,
+    "token": "row 98",
+    "text": "\"text\": \"\\\"note\\\": \\\"Worker notebook row 98 test\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 851,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 852,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT period, cc_code, account_code, form_row, amount_vnd, description\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 857,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 858,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertEqual(int(fact_row[\\\"form_row\\\"]), 98)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 863,
+    "token": "F98",
+    "text": "\"token\": \"F98\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 864,
+    "token": "F98",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"R98\\\"].value, \\\"=SUM(F98:Q98)\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 869,
+    "token": "F98",
+    "text": "\"token\": \"F98\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 870,
+    "token": "F98",
+    "text": "\"text\": \"other_month_cells = [\\\"F98\\\", \\\"H98\\\", \\\"I98\\\", \\\"J98\\\", \\\"K98\\\", \\\"L98\\\", \\\"M98\\\", \\\"N98\\\", \\\"O98\\\", \\\"P98\\\", \\\"Q98\\\"]\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 875,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 876,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT period, cc_code, account_code, form_row, amount_vnd, description\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 881,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 882,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertEqual(int(fact_row[\\\"form_row\\\"]), 58)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 887,
+    "token": "F58",
+    "text": "\"token\": \"F58\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 888,
+    "token": "F58",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"R58\\\"].value, \\\"=SUM(F58:Q58)\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 893,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 894,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"SELECT COUNT(*) FROM fact_input_data WHERE source = 'manual_event_driver' AND form_row = 58\\\"\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 899,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 900,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT period, cc_code, account_code, form_row, amount_vnd, description\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 905,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 906,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertEqual(int(fact_row[\\\"form_row\\\"]), 66)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 911,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 912,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT source, period, cc_code, account_code, form_row, amount_vnd, description\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 917,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 918,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertIsNone(fact_row[\\\"form_row\\\"])\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 923,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 924,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT period, account_code, form_row, amount_vnd, description\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 929,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 930,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertEqual(int(row[\\\"form_row\\\"]), 53)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 935,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 936,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT period, account_code, form_row, amount_vnd, description\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 941,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 942,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertEqual(int(row[\\\"form_row\\\"]), 54)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 947,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 948,
+    "token": "form_row",
+    "text": "\"text\": \"def test_manual_event_driver_without_form_row_appends_with_formula(self):\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 953,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 954,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 959,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 960,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": \\\"\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 965,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 966,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 971,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 972,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT period, amount_vnd, form_row, description\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 977,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 978,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertEqual(int(row[\\\"form_row\\\"]), 137)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 983,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 984,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 989,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 990,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": \\\"46\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 995,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 996,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": \\\"46\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1001,
+    "token": "F137",
+    "text": "\"token\": \"F137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1002,
+    "token": "F137",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"F137\\\"].value, \\\"=1000\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1007,
+    "token": "F59",
+    "text": "\"token\": \"F59\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1008,
+    "token": "F59",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"F59\\\"].value, \\\"=3*152000\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1013,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1014,
+    "token": "form_row",
+    "text": "\"text\": \"def test_manual_special_cost_parser_and_export_to_explicit_form_row(self):\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1019,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1020,
+    "token": "form_row",
+    "text": "\"text\": \"fieldnames=[\\\"cc_code\\\", \\\"period\\\", \\\"form_row\\\", \\\"account_code\\\", \\\"amount_vnd\\\", \\\"description\\\"],\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1025,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1026,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": \\\"113\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1031,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1032,
+    "token": "form_row",
+    "text": "\"text\": \"def test_export_routes_fixed_items_to_form_rows_and_clears_sample_rows(self):\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1037,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1038,
+    "token": "form_row",
+    "text": "\"text\": \"(source, period, amount_vnd, amount_usd, cc_code, account_code, form_row, description)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1043,
+    "token": "F38",
+    "text": "\"token\": \"F38\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1044,
+    "token": "F38",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"F38\\\"].value, \\\"=ROUND(3.5*$B$2,0)\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1049,
+    "token": "F42",
+    "text": "\"token\": \"F42\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1050,
+    "token": "F42",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"F42\\\"].value, \\\"=ROUND(6.5*$B$2,0)\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1055,
+    "token": "F58",
+    "text": "\"token\": \"F58\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1056,
+    "token": "F58",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"F58\\\"].value, \\\"=800\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1061,
+    "token": "F59",
+    "text": "\"token\": \"F59\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1062,
+    "token": "F59",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"F59\\\"].value, \\\"=900\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1067,
+    "token": "F97",
+    "text": "\"token\": \"F97\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1068,
+    "token": "F97",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"F97\\\"].value, \\\"=1000\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1073,
+    "token": "F98",
+    "text": "\"token\": \"F98\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1074,
+    "token": "F98",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"F98\\\"].value, \\\"=1100\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1079,
+    "token": "F137",
+    "text": "\"token\": \"F137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1080,
+    "token": "F137",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"F137\\\"].value, \\\"=1200\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1085,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1086,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1091,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1092,
+    "token": "form_row",
+    "text": "\"text\": \"ws.append([\\\"cc_code\\\", \\\"form_row\\\", \\\"account_code\\\", \\\"description\\\", *months])\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1097,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1098,
+    "token": "form_row",
+    "text": "\"text\": \"ws.append([\\\"cc_code\\\", \\\"form_row\\\", \\\"account_code\\\", \\\"description\\\", \\\"period\\\", \\\"quantity\\\", \\\"unit_price\\\", \\\"amount\\\"])\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1103,
+    "token": "F97",
+    "text": "\"token\": \"F97\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1104,
+    "token": "F97",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"R97\\\"].value, \\\"=SUM(F97:Q97)\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1109,
+    "token": "F98",
+    "text": "\"token\": \"F98\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1110,
+    "token": "F98",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"R98\\\"].value, \\\"=SUM(F98:Q98)\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1115,
+    "token": "F58",
+    "text": "\"token\": \"F58\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1116,
+    "token": "F58",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"R58\\\"].value, \\\"=SUM(F58:Q58)\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1121,
+    "token": "F38",
+    "text": "\"token\": \"F38\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1122,
+    "token": "F38",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"R38\\\"].value, \\\"=SUM(F38:Q38)\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1127,
+    "token": "F42",
+    "text": "\"token\": \"F42\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1128,
+    "token": "F42",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"R42\\\"].value, \\\"=SUM(F42:Q42)\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1133,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1134,
+    "token": "form_row",
+    "text": "\"text\": \"ws.append([\\\"cc_code\\\", \\\"form_row\\\", \\\"account_code\\\", \\\"description\\\", *months])\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1139,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1140,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT account_code, form_row\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1145,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1146,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertEqual(int(row[\\\"form_row\\\"]), 54)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1151,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1152,
+    "token": "form_row",
+    "text": "\"text\": \"(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1157,
+    "token": "F137",
+    "text": "\"token\": \"F137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1158,
+    "token": "F137",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"F137\\\"].value, \\\"=1000000\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1163,
+    "token": "Q137",
+    "text": "\"token\": \"Q137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1164,
+    "token": "Q137",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"Q137\\\"].value, \\\"=12000000\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1169,
+    "token": "F137",
+    "text": "\"token\": \"F137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1170,
+    "token": "F137",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"R137\\\"].value, \\\"=SUM(F137:Q137)\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1175,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1176,
+    "token": "form_row",
+    "text": "\"text\": \"(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1181,
+    "token": "F137",
+    "text": "\"token\": \"F137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1182,
+    "token": "F137",
+    "text": "\"text\": \"self.assertEqual(ws[\\\"F137\\\"].value, \\\"=1000000+2000*3\\\")\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1187,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1188,
+    "token": "form_row",
+    "text": "\"text\": \"(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1193,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1194,
+    "token": "form_row",
+    "text": "\"text\": \"(source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1199,
+    "token": "F137",
+    "text": "\"token\": \"F137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1200,
+    "token": "F137",
+    "text": "\"text\": \"self.assertIsNone(ws[\\\"F137\\\"].value)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1205,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1206,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1211,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1212,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": \\\"59\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1217,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1218,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": \\\"59\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1223,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1224,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"form_row\\\": \\\"59\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1229,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1230,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT period, account_code, form_row, amount_vnd, description\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1235,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1236,
+    "token": "form_row",
+    "text": "\"text\": \"assert row[\\\"form_row\\\"] == 71\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1241,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1242,
+    "token": "form_row",
+    "text": "\"text\": \"\\\"SELECT period, form_row, amount_vnd, description FROM fact_input_data WHERE source='manual_event_driver'\\\"\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1247,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1248,
+    "token": "form_row",
+    "text": "\"text\": \"assert row[\\\"form_row\\\"] == 81\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1253,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1254,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT period, amount_vnd, cc_code, account_code, form_row, description\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1259,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1260,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertEqual(rows[0][\\\"form_row\\\"], 137)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1265,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1266,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertEqual(rows[1][\\\"form_row\\\"], 137)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1271,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1272,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT period, amount_vnd, cc_code, account_code, form_row\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1277,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1278,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertEqual(rows[0][\\\"form_row\\\"], 137)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1283,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1284,
+    "token": "form_row",
+    "text": "\"text\": \"self.assertEqual(rows[1][\\\"form_row\\\"], 137)\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1289,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1290,
+    "token": "form_row",
+    "text": "\"text\": \"SELECT period, amount_vnd, cc_code, account_code, form_row, description\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1295,
+    "token": "row 137",
+    "text": "\"token\": \"row 137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1296,
+    "token": "row 137",
+    "text": "\"text\": \"assert \\\"legacy FORM row 137\\\" in spec.notes\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1301,
+    "token": "row 137",
+    "text": "\"token\": \"row 137\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1302,
+    "token": "row 137",
+    "text": "\"text\": \"assert \\\"legacy FORM row 137\\\" in planned[\\\"nnn_paperwork\\\"].notes\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1307,
+    "token": "F59",
+    "text": "\"token\": \"F59\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1308,
+    "token": "F59",
+    "text": "\"text\": \"\\\"F59\\\": \\\"=2*152000\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1313,
+    "token": "F59",
+    "text": "\"token\": \"F59\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1314,
+    "token": "F59",
+    "text": "\"text\": \"\\\"F59\\\": \\\"=6*2150000\\\",\""
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1319,
+    "token": "form_row",
+    "text": "\"token\": \"form_row\","
+  },
+  {
+    "file": "docs\\audits\\phase42n3c_active_fixed_row_reference_inventory.json",
+    "line": 1320,
+    "token": "form_row",
+    "text": "\"text\": \"def test_no_fixed_form_rows_are_required_by_policy():\""
+  },
+  {
+    "file": "docs\\audits\\phase42r0_canonical_requirement_reconciliation.md",
+    "line": 54,
+    "token": "F137",
+    "text": "| 42R0-C1 | NNN paperwork target | `Chi phí làm giấy tờ cho NNN!K19` says `F137 => Q137` | Visual image in NNN sheet at row anchor near 2/25 | `0.1`, `0.2` | Target FORM is `F137:Q137` | OK | NNN exporter writes row 137 months | Test row 137 formulas/values |"
+  },
+  {
+    "file": "docs\\audits\\phase42r0_canonical_requirement_reconciliation.md",
+    "line": 56,
+    "token": "F59",
+    "text": "| 42R0-D1 | Birthday row conflict | `Chi phí sinh nhật!B24` says row 63 `G63:Q63`; `I24` says row 59 `F59:Q59` | Visual image in birthday sheet anchors around 3 and 26 | `0.1`, `0.2`, birthday section | Accepted target should remain `F59:Q59` if image/source c"
+  },
+  {
+    "file": "docs\\audits\\phase42r0_canonical_requirement_reconciliation.md",
+    "line": 64,
+    "token": "F38",
+    "text": "| 42R0-G1 | Fixed asset depreciation | MD lines 45-50; `Chi phí tài sản cố định!B43:B49` | Visual fixed asset images anchors 3/54 | Fixed Assets section | Depreciation target `F38:Q38` | NEED_FORM_TEMPLATE_CHECK | Fixed asset exporter target row 38 if FORM con"
+  },
+  {
+    "file": "docs\\audits\\phase42r0_canonical_requirement_reconciliation.md",
+    "line": 65,
+    "token": "F42",
+    "text": "| 42R0-G2 | Fixed asset interest | MD lines 45-50; fixed asset rules same sheet | Visual fixed asset images | Fixed Assets section | Interest target `F42:Q42` | NEED_FORM_TEMPLATE_CHECK | Fixed asset interest exporter target row 42 if FORM confirms | Test row "
+  },
+  {
+    "file": "docs\\audits\\phase42r0_canonical_requirement_reconciliation.md",
+    "line": 71,
+    "token": "row 97",
+    "text": "| 42R0-H5 | Notebook staff/worker | MD lines 50-52 | Admin visual examples | Admin section | Staff notebook row 97, worker row 98 | OK | Keep identity-based compare for these rows | Tests rows 97/98 |"
+  },
+  {
+    "file": "docs\\audits\\phase42r0_canonical_requirement_reconciliation.md",
+    "line": 72,
+    "token": "row 58",
+    "text": "| 42R0-H6 | Hiring medical check | MD lines 50-52 | Admin visual examples | Admin section | Hiring medical check row 58, shifted to next month | OK | Parser shifts hiring medical to next month | Test next-month shift |"
+  },
+  {
+    "file": "docs\\audits\\phase42r0_canonical_requirement_reconciliation.md",
+    "line": 79,
+    "token": "row 59",
+    "text": "| Birthday row 63 vs row 59 | Excel gốc has both `B24` row 63 and `I24` row 59 instruction | Treat row 59 as accepted target only after FORM/template check; row 63 is conflict/old/intermediate instruction |"
+  },
+  {
+    "file": "docs\\audits\\phase42r0_canonical_requirement_reconciliation.md",
+    "line": 80,
+    "token": "row 38",
+    "text": "| Fixed Assets row 38/42 | Requirement says target rows, but recent primary-reference strict compare showed row-number mismatch risk | Requirement target can be locked, but compare to primary must still be identity-aware |"
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 72,
+    "token": "row 58",
+    "text": "| Admin / GA consumables | Consumables, allocation, event/month, new employee, hiring medical check | `raw/総務課 FY2027 MP 振替予定.xlsx` | rows 207-209 implemented; known FORM targets include row 58, 97, 98 for some admin/new employee items | CC/account per mapped "
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 74,
+    "token": "F38",
+    "text": "| Fixed Assets / 固定資産 | Fixed asset depreciation/interest/detail expense | `raw/固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx` | depreciation row 38 F38:Q38; interest row 42 F42:Q42; no final source-derived target rows yet for detail group | Account `5005"
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 75,
+    "token": "F59",
+    "text": "| Birthday / Sinh nhật | Birthday benefit/cost | `raw/Sinh nhật MP FY2027.xlsx` | FORM row 59, F59:Q59; row 63 is intermediate/source area, not final target | Target row/account needs confirmation | `number_of_people * unit_price` by month after source row is "
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 76,
+    "token": "F137",
+    "text": "| NNN paperwork | Foreigner paperwork cost estimate | `raw/Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx` | FORM row 137, F137:Q137 | Needs CC/account proof | Need source row/cell/month mapping | NOT_IMPLEMENTED_V1 | Source mapping remains open, but target r"
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 155,
+    "token": "F38",
+    "text": "- Fixed asset depreciation: row `38`, range `F38:Q38`."
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 156,
+    "token": "F42",
+    "text": "- Fixed asset interest: row `42`, range `F42:Q42`."
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 163,
+    "token": "F59",
+    "text": "Requirement status: Birthday/Tiền sinh nhật image indicates FORM target row `59`, F59:Q59. Old note about row `63` is intermediate/source area, not target row."
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 169,
+    "token": "F59",
+    "text": "- Known target: FORM row `59`, range `F59:Q59`."
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 178,
+    "token": "F137",
+    "text": "Current status: UNHANDLED_SOURCE_ORDER_FILE / NOT_IMPLEMENTED_V1. Target range is known: FORM row `137`, range `F137:Q137`. Remaining blocker: source row/cell/month mapping and output order."
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 206,
+    "token": "F58",
+    "text": "| Hiring medical check | row 58 | F58:Q58 | hiring medical check target | NEEDS_MAPPING | admin allocation/user rule |"
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 207,
+    "token": "F59",
+    "text": "| Birthday | row 59 | F59:Q59 | Birthday target row | NEEDS_MAPPING | visual requirement; row 63 is not final target |"
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 208,
+    "token": "F97",
+    "text": "| New employee notebook staff | row 97 | F97:Q97 | new employee notebook/staff | NEEDS_MAPPING | admin allocation/user rule |"
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 209,
+    "token": "F98",
+    "text": "| New employee notebook worker | row 98 | F98:Q98 | new employee notebook/worker | NEEDS_MAPPING | admin allocation/user rule |"
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 210,
+    "token": "F137",
+    "text": "| NNN paperwork | row 137 | F137:Q137 | NNN paperwork target | NEEDS_MAPPING | user rule; source mapping still open |"
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 211,
+    "token": "F38",
+    "text": "| Fixed asset depreciation | row 38 | F38:Q38 | fixed asset depreciation target | NEEDS_MAPPING | FORM/source trace docs |"
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 212,
+    "token": "F42",
+    "text": "| Fixed asset interest | row 42 | F42:Q42 | fixed asset interest target | NEEDS_MAPPING | FORM/source trace docs |"
+  },
+  {
+    "file": "docs\\knowledge\\mp_saisan_business_knowledge_base_v2.md",
+    "line": 301,
+    "token": "row 59",
+    "text": "| Birthday writer | Birthday module | NOT_STARTED | FORM row 59 target | Needs source mapping. |"
+  },
+  {
+    "file": "docs\\MP2026\\special_costs_manual.csv",
+    "line": 1,
+    "token": "form_row",
+    "text": "﻿cc_code,period,form_row,account_code,amount_vnd,description"
+  },
+  {
+    "file": "docs\\MP2027\\event_drivers_manual.csv",
+    "line": 1,
+    "token": "form_row",
+    "text": "﻿cc_code,period,event_name,count,unit_price,amount_vnd,account_code,form_row,description"
+  },
+  {
+    "file": "docs\\MP2027\\special_costs_manual.csv",
+    "line": 1,
+    "token": "form_row",
+    "text": "﻿cc_code,period,form_row,account_code,amount_vnd,description"
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 46,
+    "token": "F137",
+    "text": "- NNN paperwork: dòng 137, `F137:Q137`."
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 48,
+    "token": "F38",
+    "text": "- Fixed asset depreciation: dòng 38, `F38:Q38`."
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 49,
+    "token": "F42",
+    "text": "- Fixed asset interest: dòng 42, `F42:Q42`."
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 84,
+    "token": "F59",
+    "text": "Ví dụ `Chi phí sinh nhật` vừa có “Nhập vào dòng 63 (G63:Q63)” vừa có “Nhập vào dòng 59, F59:Q59”. Cần ghi rõ đây là **điểm xung đột** và đề xuất cách xử lý an toàn."
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 831,
+    "token": "F38",
+    "text": "| Khấu hao TSCĐ | Dòng 38, `F38:Q38` |"
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 832,
+    "token": "F42",
+    "text": "| Lãi TSCĐ | Dòng 42, `F42:Q42` |"
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 979,
+    "token": "F137",
+    "text": "Nhập vào dòng 137, từ F137 => Q137 vào file FORM"
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 986,
+    "token": "F137",
+    "text": "| Apr-2026 | F137 |"
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 997,
+    "token": "Q137",
+    "text": "| Mar-2027 | Q137 |"
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 1053,
+    "token": "F137",
+    "text": "- Dòng đích đúng `F137:Q137`."
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 1153,
+    "token": "F59",
+    "text": "Nhập vào dòng 59, từ F59 => Q59 vào file FORM"
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 1160,
+    "token": "F59",
+    "text": "- Vì sheet ghi rõ ở cột bên phải “Nhập vào dòng 59, từ F59 => Q59 vào file FORM”, nên kế hoạch mặc định ưu tiên:"
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 1162,
+    "token": "F59",
+    "text": "FORM target = dòng 59, F59:Q59"
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 1615,
+    "token": "F137",
+    "text": "4. Ghi dòng 137, `F137:Q137`."
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 1738,
+    "token": "form_row",
+    "text": "test_birthday_writes_to_confirmed_form_row"
+  },
+  {
+    "file": "docs\\requirements\\cai_tien_nhap_du_lieu_chung.md",
+    "line": 1781,
+    "token": "F59",
+    "text": "Mặc định ưu tiên dòng 59 `F59:Q59` vì file ghi “vào file FORM”, nhưng phải đối chiếu `FORM.xlsx`."
+  }
+]

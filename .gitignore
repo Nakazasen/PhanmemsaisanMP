@@ -1,0 +1,84 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Database/runtime state
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+mp2027.db
+audit_outputs/
+
+# Secrets/local environment
+.env
+.env.*
+*.key
+*.pem
+*.p12
+
+# Excel files (Source data & Generated reports)
+# We exclude them to keep the repo clean and avoid pushing company confidential data
+*.xlsx
+*.xls
+!FORM.xlsx
+
+# Keep generated Excel files ignored by default, but track requirement and canonical source workbooks.
+!raw/requirements/
+!raw/requirements/*.xlsx
+!raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx
+
+# Track curated reference outputs while keeping global Excel/zip ignores intact.
+!reference_outputs/
+!reference_outputs/**
+!reference_outputs/primary/
+!reference_outputs/secondary/
+!reference_outputs/primary/*.xlsx
+!reference_outputs/secondary/*.zip
+reference_outputs/secondary/FY2027/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs and local runtime artifacts
+*.log
+.tmp*/
+.tmp_test_artifacts/
+~$*
+*.tmp
+*.bak
+
+# Generated output scratch/audit artifacts
+OUTPUT_FY2027/*
+!OUTPUT_FY2027/.gitkeep
+
+# PyInstaller & Build
+build/
+dist/
+*.spec
+!MP2027_Portable.spec
+!MP2027_Manager.spec
+
+# ABW runtime noise (safe to regenerate)
+.brain/used_nonces.json
+.brain/route_log.jsonl
+.brain/acceptance_log.jsonl
+.brain/acceptance_requests/
+.brain/runner_artifacts/
+.brain/cache/
+.brain/tmp/
+.brain/*.log
+drafts/*.tmp
+
+# One-off repository investigation scripts
+.compare_*.py
+.inspect_*.py

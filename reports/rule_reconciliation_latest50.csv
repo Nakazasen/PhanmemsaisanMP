@@ -1,0 +1,63 @@
+﻿rule_id,item_name,posting_month,driver_type,unit_price,period_count,total_amount_vnd,status,detail
+1651,"社員証（新入社員用・再発行時、写真含む）
+Thẻ từ chấm công + ảnh",入社月,headcount_all,58000.0,1,116000.0,ok,
+1652,"社員証用写真のみ（再発行時）
+Ảnh của thẻ từ chấm công (cấp lại)",配布月,headcount_all,500.0,1,1000.0,ok,
+1653,社員証用ケース Vỏ thẻ + móc thẻ,入社月,headcount_all,3600.0,1,7200.0,ok,
+1654,ペン Bút,入社月,headcount_all,3000.0,1,6000.0,ok,
+1655,ノート Sổ,入社月,headcount_worker,4000.0,1,8000.0,ok,
+1656,フィロソフィ手帳1 Sổ tay philosophy quyển 1,入社月,headcount_all,18000.0,1,36000.0,ok,
+1657,フィロソフィ手帳2 Sổ tay philosophy quyển 2,入社月,headcount_all,9200.0,1,18400.0,ok,
+1658,"マイエピソード ～フィロソフィの実践～参加賞
+Giải tham gia ""Cảm nghĩ về triết lý kinh doanh""",7月,headcount_worker,100000.0,0,0,mismatch_no_output,no output
+1659,"健康診断（ローカル）
+Khám sức khỏe (cho CNV nam)",12月,headcount_worker,156600.0,0,0,mismatch_no_output,no output
+1660,"健康診断（ローカル）
+Khám sức khỏe (cho CNV nữ)",12月,headcount_worker,170100.0,0,0,mismatch_no_output,no output
+1661,制服（夏） Đồng phục ngắn tay,毎月,headcount_all,165000.0,2,72435000.0,ok,
+1662,制服（夏）一括支給 Đồng phục ngắn tay ※2,2月,headcount_all,165000.0,0,0,mismatch_no_output,no output
+1663,制服（冬） Đồng phục dài tay,毎月,headcount_all,175000.0,2,76825000.0,ok,
+1664,制服（冬）一括支給 Đồng phục dài tay ※2,10月,headcount_all,175000.0,0,0,mismatch_no_output,no output
+1665,ポロ制服 Áo Polo,毎月,headcount_all,139000.0,2,61021000.0,ok,
+1666,コート制服 Áo khoác,毎月,headcount_all,240000.0,2,105360000.0,ok,
+1667,制服ズボン Quần,毎月,headcount_all,116000.0,2,50924000.0,ok,
+1668,妊婦ズボン Quần bà bầu,毎月,headcount_all,124500.0,2,54655500.0,ok,
+1669,帽子（白） Mũ trắng,毎月,headcount_all,33500.0,2,14706500.0,ok,
+1670,帽子（カラー） Mũ màu,毎月,headcount_all,39000.0,2,17121000.0,ok,
+1671,金型用帽子（白）Mũ trắng tĩnh điện,毎月,headcount_all,47000.0,2,20633000.0,ok,
+1672,シューズ（女性） Giày vải nữ,毎月,headcount_all,82000.0,2,35998000.0,ok,
+1673,シューズ（男性） Giày vải nam,毎月,headcount_all,84000.0,2,36876000.0,ok,
+1674,大シューズ( 44 と 45の サイズ) Giày ngoại cỡ (sz 44 và sz 45),毎月,headcount_all,120000.0,2,52680000.0,ok,
+1675,"タイプ1の安全靴 (Old)
+Giày bảo hộ loại 1",毎月,headcount_all,410000.0,2,179990000.0,ok,
+1676,妊婦用腕章 Băng đeo tay cho người bầu,毎月,headcount_all,27000.0,2,11853000.0,ok,
+1677,保安課の半袖 Áo ngắn tay phòng an ninh,毎月,headcount_all,250500.0,1,8767500.0,ok,
+1678,保安課の長袖 Áo dài tay phòng an ninh,毎月,headcount_all,265000.0,1,9275000.0,ok,
+1679,保安課のズボン Quần phòng an ninh,毎月,headcount_all,129500.0,1,4532500.0,ok,
+1680,保安課のコート Áo khoác có lót phòng an ninh,毎月,headcount_all,240000.0,1,8400000.0,ok,
+1681,保安課の靴 Giầy phòng an ninh,毎月,headcount_all,297600.0,1,10416000.0,ok,
+1682,保安課の帽子 Mũ phòng an ninh,毎月,headcount_all,43200.0,1,1512000.0,ok,
+1683,折りたたみコップ Cốc xếp,"毎月
+2月
+9月",headcount_worker,8500.0,2,3077000.0,mismatch_extra_period,"extra=202704,202705"
+1684,ロッカーの鍵 Khoá tủ locker,-,working_days,45000.0,0,0,ok,
+1685,下駄箱の鍵 Khóa tủ giày,-,working_days,34000.0,0,0,ok,
+1686,下駄箱の扉 Mica tủ giày,-,working_days,70000.0,0,0,ok,
+1687,"Tiệc khuấy động năm tài chính
+決起コンパ（対象：全部門）",-,headcount_worker,300000.0,0,0,ok,
+1688,社員旅行 Du lịch công ty,5月,headcount_worker,1874000.0,1,341068000.0,ok,
+1689,社員旅行不参加対象者へのギフト贈呈 Quà tặng cho CNV không thể tham gia du lịch.,6月,working_days,1312500.0,1,1790250000.0,ok,
+1690,京セラフェスティバルLễ hội Kyocera,11月,headcount_all,140500.0,0,0,mismatch_no_output,no output
+1691,月餅 Bánh Trung Thu,10月,headcount_staff,0.0,0,0,mismatch_no_output,no output
+1692,"10年勤続記念コンパ 
+Tiệc kỷ niệm 10 năm gắn bó",10月,headcount_worker,481230.0,0,0,mismatch_no_output,no output
+1693,"10年勤続記念品 
+Quà kỷ niệm cho CNV 10 năm gắn bó",10月,headcount_worker,303600.0,0,0,mismatch_no_output,no output
+1694,運動会 Đại hội thể thao,11月,headcount_all,0.0,0,0,mismatch_no_output,no output
+1695,忘年会補助金 Hỗ trợ tiệc tất niên,-,headcount_worker,300000.0,0,0,ok,
+1696,お年玉 Tiền lì xì,2月,headcount_worker,100000.0,0,0,mismatch_no_output,no output
+1697,誕生日会 Tiệc sinh nhật,毎月,headcount_all,152000.0,2,66728000.0,ok,
+1698,ベトナム入国署申請費用 Chi phí xin công văn chấp thuận nhập cảnh,取得月,headcount_all,3000000.0,1,6000000.0,ok,
+1699,旅券申請費用 Chi phí làm hộ chiếu (5 năm),取得月,headcount_all,1900000.0,1,3800000.0,ok,
+1700,"労働許可証取得時の健康診断費用
+Phí khám sk khi xin cấp GPLĐ",取得月,headcount_all,1259500.0,1,2519000.0,ok,
