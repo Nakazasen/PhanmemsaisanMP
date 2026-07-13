@@ -55,7 +55,7 @@ from src.parsers.facility import parse_facility
 from src.parsers.ga import parse_ga
 from src.parsers.birthday import parse_birthday_workbook
 from src.parsers.manual_event_drivers import parse_manual_event_drivers
-from src.parsers.manual_headcount import parse_manual_headcount
+from src.parsers.manual_headcount import copy_missing_baseline_from_april, parse_manual_headcount
 from src.parsers.manual_special_costs import parse_manual_special_costs
 from src.parsers.nnn_paperwork import parse_nnn_paperwork
 from src.parsers.it_sim import parse_it_simulation
@@ -524,12 +524,14 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            mp_saisan_complete_v1: bool = True,
                            db_path: str | None = None,
                            output_dir: str | None = None,
+                           copy_baseline_t3_from_t4: bool = False,
                            simulate_baseline_t3_from_t4: bool = False,
                            audit_exclude_incomplete_staffing: bool = False):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports every CC represented by generated facts.
     - db_path/output_dir: optional isolation paths; production defaults are unchanged.
+    - copy_baseline_t3_from_t4: user-confirmed production fallback persisted to manual CSV.
     - simulate_baseline_t3_from_t4: audit-only fallback with explicit provenance.
     """
     if log_callback is None:
@@ -655,6 +657,18 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 path=birthday_result.get("path", ""),
             )
         )
+        if copy_baseline_t3_from_t4:
+            copied_baseline = copy_missing_baseline_from_april(
+                conn,
+                source_dir,
+                fiscal_year,
+                target_cc=target_cc,
+                base_dir=BASE_DIR,
+            )
+            log_callback(
+                "Baseline T3: đã sao chép dữ liệu T4 cho "
+                f"{copied_baseline['copied']} CC vào {copied_baseline['template_path']}."
+            )
         manual_hc_result = _parse_manual_headcount(conn, source_dir)
         parser_results["manual_headcount"] = manual_hc_result
         log_callback(
@@ -1052,6 +1066,11 @@ def main(argv=None):
     parser.add_argument('--exchange-rate', type=float, default=25450.0)
     parser.add_argument('--target-cc', type=int, default=None)
     parser.add_argument(
+        '--copy-baseline-t3-from-t4',
+        action='store_true',
+        help='Copy missing baseline T3 from T4 after the user confirms the GUI prompt.',
+    )
+    parser.add_argument(
         '--facility-file-order-preview',
         action='store_true',
         help='Explicit opt-in: create Facility file-order preview workbook after the normal pipeline.',
@@ -1130,6 +1149,7 @@ def main(argv=None):
         exchange_rate=args.exchange_rate,
         target_cc=args.target_cc,
         headcount_source_dir=args.headcount_source,
+        copy_baseline_t3_from_t4=args.copy_baseline_t3_from_t4,
         facility_file_order_preview=args.facility_file_order_preview,
         facility_preview_output=args.facility_preview_output,
         facility_preview_start_row=args.facility_preview_start_row,

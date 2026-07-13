@@ -96,7 +96,7 @@ from src.utils.excel_helpers import (
     read_exchange_rate_from_form,
     validate_exchange_rate,
 )
-from src.utils.fiscal_periods import fiscal_month_labels
+from src.utils.fiscal_periods import fiscal_baseline_period, fiscal_month_labels
 from src.utils.source_manifest import (
     DEFAULT_DESCRIPTIONS,
     MANIFEST_COLUMNS,
@@ -1571,6 +1571,7 @@ class MPManagerApp:
         fieldnames = [
             "cc_code",
             "period",
+            "headcount_expat",
             "headcount_staff",
             "headcount_worker",
             "headcount_male",
@@ -1836,6 +1837,11 @@ class MPManagerApp:
             fiscal_year = int(self.fiscal_year.get())
         except Exception:
             fiscal_year = 2027
+        source_dir = resolve_manual_headcount_source_dir(
+            self.source_dir.get() or BASE_DIR,
+            base_dir=BASE_DIR,
+        )
+        csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)
         periods = get_required_headcount_periods(fiscal_year)
         fy_periods = set(get_fy_months(fiscal_year))
         editor = tk.Toplevel(self.root)
@@ -1963,7 +1969,46 @@ class MPManagerApp:
                             conn.execute("INSERT INTO fact_monthly_headcount(period,cc_code,headcount_all,headcount_expat,headcount_staff,headcount_worker,headcount_male,headcount_female,source,description) VALUES(?,?,0,0,0,0,?,?,'manual',?)",(period,cc,male,female,note))
             except ValueError as exc: conn.rollback(); messagebox.showerror("Dữ liệu không hợp lệ",str(exc)); return
             finally: conn.close()
-            messagebox.showinfo("Đã lưu","Đã lưu phần dữ liệu bổ sung và thông tin xe buýt.")
+
+            # The pipeline reloads manual input from the canonical CSV. Mirror
+            # this editor's values there so a subsequent run uses the saved T3.
+            retained_rows = [
+                row
+                for row in self._read_manual_headcount_rows(csv_path)
+                if str(row.get("cc_code", "")).strip() != cc
+            ]
+            for period, values in month_vars.items():
+                male = values["male"].get().strip() if period.endswith("12") else ""
+                female = values["female"].get().strip() if period.endswith("12") else ""
+                note = values["note"].get().strip()
+                if period not in fy_periods:
+                    retained_rows.append(
+                        {
+                            "cc_code": cc,
+                            "period": period,
+                            "headcount_expat": values["expat"].get().strip() or "0",
+                            "headcount_staff": values["staff"].get().strip() or "0",
+                            "headcount_worker": values["worker"].get().strip() or "0",
+                            "headcount_male": male,
+                            "headcount_female": female,
+                            "description": note,
+                        }
+                    )
+                elif male or female or note:
+                    retained_rows.append(
+                        {
+                            "cc_code": cc,
+                            "period": period,
+                            "headcount_expat": "0",
+                            "headcount_staff": "0",
+                            "headcount_worker": "0",
+                            "headcount_male": male,
+                            "headcount_female": female,
+                            "description": note,
+                        }
+                    )
+            self._write_manual_headcount_rows(csv_path, retained_rows)
+            messagebox.showinfo("Đã lưu", "Đã lưu phần dữ liệu bổ sung và thông tin xe buýt.")
         buttons=ttk.Frame(frame); buttons.pack(fill="x",pady=(8,0)); ttk.Button(buttons,text="Tải dữ liệu CC",command=load_cc).pack(side="left"); ttk.Button(buttons,text="Lưu phần bổ sung",style="Primary.TButton",command=save).pack(side="left",padx=6); ttk.Button(buttons,text="Đóng",command=editor.destroy).pack(side="left")
         cc_combo.bind("<<ComboboxSelected>>",load_cc)
         if cc_combo["values"]: cc_var.set(cc_combo["values"][0]); load_cc()
@@ -2359,6 +2404,84 @@ class MPManagerApp:
             if str(row.get("cc_code", "")).strip()
         }
 
+    def _missing_baseline_t3_ccs(self, fiscal_year: int, target_cc: str | None) -> list[str]:
+        """Return in-scope CCs that have no persisted manual T3 baseline."""
+        baseline = fiscal_baseline_period(fiscal_year)
+        source_dir = resolve_manual_headcount_source_dir(
+            self.source_dir.get() or BASE_DIR,
+            base_dir=BASE_DIR,
+        )
+        csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)
+        baseline_ccs = {
+            str(row.get("cc_code", "")).strip()
+            for row in self._read_manual_headcount_rows(csv_path)
+            if str(row.get("period", "")).strip() == baseline
+            and str(row.get("cc_code", "")).strip()
+        }
+        if target_cc:
+            return [] if str(target_cc) in baseline_ccs else [str(target_cc)]
+
+        conn = get_connection(os.path.join(BASE_DIR, "mp2027.db"))
+        try:
+            scope = {
+                str(row[0]).strip()
+                for row in conn.execute(
+                    "SELECT DISTINCT CAST(cc_code AS TEXT) FROM fact_input_data "
+                    "WHERE account_code > 0"
+                ).fetchall()
+                if row[0] is not None
+            }
+        finally:
+            conn.close()
+        return sorted(scope - baseline_ccs)
+
+    def _show_missing_baseline_t3_dialog(self, fiscal_year: int, missing_ccs: list[str], on_copy):
+        baseline = fiscal_baseline_period(fiscal_year)
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Thiếu dữ liệu baseline T3")
+        dialog.transient(self.root)
+        dialog.resizable(False, False)
+        dialog.grab_set()
+
+        frame = ttk.Frame(dialog, padding=16)
+        frame.pack(fill=tk.BOTH, expand=True)
+        scope_text = ""
+        if missing_ccs:
+            scope_text = "\n\nCC thiếu baseline: " + ", ".join(missing_ccs[:12])
+            if len(missing_ccs) > 12:
+                scope_text += f" và {len(missing_ccs) - 12} CC khác"
+        ttk.Label(
+            frame,
+            text=(
+                f"Không có dữ liệu baseline T3 ({baseline}). Bạn có đồng ý copy dữ liệu T4 "
+                "cho baseline T3 để tiếp tục chạy luồng tự động hóa, hay sẽ quay về màn hình "
+                "Nhập nhân sự thủ công để điền dữ liệu baseline T3?"
+                + scope_text
+            ),
+            wraplength=640,
+            justify=tk.LEFT,
+        ).pack(anchor="w")
+
+        buttons = ttk.Frame(frame)
+        buttons.pack(anchor="e", pady=(16, 0))
+
+        def copy_and_continue():
+            dialog.destroy()
+            on_copy()
+
+        def open_manual_entry():
+            dialog.destroy()
+            self.open_headcount_editor_v2()
+
+        ttk.Button(buttons, text="Yes", command=copy_and_continue).pack(side="left", padx=(0, 8))
+        ttk.Button(
+            buttons,
+            text="Mở Nhập nhân sự thủ công",
+            command=open_manual_entry,
+        ).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="No", command=dialog.destroy).pack(side="left")
+        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+
 
     def start_pipeline(self):
         try:
@@ -2403,24 +2526,60 @@ class MPManagerApp:
                 if not proceed:
                     return
 
-            self.start_btn.configure(state=tk.DISABLED)
-            self.log("--- BẮT ĐẦU TÍNH TOÁN ---")
-            self.log(f"Tệp mẫu xác nhận chạy: {template}")
-            self.log(f"Thư mục nguồn xác nhận chạy: {source}")
-            self.log(f"Nguồn nhân sự & thời gian xác nhận chạy: {headcount_source}")
-            self.log(f"Tỷ giá hiệu lực cho lần chạy này: {exchange_rate:,.0f} USD/VND")
-            threading.Thread(
-                target=self.run_process,
-                args=(fiscal_year, template, source, headcount_source, exchange_rate, target_cc),
-                daemon=True,
-            ).start()
+            def begin_pipeline(copy_baseline_t3_from_t4: bool = False):
+                self.start_btn.configure(state=tk.DISABLED)
+                self.log("--- BẮT ĐẦU TÍNH TOÁN ---")
+                self.log(f"Tệp mẫu xác nhận chạy: {template}")
+                self.log(f"Thư mục nguồn xác nhận chạy: {source}")
+                self.log(f"Nguồn nhân sự & thời gian xác nhận chạy: {headcount_source}")
+                if copy_baseline_t3_from_t4:
+                    self.log("Đã xác nhận copy dữ liệu T4 cho baseline T3 trước khi chạy.")
+                self.log(f"Tỷ giá hiệu lực cho lần chạy này: {exchange_rate:,.0f} USD/VND")
+                threading.Thread(
+                    target=self.run_process,
+                    args=(
+                        fiscal_year,
+                        template,
+                        source,
+                        headcount_source,
+                        exchange_rate,
+                        target_cc,
+                        copy_baseline_t3_from_t4,
+                    ),
+                    daemon=True,
+                ).start()
+
+            missing_baseline_ccs = self._missing_baseline_t3_ccs(fiscal_year, target_cc)
+            if missing_baseline_ccs:
+                self._show_missing_baseline_t3_dialog(
+                    fiscal_year,
+                    missing_baseline_ccs,
+                    lambda: begin_pipeline(copy_baseline_t3_from_t4=True),
+                )
+                return
+            begin_pipeline()
         except Exception as exc:
             messagebox.showerror("Lỗi nhập liệu", _friendly_error_message(exc))
 
-    def run_process(self, fiscal_year: int, template: str, source: str, headcount_source: str, rate: float, target_cc: int | None):
+    def run_process(
+        self,
+        fiscal_year: int,
+        template: str,
+        source: str,
+        headcount_source: str,
+        rate: float,
+        target_cc: int | None,
+        copy_baseline_t3_from_t4: bool = False,
+    ):
         try:
             cmd = self._pipeline_subprocess_command(
-                fiscal_year, template, source, headcount_source, rate, target_cc
+                fiscal_year,
+                template,
+                source,
+                headcount_source,
+                rate,
+                target_cc,
+                copy_baseline_t3_from_t4,
             )
             env = os.environ.copy()
             env["PYTHONIOENCODING"] = "utf-8"
@@ -2461,6 +2620,7 @@ class MPManagerApp:
         headcount_source: str,
         rate: float,
         target_cc: int | str | None,
+        copy_baseline_t3_from_t4: bool = False,
     ) -> list[str]:
         if getattr(sys, "frozen", False):
             cmd = [sys.executable]
@@ -2482,6 +2642,8 @@ class MPManagerApp:
         )
         if target_cc:
             cmd.extend(["--target-cc", str(target_cc)])
+        if copy_baseline_t3_from_t4:
+            cmd.append("--copy-baseline-t3-from-t4")
         return cmd
 
     def _finish_pipeline(self, success: bool, result):

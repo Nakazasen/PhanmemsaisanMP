@@ -210,6 +210,7 @@ def validate_manual_headcount_rows(
         raw_period = row.get("period", "")
         raw_staff = row.get("headcount_staff", "")
         raw_worker = row.get("headcount_worker", "")
+        raw_expat = row.get("headcount_expat", "")
         raw_male = row.get("headcount_male", "")
         raw_female = row.get("headcount_female", "")
         description = str(row.get("description", "") or "").strip()
@@ -220,6 +221,7 @@ def validate_manual_headcount_rows(
             and not str(raw_period).strip()
             and not str(raw_staff).strip()
             and not str(raw_worker).strip()
+            and not str(raw_expat).strip()
             and not str(raw_male).strip()
             and not str(raw_female).strip()
         ):
@@ -290,17 +292,18 @@ def validate_manual_headcount_rows(
             "worker",
             blank_as_zero=blank_categories_as_zero,
         )
+        expat, expat_error = _parse_optional_headcount_int(row_number, row, "headcount_expat", "expat")
         male, male_error = _parse_optional_headcount_int(row_number, row, "headcount_male", "male")
         female, female_error = _parse_optional_headcount_int(row_number, row, "headcount_female", "female")
-        row_errors = [error for error in (staff_error, worker_error, male_error, female_error) if error]
+        row_errors = [error for error in (staff_error, worker_error, expat_error, male_error, female_error) if error]
         if row_errors:
             error_details.extend(row_errors)
             continue
 
         assert staff is not None
         assert worker is not None
-        headcount_all = staff + worker
-        if male + female > headcount_all:
+        headcount_all = expat + staff + worker
+        if male + female > staff + worker:
             error_details.append(
                 _make_validation_error(
                     row_number,
@@ -319,6 +322,7 @@ def validate_manual_headcount_rows(
                 "period": period,
                 "cc_code": cc_code,
                 "headcount_all": float(headcount_all),
+                "headcount_expat": float(expat),
                 "headcount_staff": float(staff),
                 "headcount_worker": float(worker),
                 "headcount_male": float(male),
@@ -333,6 +337,79 @@ def validate_manual_headcount_rows(
         "errors": len(error_details),
         "error_details": error_details,
     }
+
+
+def copy_missing_baseline_from_april(
+    conn: sqlite3.Connection,
+    source_dir: str | None,
+    fiscal_year: int,
+    *,
+    target_cc: object | None = None,
+    base_dir: str | None = None,
+) -> dict[str, Any]:
+    """Persist missing T3 baseline rows by copying the corresponding T4 plan rows.
+
+    The copied rows are written to the canonical manual CSV before it is parsed,
+    so the confirmed fallback remains available on subsequent runs.
+    """
+    search_dir = resolve_manual_headcount_source_dir(source_dir, base_dir=base_dir)
+    os.makedirs(search_dir, exist_ok=True)
+    csv_path = ensure_manual_headcount_template(search_dir, fiscal_year)
+    baseline = fiscal_baseline_period(fiscal_year)
+    april = f"{fiscal_year - 1}04"
+
+    with open(csv_path, "r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        existing_rows = list(reader)
+        existing_fieldnames = list(reader.fieldnames or [])
+
+    existing_baselines = {
+        (str(row.get("cc_code", "")).strip(), str(row.get("period", "")).strip())
+        for row in existing_rows
+    }
+    target_clause = "AND CAST(cc_code AS TEXT)=?" if target_cc is not None else ""
+    params: tuple[object, ...] = (april,)
+    if target_cc is not None:
+        params += (str(target_cc).strip(),)
+    april_rows = conn.execute(
+        f"""
+        SELECT cc_code, headcount_expat, headcount_staff, headcount_worker
+        FROM fact_monthly_headcount
+        WHERE period=? AND source='department_plan' {target_clause}
+        ORDER BY CAST(cc_code AS TEXT)
+        """,
+        params,
+    ).fetchall()
+
+    copied_ccs: list[str] = []
+    for april_row in april_rows:
+        cc_code = str(april_row["cc_code"]).strip()
+        if (cc_code, baseline) in existing_baselines:
+            continue
+        existing_rows.append(
+            {
+                "cc_code": cc_code,
+                "period": baseline,
+                "headcount_expat": f"{float(april_row['headcount_expat'] or 0):g}",
+                "headcount_staff": f"{float(april_row['headcount_staff'] or 0):g}",
+                "headcount_worker": f"{float(april_row['headcount_worker'] or 0):g}",
+                "headcount_male": "",
+                "headcount_female": "",
+                "description": "COPIED_BASELINE_T3_FROM_T4",
+            }
+        )
+        copied_ccs.append(cc_code)
+
+    if copied_ccs:
+        fieldnames = list(
+            dict.fromkeys([*existing_fieldnames, "headcount_expat", *MANUAL_HEADCOUNT_COLUMNS])
+        )
+        with open(csv_path, "w", encoding="utf-8-sig", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(existing_rows)
+
+    return {"copied": len(copied_ccs), "cc_codes": copied_ccs, "template_path": csv_path}
 
 
 def validate_manual_bus_headcount_rows(
@@ -738,26 +815,30 @@ def parse_manual_headcount(
             """
             INSERT INTO fact_monthly_headcount
             (
-                period, cc_code, headcount_all, headcount_staff, headcount_worker,
-                headcount_male, headcount_female, source, description
+                period, cc_code, headcount_all, headcount_expat, headcount_staff, headcount_worker,
+                headcount_male, headcount_female, headcount_local_total, source, description
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?)
             ON CONFLICT(period, cc_code, source) DO UPDATE SET
                 headcount_all = excluded.headcount_all,
+                headcount_expat = excluded.headcount_expat,
                 headcount_staff = excluded.headcount_staff,
                 headcount_worker = excluded.headcount_worker,
                 headcount_male = excluded.headcount_male,
                 headcount_female = excluded.headcount_female,
+                headcount_local_total = excluded.headcount_local_total,
                 description = excluded.description
             """,
             (
                 row["period"],
                 row["cc_code"],
                 headcount_all,
+                0 if has_department_plan else row["headcount_expat"],
                 headcount_staff,
                 headcount_worker,
                 row["headcount_male"],
                 row["headcount_female"],
+                0 if has_department_plan else row["headcount_staff"] + row["headcount_worker"],
                 description,
             ),
         )
