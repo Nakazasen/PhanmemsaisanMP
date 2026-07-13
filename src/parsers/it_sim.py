@@ -405,6 +405,11 @@ def parse_it_simulation(conn: sqlite3.Connection, source_dir: str | None = None)
         entry for entry in read_source_manifest(search_dir)
         if entry.get("category") == "it_simulation"
     ]
+    if not manifest_entries:
+        raise ValueError(
+            "Manifest nguồn chi phí không có file IT đang bật và tồn tại. "
+            "Hãy kiểm tra category='it_simulation' trong source_file_order.xlsx."
+        )
     files_to_parse: list[tuple[str, list[str]]] = []
     configured_periods: list[str] = []
     for entry in manifest_entries:

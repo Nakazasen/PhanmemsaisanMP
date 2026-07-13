@@ -102,6 +102,7 @@ from src.utils.source_manifest import (
     MANIFEST_COLUMNS,
     ensure_source_manifest,
     read_source_manifest,
+    validate_cost_source_manifest,
     write_source_manifest_xlsx,
 )
 
@@ -350,6 +351,12 @@ def _validate_selected_source_dir(path: str) -> str | None:
             "Đây là thư mục đóng gói nội bộ, không phải nơi người dùng quản lý dữ liệu.\n"
             f"Hãy chọn thư mục bên ngoài cạnh file chạy: {external_source}"
         )
+    try:
+        validate_cost_source_manifest(path)
+    except (FileNotFoundError, ValueError) as exc:
+        return str(exc)
+    except Exception as exc:
+        return f"Không thể đọc manifest nguồn chi phí tại {path}: {exc}"
     return None
 
 
@@ -761,9 +768,12 @@ class MPManagerApp:
         self.exchange_rate = tk.StringVar(value=self._initial_exchange_rate(template_path))
         self.cc_code_filter = tk.StringVar(value="")
         self.template_path = tk.StringVar(value=template_path)
-        self.source_dir = tk.StringVar(
-            value=self._initial_saved_path("cost_source_dir", _default_source_dir(), expect_directory=True)
+        initial_source_dir = self._initial_saved_path(
+            "cost_source_dir", _default_source_dir(), expect_directory=True
         )
+        if _validate_selected_source_dir(initial_source_dir):
+            initial_source_dir = _default_source_dir()
+        self.source_dir = tk.StringVar(value=initial_source_dir)
         self.headcount_source_dir = tk.StringVar(
             value=self._initial_saved_path(
                 "headcount_source_dir", os.path.join(BASE_DIR, "raw"), expect_directory=True
@@ -1269,7 +1279,7 @@ class MPManagerApp:
 
         editor = tk.Toplevel(self.root)
         editor.title("Thứ tự file nguồn")
-        editor.geometry("980x520")
+        editor.geometry("1180x560")
         editor.transient(self.root)
         editor.grab_set()
 
@@ -1285,18 +1295,25 @@ class MPManagerApp:
             wraplength=900,
         ).grid(row=0, column=0, columnspan=6, sticky="w", pady=(0, 10))
 
-        columns = ("order", "category", "filename", "enabled", "description")
+        columns = (
+            "order", "category", "filename", "enabled", "description",
+            "period_start", "period_end",
+        )
         tree = ttk.Treeview(frame, columns=columns, show="headings", height=14)
         tree.heading("order", text="Thứ tự")
         tree.heading("category", text="Loại nguồn")
         tree.heading("filename", text="Tên file")
         tree.heading("enabled", text="Dùng")
         tree.heading("description", text="Ghi chú")
+        tree.heading("period_start", text="Tháng bắt đầu")
+        tree.heading("period_end", text="Tháng kết thúc")
         tree.column("order", width=60, anchor="center")
         tree.column("category", width=130)
         tree.column("filename", width=430)
         tree.column("enabled", width=60, anchor="center")
-        tree.column("description", width=250)
+        tree.column("description", width=210)
+        tree.column("period_start", width=95, anchor="center")
+        tree.column("period_end", width=95, anchor="center")
         tree.grid(row=1, column=0, columnspan=6, sticky="nsew")
 
         scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
@@ -1333,6 +1350,12 @@ class MPManagerApp:
         ttk.Entry(form, textvariable=description_var, width=96).grid(
             row=3, column=0, columnspan=3, sticky="w", pady=(0, 8)
         )
+        ttk.Label(form, text="Tháng bắt đầu (YYYYMM)").grid(row=2, column=3, sticky="w", pady=(8, 0))
+        period_start_var = tk.StringVar()
+        ttk.Entry(form, textvariable=period_start_var, width=16).grid(row=3, column=3, sticky="w")
+        ttk.Label(form, text="Tháng kết thúc (YYYYMM)").grid(row=2, column=4, sticky="w", pady=(8, 0))
+        period_end_var = tk.StringVar()
+        ttk.Entry(form, textvariable=period_end_var, width=16).grid(row=3, column=4, sticky="w")
 
         def rows_from_tree() -> list[dict[str, str]]:
             rows: list[dict[str, str]] = []
@@ -1345,6 +1368,8 @@ class MPManagerApp:
                         "filename": str(values[2]),
                         "enabled": str(values[3]),
                         "description": str(values[4]),
+                        "period_start": str(values[5]),
+                        "period_end": str(values[6]),
                     }
                 )
             return rows
@@ -1368,6 +1393,8 @@ class MPManagerApp:
                         row.get("filename", ""),
                         row.get("enabled", "1"),
                         row.get("description", ""),
+                        row.get("period_start", ""),
+                        row.get("period_end", ""),
                     ),
                 )
             refresh_order_numbers()
@@ -1385,6 +1412,8 @@ class MPManagerApp:
             filename_var.set(str(values[2]))
             enabled_var.set(1 if str(values[3]).strip() not in {"0", "False", "false"} else 0)
             description_var.set(str(values[4]))
+            period_start_var.set(str(values[5]))
+            period_end_var.set(str(values[6]))
 
         def browse_manifest_file() -> None:
             path = filedialog.askopenfilename(
@@ -1409,9 +1438,21 @@ class MPManagerApp:
             item_id = selected_item()
             if item_id:
                 order = tree.item(item_id, "values")[0]
-                tree.item(item_id, values=(order, category, filename, enabled, description))
+                tree.item(
+                    item_id,
+                    values=(
+                        order, category, filename, enabled, description,
+                        period_start_var.get().strip(), period_end_var.get().strip(),
+                    ),
+                )
             else:
-                tree.insert("", tk.END, values=("", category, filename, enabled, description))
+                tree.insert(
+                    "", tk.END,
+                    values=(
+                        "", category, filename, enabled, description,
+                        period_start_var.get().strip(), period_end_var.get().strip(),
+                    ),
+                )
             refresh_order_numbers()
 
         def remove_selected() -> None:
@@ -1643,7 +1684,10 @@ class MPManagerApp:
         except Exception:
             fiscal_year = 2027
 
-        source_dir = resolve_manual_headcount_source_dir(self.source_dir.get() or BASE_DIR, base_dir=BASE_DIR)
+        source_dir = resolve_manual_headcount_source_dir(
+            self.headcount_source_dir.get() or BASE_DIR,
+            base_dir=BASE_DIR,
+        )
         os.makedirs(source_dir, exist_ok=True)
         csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)
 
@@ -1838,7 +1882,7 @@ class MPManagerApp:
         except Exception:
             fiscal_year = 2027
         source_dir = resolve_manual_headcount_source_dir(
-            self.source_dir.get() or BASE_DIR,
+            self.headcount_source_dir.get() or BASE_DIR,
             base_dir=BASE_DIR,
         )
         csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)
@@ -2397,7 +2441,7 @@ class MPManagerApp:
         """Return in-scope CCs that have no persisted manual T3 baseline."""
         baseline = fiscal_baseline_period(fiscal_year)
         source_dir = resolve_manual_headcount_source_dir(
-            self.source_dir.get() or BASE_DIR,
+            self.headcount_source_dir.get() or BASE_DIR,
             base_dir=BASE_DIR,
         )
         csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)

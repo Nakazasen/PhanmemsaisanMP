@@ -115,6 +115,16 @@ class TestItSimParserAuditMetadata(unittest.TestCase):
 
 
 class TestItSimAccountCodeMapping(unittest.TestCase):
+    def test_parse_it_simulation_reports_missing_it_manifest_entries(self):
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        create_schema(conn)
+        init_sys_params(conn, exchange_rate=26273, fiscal_year=2027)
+
+        with patch("src.parsers.it_sim.read_source_manifest", return_value=[]):
+            with self.assertRaisesRegex(ValueError, "không có file IT"):
+                parse_it_simulation(conn, "unused")
+
     def test_summary_sheet_extracts_account_code_per_cc(self):
         df = pd.DataFrame(
             [

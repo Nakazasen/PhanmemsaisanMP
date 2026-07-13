@@ -65,6 +65,7 @@ from src.utils.fiscal_periods import fiscal_baseline_period
 from src.utils.source_manifest import (
     describe_manifest,
     read_source_manifest,
+    validate_cost_source_manifest,
 )
 from src.services.headcount_source_importer import import_headcount_time_sources
 
@@ -427,6 +428,10 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
     try:
         log_callback(f"Quy trình năm tài chính {fiscal_year} (Tỷ giá: {exchange_rate:,.0f})")
         
+        # Validate before opening or clearing the database. A staffing-only
+        # directory must never be accepted as the cost-source directory.
+        validate_cost_source_manifest(source_dir)
+
         # 1. Setup Environment
         db_path = requested_db_path or production_db_path
 
@@ -502,7 +507,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         if copy_baseline_t3_from_t4:
             copied_baseline = copy_missing_baseline_from_april(
                 conn,
-                source_dir,
+                staffing_dir,
                 fiscal_year,
                 target_cc=target_cc,
                 base_dir=BASE_DIR,
@@ -511,7 +516,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 "Baseline T3: đã sao chép dữ liệu T4 cho "
                 f"{copied_baseline['copied']} CC vào {copied_baseline['template_path']}."
             )
-        manual_hc_result = _parse_manual_headcount(conn, source_dir)
+        manual_hc_result = _parse_manual_headcount(conn, staffing_dir)
         parser_results["manual_headcount"] = manual_hc_result
         log_callback(
             "Nhân sự nhập tay: thêm={inserted}, bỏ qua={skipped}, lỗi={errors}, "

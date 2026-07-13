@@ -248,6 +248,8 @@ def merge_manifest_with_detected(
                 "category": row.get("category", merged_row["category"]),
                 "enabled": row.get("enabled", "1"),
                 "description": row.get("description", merged_row.get("description", "")),
+                "period_start": row.get("period_start", ""),
+                "period_end": row.get("period_end", ""),
                 "_path": str(base_dir / filename),
             }
         )
@@ -320,6 +322,55 @@ def read_source_manifest(source_dir: str | None, include_missing: bool = False) 
     if include_missing:
         return entries
     return _existing_enabled_entries(entries)
+
+
+def validate_cost_source_manifest(source_dir: str | None) -> list[dict[str, str]]:
+    """Validate the explicit cost-source manifest before a production run.
+
+    Auto-detection remains available to the manifest editor, but calculation must
+    use an explicit manifest so a staffing-only folder cannot silently be treated
+    as the cost-source folder.
+    """
+    base_dir = _source_dir_path(source_dir)
+    if base_dir is None:
+        raise FileNotFoundError(f"Không tìm thấy thư mục nguồn chi phí: {source_dir}")
+
+    manifest_paths = (
+        base_dir / MANIFEST_XLSX_FILENAME,
+        base_dir / MANIFEST_FILENAME,
+    )
+    if not any(path.is_file() for path in manifest_paths):
+        raise ValueError(
+            "Thư mục nguồn chi phí không có source_file_order.xlsx hoặc "
+            f"source_file_order.csv: {base_dir}. Hãy chọn thư mục nguồn chi phí "
+            "đã cấu hình manifest; không chọn thư mục chỉ chứa dữ liệu nhân sự."
+        )
+
+    entries = _read_saved_manifest(str(base_dir))
+    if not entries:
+        raise ValueError(f"Manifest nguồn chi phí không có dòng cấu hình hợp lệ: {base_dir}.")
+
+    enabled = [
+        entry
+        for entry in entries
+        if str(entry.get("enabled", "1")).strip() != "0"
+    ]
+    if not enabled:
+        raise ValueError(f"Manifest nguồn chi phí không có nguồn nào được bật: {base_dir}.")
+
+    missing = [
+        str(entry.get("filename", "")).strip()
+        for entry in enabled
+        if not Path(str(entry.get("_path", ""))).is_file()
+    ]
+    if missing:
+        preview = ", ".join(missing[:5])
+        suffix = f" (và {len(missing) - 5} file khác)" if len(missing) > 5 else ""
+        raise FileNotFoundError(
+            f"Manifest nguồn chi phí tham chiếu file không tồn tại: {preview}{suffix}."
+        )
+
+    return enabled
 
 
 def resolve_manifest_file(source_dir: str | None, category: str) -> str | None:
