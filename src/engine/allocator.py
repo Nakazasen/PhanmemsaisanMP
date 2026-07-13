@@ -169,27 +169,19 @@ FIXED_HEADCOUNT_RULE_SPECS = (
 BUS_RULE_SPECS = {
     "bus_expat_count": {
         "tokens": ("出向者通勤送迎費", "xe dua don cho nguoi nhat", "xe đưa đón cho người nhật"),
-        "form_row": 53,
         "label": "expat bus",
     },
     "bus_vietnamese_count": {
         "tokens": ("ローカル通勤送迎費", "xe dua don cho nguoi viet", "xe đưa đón cho người việt"),
-        "form_row": 54,
         "label": "Vietnamese bus",
     },
 }
 BUS_UNIT_PRICE_SPECS = {
     "bus_expat_count": {
         "tokens": ("出向者送迎費", "xe dua don nguoi nhat", "xe đưa đón người nhật"),
-        "source_workbook": "総務課 FY2027 MP 振替予定.xlsx",
-        "source_sheet": "FY2027予定",
-        "source_cells": "B9:M9",
     },
     "bus_vietnamese_count": {
         "tokens": ("ローカル社員送迎費", "xe dua don nguoi viet", "xe đưa đón người việt"),
-        "source_workbook": "総務課 FY2027 MP 振替予定.xlsx",
-        "source_sheet": "FY2027予定",
-        "source_cells": "B10:M10",
     },
 }
 
@@ -210,7 +202,7 @@ class AllocationEngine:
         self.bus_driver_cache = self._load_bus_driver_cache()
         self.bus_unit_price_cache = self._load_bus_unit_price_cache()
         self._missing_input_keys: set[tuple[str, str, str, str]] = set()
-        self._account_resolution_cache: dict[tuple[str, str, str, int | None], int | None] = {}
+        self._account_resolution_cache: dict[tuple[str, str, str], int | None] = {}
 
     def _normalize_text(self, value: str) -> str:
         text = unicodedata.normalize("NFKD", str(value or ""))
@@ -595,22 +587,6 @@ class AllocationEngine:
             return rule_price, "allocation_rules_master"
         return 0.0, ""
 
-    def _bus_unit_price_source_metadata(self, driver_key: str, source_kind: str) -> dict[str, str]:
-        if source_kind == "ga_unit_price":
-            spec = BUS_UNIT_PRICE_SPECS.get(driver_key, {})
-            return {
-                "workbook": spec.get("source_workbook", "総務課 FY2027 MP 振替予定.xlsx"),
-                "sheet": spec.get("source_sheet", "FY2027予定"),
-                "cells": spec.get("source_cells", ""),
-            }
-        if source_kind == "allocation_rules_master":
-            return {
-                "workbook": "allocation_rules_master",
-                "sheet": "map_allocation_rules",
-                "cells": "unit_price",
-            }
-        return {"workbook": "", "sheet": "", "cells": ""}
-
     def _get_event_delta(self, cc_code: object, period: str, driver_type: str, rule=None) -> float:
         prev_period = self._get_prev_period(period)
         if not prev_period:
@@ -793,7 +769,6 @@ class AllocationEngine:
                         0.0,
                         cc_code,
                         int(target_acc),
-                        None,
                         description,
                     )
                 )
@@ -801,8 +776,8 @@ class AllocationEngine:
             cursor.executemany(
                 """
                 INSERT INTO fact_input_data
-                (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
-                VALUES (?, ?, ?, ?, ?, ?, 'base', ?)
+                (source, period, amount_vnd, cc_code, account_code, scenario_id, description)
+                VALUES (?, ?, ?, ?, ?, 'base', ?)
                 """,
                 rows_to_insert,
             )
@@ -837,7 +812,7 @@ class AllocationEngine:
             params = (self.target_cc,)
         raw_rows = cursor.execute(
             f"""
-            SELECT id, source, cc_code, description, form_row
+            SELECT id, source, cc_code, description
             FROM fact_input_data
             WHERE {where}
             """,
@@ -851,7 +826,6 @@ class AllocationEngine:
                 str(row["source"] or ""),
                 str(row["cc_code"] or "").strip(),
                 str(row["description"] or ""),
-                int(row["form_row"]) if row["form_row"] is not None else None,
             )
             if cache_key not in self._account_resolution_cache:
                 try:
@@ -860,7 +834,6 @@ class AllocationEngine:
                         cache_key[0],
                         cache_key[1],
                         description=cache_key[2],
-                        form_row=cache_key[3],
                     )
                 except AccountResolutionError:
                     self._account_resolution_cache[cache_key] = None
@@ -919,6 +892,8 @@ class AllocationEngine:
 
             if self._is_recruitment_health_rule(rule):
                 unit_price = float(rule["unit_price"] or 0.0)
+                if unit_price <= 0:
+                    continue
                 for target_period in self.fy_months:
                     source_period = self._get_prev_period(target_period)
                     if not source_period:
@@ -926,6 +901,8 @@ class AllocationEngine:
                     for cc in self.cost_centers:
                         staff_new, worker_new = self._recruitment_health_new_hires(cc["code"], source_period, rule)
                         total_new = staff_new + worker_new
+                        if total_new <= 0:
+                            continue
                         target_acc = self._get_account_for_cc(
                             str(cc["cost_type"]), rule["mfg_account"], rule["ga_account"], rule["sales_account"]
                         )
@@ -946,8 +923,8 @@ class AllocationEngine:
                         cursor.execute(
                             """
                             INSERT INTO fact_input_data
-                            (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
-                            VALUES (?, ?, ?, ?, ?, NULL, 'base', ?)
+                            (source, period, amount_vnd, cc_code, account_code, scenario_id, description)
+                            VALUES (?, ?, ?, ?, ?, 'base', ?)
                             """,
                             (
                                 f"alloc_{int(rule['id'])}", target_period, total_new * unit_price,
@@ -1101,14 +1078,12 @@ class AllocationEngine:
                     if amount_vnd <= 0:
                         continue
 
-                    source_meta = self._bus_unit_price_source_metadata(driver_key, source_kind)
                     formula = f"{self._format_formula_number(driver_value)}*{self._format_formula_number(unit_price)}"
                     description = (
                         f"Alloc: {rule['item_name']}|driver_type={driver_key}"
                         f"|driver_value={self._format_formula_number(driver_value)}"
                         f"|unit_price_key={rule['item_name']}|unit_price_source={source_kind}"
-                        f"|source_workbook={source_meta['workbook']}|source_sheet={source_meta['sheet']}"
-                        f"|source_cells={source_meta['cells']}|provenance=bus_headcount_manual"
+                        f"|provenance=bus_headcount_manual"
                         f"|status=OK|formula_expr={formula}"
                     )
                     rows_to_insert.append(
@@ -1118,7 +1093,6 @@ class AllocationEngine:
                             amount_vnd,
                             cc_code,
                             int(target_acc),
-                            int(spec["form_row"]),
                             description,
                         )
                     )
@@ -1127,8 +1101,8 @@ class AllocationEngine:
                     cursor.executemany(
                         """
                         INSERT INTO fact_input_data
-                        (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
-                        VALUES (?, ?, ?, ?, ?, ?, 'base', ?)
+                        (source, period, amount_vnd, cc_code, account_code, scenario_id, description)
+                        VALUES (?, ?, ?, ?, ?, 'base', ?)
                         """,
                         rows_to_insert,
                     )

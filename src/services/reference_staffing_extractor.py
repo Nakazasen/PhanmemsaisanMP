@@ -159,7 +159,7 @@ def _official_splits(official_source_dir: str | Path | None, fiscal_year: int) -
 def _output_filename(path: Path, department_name: str, fiscal_year: int) -> str:
     matched = re.match(r"\s*(\d+)\.", path.name)
     sequence = matched.group(1) if matched else "00"
-    return f"{sequence}.KDTVN {department_name}_FY{fiscal_year}_staffing_truth.xlsx"
+    return f"{int(sequence):02d}_{department_name}_FY{fiscal_year}_staffing_truth.xlsx"
 
 
 def _record_source_value(

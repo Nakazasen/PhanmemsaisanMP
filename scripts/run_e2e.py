@@ -2,12 +2,10 @@
 MP2027 Manager - Universal E2E Execution Pipeline
 Supports Single CC and Batch Export.
 
-Compatibility guard: facility file-order export remains explicit via
-`if facility_file_order_export:`; runtime adds workbook-existence checks.
+The canonical export is database-to-FORM in one dynamic write.
 """
 import sqlite3
 import argparse
-import csv
 import inspect
 import os
 import sys
@@ -55,31 +53,20 @@ from src.parsers.facility import parse_facility
 from src.parsers.ga import parse_ga
 from src.parsers.birthday import parse_birthday_workbook
 from src.parsers.manual_event_drivers import parse_manual_event_drivers
-from src.parsers.manual_headcount import parse_manual_headcount
+from src.parsers.manual_headcount import copy_missing_baseline_from_april, parse_manual_headcount
 from src.parsers.manual_special_costs import parse_manual_special_costs
 from src.parsers.nnn_paperwork import parse_nnn_paperwork
 from src.parsers.it_sim import parse_it_simulation
 from src.parsers.fixed_assets import parse_fixed_assets
 from src.engine.allocator import AllocationEngine
-from src.engine.hub_builder import HubBuilder
-from src.engine.facility_file_order_writer import (
-    apply_facility_file_order_to_workbook,
-    write_facility_file_order_preview_workbook,
-)
-from src.engine.admin_consumables_writer import apply_admin_consumables_to_workbook
-from src.engine.system_cost_writer import apply_system_cost_to_workbook
-from src.engine.reference_assisted_fill import apply_reference_assisted_fill_to_workbook
-from src.engine.fixed_assets_reference_skeleton import apply_fixed_assets_reference_skeleton_to_workbook
-from src.engine.complete_v1_source_order_writer import apply_complete_v1_source_order_to_workbook
-from src.engine.mp_saisan_complete_export import apply_mp_saisan_complete_v1
+from src.engine.dynamic_source_order_export import export_dynamic_source_order
 from src.utils.excel_helpers import get_fy_months
 from src.utils.fiscal_periods import fiscal_baseline_period
-from src.utils.source_manifest import describe_manifest
+from src.utils.source_manifest import (
+    describe_manifest,
+    read_source_manifest,
+)
 from src.services.headcount_source_importer import import_headcount_time_sources
-
-COMPLETE_V1_SOURCE_ORDER_START_ROW = 30
-COMPLETE_V1_SOURCE_ORDER_CLEAR_UNTIL_ROW = 199
-
 
 def _safe_console_print(message):
     text = str(message)
@@ -193,60 +180,7 @@ def _log_debug_traceback(log_callback) -> None:
         log_callback("Chi tiết kỹ thuật đã được ẩn. Nếu cần điều tra sâu, bật MP2027_DEBUG_TRACEBACK=1 rồi chạy lại.")
 
 
-def _default_reference_map_path() -> str:
-    return os.path.join(BASE_DIR, "docs", "config", "reference_workbook_map.csv")
-
-
-def _default_fixed_assets_skeleton_csv_path() -> str:
-    return os.path.join(
-        BASE_DIR,
-        "docs",
-        "audits",
-        "phase42n2e_5005026371_secondary_skeleton_patterns.csv",
-    )
-
-
-def _apply_complete_v1_source_order(
-    workbook_path: str,
-    log_callback,
-    phase: str,
-    *,
-    dynamic_allocation_rows=None,
-    fiscal_periods=None,
-) -> dict[str, int]:
-    kwargs = {
-        "start_row": COMPLETE_V1_SOURCE_ORDER_START_ROW,
-        "clear_until_row": COMPLETE_V1_SOURCE_ORDER_CLEAR_UNTIL_ROW,
-    }
-    if dynamic_allocation_rows and fiscal_periods:
-        kwargs["dynamic_allocation_rows"] = dynamic_allocation_rows
-        kwargs["fiscal_periods"] = fiscal_periods
-    result = apply_complete_v1_source_order_to_workbook(workbook_path, **kwargs)
-    log_callback(
-        "Đã áp dụng ghi kết quả hoàn chỉnh theo thứ tự nguồn ({phase}): {summary}".format(
-            phase=_translate_complete_v1_phase(phase),
-            summary=_format_complete_v1_result_vi(result),
-        )
-    )
-    return result
-
-
-def _load_complete_v1_dynamic_allocation_rows(builder, target_cc) -> list[dict[str, object]]:
-    loader = getattr(builder, "_load_append_rows", None)
-    if not callable(loader):
-        return []
-    return loader(str(target_cc))
-
-
-def _translate_complete_v1_phase(phase: str) -> str:
-    translations = {
-        "final": "cuối",
-        "pre-reference": "trước tham chiếu",
-    }
-    return translations.get(str(phase), str(phase))
-
-
-def _format_complete_v1_result_vi(result: dict[str, int]) -> str:
+def _format_dynamic_export_result_vi(result: dict[str, int]) -> str:
     labels = {
         "source_blocks_written": "nhóm nguồn",
         "rows_written": "dòng ghi",
@@ -262,50 +196,6 @@ def _format_complete_v1_result_vi(result: dict[str, int]) -> str:
         if key in result:
             parts.append(f"{label}={result[key]}")
     return ", ".join(parts) if parts else str(result)
-
-
-def _resolve_primary_reference_path(
-    target_cc: int | str | None,
-    primary_reference_path: str | None = None,
-    reference_map_path: str | None = None,
-) -> str:
-    """Resolve an explicit or mapped reference workbook for reference-assisted fill."""
-    if primary_reference_path:
-        resolved = os.path.abspath(primary_reference_path)
-    else:
-        target_text = str(target_cc or "")
-        resolved = ""
-        map_path = reference_map_path or _default_reference_map_path()
-        if os.path.exists(map_path):
-            with open(map_path, newline="", encoding="utf-8-sig") as handle:
-                for row in csv.DictReader(handle):
-                    if row.get("target_cc") == target_text and row.get("reference_role") == "primary_reference":
-                        candidate = row.get("reference_path", "")
-                        resolved = candidate if os.path.isabs(candidate) else os.path.join(BASE_DIR, candidate)
-                        break
-        if not resolved:
-            raise ValueError("Điền theo tham chiếu cần --primary-reference-path hoặc bảng ánh xạ tham chiếu chính cho mã bộ phận này.")
-    if not os.path.exists(resolved):
-        raise FileNotFoundError(f"Không tìm thấy tệp tham chiếu chính để điền dữ liệu: {resolved}")
-    return resolved
-
-
-def _try_resolve_primary_reference_path(
-    target_cc: int | str | None,
-    primary_reference_path: str | None = None,
-    reference_map_path: str | None = None,
-) -> str | None:
-    """Resolve an optional reference workbook for canonical export."""
-    if not primary_reference_path and not reference_map_path:
-        return None
-    try:
-        return _resolve_primary_reference_path(
-            target_cc=target_cc,
-            primary_reference_path=primary_reference_path,
-            reference_map_path=reference_map_path,
-        )
-    except ValueError:
-        return None
 
 
 def _parse_manual_headcount(conn, source_dir: str):
@@ -503,74 +393,28 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            target_cc: int = None,
                            headcount_source_dir: str | None = None,
                            log_callback=None,
-                           facility_file_order_preview: bool = False,
-                           facility_preview_output: str | None = None,
-                           facility_preview_start_row: int = 200,
-                           facility_file_order_export: bool = False,
-                           facility_file_order_start_row: int = 200,
-                           admin_consumables_export: bool = False,
-                           admin_consumables_start_row: int = 207,
-                           system_cost_export: bool = False,
-                           system_cost_start_row: int = 211,
-                           file_order_export_v1: bool = False,
-                           primary_reference_fill: bool = False,
-                           primary_reference_fill_start_row: int = 213,
-                           file_order_export_v2: bool = False,
-                           primary_reference_path: str | None = None,
-                           reference_map_path: str | None = None,
-                           fixed_assets_reference_skeleton_export: bool = False,
-                           fixed_assets_skeleton_csv: str | None = None,
-                           fixed_assets_skeleton_start_row: int | None = None,
-                           mp_saisan_complete_v1: bool = True,
                            db_path: str | None = None,
                            output_dir: str | None = None,
+                           copy_baseline_t3_from_t4: bool = False,
                            simulate_baseline_t3_from_t4: bool = False,
-                           audit_exclude_incomplete_staffing: bool = False):
+                           audit_exclude_incomplete_staffing: bool = False,
+                           **legacy_output_options):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports every CC represented by generated facts.
     - db_path/output_dir: optional isolation paths; production defaults are unchanged.
+    - copy_baseline_t3_from_t4: user-confirmed production fallback persisted to manual CSV.
     - simulate_baseline_t3_from_t4: audit-only fallback with explicit provenance.
     """
     if log_callback is None:
         log_callback = _safe_console_print
 
-    explicit_facility_file_order_export = facility_file_order_export
-    explicit_admin_consumables_export = admin_consumables_export
-    explicit_system_cost_export = system_cost_export
-    explicit_complete_v1 = mp_saisan_complete_v1
-    template_ext = os.path.splitext(str(template_path))[1].lower()
-    template_is_excel = template_ext in {".xlsx", ".xlsm", ".xltx", ".xltm"}
-
-    if file_order_export_v2 and fixed_assets_reference_skeleton_export:
+    if legacy_output_options:
+        names = ", ".join(sorted(legacy_output_options))
         return False, (
-            "Nguy cơ trùng dữ liệu: --fixed-assets-reference-skeleton-export không thể chạy cùng "
-            "--primary-reference-fill hoặc --file-order-export-v2. Hãy chạy riêng."
+            "Chế độ xuất theo dòng cố định không còn được hỗ trợ. "
+            f"Hãy bỏ các tham số cũ: {names}."
         )
-
-    if fixed_assets_reference_skeleton_export and primary_reference_fill:
-        return False, (
-            "Nguy cơ trùng dữ liệu: --fixed-assets-reference-skeleton-export không thể chạy cùng "
-            "--primary-reference-fill hoặc --file-order-export-v2. Hãy chạy riêng."
-        )
-
-    if file_order_export_v2:
-        file_order_export_v1 = True
-        primary_reference_fill = True
-        primary_reference_fill_start_row = 213
-
-    if mp_saisan_complete_v1:
-        file_order_export_v1 = True
-        primary_reference_fill = False
-        fixed_assets_reference_skeleton_export = False
-
-    if file_order_export_v1:
-        facility_file_order_export = True
-        facility_file_order_start_row = 168
-        admin_consumables_export = True
-        admin_consumables_start_row = 175
-        system_cost_export = True
-        system_cost_start_row = 179
 
     production_db_path = os.path.abspath(os.path.join(BASE_DIR, "mp2027.db"))
     requested_db_path = os.path.abspath(db_path) if db_path else None
@@ -655,6 +499,18 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 path=birthday_result.get("path", ""),
             )
         )
+        if copy_baseline_t3_from_t4:
+            copied_baseline = copy_missing_baseline_from_april(
+                conn,
+                source_dir,
+                fiscal_year,
+                target_cc=target_cc,
+                base_dir=BASE_DIR,
+            )
+            log_callback(
+                "Baseline T3: đã sao chép dữ liệu T4 cho "
+                f"{copied_baseline['copied']} CC vào {copied_baseline['template_path']}."
+            )
         manual_hc_result = _parse_manual_headcount(conn, source_dir)
         parser_results["manual_headcount"] = manual_hc_result
         log_callback(
@@ -755,122 +611,25 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         engine = _create_allocation_engine(conn, target_cc=target_cc)
         _timed_call(log_callback, "xác định tài khoản và tính phân bổ", engine.run_allocation)
         
-        # 5. Export Logic
-        builder = HubBuilder(conn, fiscal_year=fiscal_year)
-        
-        facility_source_path = os.path.join(source_dir, "施設課　MPFY2027.xlsx")
-        admin_source_path = os.path.join(source_dir, "総務課 FY2027 MP 振替予定.xlsx")
-        allocation_source_path = os.path.join(source_dir, "FY2027配賦額一覧 (2025.12.29).xlsx")
-        system_source_paths = [
-            os.path.join(source_dir, "システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls"),
-            os.path.join(source_dir, "システム課金金額(Simulation)_FY2027_July.2026 ~ Dec.2026(Change AMS & PLM price).xls"),
-            os.path.join(source_dir, "システム課金金額(Simulation)_FY2027_Jan.2027 ~ March.2027(Change SAP price).xls"),
-        ]
+        # 5. Export Logic: database -> FORM exactly once.
+        builder = None
+        manifest_entries = read_source_manifest(source_dir)
         if target_cc:
             # Single Export
             log_callback(f"Đang xuất riêng mã bộ phận: {target_cc}")
             out_path = os.path.join(output_dir, f"MP_CC_{target_cc}.xlsx")
-            complete_v1_primary_path = None
-            if mp_saisan_complete_v1:
-                complete_v1_primary_path = _try_resolve_primary_reference_path(
-                    target_cc=target_cc,
-                    primary_reference_path=primary_reference_path,
-                    reference_map_path=reference_map_path,
-                )
-            builder.export_to_template(template_path, out_path, cc_code=target_cc)
-            complete_v1_dynamic_allocation_rows = (
-                _load_complete_v1_dynamic_allocation_rows(builder, target_cc)
-                if mp_saisan_complete_v1
-                else []
+            dynamic_result = export_dynamic_source_order(
+                conn,
+                fiscal_year=fiscal_year,
+                template_path=template_path,
+                output_path=out_path,
+                cc_code=target_cc,
+                manifest_entries=manifest_entries,
             )
-            complete_v1_fiscal_periods = get_fy_months(fiscal_year) if mp_saisan_complete_v1 else []
-            output_workbook_exists = os.path.exists(out_path)
-            if facility_file_order_export and output_workbook_exists and (explicit_facility_file_order_export or template_is_excel):
-                apply_facility_file_order_to_workbook(
-                    workbook_path=out_path,
-                    facility_source_path=facility_source_path,
-                    cost_center=target_cc,
-                    start_row=facility_file_order_start_row,
-                )
-                log_callback(f"Đã áp dụng xuất Cơ sở vật chất theo thứ tự tệp: {out_path}")
-            if admin_consumables_export and output_workbook_exists and (explicit_admin_consumables_export or template_is_excel):
-                apply_admin_consumables_to_workbook(
-                    workbook_path=out_path,
-                    admin_source_path=admin_source_path,
-                    allocation_source_path=allocation_source_path,
-                    cost_center=target_cc,
-                    start_row=admin_consumables_start_row,
-                )
-                log_callback(f"Đã áp dụng xuất vật tư Tổng vụ: {out_path}")
-            if system_cost_export and output_workbook_exists and (explicit_system_cost_export or template_is_excel):
-                apply_system_cost_to_workbook(
-                    workbook_path=out_path,
-                    system_source_paths=system_source_paths,
-                    cost_center=target_cc,
-                    start_row=system_cost_start_row,
-                )
-                log_callback(f"Đã áp dụng xuất chi phí hệ thống: {out_path}")
-            if (
-                mp_saisan_complete_v1
-                and output_workbook_exists
-                and template_is_excel
-                and (primary_reference_fill or complete_v1_primary_path or fixed_assets_reference_skeleton_export)
-            ):
-                _apply_complete_v1_source_order(out_path, log_callback, phase="pre-reference")
-            if primary_reference_fill:
-                primary_path = _resolve_primary_reference_path(
-                    target_cc=target_cc,
-                    primary_reference_path=primary_reference_path,
-                    reference_map_path=reference_map_path,
-                )
-                invariant_path = os.path.join(
-                    BASE_DIR,
-                    "docs",
-                    "audits",
-                    "phase42n2b_invariant_gap_accounting.csv",
-                )
-                fill_result = apply_reference_assisted_fill_to_workbook(
-                    workbook_path=out_path,
-                    primary_path=primary_path,
-                    invariant_csv_path=invariant_path,
-                    start_row=primary_reference_fill_start_row,
-                )
-                log_callback(f"Đã áp dụng điền theo tệp tham chiếu chính: {fill_result}")
-            if mp_saisan_complete_v1 and complete_v1_primary_path:
-                complete_result = apply_mp_saisan_complete_v1(
-                    workbook_path=out_path,
-                    target_cc=target_cc,
-                    primary_reference_path=complete_v1_primary_path,
-                    reference_map_path=reference_map_path or _default_reference_map_path(),
-                    fixed_assets_skeleton_csv=fixed_assets_skeleton_csv or _default_fixed_assets_skeleton_csv_path(),
-                    invariant_csv_path=os.path.join(
-                        BASE_DIR,
-                        "docs",
-                        "audits",
-                        "phase42n2b_invariant_gap_accounting.csv",
-                    ),
-                )
-                log_callback(f"Đã áp dụng hoàn chỉnh MP Saisan v1: {complete_result}")
-            if fixed_assets_reference_skeleton_export:
-                if primary_reference_fill:
-                    raise ValueError(
-                        "Nguy cơ trùng dữ liệu: --fixed-assets-reference-skeleton-export không thể chạy cùng "
-                        "--primary-reference-fill hoặc --file-order-export-v2. Hãy chạy riêng."
-                    )
-                skeleton_result = apply_fixed_assets_reference_skeleton_to_workbook(
-                    workbook_path=out_path,
-                    csv_path=fixed_assets_skeleton_csv or _default_fixed_assets_skeleton_csv_path(),
-                    start_row=fixed_assets_skeleton_start_row,
-                )
-                log_callback(f"Đã áp dụng khung tham chiếu tài sản cố định: {skeleton_result}")
-            if mp_saisan_complete_v1 and output_workbook_exists and template_is_excel:
-                _apply_complete_v1_source_order(
-                    out_path,
-                    log_callback,
-                    phase="final",
-                    dynamic_allocation_rows=complete_v1_dynamic_allocation_rows,
-                    fiscal_periods=complete_v1_fiscal_periods,
-                )
+            log_callback(
+                "Đã xuất động theo thứ tự nguồn: "
+                + _format_dynamic_export_result_vi(dynamic_result)
+            )
             log_callback(f"Hoàn tất: {output_dir}")
         else:
             # Batch Export
@@ -882,94 +641,16 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             count = 0
             for cc in all_ccs:
                 out_path = os.path.join(output_dir, f"MP_CC_{cc}.xlsx")
-                if builder.export_to_template(template_path, out_path, cc_code=cc):
-                    if facility_file_order_export:
-                        apply_facility_file_order_to_workbook(
-                            workbook_path=out_path,
-                            facility_source_path=facility_source_path,
-                            cost_center=cc,
-                            start_row=facility_file_order_start_row,
-                        )
-                        log_callback(f"Đã áp dụng xuất Cơ sở vật chất theo thứ tự tệp: {out_path}")
-                    if admin_consumables_export:
-                        apply_admin_consumables_to_workbook(
-                            workbook_path=out_path,
-                            admin_source_path=admin_source_path,
-                            allocation_source_path=allocation_source_path,
-                            cost_center=cc,
-                            start_row=admin_consumables_start_row,
-                        )
-                        log_callback(f"Đã áp dụng xuất vật tư Tổng vụ: {out_path}")
-                    if system_cost_export:
-                        apply_system_cost_to_workbook(
-                            workbook_path=out_path,
-                            system_source_paths=system_source_paths,
-                            cost_center=cc,
-                            start_row=system_cost_start_row,
-                        )
-                        log_callback(f"Đã áp dụng xuất chi phí hệ thống: {out_path}")
-                    if primary_reference_fill:
-                        primary_path = _resolve_primary_reference_path(
-                            target_cc=cc,
-                            primary_reference_path=primary_reference_path,
-                            reference_map_path=reference_map_path,
-                        )
-                        invariant_path = os.path.join(
-                            BASE_DIR,
-                            "docs",
-                            "audits",
-                            "phase42n2b_invariant_gap_accounting.csv",
-                        )
-                        fill_result = apply_reference_assisted_fill_to_workbook(
-                            workbook_path=out_path,
-                            primary_path=primary_path,
-                            invariant_csv_path=invariant_path,
-                            start_row=primary_reference_fill_start_row,
-                        )
-                        log_callback(f"Đã áp dụng điền theo tệp tham chiếu chính: {fill_result}")
-                    if fixed_assets_reference_skeleton_export:
-                        if primary_reference_fill:
-                            raise ValueError(
-                                "Nguy cơ trùng dữ liệu: --fixed-assets-reference-skeleton-export không thể chạy cùng "
-                                "--primary-reference-fill hoặc --file-order-export-v2. Hãy chạy riêng."
-                            )
-                        skeleton_result = apply_fixed_assets_reference_skeleton_to_workbook(
-                            workbook_path=out_path,
-                            csv_path=fixed_assets_skeleton_csv or _default_fixed_assets_skeleton_csv_path(),
-                            start_row=fixed_assets_skeleton_start_row,
-                        )
-                        log_callback(f"Đã áp dụng khung tham chiếu tài sản cố định: {skeleton_result}")
-                    if mp_saisan_complete_v1:
-                        complete_v1_dynamic_rows = _load_complete_v1_dynamic_allocation_rows(builder, cc)
-                        complete_v1_periods = get_fy_months(fiscal_year)
-                        complete_v1_primary_path = _try_resolve_primary_reference_path(
-                            target_cc=cc,
-                            primary_reference_path=primary_reference_path,
-                            reference_map_path=reference_map_path,
-                        )
-                        if complete_v1_primary_path:
-                            _apply_complete_v1_source_order(out_path, log_callback, phase="pre-reference")
-                            complete_result = apply_mp_saisan_complete_v1(
-                                workbook_path=out_path,
-                                target_cc=cc,
-                                primary_reference_path=complete_v1_primary_path,
-                                reference_map_path=reference_map_path or _default_reference_map_path(),
-                                fixed_assets_skeleton_csv=fixed_assets_skeleton_csv or _default_fixed_assets_skeleton_csv_path(),
-                                invariant_csv_path=os.path.join(
-                                    BASE_DIR,
-                                    "docs",
-                                    "audits",
-                                    "phase42n2b_invariant_gap_accounting.csv",
-                                ),
-                            )
-                            log_callback(f"Đã áp dụng hoàn chỉnh MP Saisan v1: {complete_result}")
-                        _apply_complete_v1_source_order(
-                            out_path,
-                            log_callback,
-                            phase="final",
-                            dynamic_allocation_rows=complete_v1_dynamic_rows,
-                            fiscal_periods=complete_v1_periods,
-                        )
+                dynamic_result = export_dynamic_source_order(
+                    conn,
+                    fiscal_year=fiscal_year,
+                    template_path=template_path,
+                    output_path=out_path,
+                    cc_code=cc,
+                    manifest_entries=manifest_entries,
+                )
+                export_succeeded = bool(dynamic_result.get("rows_written", 0))
+                if export_succeeded:
                     count += 1
             
             log_callback(f"Đã xuất thành công {count} tệp vào: {output_dir}")
@@ -1006,25 +687,6 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         log_callback(f"Báo cáo tóm tắt lần chạy: {audit_result['report_path']}")
         log_callback(f"Báo cáo dữ liệu cần bổ sung: {audit_result['missing_csv_path']}")
 
-        if facility_file_order_preview:
-            preview_output = facility_preview_output or os.path.join(
-                BASE_DIR,
-                "dist",
-                "preview",
-                "facility_file_order_preview.xlsx",
-            )
-            if target_cc is None:
-                raise ValueError("Xem trước Cơ sở vật chất theo thứ tự nguồn cần tham số --target-cc.")
-            preview_cc = target_cc
-            preview_path = write_facility_file_order_preview_workbook(
-                template_path=template_path,
-                facility_source_path=facility_source_path,
-                output_path=preview_output,
-                cost_center=preview_cc,
-                start_row=facility_preview_start_row,
-            )
-            log_callback(f"Tệp xem trước Cơ sở vật chất theo thứ tự nguồn: {preview_path}")
-        
         conn.close()
         return True, output_dir
 
@@ -1052,74 +714,9 @@ def main(argv=None):
     parser.add_argument('--exchange-rate', type=float, default=25450.0)
     parser.add_argument('--target-cc', type=int, default=None)
     parser.add_argument(
-        '--facility-file-order-preview',
+        '--copy-baseline-t3-from-t4',
         action='store_true',
-        help='Explicit opt-in: create Facility file-order preview workbook after the normal pipeline.',
-    )
-    parser.add_argument(
-        '--facility-preview-output',
-        type=str,
-        default=None,
-        help='Output path for Facility preview workbook. Defaults to dist/preview/facility_file_order_preview.xlsx when preview is enabled.',
-    )
-    parser.add_argument('--facility-preview-start-row', type=int, default=200)
-    parser.add_argument(
-        '--facility-file-order-export',
-        action='store_true',
-        help='Explicit opt-in: apply Facility file-order rows to generated output workbook(s).',
-    )
-    parser.add_argument('--facility-file-order-start-row', type=int, default=200)
-    parser.add_argument(
-        '--admin-consumables-export',
-        action='store_true',
-        help='Explicit opt-in: apply Admin consumables file-order rows to generated output workbook(s).',
-    )
-    parser.add_argument('--admin-consumables-start-row', type=int, default=207)
-    parser.add_argument(
-        '--system-cost-export',
-        action='store_true',
-        help='Explicit opt-in: apply System Cost file-order single row to generated output workbook(s).',
-    )
-    parser.add_argument('--system-cost-start-row', type=int, default=211)
-    parser.add_argument(
-        '--file-order-export-v1',
-        action='store_true',
-        help='Explicit opt-in: apply Facility, Admin consumables, and System Cost file-order rows with v1 row placement.',
-    )
-    parser.add_argument(
-        '--primary-reference-fill',
-        action='store_true',
-        help='Explicit opt-in: append primary reference-assisted rows with provenance labels after normal export.',
-    )
-    parser.add_argument('--primary-reference-fill-start-row', type=int, default=213)
-    parser.add_argument(
-        '--file-order-export-v2',
-        action='store_true',
-        help='Explicit opt-in: v1 file-order export plus primary reference-assisted fill starting at row 213.',
-    )
-    parser.add_argument(
-        '--primary-reference-path',
-        type=str,
-        default=None,
-        help='Primary reference workbook for reference-assisted fill. Required unless the target CC is mapped.',
-    )
-    parser.add_argument('--reference-map-path', type=str, default=_default_reference_map_path())
-    parser.add_argument(
-        '--fixed-assets-reference-skeleton-export',
-        action='store_true',
-        help='Explicit opt-in: append fixed-assets secondary skeleton rows with not-source-derived provenance.',
-    )
-    parser.add_argument(
-        '--fixed-assets-skeleton-csv',
-        type=str,
-        default=_default_fixed_assets_skeleton_csv_path(),
-        help='42N2E fixed-assets secondary skeleton candidate CSV.',
-    )
-    parser.add_argument('--fixed-assets-skeleton-start-row', type=int, default=None)
-    parser.add_argument(
-        '--mp-saisan-complete-v1',
-        action='store_true',
-        help=argparse.SUPPRESS,
+        help='Copy missing baseline T3 from T4 after the user confirms the GUI prompt.',
     )
     args = parser.parse_args(argv)
 
@@ -1130,25 +727,7 @@ def main(argv=None):
         exchange_rate=args.exchange_rate,
         target_cc=args.target_cc,
         headcount_source_dir=args.headcount_source,
-        facility_file_order_preview=args.facility_file_order_preview,
-        facility_preview_output=args.facility_preview_output,
-        facility_preview_start_row=args.facility_preview_start_row,
-        facility_file_order_export=args.facility_file_order_export,
-        facility_file_order_start_row=args.facility_file_order_start_row,
-        admin_consumables_export=args.admin_consumables_export,
-        admin_consumables_start_row=args.admin_consumables_start_row,
-        system_cost_export=args.system_cost_export,
-        system_cost_start_row=args.system_cost_start_row,
-        file_order_export_v1=args.file_order_export_v1,
-        primary_reference_fill=args.primary_reference_fill,
-        primary_reference_fill_start_row=args.primary_reference_fill_start_row,
-        file_order_export_v2=args.file_order_export_v2,
-        primary_reference_path=args.primary_reference_path,
-        reference_map_path=args.reference_map_path,
-        fixed_assets_reference_skeleton_export=args.fixed_assets_reference_skeleton_export,
-        fixed_assets_skeleton_csv=args.fixed_assets_skeleton_csv,
-        fixed_assets_skeleton_start_row=args.fixed_assets_skeleton_start_row,
-        mp_saisan_complete_v1=True,
+        copy_baseline_t3_from_t4=args.copy_baseline_t3_from_t4,
     )
     return 0 if success else 1
 

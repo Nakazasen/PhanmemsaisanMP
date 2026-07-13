@@ -45,7 +45,7 @@ def create_split_required_company_form(path: Path) -> None:
 class ExtractedImportTests(unittest.TestCase):
     def test_split_required_preserves_total_and_rejects_category_driver(self):
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "01.KDTVN Test_FY2027_staffing_truth.xlsx"
+            path = Path(tmp) / "01_Test_FY2027_staffing_truth.xlsx"
             create_split_required_company_form(path)
             conn = sqlite3.connect(":memory:")
             conn.row_factory = sqlite3.Row
@@ -72,7 +72,7 @@ class ExtractedImportTests(unittest.TestCase):
 
     def test_nonzero_local_hours_without_headcount_is_split_required(self):
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "01.KDTVN Test_FY2027_staffing_truth.xlsx"
+            path = Path(tmp) / "01_Test_FY2027_staffing_truth.xlsx"
             create_split_required_company_form(path)
             workbook = __import__("openpyxl").load_workbook(path)
             plan = workbook[OUTPUT_SHEET]

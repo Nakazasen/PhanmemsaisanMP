@@ -14,7 +14,6 @@ from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
 from src.utils.source_manifest import resolve_manifest_file
 
 SOURCE_NAME = "nnn_paperwork"
-FORM_ROW = 137
 
 
 def _format_formula_number(value: float) -> str:
@@ -143,7 +142,7 @@ def find_nnn_paperwork_file(source_dir: str | None = None) -> str | None:
 
 
 def parse_nnn_paperwork(conn: sqlite3.Connection, source_dir: str | None = None, workbook_path: str | None = None) -> dict[str, int | str]:
-    """Load NNN/VISA/GPLD/Passport paperwork workbook into explicit FORM row 137."""
+    """Load NNN/VISA/GPLD/Passport costs with business provenance."""
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
     fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip()) if fy_row else 2027
     fy_months = get_fy_months(fiscal_year)
@@ -212,7 +211,10 @@ def parse_nnn_paperwork(conn: sqlite3.Connection, source_dir: str | None = None,
 
         formula_ws = formula_wb[ws.title]
         formula_rows = formula_ws.iter_rows(min_row=header_row_idx + 1, values_only=True)
-        for row, formula_row in zip(ws.iter_rows(min_row=header_row_idx + 1, values_only=True), formula_rows):
+        for row_number, (row, formula_row) in enumerate(
+            zip(ws.iter_rows(min_row=header_row_idx + 1, values_only=True), formula_rows),
+            start=header_row_idx + 1,
+        ):
             cc_code = normalize_cc_code(row[cc_col_idx] if len(row) > cc_col_idx else None)
             if not cc_code:
                 skipped += 1
@@ -257,8 +259,10 @@ def parse_nnn_paperwork(conn: sqlite3.Connection, source_dir: str | None = None,
                 cursor.execute(
                     """
                     INSERT INTO fact_input_data
-                    (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
-                    VALUES (?, ?, ?, ?, ?, ?, 'base', ?)
+                    (source, period, amount_vnd, cc_code, account_code, scenario_id, description,
+                     source_group, source_file, source_sheet, source_row, item_key, item_order)
+                    VALUES (?, ?, ?, ?, ?, 'base', ?, 'nnn_paperwork',
+                            ?, ?, ?, 'nnn_paperwork', ?)
                     """,
                     (
                         SOURCE_NAME,
@@ -266,8 +270,11 @@ def parse_nnn_paperwork(conn: sqlite3.Connection, source_dir: str | None = None,
                         amount,
                         cc_code,
                         account_code,
-                        FORM_ROW,
                         f"{description}|formula_expr={formula_expr}",
+                        Path(path).name,
+                        ws.title,
+                        row_number,
+                        row_number,
                     ),
                 )
                 inserted += 1

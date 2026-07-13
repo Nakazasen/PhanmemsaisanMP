@@ -17,8 +17,6 @@ COST_TYPE_TO_ACCOUNT_COLUMN = {
 ACCOUNT_STRATEGY_DIRECT_BY_CC = "direct_by_cc"
 ACCOUNT_STRATEGY_SUMMARY_BY_CC = "summary_by_cc"
 ACCOUNT_STRATEGY_CC_RESOLVER = "cc_resolver"
-ACCOUNT_STRATEGY_FIXED_BASE_ACCOUNT = "fixed_base_account"
-ACCOUNT_STRATEGY_FORM_ROW_BASE_ACCOUNT = "form_row_base_account"
 ACCOUNT_STRATEGY_DESCRIPTION_BASE_ACCOUNT = "description_base_account"
 ACCOUNT_STRATEGY_ALLOCATION_RULE = "allocation_rule"
 ACCOUNT_STRATEGY_NOT_APPLICABLE = "not_applicable"
@@ -29,10 +27,16 @@ class SourceAccountPolicy:
     strategy: str
     cc_only: bool = True
     notes: str = ""
-    fixed_form_row: int | None = None
-    fixed_base_account_code: int | None = None
-    base_account_by_form_row: Mapping[int, int] = field(default_factory=dict)
-    base_account_by_description: Mapping[str, int | tuple[str, ...]] = field(default_factory=dict)
+    base_account_by_description: Mapping[str, int | tuple[str, ...] | "AccountKeywordQuery"] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class AccountKeywordQuery:
+    """Semantic account lookup; values are matched against account-master text."""
+
+    any_of: tuple[str, ...] = ()
+    all_of: tuple[str, ...] = ()
+    none_of: tuple[str, ...] = ()
 
 
 SOURCE_ACCOUNT_POLICIES: dict[str, SourceAccountPolicy] = {
@@ -50,50 +54,37 @@ SOURCE_ACCOUNT_POLICIES: dict[str, SourceAccountPolicy] = {
     ),
     "it_sim": SourceAccountPolicy(
         strategy=ACCOUNT_STRATEGY_SUMMARY_BY_CC,
-        fixed_base_account_code=5005246282,
-        notes="Prefer summary-sheet CC->account mapping; fall back to system-cost master account.",
+        notes="Account must be supplied by the IT summary source.",
     ),
     "birthday_workbook": SourceAccountPolicy(
-        strategy=ACCOUNT_STRATEGY_FIXED_BASE_ACCOUNT,
-        fixed_form_row=59,
-        fixed_base_account_code=5004086291,
-        notes="Birthday cost resolves from one logical base account via CC cost_type.",
+        strategy=ACCOUNT_STRATEGY_ALLOCATION_RULE,
+        notes="Birthday account and unit price come from the allocation-rule master.",
     ),
     "ga_admin_allocation": SourceAccountPolicy(
-        strategy=ACCOUNT_STRATEGY_FORM_ROW_BASE_ACCOUNT,
-        base_account_by_form_row={
-            46: 5005056281,
-            48: 5005016372,
-            51: 5005246286,
-            54: 5004086291,
-            56: 5004086291,
-            58: 5004086291,
-            97: 5005246288,
-            98: 5005246288,
-        },
-        notes="GA admin rows choose a logical base account by form_row, then resolve by CC cost_type.",
+        strategy=ACCOUNT_STRATEGY_DIRECT_BY_CC,
+        notes="GA admin source must provide an account identity; destination rows are dynamic.",
     ),
     "facility": SourceAccountPolicy(
         strategy=ACCOUNT_STRATEGY_DESCRIPTION_BASE_ACCOUNT,
         base_account_by_description={
-            "depreciation_building": 5006016260,
-            "depreciation_land": 5006016261,
-            "interest_building": 9114120007,
-            "interest_land": 9114120007,
-            "electric": ("電気", "electric", "điện"),
-            "water": ("水道", "water", "nước"),
+            "depreciation_building": AccountKeywordQuery(all_of=("減価償却費配賦", "建物")),
+            "depreciation_land": AccountKeywordQuery(all_of=("減価償却費配賦", "土地使用権")),
+            "interest_building": AccountKeywordQuery(all_of=("固定資産", "金利")),
+            "interest_land": AccountKeywordQuery(all_of=("固定資産", "金利")),
+            "electric": AccountKeywordQuery(any_of=("電気", "electric", "điện")),
+            "water": AccountKeywordQuery(any_of=("水道", "water", "nước")),
         },
         notes="Facility parser emits CC plus item type; account comes from source-specific description rules.",
     ),
     "fixed_assets": SourceAccountPolicy(
         strategy=ACCOUNT_STRATEGY_DESCRIPTION_BASE_ACCOUNT,
         base_account_by_description={
-            "fixed_assets_depr|machinery_equipment|": 5006016242,
-            "fixed_assets_depr|vehicles|": 5006016243,
-            "fixed_assets_depr|tools_furniture_fixtures|": 5006016244,
-            "fixed_assets_depr|other_tangible_fixed_assets|": 5006016247,
-            "fixed_assets_depr|mold|": 5005036246,
-            "fixed_assets_interest|": 9114120007,
+            "fixed_assets_depr|machinery_equipment|": AccountKeywordQuery(all_of=("減価償却費", "機械装置"), none_of=("リース",)),
+            "fixed_assets_depr|vehicles|": AccountKeywordQuery(all_of=("減価償却費", "車輌運搬具"), none_of=("リース",)),
+            "fixed_assets_depr|tools_furniture_fixtures|": AccountKeywordQuery(all_of=("減価償却費", "工具器具備品"), none_of=("リース",)),
+            "fixed_assets_depr|other_tangible_fixed_assets|": AccountKeywordQuery(all_of=("減価償却費", "その他有形固定資産"), none_of=("リース",)),
+            "fixed_assets_depr|mold|": AccountKeywordQuery(all_of=("減価償却費", "金型"), none_of=("リース",)),
+            "fixed_assets_interest|": AccountKeywordQuery(all_of=("固定資産", "金利")),
         },
         notes="Fixed-assets parser emits Category-specific depreciation accounts and one shared interest account.",
     ),
@@ -147,6 +138,52 @@ def _find_account_code_by_keywords(conn: sqlite3.Connection, keywords: tuple[str
     if len(unique_matches) > 1:
         raise AccountResolutionError(f"Ambiguous account keywords for account lookup: {keywords}")
     return unique_matches[0]
+
+
+def _find_account_for_cost_type_by_keywords(
+    conn: sqlite3.Connection,
+    keywords: tuple[str, ...] | AccountKeywordQuery,
+    column: str,
+) -> int:
+    rows = conn.execute(
+        "SELECT code, name_jp, name_vn, group_name, mfg_code, ga_code, sales_code FROM dim_accounts"
+    ).fetchall()
+    values: set[int] = set()
+    for row in rows:
+        haystack = f"{row['name_jp'] or ''} {row['name_vn'] or ''}".lower()
+        if isinstance(keywords, AccountKeywordQuery):
+            any_match = not keywords.any_of or any(keyword.lower() in haystack for keyword in keywords.any_of)
+            all_match = all(keyword.lower() in haystack for keyword in keywords.all_of)
+            excluded = any(keyword.lower() in haystack for keyword in keywords.none_of)
+            matches = any_match and all_match and not excluded
+        else:
+            matches = any(keyword.lower() in haystack for keyword in keywords)
+        if not matches:
+            continue
+        if _is_valid_account_code(row[column]):
+            values.add(int(float(row[column])))
+    if not values:
+        raise AccountResolutionError(f"Account not found for keyword lookup: {keywords}:{column}")
+    if len(values) > 1:
+        raise AccountResolutionError(f"Ambiguous account keywords for account lookup: {keywords}:{column}")
+    return next(iter(values))
+
+
+def resolve_account_code_by_keywords_for_connection(
+    conn: sqlite3.Connection,
+    target_cc: int | str,
+    *,
+    any_of: tuple[str, ...] = (),
+    all_of: tuple[str, ...] = (),
+    none_of: tuple[str, ...] = (),
+) -> int:
+    """Resolve one account from semantic master text and the target CC cost type."""
+    _, column = _account_column_for_connection(conn, target_cc)
+    return _find_account_for_cost_type_by_keywords(
+        conn,
+        AccountKeywordQuery(any_of=any_of, all_of=all_of, none_of=none_of),
+        column,
+    )
 
 
 def _candidate_rows_for_group_name(conn: sqlite3.Connection, group_name: str) -> list[sqlite3.Row]:
@@ -221,28 +258,20 @@ def _resolve_source_base_account_code(
     source: str,
     *,
     description: str | None = None,
-    form_row: int | None = None,
 ) -> int:
     policy = get_source_account_policy(source)
     if policy is None:
         raise AccountResolutionError(f"Unsupported source for account policy lookup: {source}")
-
-    if policy.fixed_base_account_code:
-        return int(policy.fixed_base_account_code)
-
-    if policy.base_account_by_form_row:
-        if form_row is None:
-            raise AccountResolutionError(f"Missing form_row for source account policy: {source}")
-        account_code = policy.base_account_by_form_row.get(int(form_row))
-        if account_code is None:
-            raise AccountResolutionError(f"Unsupported form_row for source account policy: {source}:{form_row}")
-        return int(account_code)
 
     if policy.base_account_by_description:
         description_text = str(description or "").strip().lower()
         for token, account_ref in policy.base_account_by_description.items():
             if token.lower() not in description_text:
                 continue
+            if isinstance(account_ref, AccountKeywordQuery):
+                raise AccountResolutionError(
+                    f"Account lookup for {source}:{token} requires target cost type"
+                )
             if isinstance(account_ref, tuple):
                 return _find_account_code_by_keywords(conn, account_ref)
             return int(account_ref)
@@ -310,15 +339,48 @@ def resolve_account_code_for_source(
     target_cc: int | str,
     *,
     description: str | None = None,
-    form_row: int | None = None,
 ) -> int:
     """Resolve a source-specific account via CC-only policy metadata."""
+
+    policy = get_source_account_policy(source)
+    if policy and policy.strategy == ACCOUNT_STRATEGY_SUMMARY_BY_CC:
+        rows = conn.execute(
+            """
+            SELECT DISTINCT CAST(account_code AS INTEGER) AS account_code
+            FROM fact_input_data
+            WHERE source = ?
+              AND CAST(cc_code AS TEXT) = CAST(? AS TEXT)
+              AND account_code IS NOT NULL
+              AND CAST(account_code AS INTEGER) > 0
+            """,
+            (source, str(target_cc).strip()),
+        ).fetchall()
+        accounts = {int(row["account_code"]) for row in rows}
+        if not accounts:
+            _, account_column = _account_column_for_connection(conn, target_cc)
+            return _find_account_for_cost_type_by_keywords(
+                conn,
+                AccountKeywordQuery(all_of=("ＫＤＣ", "システム使用料")),
+                account_column,
+            )
+        if len(accounts) != 1:
+            raise AccountResolutionError(
+                f"Source summary account must be unique for {source}/{target_cc}; found {sorted(accounts)}"
+            )
+        return accounts.pop()
+
+    if policy and policy.base_account_by_description:
+        description_text = str(description or "").strip().lower()
+        for token, account_ref in policy.base_account_by_description.items():
+            if token.lower() not in description_text or not isinstance(account_ref, (tuple, AccountKeywordQuery)):
+                continue
+            _, account_column = _account_column_for_connection(conn, target_cc)
+            return _find_account_for_cost_type_by_keywords(conn, account_ref, account_column)
 
     base_account_code = _resolve_source_base_account_code(
         conn,
         source,
         description=description,
-        form_row=form_row,
     )
     return resolve_account_code_for_connection(conn, target_cc, base_account_code)
 

@@ -114,7 +114,7 @@ class TestNNNPaperworkParser(unittest.TestCase):
         self.assertEqual(float(rows[0]["amount_vnd"]), 1000.0)
         self.assertEqual(str(rows[0]["cc_code"]), str(cc_code))
         self.assertEqual(rows[0]["account_code"], 6005186429)
-        self.assertEqual(rows[0]["form_row"], 137)
+        self.assertIsNone(rows[0]["form_row"])
         self.assertIn("Worker A", rows[0]["description"])
 
         # Record 2
@@ -122,7 +122,7 @@ class TestNNNPaperworkParser(unittest.TestCase):
         self.assertEqual(float(rows[1]["amount_vnd"]), 2000.0)
         self.assertEqual(str(rows[1]["cc_code"]), str(cc_code))
         self.assertEqual(rows[1]["account_code"], 6005186429)
-        self.assertEqual(rows[1]["form_row"], 137)
+        self.assertIsNone(rows[1]["form_row"])
         self.assertIn("Worker A", rows[1]["description"])
 
         conn.close()
@@ -168,14 +168,14 @@ class TestNNNPaperworkParser(unittest.TestCase):
         self.assertEqual(float(rows[0]["amount_vnd"]), 1500.0)
         self.assertEqual(str(rows[0]["cc_code"]), str(cc_code))
         self.assertEqual(rows[0]["account_code"], 6005186429)
-        self.assertEqual(rows[0]["form_row"], 137)
+        self.assertIsNone(rows[0]["form_row"])
 
         # periods[1] amount 2500.0
         self.assertEqual(rows[1]["period"], periods[1])
         self.assertEqual(float(rows[1]["amount_vnd"]), 2500.0)
         self.assertEqual(str(rows[1]["cc_code"]), str(cc_code))
         self.assertEqual(rows[1]["account_code"], 6005186429)
-        self.assertEqual(rows[1]["form_row"], 137)
+        self.assertIsNone(rows[1]["form_row"])
 
         conn.close()
 

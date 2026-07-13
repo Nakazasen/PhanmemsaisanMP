@@ -8,20 +8,15 @@ Parses 施設課 MPFY[Year].xlsx to extract:
 import pandas as pd
 import sqlite3
 import os
+from datetime import date, datetime
 from src.utils.excel_helpers import safe_float, extract_cc_code, get_fy_months
 from src.utils.source_manifest import resolve_manifest_file
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-SHEET_CONFIG = {
+SOURCE_SPECS = {
     '減価償却費（Depreciation）': {
         'currency': 'USD',
-        'header_row': 2,
-        'data_start': 6,
-        'cc_name_col': 1,
-        'cc_code_col': 1,
-        'type_col': 2,
-        'month_start_col': 3,
         'items': {
             '建物 Building': 'depreciation_building',
             '土地 Land': 'depreciation_land',
@@ -29,12 +24,6 @@ SHEET_CONFIG = {
     },
     '固定資産金利（Interest）': {
         'currency': 'USD',
-        'header_row': 2,
-        'data_start': 6,
-        'cc_name_col': 1,
-        'cc_code_col': 1,
-        'type_col': 2,
-        'month_start_col': 3,
         'items': {
             '建物 Building': 'interest_building',
             '土地 Land': 'interest_land',
@@ -42,12 +31,6 @@ SHEET_CONFIG = {
     },
     '水道光熱費（Electric & Water）': {
         'currency': 'VND',
-        'header_row': 2,
-        'data_start': 6,
-        'cc_name_col': 1,
-        'cc_code_col': 1,
-        'type_col': 2,
-        'month_start_col': 3,
         'items': {
             '電気代 Electric': 'electric',
             '水道代 Water': 'water',
@@ -55,68 +38,80 @@ SHEET_CONFIG = {
     },
 }
 
-def parse_facility_sheet(df: pd.DataFrame, config: dict, fy_months: list) -> list:
-    """Parse a facility sheet into list of dicts."""
-    records = []
-    data_start = config['data_start']
-    type_col = config['type_col']
-    month_start = config['month_start_col']
-    currency = config['currency']
+def _period(value: object) -> str | None:
+    if isinstance(value, (datetime, date, pd.Timestamp)):
+        return f"{value.year:04d}{value.month:02d}"
+    text = str(value or "").strip()
+    parsed = pd.to_datetime(text, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return f"{parsed.year:04d}{parsed.month:02d}"
 
-    current_cc = None
-    i = data_start
-    while i < len(df):
-        row = df.iloc[i]
-        item_type = str(row.iloc[type_col]).strip() if not pd.isna(row.iloc[type_col]) else ''
-        item_key = None
-        for key in config['items']:
-            if key in item_type:
-                item_key = config['items'][key]
-                break
 
+def _month_columns(df: pd.DataFrame, fy_months: list[str]) -> tuple[int, dict[str, int]]:
+    wanted = set(fy_months)
+    candidates: list[tuple[int, dict[str, int]]] = []
+    for row_index, row in df.iterrows():
+        columns: dict[str, int] = {}
+        for column, value in enumerate(row.tolist()):
+            period = _period(value)
+            if period in wanted and period not in columns:
+                columns[period] = column
+        if set(columns) == wanted:
+            candidates.append((int(row_index), columns))
+    if len(candidates) != 1:
+        raise ValueError(f"Facility sheet phải có đúng một dòng tiêu đề 12 tháng; tìm thấy {len(candidates)}.")
+    return candidates[0]
+
+
+def _item_key(row: pd.Series, spec: dict, first_month_col: int) -> str | None:
+    text = " ".join(str(value) for value in row.iloc[:first_month_col] if not pd.isna(value))
+    matches = {key for label, key in spec["items"].items() if label in text}
+    if len(matches) > 1:
+        raise ValueError(f"Facility row có nhiều mã hạng mục: {sorted(matches)}")
+    return next(iter(matches), None)
+
+
+def _cc_before_month(row: pd.Series, first_month_col: int) -> str | None:
+    matches = {
+        str(code)
+        for value in row.iloc[:first_month_col]
+        for code in (extract_cc_code(value),)
+        if code
+    }
+    if len(matches) > 1:
+        raise ValueError(f"Facility row có nhiều Cost Center: {sorted(matches)}")
+    return next(iter(matches), None)
+
+
+def parse_facility_sheet(df: pd.DataFrame, spec: dict, fy_months: list[str]) -> list[dict]:
+    """Parse by semantic item labels and fiscal-month headers only."""
+    header_row, month_columns = _month_columns(df, fy_months)
+    first_month_col = min(month_columns.values())
+    records: list[dict] = []
+    for row_index in range(header_row + 1, len(df)):
+        row = df.iloc[row_index]
+        item_key = _item_key(row, spec, first_month_col)
         if not item_key:
-            i += 1
             continue
-
-        cc_code = None
-        seq = row.iloc[0]
-        if not pd.isna(seq):
-            try:
-                float(seq)
-                if i + 1 < len(df):
-                    next_row = df.iloc[i + 1]
-                    cc_val = next_row.iloc[config['cc_code_col']]
-                    cc_code = extract_cc_code(cc_val)
-                    if cc_code:
-                        current_cc = cc_code
-            except (ValueError, TypeError):
-                pass
-        else:
-            cc_val = row.iloc[config['cc_code_col']]
-            cc_code = extract_cc_code(cc_val)
-            if cc_code:
-                current_cc = cc_code
-
-        if not current_cc:
-            i += 1
+        cc_code = _cc_before_month(row, first_month_col)
+        if not cc_code and row_index + 1 < len(df):
+            cc_code = _cc_before_month(df.iloc[row_index + 1], first_month_col)
+        if not cc_code:
             continue
-
-        for m in range(12):
-            col_idx = month_start + m
-            if col_idx >= len(row):
-                continue
-            amount = safe_float(row.iloc[col_idx])
+        for item_order, period in enumerate(fy_months, start=1):
+            amount = safe_float(row.iloc[month_columns[period]])
             if amount == 0.0:
                 continue
             records.append({
-                'cc_code': current_cc,
-                'period': fy_months[m],
+                'cc_code': cc_code,
+                'period': period,
                 'amount': amount,
-                'currency': currency,
+                'currency': spec['currency'],
                 'item_type': item_key,
-                'source': 'facility',
+                'source_row': row_index + 1,
+                'item_order': row_index * len(fy_months) + item_order,
             })
-        i += 1
     return records
 
 def parse_facility(conn: sqlite3.Connection, source_dir: str = None) -> dict:
@@ -133,23 +128,18 @@ def parse_facility(conn: sqlite3.Connection, source_dir: str = None) -> dict:
     # Use source_dir if provided
     search_dir = source_dir or BASE_DIR
     manifest_path = resolve_manifest_file(search_dir, "facility")
-    path = os.path.join(search_dir, f'施設課　MP{fy_str}.xlsx')
-    if manifest_path:
-        path = manifest_path
+    path = manifest_path
     print(f"Đang mở tệp Cơ sở vật chất: {path}")
-    if not os.path.exists(path):
-        # Try local folder
-        path = f'施設課　MP{fy_str}.xlsx'
-        if not os.path.exists(path):
-            print(f"Cảnh báo: không tìm thấy tệp Cơ sở vật chất: {path} trong {search_dir}")
-            return {'total': 0}
+    if not path or not os.path.exists(path):
+        print(f"Cảnh báo: manifest không có tệp Cơ sở vật chất hợp lệ trong {search_dir}")
+        return {'total': 0}
 
     results = {}
     cursor = conn.cursor()
     total = 0
 
     xl = pd.ExcelFile(path, engine='openpyxl')
-    for sheet_name, config in SHEET_CONFIG.items():
+    for sheet_name, config in SOURCE_SPECS.items():
         target_sheet = None
         for s in xl.sheet_names:
             if sheet_name[:6] in s:
@@ -171,8 +161,9 @@ def parse_facility(conn: sqlite3.Connection, source_dir: str = None) -> dict:
             cursor.execute("""
                 INSERT INTO fact_input_data
                 (source, period, amount_vnd, amount_usd, cc_code, account_code,
-                 scenario_id, description)
-                VALUES (?, ?, ?, ?, ?, ?, 'base', ?)
+                 scenario_id, description, source_group, source_file, source_sheet,
+                 source_row, item_key, item_order)
+                VALUES (?, ?, ?, ?, ?, ?, 'base', ?, 'facility', ?, ?, ?, ?, ?)
             """, (
                 'facility',
                 rec['period'],
@@ -180,7 +171,12 @@ def parse_facility(conn: sqlite3.Connection, source_dir: str = None) -> dict:
                 amount_usd,
                 rec['cc_code'],
                 0,
-                rec['item_type']
+                rec['item_type'],
+                os.path.basename(path),
+                target_sheet,
+                rec['source_row'],
+                f"facility:{rec['item_type']}",
+                rec['item_order'],
             ))
             total += 1
         results[sheet_name] = len(records)

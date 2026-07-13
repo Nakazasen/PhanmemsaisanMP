@@ -346,27 +346,11 @@ class TestSharedAccountResolver(unittest.TestCase):
         self.assertEqual(resolve_account_code(db_path, 1412000099, "福利厚生費"), 6004086551)
         self.assertEqual(resolve_account_code(db_path, 1412000100, "福利厚生費"), 7004086777)
 
-    def test_source_policy_resolves_birthday_account_by_cc_cost_type(self):
-        from src.engine.account_resolver import resolve_account_code_for_source
+    def test_birthday_policy_requires_allocation_rule_identity(self):
+        from src.engine.account_resolver import ACCOUNT_STRATEGY_ALLOCATION_RULE, get_source_account_policy
 
-        db_path, conn, _ = self._mk_file_db()
-        try:
-            self.assertEqual(resolve_account_code_for_source(conn, "birthday_workbook", "1412000040"), 5004086291)
-            self.assertEqual(resolve_account_code_for_source(conn, "birthday_workbook", "1412000099"), 6004086551)
-            self.assertEqual(resolve_account_code_for_source(conn, "birthday_workbook", "1412000100"), 7004086777)
-        finally:
-            conn.close()
-
-    def test_source_policy_resolves_split_variant_rows_like_form_filtering(self):
-        from src.engine.account_resolver import resolve_account_code_for_source
-
-        db_path, conn = self._mk_split_variant_db()
-        try:
-            self.assertEqual(resolve_account_code_for_source(conn, "birthday_workbook", "1412000040"), 5004086291)
-            self.assertEqual(resolve_account_code_for_source(conn, "birthday_workbook", "1412000099"), 6004086651)
-            self.assertEqual(resolve_account_code_for_source(conn, "birthday_workbook", "1412000100"), 6004086551)
-        finally:
-            conn.close()
+        policy = get_source_account_policy("birthday_workbook")
+        self.assertEqual(policy.strategy, ACCOUNT_STRATEGY_ALLOCATION_RULE)
 
     def test_group_name_lookup_resolves_split_variant_rows_like_form_filtering(self):
         from src.engine.account_resolver import resolve_account_code
@@ -377,8 +361,8 @@ class TestSharedAccountResolver(unittest.TestCase):
         self.assertEqual(resolve_account_code(db_path, "1412000099", "福利厚生費"), 6004086651)
         self.assertEqual(resolve_account_code(db_path, "1412000100", "福利厚生費"), 6004086551)
 
-    def test_source_policy_resolves_ga_admin_form_row_by_cc_cost_type(self):
-        from src.engine.account_resolver import resolve_account_code_for_source
+    def test_ga_admin_resolves_explicit_source_account_by_cc_cost_type(self):
+        from src.engine.account_resolver import resolve_account_code_for_connection
 
         db_path, conn, _ = self._mk_file_db()
         try:
@@ -391,15 +375,15 @@ class TestSharedAccountResolver(unittest.TestCase):
             )
             conn.commit()
             self.assertEqual(
-                resolve_account_code_for_source(conn, "ga_admin_allocation", "1412000040", form_row=97),
+                resolve_account_code_for_connection(conn, "1412000040", "事務用消耗品費"),
                 5005246288,
             )
             self.assertEqual(
-                resolve_account_code_for_source(conn, "ga_admin_allocation", "1412000099", form_row=97),
+                resolve_account_code_for_connection(conn, "1412000099", "事務用消耗品費"),
                 6005246288,
             )
             self.assertEqual(
-                resolve_account_code_for_source(conn, "ga_admin_allocation", "1412000100", form_row=97),
+                resolve_account_code_for_connection(conn, "1412000100", "事務用消耗品費"),
                 7005246288,
             )
         finally:

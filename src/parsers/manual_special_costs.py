@@ -1,11 +1,11 @@
 """
 Manual special-cost parser.
 
-Users can provide row-specific monthly costs in:
+Users can provide business-keyed monthly costs in:
   source_dir/special_costs_manual.csv
 
-This is intended for business cases that already have a fixed destination row
-in FORM.xlsx but do not yet have a machine-readable source workbook, such as:
+This is intended for business cases that do not yet have a machine-readable
+source workbook, such as:
 - foreign-worker visa / resident-card / GPLD paperwork
 - one-off administrative costs with exact target rows
 """
@@ -21,7 +21,7 @@ from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
 
 
 TEMPLATE_FILENAME = "special_costs_manual.csv"
-REQUIRED_COLUMNS = ("cc_code", "period", "form_row", "account_code", "amount_vnd", "description")
+REQUIRED_COLUMNS = ("cc_code", "period", "account_code", "amount_vnd", "description")
 
 
 def _normalize_period(raw_period: Any, valid_periods: set[str]) -> str | None:
@@ -45,7 +45,7 @@ def ensure_manual_special_costs_template(source_dir: str, fiscal_year: int) -> s
 
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
-        writer.writerow(["cc_code", "period", "form_row", "account_code", "amount_vnd", "description"])
+        writer.writerow(["cc_code", "period", "item_key", "account_code", "amount_vnd", "description"])
     return path
 
 
@@ -82,31 +82,34 @@ def parse_manual_special_costs(conn: sqlite3.Connection, source_dir: str | None 
                 "error_message": f"Missing required columns: {', '.join(missing_cols)}",
             }
 
-        for row in reader:
+        for source_row, row in enumerate(reader, start=2):
             raw_cc = str(row.get("cc_code", "")).strip()
             raw_period = row.get("period", "")
-            raw_form_row = str(row.get("form_row", "")).strip()
+            item_key = str(row.get("item_key", "") or "").strip()
             raw_account_code = str(row.get("account_code", "")).strip()
             raw_amount = row.get("amount_vnd", "")
             description = str(row.get("description", "") or "").strip()
+
+            if any(str(row.get(key, "") or "").strip() for key in ("form_row", "row")):
+                errors += 1
+                continue
 
             if description.lower().startswith("example only"):
                 skipped += 1
                 continue
 
-            if not raw_cc and not str(raw_period).strip() and not raw_form_row and not raw_account_code and not str(raw_amount).strip():
+            if not raw_cc and not str(raw_period).strip() and not raw_account_code and not str(raw_amount).strip():
                 skipped += 1
                 continue
 
             cc_code = normalize_cc_code(raw_cc)
             try:
-                form_row = int(float(raw_form_row))
                 account_code = int(float(raw_account_code))
             except (ValueError, TypeError):
                 errors += 1
                 continue
 
-            if cc_code not in valid_cc_codes or form_row <= 0 or account_code <= 0:
+            if cc_code not in valid_cc_codes or account_code <= 0:
                 errors += 1
                 continue
 
@@ -123,10 +126,22 @@ def parse_manual_special_costs(conn: sqlite3.Connection, source_dir: str | None 
             cursor.execute(
                 """
                 INSERT INTO fact_input_data
-                (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
-                VALUES ('manual_special_cost', ?, ?, ?, ?, ?, 'base', ?)
+                (source, period, amount_vnd, cc_code, account_code, scenario_id, description,
+                 source_group, source_file, source_row, item_key, item_order)
+                VALUES ('manual_special_cost', ?, ?, ?, ?, 'base', ?,
+                        'allocation_rules', ?, ?, ?, ?)
                 """,
-                (period, amount_vnd, cc_code, account_code, form_row, description),
+                (
+                    period,
+                    amount_vnd,
+                    cc_code,
+                    account_code,
+                    description,
+                    os.path.basename(template_path),
+                    source_row,
+                    item_key or f"manual_special_cost:{account_code}:{description}",
+                    source_row,
+                ),
             )
             inserted += 1
 

@@ -14,7 +14,29 @@ def _mk_conn():
     conn.row_factory = sqlite3.Row
     create_schema(conn)
     init_sys_params(conn, exchange_rate=100.0, fiscal_year=2027)
+    account_rows = (
+        (5006016242, "減価償却費（製） 機械装置", "減価償却費"),
+        (5006016243, "減価償却費（製） 車輌運搬具", "減価償却費"),
+        (5006016244, "減価償却費（製） 工具器具備品", "減価償却費"),
+        (5006016247, "減価償却費（製） その他有形固定資産", "減価償却費"),
+        (5005036246, "減価償却費（製） 金型", "金型償却費"),
+        (9114120007, "社内金利（固定資産）", "固定資産金利"),
+    )
+    conn.executemany(
+        """INSERT INTO dim_accounts(code,name_jp,group_name,mfg_code,ga_code,sales_code)
+           VALUES(?,?,?,?,?,?)""",
+        [(code, name, group, code, code if code == 9114120007 else None, code if code == 9114120007 else None) for code, name, group in account_rows],
+    )
+    _seed_cost_centers(conn, ("1412000040", "1412000018"))
+    conn.commit()
     return conn
+
+
+def _seed_cost_centers(conn, codes):
+    conn.executemany(
+        "INSERT OR IGNORE INTO dim_cost_centers(code,name_jp,saisan_type,cost_type) VALUES(?,?,'MFG','製造')",
+        [(str(code), str(code)) for code in codes],
+    )
 
 
 def _asset_row(category, asset_no, text, control_cc, depreciation_cc, monthly, last_month, last_amount, apr, may):
@@ -112,6 +134,9 @@ def test_fixed_assets_raw_workbook_coverage_if_present():
     if not workbook.exists():
         return
     conn = _mk_conn()
+    source_only = inspect_fixed_assets_workbook(workbook)
+    _seed_cost_centers(conn, source_only["by_cc"])
+    conn.commit()
     result = parse_fixed_assets(conn, fa_path=str(workbook))
     report = build_fixed_assets_coverage_report(conn, workbook)
     assert result["source_rows"] >= result["parsed_assets"]

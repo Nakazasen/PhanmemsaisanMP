@@ -11,6 +11,8 @@ from typing import Any
 
 import openpyxl
 
+from src.engine.account_resolver import resolve_account_code_by_keywords_for_connection
+
 from src.utils import excel_helpers as helpers
 from src.utils.source_manifest import resolve_manifest_file
 
@@ -47,31 +49,31 @@ LEGACY_COLUMN_MAP = {
 CATEGORY_SPECS = {
     "machinery_equipment": {
         "aliases": ("mfg)machinery and equipment", "machinery and equipment"),
-        "depreciation_account": 5006016242,
+        "account_keywords": ("減価償却費", "機械装置"),
         "label": "Machinery and Equipment",
     },
     "vehicles": {
         "aliases": ("mfg)vehicles", "vehicles"),
-        "depreciation_account": 5006016243,
+        "account_keywords": ("減価償却費", "車輌運搬具"),
         "label": "Vehicles",
     },
     "tools_furniture_fixtures": {
         "aliases": ("mfg)tools furniture and fixtures", "tools furniture and fixtures"),
-        "depreciation_account": 5006016244,
+        "account_keywords": ("減価償却費", "工具器具備品"),
         "label": "Tools Furniture and Fixtures",
     },
     "other_tangible_fixed_assets": {
         "aliases": ("mfg)other tangible fixed assets", "other tangible fixed assets"),
-        "depreciation_account": 5006016247,
+        "account_keywords": ("減価償却費", "その他有形固定資産"),
         "label": "Other Tangible Fixed Assets",
     },
     "mold": {
         "aliases": ("mfg)mold", "mold"),
-        "depreciation_account": 5005036246,
+        "account_keywords": ("減価償却費", "金型"),
         "label": "Mold",
     },
 }
-INTEREST_ACCOUNT = 9114120007
+INTEREST_ACCOUNT_KEYWORDS = ("固定資産", "金利")
 OUT_OF_SCOPE_CATEGORY_MARKERS = (
     "sga)", "software", "buildings", "structures", "land use rights",
 )
@@ -275,7 +277,7 @@ def parse_fixed_assets(conn: sqlite3.Connection, fa_path: str = None, source_dir
     fy_months = helpers.get_fy_months(fiscal_year)
 
     wb = openpyxl.load_workbook(Path(fpath), read_only=True, data_only=True)
-    pending: list[tuple[str, str, float, float, str, int, str]] = []
+    pending: list[tuple[object, ...]] = []
     parsed_assets = 0
     source_rows = 0
     depr_rows = 0
@@ -336,12 +338,30 @@ def parse_fixed_assets(conn: sqlite3.Connection, fa_path: str = None, source_dir
 
                 dep_desc = f"fixed_assets_depr|{category_key}|{asset_tag}"
                 int_desc = f"fixed_assets_interest|{category_key}|{asset_tag}"
-                dep_account = int(CATEGORY_SPECS[category_key]["depreciation_account"])
+                dep_account = resolve_account_code_by_keywords_for_connection(
+                    conn,
+                    cc_code,
+                    all_of=tuple(CATEGORY_SPECS[category_key]["account_keywords"]),
+                    none_of=("リース",),
+                )
+                interest_account = resolve_account_code_by_keywords_for_connection(
+                    conn,
+                    cc_code,
+                    all_of=INTEREST_ACCOUNT_KEYWORDS,
+                )
                 for period, val in expand_depreciation_schedule(monthly_depr, last_month, last_month_depr, fy_months).items():
-                    pending.append(("fixed_assets", period, round(val * rate, 0), val, cc_code, dep_account, dep_desc))
+                    pending.append((
+                        "fixed_assets", period, round(val * rate, 0), val, cc_code, dep_account, dep_desc,
+                        Path(fpath).name, ws.title, row_number,
+                        f"fixed_assets:depreciation:{category_key}:{asset_tag}", row_number * 2,
+                    ))
                     depr_rows += 1
                 for period, val in expand_interest_schedule(apr_interest, may_interest, last_month, fy_months).items():
-                    pending.append(("fixed_assets", period, round(val * rate, 0), val, cc_code, INTEREST_ACCOUNT, int_desc))
+                    pending.append((
+                        "fixed_assets", period, round(val * rate, 0), val, cc_code, interest_account, int_desc,
+                        Path(fpath).name, ws.title, row_number,
+                        f"fixed_assets:interest:{category_key}:{asset_tag}", row_number * 2 + 1,
+                    ))
                     interest_rows += 1
             skipped.update(sheet_skipped)
             by_sheet[ws.title] = {
@@ -358,8 +378,9 @@ def parse_fixed_assets(conn: sqlite3.Connection, fa_path: str = None, source_dir
         cursor.executemany(
             """
             INSERT INTO fact_input_data
-            (source, period, amount_vnd, amount_usd, cc_code, account_code, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (source, period, amount_vnd, amount_usd, cc_code, account_code, description,
+             source_group, source_file, source_sheet, source_row, item_key, item_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'fixed_assets', ?, ?, ?, ?, ?)
             """,
             pending,
         )

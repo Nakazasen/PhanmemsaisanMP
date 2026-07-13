@@ -42,7 +42,7 @@ def _insert_rule(conn, posting_month, driver_type, unit_price=100, rid_label="TE
     return cur.lastrowid
 
 
-def _seed_hc(conn, cc_code, values, source="manual", driver_kind="all"):
+def _seed_hc(conn, cc_code, values, source="department_plan", driver_kind="all"):
     fy_months = get_fy_months(2027)
     for i, val in enumerate(values):
         period = fy_months[i]
@@ -259,7 +259,7 @@ class TestPostingMonthLogic(unittest.TestCase):
                 """
                 INSERT INTO fact_monthly_headcount
                 (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
-                VALUES (?, ?, ?, ?, 0, 'manual', 'mixed event fixed month')
+                VALUES (?, ?, ?, ?, 0, 'department_plan', 'mixed event fixed month')
                 """,
                 (period, cc, value, value),
             )
@@ -458,7 +458,7 @@ class TestPostingMonthLogic(unittest.TestCase):
         conn = _mk_conn()
         cc = _seed_cc(conn)
         _seed_hc(conn, cc, [10, 12, 12, 15, 15, 15, 15, 15, 15, 15, 15, 15])
-        rid = _insert_rule(conn, "入社月の翌月", "headcount_all", unit_price=1, rid_label="採用時健診")
+        rid = _insert_rule(conn, "入社月の翌月", "headcount_all", unit_price=0, rid_label="採用時健診")
 
         AllocationEngine(conn)._process_allocation_rules()
 

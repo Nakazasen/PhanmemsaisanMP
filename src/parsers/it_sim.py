@@ -17,7 +17,7 @@ from urllib.parse import quote
 import pandas as pd
 
 from src.utils.excel_helpers import extract_cc_code, get_fy_months, safe_float
-from src.utils.source_manifest import resolve_manifest_files
+from src.utils.source_manifest import read_source_manifest
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
@@ -31,13 +31,6 @@ COMPONENT_SHEETS = {
     "vps": ("vps",),
     "ams": ("ams",),
 }
-FILE_RANGES = [
-    (0, 3, ("apr", "june")),
-    (3, 9, ("july", "dec")),
-    (9, 12, ("jan", "march")),
-]
-
-
 def _normalize_text(value: object) -> str:
     text = unicodedata.normalize("NFKD", str(value or ""))
     text = "".join(ch for ch in text if not unicodedata.combining(ch))
@@ -395,6 +388,8 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
         excel_file.close()
 
     _attach_summary_audit_metadata(records, detail_vnd_by_cc)
+    for record in records:
+        record["source_file"] = os.path.basename(path)
     return records
 
 
@@ -406,27 +401,24 @@ def parse_it_simulation(conn: sqlite3.Connection, source_dir: str | None = None)
     fy_months = get_fy_months(fy_int)
 
     search_dir = source_dir or BASE_DIR
-    manifest_files = resolve_manifest_files(search_dir, "it_simulation")
-    all_files = [os.path.basename(path) for path in manifest_files] if manifest_files else os.listdir(search_dir)
-    manifest_by_name = {os.path.basename(path): path for path in manifest_files}
+    manifest_entries = [
+        entry for entry in read_source_manifest(search_dir)
+        if entry.get("category") == "it_simulation"
+    ]
     files_to_parse: list[tuple[str, list[str]]] = []
-
-    for start, end, keywords in FILE_RANGES:
-        months = fy_months[start:end]
-        matched_path: str | None = None
-        for name in all_files:
-            lower_name = name.lower()
-            if not lower_name.endswith(".xls") or "simulation" not in lower_name:
-                continue
-            if str(fy_int) not in name and str(fy_int - 1) not in name:
-                continue
-            if any(keyword in lower_name for keyword in keywords):
-                matched_path = manifest_by_name.get(name, os.path.join(search_dir, name))
-                break
-        if matched_path:
-            files_to_parse.append((matched_path, months))
-        else:
-            print(f"Thông tin: không tìm thấy tệp mô phỏng hệ thống cho {keywords}")
+    configured_periods: list[str] = []
+    for entry in manifest_entries:
+        start = str(entry.get("period_start", "")).strip()
+        end = str(entry.get("period_end", "")).strip()
+        if start not in fy_months or end not in fy_months or fy_months.index(start) > fy_months.index(end):
+            raise ValueError(
+                f"Manifest IT thiếu khoảng tháng hợp lệ cho {entry.get('filename')}: {start}..{end}"
+            )
+        months = fy_months[fy_months.index(start) : fy_months.index(end) + 1]
+        configured_periods.extend(months)
+        files_to_parse.append((str(entry["_path"]), months))
+    if sorted(configured_periods) != sorted(fy_months) or len(configured_periods) != len(set(configured_periods)):
+        raise ValueError("Các khoảng tháng IT trong manifest phải phủ đúng 12 tháng và không chồng nhau.")
 
     cursor = conn.cursor()
     cursor.execute("DELETE FROM fact_input_data WHERE source = 'it_sim'")
@@ -436,12 +428,13 @@ def parse_it_simulation(conn: sqlite3.Connection, source_dir: str | None = None)
 
     for path, months in files_to_parse:
         records = parse_it_sim_file(path, months)
-        for record in records:
+        for item_order, record in enumerate(records, start=1):
             cursor.execute(
                 """
                 INSERT INTO fact_input_data
-                (source, period, amount_vnd, amount_usd, cc_code, account_code, scenario_id, description)
-                VALUES ('it_sim', ?, ?, ?, ?, ?, 'base', ?)
+                (source, period, amount_vnd, amount_usd, cc_code, account_code, scenario_id, description,
+                 source_group, source_file, item_key, item_order)
+                VALUES ('it_sim', ?, ?, ?, ?, ?, 'base', ?, 'it_simulation', ?, 'it_simulation', ?)
                 """,
                 (
                     record["period"],
@@ -450,6 +443,8 @@ def parse_it_simulation(conn: sqlite3.Connection, source_dir: str | None = None)
                     record["cc_code"],
                     int(record.get("account_code") or 0),
                     record["description"],
+                    record.get("source_file") or os.path.basename(path),
+                    item_order,
                 ),
             )
             total += 1
