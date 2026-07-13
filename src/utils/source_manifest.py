@@ -11,7 +11,10 @@ import openpyxl
 
 MANIFEST_FILENAME = "source_file_order.csv"
 MANIFEST_XLSX_FILENAME = "source_file_order.xlsx"
-MANIFEST_COLUMNS = ("order", "category", "filename", "enabled", "description")
+MANIFEST_COLUMNS = (
+    "order", "category", "filename", "enabled", "description",
+    "period_start", "period_end",
+)
 SUPPORTED_SOURCE_SUFFIXES = {".xls", ".xlsx", ".xlsm"}
 SYSTEM_FILENAMES = {"form.xlsx", MANIFEST_FILENAME.lower(), MANIFEST_XLSX_FILENAME.lower()}
 SYSTEM_PREFIXES = ("~$", "mp_cc_")
@@ -274,7 +277,9 @@ def write_source_manifest_xlsx(source_dir: str | None, entries: list[dict[str, s
     for entry in _sort_entries(entries):
         worksheet.append([entry.get(column, "") for column in MANIFEST_COLUMNS])
     worksheet.freeze_panes = "A2"
-    for column, width in {"A": 10, "B": 18, "C": 90, "D": 10, "E": 44}.items():
+    for column, width in {
+        "A": 10, "B": 18, "C": 90, "D": 10, "E": 44, "F": 14, "G": 14,
+    }.items():
         worksheet.column_dimensions[column].width = width
     path = base_dir / MANIFEST_XLSX_FILENAME
     workbook.save(path)
@@ -296,7 +301,11 @@ def ensure_source_manifest(source_dir: str | None, *, refresh: bool = True) -> s
 
 @lru_cache(maxsize=16)
 def _cached_manifest_snapshot(source_dir: str) -> tuple[tuple[tuple[str, str], ...], ...]:
-    entries = merge_manifest_with_detected(source_dir)
+    # A saved manifest is authoritative: changing a configured filename or
+    # directory must not depend on filename classification heuristics.
+    entries = _read_saved_manifest(source_dir)
+    if not entries:
+        entries = detect_source_files(source_dir)
     return tuple(tuple(sorted((str(key), str(value)) for key, value in entry.items())) for entry in entries)
 
 

@@ -21,7 +21,8 @@ from openpyxl.utils import get_column_letter
 from src.engine.column_s_normalizer import normalize_output_description_column_s
 from src.engine.output_mode import OutputGroupSpec, get_default_output_group_specs
 from src.engine.source_order_output import CANONICAL_SOURCE_FILE_ORDER
-from src.parsers.fixed_assets import CATEGORY_SPECS, INTEREST_ACCOUNT
+from src.parsers.fixed_assets import CATEGORY_SPECS, INTEREST_ACCOUNT_KEYWORDS
+from src.engine.account_resolver import resolve_account_code_by_keywords_for_connection
 from src.services.headcount_source_policy import HeadcountSourceError, load_canonical_headcount
 from src.utils import excel_helpers as helpers
 from src.utils.fiscal_periods import fiscal_baseline_period
@@ -1463,7 +1464,16 @@ class HubBuilder:
                 if not any(amount > 0 for amount in months.values()):
                     continue
                 spec = CATEGORY_SPECS[category_key]
-                account_code = int(spec["depreciation_account"] if kind == "depreciation" else INTEREST_ACCOUNT)
+                keywords = (
+                    tuple(spec["account_keywords"])
+                    if kind == "depreciation"
+                    else INTEREST_ACCOUNT_KEYWORDS
+                )
+                account_code = resolve_account_code_by_keywords_for_connection(
+                    self.conn,
+                    cc_code,
+                    all_of=keywords,
+                )
                 label = str(spec["label"])
                 description = (
                     f"Khấu hao tài sản cố định - {label}"

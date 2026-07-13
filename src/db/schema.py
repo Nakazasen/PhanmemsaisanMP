@@ -111,6 +111,8 @@ def create_schema(conn: sqlite3.Connection) -> None:
             amount_vnd REAL NOT NULL DEFAULT 0, amount_usd REAL DEFAULT NULL, cc_code INTEGER NOT NULL,
             account_code INTEGER NOT NULL, form_row INTEGER DEFAULT NULL,
             scenario_id TEXT DEFAULT 'base', description TEXT,
+            source_group TEXT, source_file TEXT, source_sheet TEXT, source_row INTEGER,
+            item_key TEXT, item_order INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
     cursor.execute("""
@@ -172,6 +174,16 @@ def create_schema(conn: sqlite3.Connection) -> None:
             cursor.execute(f"ALTER TABLE fact_monthly_headcount ADD COLUMN {column_name} {definition}")
     if not _column_exists(conn, "fact_input_data", "form_row"):
         cursor.execute("ALTER TABLE fact_input_data ADD COLUMN form_row INTEGER DEFAULT NULL")
+    for column_name, definition in (
+        ("source_group", "TEXT"),
+        ("source_file", "TEXT"),
+        ("source_sheet", "TEXT"),
+        ("source_row", "INTEGER"),
+        ("item_key", "TEXT"),
+        ("item_order", "INTEGER"),
+    ):
+        if not _column_exists(conn, "fact_input_data", column_name):
+            cursor.execute(f"ALTER TABLE fact_input_data ADD COLUMN {column_name} {definition}")
 
     conn.commit()
 
