@@ -345,7 +345,15 @@ Nếu `OUTPUT_FY2027` bị Windows lock, chạy từ thư mục temp và dùng a
 
 ## 17. Việc ưu tiên tiếp theo
 
-P1:
+Fixed-assets P0/P1:
+
+- Tài liệu tiếp tục hiện hành: `docs/audits/fixed_assets_gap_and_implementation_plan_2026-07-15.md`.
+- Chốt với Accounting/MP: làm tròn từng asset hay sau tổng, mức chi tiết output, tỷ giá FY, category scope, adjustment âm và chính sách thiếu `Last Month Depr`.
+- Khóa baseline cho tối thiểu 3 CC đại diện trước khi sửa code.
+- Xử lý P0 trước: rounding point và kiểm tra tỷ giá FY/FORM `$B$2`.
+- Không final acceptance fixed-assets cho đến khi comparator kiểm tra theo CC × asset × month × cost type và true mismatch đã được xử lý/chấp thuận.
+
+P1 chung:
 
 - Thu thập/chốt headcount thật cho CC `1412000040`, gồm baseline `202603` và FY periods `202604..202703`.
 - Chốt Nam/Nữ tháng 12 thật nếu health-check row 57 cần split.

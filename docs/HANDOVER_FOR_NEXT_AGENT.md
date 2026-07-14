@@ -1,4 +1,4 @@
-﻿# Handover for next agent
+# Handover for next agent
 
 ## Repo đang làm gì
 
@@ -10,7 +10,10 @@ MP2027 Manager là app Python/Tkinter cho Windows để gom dữ liệu budget M
 2. `docs/requirements/cai_tien_nhap_du_lieu_chung.md`.
 3. `QUY_TRINH_NGHIEP_VU_MP2027.md`.
 4. `docs/knowledge/mp_saisan_business_knowledge_base_v2.md`.
-5. `docs/requirements/requirement_mapping.yaml`.
+5. `docs/audits/fixed_assets_gap_and_implementation_plan_2026-07-15.md` — audit/GAP/kế hoạch tiếp tục hiện hành cho tài sản cố định.
+6. `docs/requirements/requirement_mapping.yaml`.
+
+> Khi làm fixed-assets, tài liệu ngày 2026-07-15 thắng các kết luận implementation cũ chỉ dựa trên workbook 09.06.2026. Audit cũ vẫn được giữ làm bằng chứng lịch sử.
 
 ## Lệnh kiểm tra nhanh
 
@@ -35,6 +38,7 @@ py -m pytest
 
 ## Hướng phát triển tiếp theo
 
+- Fixed-assets: mở `docs/audits/fixed_assets_gap_and_implementation_plan_2026-07-15.md`, chốt các quyết định Accounting/MP, khóa baseline 3 CC đại diện, rồi xử lý P0 rounding và FX trước.
 - Tách runtime/dev requirements nếu repo muốn packaging chuyên nghiệp hơn.
 - Thêm test đọc `requirement_mapping.yaml` bằng PyYAML nếu sau này dependency đã có.
 - Tăng coverage cho fail-closed/missing input theo từng business area.
