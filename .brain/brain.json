@@ -2,13 +2,20 @@
   "meta": {
     "schema_version": "1.1.0",
     "awf_version": "4.0.2",
-    "last_updated": "2026-04-12T22:57:55+07:00",
-    "updated_at": "2026-04-24T07:09:48+07:00"
+    "last_updated": "2026-07-16T06:00:00+07:00",
+    "updated_at": "2026-07-16T06:00:00+07:00"
   },
   "project": {
     "name": "MP2027 Manager",
     "type": "Windows desktop app for MP2027 cost allocation and FORM export",
-    "status": "In-app user guide updated for current workflow; packaging script now builds OneFile and copies editable docs/MP2027 next to dist executable."
+    "status": "Historical memory refreshed. Current backlog is docs/handover/CURRENT_OPEN_ITEMS.md; canonical business source is the 10.07.2026 workbook."
+  },
+  "authority": {
+    "note": ".brain is lower-authority memory, not a business requirement or live backlog.",
+    "current_open_items": "docs/handover/CURRENT_OPEN_ITEMS.md",
+    "fixed_assets_handover": "docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md",
+    "audit_lifecycle": "docs/audits/AUDIT_STATUS_INDEX.md",
+    "canonical_requirement": "raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx"
   },
   "tech_stack": {
     "language": "Python 3.13.5",
@@ -86,7 +93,7 @@
     ],
     "conventions": [
       "Fiscal period format is YYYYMM, covering April to March.",
-      "Primary business references are QUY_TRINH_NGHIEP_VU_MP2027.md and TODO_MP2027_OPEN_ITEMS.md.",
+      "Primary status sources are docs/handover/CURRENT_OPEN_ITEMS.md and docs/audits/AUDIT_STATUS_INDEX.md; this .brain file is a lower-authority memory index.",
       "Use docs/MP2026 only as a trusted comparison set, not as runtime input.",
       "GUI visible text should be Vietnamese-first; the word Dashboard is allowed by user exception.",
       "Keep FORM/account/source schema keys such as cc_code, account_code, form_row, staff, worker unchanged in code/data."
@@ -116,20 +123,28 @@
   ],
   "pending_tasks": [
     {
-      "task": "Collect real event driver data for JP/VN bus, no-trip gift, My Episode, 10-year events, company anniversary, and VISA/Passport rows if not row 137.",
+      "task": "Run the evidence-first fixed-assets deep audit from docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md; cross-trace canonical, MP2026/MP2027 sources, FY2026/FY2027 references and current code before business escalation.",
       "priority": "high"
     },
     {
-      "task": "Collect/confirm manual headcount by CC/month, especially December male/female split for health-check rows 57/58.",
+      "task": "Collect baseline 202603 and FY2027 monthly staff/worker headcount for CC 1412000040.",
       "priority": "high"
     },
     {
-      "task": "Manually validate GUI layout in a real Windows Tkinter session after the Vietnamese UX changes.",
+      "task": "Collect December male/female, recruitment and remaining event drivers; confirm NNN row/account only if outside row 137.",
+      "priority": "high"
+    },
+    {
+      "task": "Run one current Windows GUI acceptance session; capture a stack only if the UI still freezes.",
       "priority": "medium"
     },
     {
-      "task": "If finance requires output for CCs with zero fact data, revisit batch-export selection that currently exports only CCs with account_code > 0 data.",
-      "priority": "low"
+      "task": "Run canonical-10.07 output audits after required real-input blockers are resolved; fixed-assets follows its separate evidence-first deep-audit handover.",
+      "priority": "medium"
+    },
+    {
+      "task": "Decide data governance before publishing or pushing raw workbooks, outputs, databases, screenshots, backups, references, or tracked .brain state.",
+      "priority": "medium"
     }
   ],
   "recent_changes": [

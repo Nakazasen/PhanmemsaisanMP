@@ -7,13 +7,14 @@ Current source hierarchy:
 
 - `CANONICAL_SOURCE_USER_CONFIRMED_AT=2026-07-11`
 - Canonical requirement date: `10.07.2026`.
-- Implementation status was last verified against the prior 09.06 source and therefore requires a current audit before being claimed against 10.07.
+- Live backlog: `docs/handover/CURRENT_OPEN_ITEMS.md`.
+- Audit lifecycle/successors: `docs/audits/AUDIT_STATUS_INDEX.md`.
+- Historical implementation evidence verified against 09.06 must not be reused as acceptance against 10.07.
 - Historical content must not override current audits, code, or the canonical 10.07.2026 workbook.
-
 
 ## Historical reconcile note - 09.06 workbook
 
-Local reconcile time: `2026-07-07 06:40:00`. The Markdown and machine-readable mapping were refreshed against the 09.06 workbook after it received additional content. This is historical context only: the 10.07 workbook is now canonical and all implementation claims require a current audit against it.
+Local reconcile time: `2026-07-07 06:40:00`. The Markdown and machine-readable mapping were refreshed against the 09.06 workbook after it received additional content. This is historical context only: the 10.07 workbook is now canonical and current residual work is listed only in `CURRENT_OPEN_ITEMS.md`.
 
 ---
 # MP Saisan Business Knowledge Base v2 - Full Business Specification
@@ -92,7 +93,7 @@ Status freshness: `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e6
 | ------ | ---------------- | --------------------- | --------------------------- | --------------------- | ------------------ | ----------------------------- | ----------------- |
 | Facility / 施設課 | Facility cost: building, land, utilities | `raw/施設課　MPFY2027.xlsx`; sheets include depreciation, interest, electric/water | historical rows 200-205; latest complete-v1 acceptance used source-order block rows, not a universal fixed-row proof | Target CC `1412000040`; aliases `電気代`/`水道代` | `ROUND(source_value*$B$2,0)` for 12 months where VND conversion is needed; electricity/water currency handling must preserve source currency/conversion policy | PARTIAL_PASS_FOR_WRITTEN_BLOCKS; STATUS_REQUIRES_CURRENT_CODE_AUDIT_FOR_FULL_COMPLETENESS | Facility details and fixed row claims need fresh source/output audit. |
 | Admin / GA consumables | Consumables, allocation, event/month, new employee, hiring medical check | `raw/総務課 FY2027 MP 振替予定.xlsx` | historical rows 207-209; known FORM targets include row 58, 97, 98 for some admin/new employee items | CC/account per mapped consumable/allocation rows | driver/headcount/unit price/month allocation; 12-month costs and event/month costs require explicit driver | PASS_FAIL_CLOSED_FOR_NEW_HIRE; STATUS_REQUIRES_CURRENT_CODE_AUDIT_FOR_REMAINDER | Target CC lacks complete monthly headcount driver data; other admin/allocation rows need row-level provenance. |
-| System Cost | IT/system charge across three simulation periods | Three `システム課金金額(Simulation)_FY2027...xls` files | historical row 211; row 212 blank | Combined system cost for target CC | Month values come from three source files by period; combined row only under explicit flag | STATUS_REQUIRES_CURRENT_CODE_AUDIT | Re-audit combined row behavior against canonical 09.06 before treating it as complete. |
+| System Cost | IT/system charge across three simulation periods | Three `システム課金金額(Simulation)_FY2027...xls` files | historical row 211; row 212 blank | Combined system cost for target CC | Month values come from three source files by period; combined row only under explicit flag | STATUS_REQUIRES_CURRENT_CODE_AUDIT | Re-audit combined row behavior against canonical 10.07 before treating it as complete. |
 | Fixed Assets / 固定資産 | Fixed asset depreciation/interest/detail expense | `raw/固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx` | depreciation row 38 F38:Q38; interest row 42 F42:Q42; fresh output had a written block but not certified completeness | Account `5005026371` has 75 primary rows | Need exact source workbook/sheet/row/cell + Apr-Mar monthly values | STATUS_REQUIRES_CURRENT_CODE_AUDIT | Master/reference and CC evidence exist, but not enough current proof to claim complete. Do not code guess. |
 | Birthday / Sinh nhật | Birthday benefit/cost | `raw/Sinh nhật MP FY2027.xlsx` | FORM row 59, F59:Q59; fresh output had a written block but not certified completeness | Target row/account needs confirmation | `number_of_people * unit_price` by month after source row is confirmed | STATUS_REQUIRES_CURRENT_CODE_AUDIT | Resolve source row and Apr-Mar values/formula mapping before any completion claim. |
 | NNN paperwork | Foreigner paperwork cost estimate | `raw/Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx` | FORM row 137, F137:Q137; fresh output had a written block but not certified completeness | Needs CC/account proof | Need source row/cell/month mapping | STATUS_REQUIRES_CURRENT_CODE_AUDIT | Source mapping remains open, but target range is known. |
@@ -320,23 +321,25 @@ Reference-assisted output must carry label like `REFERENCE_FILLED_FROM_PRIMARY` 
 | file-order / complete-v1 spacing | `--mp-saisan-complete-v1` | PARTIAL_PASS_FOR_WRITTEN_BLOCKS; `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8` | 6 written source-order blocks in latest target output | All written block gaps had exactly one blank row; seven-block acceptance remains blocked by missing driver data. |
 | Facility writer | Facility module | STATUS_REQUIRES_CURRENT_CODE_AUDIT | historical rows 200-205 + 206 blank | Latest audit verified block presence/spacing, not full amount completeness. |
 | Admin consumables/new-hire writer | Admin/GA module | PASS_FAIL_CLOSED_FOR_NEW_HIRE; STATUS_REQUIRES_CURRENT_CODE_AUDIT_FOR_REMAINDER | rows 58/97/98 and admin source-order rows | Target CC lacks complete monthly headcount driver data; real new-hire monthly amounts are not certified. |
-| System cost writer | System Cost module | STATUS_REQUIRES_CURRENT_CODE_AUDIT | historical row 211 + 212 blank | Combined system cost behavior needs fresh audit against canonical 09.06. |
-| Fixed assets calculation/writer | Fixed Assets module | CURRENT_AUDIT_COMPLETED_IMPLEMENTATION_GAPS_OPEN | dynamic category rows; historical staging rows 38/42 | Core terminal-month behavior is present. Follow `docs/audits/fixed_assets_gap_and_implementation_plan_2026-07-15.md`; P0 decisions are rounding point and FY/FORM FX validation. |
+| System cost writer | System Cost module | STATUS_REQUIRES_CURRENT_CODE_AUDIT | historical row 211 + 212 blank | Combined system cost behavior needs fresh audit against canonical 10.07. |
+| Fixed assets calculation/writer | Fixed Assets module | OPEN_DEEP_AUDIT; IMPLEMENTATION_NOT_COMPLETE | dynamic category rows; historical staging rows 38/42 | Follow `docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md`. Cross-trace canonical/source/reference/code before escalation; known gaps include per-asset rounding, dynamic FY/FX/source resolution, provenance, negative/missing handling and multi-FY storage. |
 | Birthday writer | Birthday module | STATUS_REQUIRES_CURRENT_CODE_AUDIT | FORM row 59 target | Needs source mapping and current output proof. |
 | NNN writer | NNN paperwork module | STATUS_REQUIRES_CURRENT_CODE_AUDIT | FORM row 137 target | Needs source mapping and current output proof. |
 | Allocation writer | Allocation module | BLOCKED_BY_MISSING_DRIVER_DATA / STATUS_REQUIRES_CURRENT_CODE_AUDIT | allocation/travel rows | Needs exact mapping and complete headcount drivers. |
 | Column S cost-row rule | output normalizer | PASS; `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8` | month-cost rows from row 30 onward | Latest audit found cost+blank S = 0 and no-cost+nonblank S = 0. |
 | reference-assisted fill scope | complete-v1/reference assist | PASS_SCOPED_QUARANTINE; `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8` | primary reference candidates | Latest audit found 0 reference-filled workbook rows and 130 quarantined unscoped rows. |
-| secondary skeleton extraction | analysis workflow | STATUS_REQUIRES_CURRENT_CODE_AUDIT | account `5005026371` candidates | Use as guide only; not raw amount proof. |
+| secondary skeleton extraction | historical analysis workflow | SUPERSEDED | account `5005026371` candidates | Retained as evidence only; the fixed-assets deep-audit handover replaces this next phase. |
 
-## 11. Recommended next phases
+## 11. Current continuation route
 
-1. Extract secondary skeleton patterns for account `5005026371`.
-2. Build reference-assisted fill with provenance if skeleton is stable.
-3. Implement source parsers only for modules with exact source row/cell/month evidence.
-4. Keep default export unchanged and use explicit flags only.
+Do not use this knowledge document as a task list.
 
-Recommended route remains **HYBRID PATH**: secondary skeleton/formula/order guide + reference-assisted fill with provenance + source parsers only when proven.
+1. Read `docs/handover/CURRENT_OPEN_ITEMS.md` for current work and closure status.
+2. Read `docs/audits/AUDIT_STATUS_INDEX.md` before following any historical phase recommendation.
+3. Continue fixed-assets only from the 2026-07-15 GAP plan and approved Accounting decisions.
+4. For other modules, audit current output against canonical 10.07 only after required real inputs are available.
+
+Historical “HYBRID PATH”, secondary skeleton extraction and broad reference-assisted fill remain provenance concepts, not active next phases.
 
 ## 12. Glossary
 

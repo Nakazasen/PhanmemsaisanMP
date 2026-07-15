@@ -4,16 +4,18 @@
 
 MP2027 Manager là app Python/Tkinter cho Windows để gom dữ liệu budget MP FY2027 từ nhiều Excel source, tính phân bổ hiện có, export FORM theo Cost Center và sinh audit/missing input.
 
-## File nghiệp vụ đọc đầu tiên
+## 1. Đọc theo thứ tự này
 
-1. `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx` — canonical hiện tại, được người dùng xác nhận là bản mới nhất ngày 11.07.2026.
-2. `docs/requirements/cai_tien_nhap_du_lieu_chung.md`.
-3. `QUY_TRINH_NGHIEP_VU_MP2027.md`.
-4. `docs/knowledge/mp_saisan_business_knowledge_base_v2.md`.
-5. `docs/audits/fixed_assets_gap_and_implementation_plan_2026-07-15.md` — audit/GAP/kế hoạch tiếp tục hiện hành cho tài sản cố định.
-6. `docs/requirements/requirement_mapping.yaml`.
+1. `docs/handover/CURRENT_OPEN_ITEMS.md` — backlog/handover hiện hành duy nhất
+2. `docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md` — bắt buộc nếu làm fixed-assets; có evidence order và prompt tiếp quản
+3. `docs/audits/AUDIT_STATUS_INDEX.md` — lifecycle và successor của audit cũ
+4. `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx` — canonical cao nhất
+5. `docs/requirements/requirement_mapping.yaml`
+6. `docs/requirements/cai_tien_nhap_du_lieu_chung.md`
+7. `QUY_TRINH_NGHIEP_VU_MP2027.md`
+8. `docs/knowledge/mp_saisan_business_knowledge_base_v2.md`
 
-> Khi làm fixed-assets, tài liệu ngày 2026-07-15 thắng các kết luận implementation cũ chỉ dựa trên workbook 09.06.2026. Audit cũ vẫn được giữ làm bằng chứng lịch sử.
+Nếu Markdown mâu thuẫn workbook canonical ngày 10.07.2026, dùng workbook. Audit cũ không tự tạo backlog mới; trạng thái live chỉ lấy từ `CURRENT_OPEN_ITEMS.md`.
 
 ## Lệnh kiểm tra nhanh
 
@@ -30,16 +32,19 @@ py -m pytest
 - Không biến blank thành zero.
 - Markdown là derived; workbook canonical 10.07.2026 thắng.
 
-## Phần chưa chắc cần user xác nhận
+## 5. Trạng thái work hiện hành
 
-- Governance của tracked `.brain`, `OUTPUT_FY2027`, `raw`, `docs/MP2027`, `reference_outputs`.
-- Mapping row/form chính xác cho một số nhóm nếu chưa đối chiếu output hiện tại và workbook canonical.
-- Full E2E trên dữ liệu production/private.
+Nguồn chi tiết: `docs/handover/CURRENT_OPEN_ITEMS.md`.
 
-## Hướng phát triển tiếp theo
+- `OPEN_DECISION`: NNN row/account ngoài row 137; data governance trước public/push.
+- `BLOCKED_BY_INPUT`: headcount thật CC `1412000040`; December male/female và recruitment health-check drivers; các event driver chưa có source ổn định.
+- `IMPLEMENTED_PENDING_ACCEPTANCE`: GUI đã chuyển heavy pipeline sang child process/UI queue nhưng chưa có current Windows acceptance.
+- `OPEN_AUDIT`: fixed-assets phải cross-trace đủ canonical/source/reference/code trước khi hỏi policy còn thiếu; các module implemented khác cần audit output hiện hành đối chiếu canonical 10.07 sau khi đủ input thật.
+- `CLOSED/SUPERSEDED`: empty output cũ, duplicate new-hire, total-headcount fallback, Column S, reference garbage, spacing giữa written blocks, bus generic event backlog và gas blocker 13.07 không còn là hạng mục mở độc lập.
 
-- Fixed-assets: mở `docs/audits/fixed_assets_gap_and_implementation_plan_2026-07-15.md`, chốt các quyết định Accounting/MP, khóa baseline 3 CC đại diện, rồi xử lý P0 rounding và FX trước.
-- Tách runtime/dev requirements nếu repo muốn packaging chuyên nghiệp hơn.
-- Thêm test đọc `requirement_mapping.yaml` bằng PyYAML nếu sau này dependency đã có.
-- Tăng coverage cho fail-closed/missing input theo từng business area.
-- Lập data governance checklist trước khi publish/push repo có workbook thật.
+## 6. Hướng phát triển
+
+- Không re-open “recommended next phase” trong audit cũ nếu `AUDIT_STATUS_INDEX.md` đã chỉ ra successor.
+- Fixed-assets tiếp tục theo `docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md`; audit GAP 15.07 chỉ là provenance.
+- Không hỏi Accounting/MP cho fixed-assets trước khi đã cross-trace canonical, source/calculation MP2026/MP2027 và reference outputs; chỉ escalation phần còn mâu thuẫn hoặc thiếu evidence.
+- Mọi thay đổi phải thêm regression test trước hoặc cùng lúc.

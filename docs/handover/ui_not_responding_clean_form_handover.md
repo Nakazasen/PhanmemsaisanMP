@@ -2,6 +2,10 @@
 
 Date: 2026-07-10
 
+Status reviewed 2026-07-16: `IMPLEMENTED_PENDING_ACCEPTANCE`
+
+> Current code contains the intended UI-queue and child-process isolation, but no later manual Windows run or frozen-state stack capture proves closure. Follow `GUI-FREEZE` in `docs/handover/CURRENT_OPEN_ITEMS.md`; do not infer responsiveness from CLI/unit tests alone.
+
 ## Context
 
 The runtime FORM at `docs/MP2027/FORM.xlsx` was cleaned so detail-sheet columns `B`, `S`, and `T` are blank from row 30 onward. The formulas/styles in other columns are preserved. The exporter was updated so those blank template labels do not break fixed-row output.

@@ -640,7 +640,7 @@ Hình minh họa thứ tự file chi phí (từ Excel gốc Row 178-193):
 - Vì vậy “6 chi phí” áp dụng cho Facility: khấu hao nhà, khấu hao đất, lãi nhà, lãi đất, tiền điện, tiền nước.
 - Không tự gộp Facility thành 1 dòng chỉ vì chữ “6 chi phí”. Đây là xác nhận Facility có 6 khoản theo thứ tự xử lý.
 - `Hạng mục cần cải tiến!K186` (“gộp thành 1 dòng chi phí”) hyperlink tới `Chi phí hệ thống!A89`.
-- Ô `Chi phí hệ thống!A89` trong lineage 04.06 ghi “Nhập vào 1 dòng duy nhất”; rule này phải nhường canonical 09.06 nếu có conflict.
+- Ô `Chi phí hệ thống!A89` trong lineage 04.06 ghi “Nhập vào 1 dòng duy nhất”; rule này phải nhường workbook canonical hiện hành `10.07.2026` nếu có conflict.
 - Vì vậy System Cost phải ghi/gộp thành 1 dòng chi phí duy nhất; không còn hardcode dòng 75 theo requirement mới.
 
 ---

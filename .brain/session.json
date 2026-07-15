@@ -1,26 +1,30 @@
 {
-  "updated_at": "2026-04-24T07:09:48+07:00",
+  "updated_at": "2026-07-16T06:00:00+07:00",
   "working_on": {
-    "feature": "User guide update and OneFile packaging",
-    "status": "READY_TO_PACKAGE",
-    "notes": "Updated GUI guide text to cover source_file_order.xlsx, OneFile folder layout, manual headcount/events, Dashboard, errors, and operating recommendations. package_app.py now uses python -m PyInstaller and copies docs/MP2027 to dist/docs/MP2027."
+    "feature": "Handover lifecycle cleanup and fixed-assets evidence-driven successor",
+    "status": "DOCUMENTATION_RECONCILED_FIXED_ASSETS_AUDIT_READY",
+    "notes": "Live work is consolidated in docs/handover/CURRENT_OPEN_ITEMS.md. Fixed-assets must follow docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md; historical reports remain evidence indexed by docs/audits/AUDIT_STATUS_INDEX.md."
   },
   "pending_tasks": [
     {
-      "task": "Collect real event driver data for JP/VN bus, no-trip gift, My Episode, 10-year events, company anniversary, and VISA/Passport rows if not row 137.",
+      "task": "Run the evidence-first fixed-assets deep audit: canonical → MP2026/MP2027 source/calculation workbooks → FY2026/FY2027 reference outputs → code/tests; only escalate unresolved contradictions.",
       "priority": "high"
     },
     {
-      "task": "Collect/confirm manual headcount by CC/month, especially December male/female split for health-check rows 57/58.",
+      "task": "Collect CC 1412000040 monthly headcount and health-check/event drivers listed in CURRENT_OPEN_ITEMS.md.",
       "priority": "high"
     },
     {
-      "task": "Manually validate GUI layout in a real Windows Tkinter session after the Vietnamese UX changes.",
+      "task": "Run one current Windows GUI acceptance session; capture a stack only if the UI remains frozen.",
       "priority": "medium"
     },
     {
-      "task": "If finance requires output for CCs with zero fact data, revisit batch-export selection that currently exports only CCs with account_code > 0 data.",
-      "priority": "low"
+      "task": "Run canonical-10.07 output audits after required real-input blockers are resolved; do not block fixed-assets evidence audit on premature Accounting questions.",
+      "priority": "medium"
+    },
+    {
+      "task": "Resolve repository data-governance policy before public/push operations.",
+      "priority": "medium"
     }
   ],
   "recent_changes": [
@@ -80,11 +84,13 @@
     }
   ],
   "read_first_next_time": [
-    "README.md",
-    "docs/MANUAL_HEADCOUNT_INPUT.md",
-    "src/universal_app.py",
-    "OUTPUT_FY2027/MP2027_AUDIT_REPORT.md",
-    "OUTPUT_FY2027/MP2027_MISSING_INPUTS.csv"
+    "docs/handover/CURRENT_OPEN_ITEMS.md",
+    "docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md",
+    "docs/audits/AUDIT_STATUS_INDEX.md",
+    "docs/HANDOVER_FOR_NEXT_AGENT.md",
+    "raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx",
+    "docs/audits/fixed_assets_gap_and_implementation_plan_2026-07-15.md",
+    "QUY_TRINH_NGHIEP_VU_MP2027.md"
   ],
   "errors_encountered": [
     {
@@ -99,8 +105,10 @@
     }
   ],
   "context_checkpoints": [
-    "Current workspace has many code/docs/output/db changes; do not revert user or generated changes without approval.",
-    "Latest verified commands: py -m py_compile src\\universal_app.py; py -m unittest tests.test_src_v2_logic tests.test_posting_month_logic tests.test_headcount_and_export.",
+    ".brain is lower-authority project memory; canonical workbook, current code/tests, CURRENT_OPEN_ITEMS.md and AUDIT_STATUS_INDEX.md take precedence.",
+    "Old audit findings are preserved but must not be copied into pending work without checking their successor lifecycle.",
+    "Bus JP/VN generic event work is closed; fixed-assets evidence audit, missing inputs, GUI acceptance, canonical output audit and data governance remain open.",
+    "For fixed-assets, do not treat the 15 July `Chưa chốt` table as authority: read the successor handover and exhaust canonical/source/reference evidence before escalation.",
     "Do not convert internal data/schema keys like staff, worker, row, form_row, cc_code; only visible UI text is Vietnamese-first."
   ]
 }

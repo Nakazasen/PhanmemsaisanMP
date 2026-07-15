@@ -19,6 +19,13 @@ Tài liệu này là handover tổng hợp cho dự án MP2027 Manager. Canonica
 
 Thông tin lịch sử không tự động override code hiện tại. Mọi claim về implementation phải có commit/test evidence hoặc được đánh dấu là cần audit lại.
 
+Nguồn trạng thái work hiện hành:
+
+- `docs/handover/CURRENT_OPEN_ITEMS.md` — backlog/handover duy nhất.
+- `docs/audits/AUDIT_STATUS_INDEX.md` — successor và lifecycle của audit cũ.
+
+Các “recommended next phase” trong audit/knowledge lịch sử không phải work mở nếu không xuất hiện trong current register.
+
 
 ## Reconcile note - workbook canonical updated
 
@@ -52,14 +59,16 @@ Không dùng phần trăm ước lượng cho readiness. Dùng trạng thái the
 |---|---|---|
 | Default FORM path | PASS | Runtime ưu tiên `docs/MP2027/FORM.xlsx`. |
 | Source workbook manifest | PASS | `docs/MP2027/source_file_order.xlsx` điều khiển thứ tự parser, CSV manifest là fallback kỹ thuật. |
-| Facility / fixed assets / IT / GA / birthday / NNN parsers | PASS_WITH_SCOPE | Parser hiện có cho các nguồn chính; output cần audit theo từng CC khi dữ liệu nguồn đổi. |
+| Facility / IT / GA / birthday / NNN parsers | PASS_WITH_SCOPE | Parser hiện có cho các nguồn chính; output cần audit theo từng CC khi dữ liệu nguồn đổi. |
+| Fixed assets | OPEN_DECISION / OPEN_AUDIT | Core schedule logic có trong code; theo GAP plan 2026-07-15, còn P0 rounding/FX, Accounting policy và comparator acceptance. |
 | Manual headcount channel | PARTIAL | Active path là `raw/headcount_manual.csv`; vẫn thiếu headcount thật cho một số CC. |
 | CC `1412000040` headcount | BLOCKED_BY_INPUT | Chưa có chuỗi headcount thật đủ để accept các claim phụ thuộc new-hire delta. |
 | Bus passenger drivers | PASS | GUI có input scalar; allocator nhân scalar count với monthly unit price từ GA source. |
 | Health-check male/female split | BLOCKED_BY_INPUT | Cần Nam/Nữ tháng 12 thật nếu muốn tính row health-check theo split. |
 | Manual event drivers | PARTIAL | Channel có sẵn; event chưa có nguồn máy đọc vẫn cần người dùng nhập/chốt. |
+| GUI pipeline responsiveness | IMPLEMENTED_PENDING_ACCEPTANCE | UI queue/child process đã có; cần một Windows session thật để accept hoặc stack capture nếu còn treo. |
 | Legacy headcount source hardening | PASS | Docs legacy đã đổi tên DO_NOT_USE và parser guardrail không silent import. |
-| Final six-claim acceptance | PARTIAL | Không được ghi nhận là hoàn tất toàn bộ; xem bảng six-claim bên dưới. |
+| Final six-claim acceptance | PARTIAL | Defect cũ đã có successor evidence; full canonical-10.07/real-data acceptance vẫn chưa hoàn tất. |
 
 ## 4. Runtime directory model
 
@@ -136,7 +145,7 @@ Hai field bus độc lập với staff/worker/male/female headcount. Chỉnh hea
 
 ## 7. Six-claim acceptance status
 
-Không ghi nhận toàn bộ sáu claim là hoàn tất. Trạng thái hiện hành:
+Bảng này là successor evidence cho các defect N3Q/N3S và dùng run historical 09.06; không phải full acceptance của workbook canonical 10.07. Current residual item chỉ lấy từ `CURRENT_OPEN_ITEMS.md`.
 
 | Claim | Trạng thái | Ghi chú |
 |---|---|---|
@@ -345,12 +354,13 @@ Nếu `OUTPUT_FY2027` bị Windows lock, chạy từ thư mục temp và dùng a
 
 ## 17. Việc ưu tiên tiếp theo
 
-Fixed-assets P0/P1:
+Fixed-assets deep audit:
 
-- Tài liệu tiếp tục hiện hành: `docs/audits/fixed_assets_gap_and_implementation_plan_2026-07-15.md`.
-- Chốt với Accounting/MP: làm tròn từng asset hay sau tổng, mức chi tiết output, tỷ giá FY, category scope, adjustment âm và chính sách thiếu `Last Month Depr`.
-- Khóa baseline cho tối thiểu 3 CC đại diện trước khi sửa code.
-- Xử lý P0 trước: rounding point và kiểm tra tỷ giá FY/FORM `$B$2`.
+- Handover hiện hành: `docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md`.
+- Audit GAP 15.07 là provenance; không dùng bảng “Chưa chốt” làm lý do hỏi Accounting trước khi đọc đủ evidence.
+- Cross-trace canonical → source/calculation MP2026/MP2027 → reference outputs FY2026/FY2027 → code/tests; tạo asset ledger và decision matrix có file/sheet/cell/row evidence.
+- Chỉ chuyển phần còn mâu thuẫn/thiếu sau cross-trace sang Accounting/MP review.
+- Không hardcode FY, period, FX, filename/sheet, row identity, category/account theo một FY hoặc xóa history FY khác.
 - Không final acceptance fixed-assets cho đến khi comparator kiểm tra theo CC × asset × month × cost type và true mismatch đã được xử lý/chấp thuận.
 
 P1 chung:

@@ -3,14 +3,15 @@
     {
       "id": "gq-SRC-20260522-0001",
       "manifest_ref": "processed/manifest.jsonl#line-1",
-      "source_title": "Cải tiến nhập dữ liệu chung vào file MPnew.xlsx",
-      "query": "Verify key claims from Cải tiến nhập dữ liệu chung vào file MPnew.xlsx",
-      "priority": "high",
-      "status": "pending",
+      "source_title": "Cải tiến nhập dữ liệu chung vào file MPnew.xlsx (historical source snapshot)",
+      "query": "If NotebookLM becomes available, refresh grounding against canonical 10.07.2026 and record any discrepancy.",
+      "priority": "maintenance",
+      "status": "deferred",
       "created_at": "2026-05-22T10:31:58Z",
+      "reviewed_at": "2026-07-16T06:00:00+07:00",
       "grounding_engine": "notebooklm",
       "notebook_id": null,
-      "result_summary": null,
+      "result_summary": "Not a product blocker; local canonical workbook and code/audit evidence govern current work.",
       "target_wiki_path": null,
       "error": "MCP_UNAVAILABLE"
     }

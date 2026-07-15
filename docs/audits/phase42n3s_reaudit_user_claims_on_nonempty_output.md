@@ -1,5 +1,7 @@
 # Phase 42N3S - Re-audit user claims on non-empty output
 
+> **LIFECYCLE (2026-07-16): `SUPERSEDED`.** Preserve this report as historical chronology. N3Y supersedes its duplicate-formula, total-headcount, Column S, spacing and reference-fill actions; missing real headcount remains active only as `HC-1412000040` in `docs/handover/CURRENT_OPEN_ITEMS.md`.
+
 CLASSIFICATION: FAIL_PHASE_42N3S_REAUDIT_USER_CLAIMS_ON_NONEMPTY_OUTPUT
 
 ## Scope

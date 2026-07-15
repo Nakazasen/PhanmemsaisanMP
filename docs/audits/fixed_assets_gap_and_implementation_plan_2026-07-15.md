@@ -1,9 +1,9 @@
-﻿# Fixed Assets — GAP Audit and Implementation Plan (2026-07-15)
+# Fixed Assets — GAP Audit and Implementation Plan (2026-07-15)
 
-Status: `CURRENT_AUDIT_COMPLETED_IMPLEMENTATION_GAPS_OPEN`
+Status: `HISTORICAL_PROVENANCE_SUPERSEDED_BY_EVIDENCE_DRIVEN_HANDOVER`
 
-> [!IMPORTANT]
-> Đây là tài liệu tiếp tục hiện hành cho phần tài sản cố định. Tài liệu này dựa trên workbook yêu cầu canonical ngày 10.07.2026, code hiện tại và các file kết quả thủ công FY2026/FY2027. Không được xem đây là bằng chứng rằng toàn bộ module đã hoàn tất.
+> [!WARNING]
+> Snapshot này giữ nguyên finding lịch sử, nhưng workflow “hỏi Accounting/MP trước” và bảng `Chưa chốt` không còn là điểm bắt đầu hiện hành. Successor bắt buộc: `docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md`. Phải cross-trace canonical, source/calculation MP2026/MP2027 và reference outputs trước; chỉ escalation phần còn mâu thuẫn hoặc thiếu evidence.
 
 ## 1. Mục đích
 
