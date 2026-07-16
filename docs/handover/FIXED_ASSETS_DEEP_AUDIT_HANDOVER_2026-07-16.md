@@ -32,6 +32,8 @@ Do đó không được hardcode:
 
 ## 2. Thứ tự authority và evidence bắt buộc
 
+Tất cả đường dẫn dưới đây là **tương đối từ repository root**. Trước khi audit, đọc và chạy checklist trong `docs/handover/FIXED_ASSETS_EVIDENCE_MANIFEST.md` để xác minh corpus/checksum và bootstrap reference FY2027.
+
 ### Tầng 1 — Canonical requirement
 
 - `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`
@@ -45,8 +47,8 @@ Do đó không được hardcode:
 
 ### Tầng 3 — Reference output
 
-- `reference_outputs/secondary/FY2026`
-- `reference_outputs/secondary/FY2027`
+- `reference_outputs/secondary/FY2026` (64 workbook được Git track trực tiếp)
+- `reference_outputs/secondary/FY2027.zip` (82 workbook `.xlsx`; giải nén từ repository root bằng lệnh trong evidence manifest trước khi audit)
 
 ### Tầng 4 — Current implementation và tests
 
@@ -327,7 +329,7 @@ AI sau phải tạo/cập nhật:
 ## 10. Prompt copy-paste cho AI tiếp quản
 
 ```text
-Bạn đang tiếp quản deep audit fixed-assets của project MP2027 tại D:\Sandbox\MP2027.
+Bạn đang tiếp quản deep audit fixed-assets của project MP2027. Hãy mở terminal tại repository root sau khi clone; mọi đường dẫn dưới đây đều tương đối từ repository root, không giả định ổ đĩa hay workspace cụ thể.
 
 Mục tiêu: điều tra độc lập, nối đầy đủ requirement → source/calculation workbook → reference output → current code/tests → FORM output; sau đó mới đề xuất/sửa implementation. Không làm mất mạch, không bị wording audit cũ dẫn dắt, không hỏi Accounting trước khi đọc đủ evidence.
 
@@ -337,9 +339,10 @@ BẮT BUỘC đọc theo thứ tự:
 3. docs/audits/AUDIT_STATUS_INDEX.md
 4. raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx, sheet Chi phí tài sản cố định
 5. docs/MP2026 và docs/MP2027, đặc biệt hai workbook 固定資産情報_Fixed_Assets_Information_*.xlsx, FORM và calculation sheets
-6. reference_outputs/secondary/FY2026 và reference_outputs/secondary/FY2027
-7. src/parsers/fixed_assets.py, src/engine/hub_builder.py, src/engine/output_mode.py, src/engine/account_resolver.py, src/utils/source_manifest.py, src/utils/fiscal_periods.py, src/db/schema.py, src/audit/fixed_assets_coverage.py và tests liên quan
-8. docs/audits/fixed_assets_gap_and_implementation_plan_2026-07-15.md chỉ như provenance, không coi bảng Chưa chốt là ground truth.
+6. docs/handover/FIXED_ASSETS_EVIDENCE_MANIFEST.md; xác minh checksum và giải nén reference_outputs/secondary/FY2027.zip theo hướng dẫn
+7. reference_outputs/secondary/FY2026 và thư mục reference_outputs/secondary/FY2027 sau khi bootstrap
+8. src/parsers/fixed_assets.py, src/engine/hub_builder.py, src/engine/output_mode.py, src/engine/account_resolver.py, src/utils/source_manifest.py, src/utils/fiscal_periods.py, src/db/schema.py, src/audit/fixed_assets_coverage.py và tests liên quan
+9. docs/audits/fixed_assets_gap_and_implementation_plan_2026-07-15.md chỉ như provenance, không coi bảng Chưa chốt là ground truth.
 
 Chỉ đạo người dùng: CẤM HARDCODE vì phải dùng cho FY sau. Không hardcode FY2027, periods, FX, source filename/sheet, row identity, category/account theo một FY, hoặc xóa toàn bộ fixed-assets history.
 
@@ -378,6 +381,7 @@ Deliverable đầu tiên: audit/evidence matrix, không phải patch. Báo rõ �
 ## 11. Liên kết lifecycle
 
 - Live register: `docs/handover/CURRENT_OPEN_ITEMS.md`
+- Portable evidence manifest: `docs/handover/FIXED_ASSETS_EVIDENCE_MANIFEST.md`
 - Audit lifecycle: `docs/audits/AUDIT_STATUS_INDEX.md`
 - Audit GAP tiền nhiệm: `docs/audits/fixed_assets_gap_and_implementation_plan_2026-07-15.md`
 - Top-level handover: `docs/HANDOVER_FOR_NEXT_AGENT.md`

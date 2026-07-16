@@ -8,12 +8,13 @@ MP2027 Manager là app Python/Tkinter cho Windows để gom dữ liệu budget M
 
 1. `docs/handover/CURRENT_OPEN_ITEMS.md` — backlog/handover hiện hành duy nhất
 2. `docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md` — bắt buộc nếu làm fixed-assets; có evidence order và prompt tiếp quản
-3. `docs/audits/AUDIT_STATUS_INDEX.md` — lifecycle và successor của audit cũ
-4. `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx` — canonical cao nhất
-5. `docs/requirements/requirement_mapping.yaml`
-6. `docs/requirements/cai_tien_nhap_du_lieu_chung.md`
-7. `QUY_TRINH_NGHIEP_VU_MP2027.md`
-8. `docs/knowledge/mp_saisan_business_knowledge_base_v2.md`
+3. `docs/handover/FIXED_ASSETS_EVIDENCE_MANIFEST.md` — kiểm tra corpus/checksum và bootstrap reference FY2027 trên máy mới
+4. `docs/audits/AUDIT_STATUS_INDEX.md` — lifecycle và successor của audit cũ
+5. `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx` — canonical cao nhất
+6. `docs/requirements/requirement_mapping.yaml`
+7. `docs/requirements/cai_tien_nhap_du_lieu_chung.md`
+8. `QUY_TRINH_NGHIEP_VU_MP2027.md`
+9. `docs/knowledge/mp_saisan_business_knowledge_base_v2.md`
 
 Nếu Markdown mâu thuẫn workbook canonical ngày 10.07.2026, dùng workbook. Audit cũ không tự tạo backlog mới; trạng thái live chỉ lấy từ `CURRENT_OPEN_ITEMS.md`.
 

@@ -36,6 +36,10 @@ audit_outputs/
 !raw/requirements/*.xlsx
 !raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx
 
+# Fixed-assets audit corpus: exact company source workbooks required for portable handover.
+!docs/MP2026/固定資産情報_Fixed_Assets_Information_2024.12 - December.xlsx
+!docs/MP2027/固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx
+
 # Track curated reference outputs while keeping global Excel/zip ignores intact.
 !reference_outputs/
 !reference_outputs/**
