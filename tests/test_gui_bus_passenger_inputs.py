@@ -19,32 +19,27 @@ def test_event_driver_gui_has_dedicated_bus_passenger_inputs():
     assert "validate_non_negative_int" in source
 
 
-def test_headcount_gui_has_scalar_bus_driver_inputs():
+def test_annual_staffing_editor_uses_project_canonical_and_annual_manual_stores():
     source = Path("src/universal_app.py").read_text(encoding="utf-8")
+    load_start = source.index("        def load_cc(*_):")
+    save_start = source.index("        def nonneg(text,label):", load_start)
+    load_source = source[load_start:save_start]
 
-    assert "Th\\u00f4ng tin xe bus - d\\u00f9ng chung cho 12 th\\u00e1ng" in source
-    assert "Ng\\u01b0\\u1eddi bi\\u1ec7t ph\\u00e1i \\u0111i xe bus" in source
-    assert "Ng\\u01b0\\u1eddi Vi\\u1ec7t Nam \\u0111i xe bus" in source
-    assert "bus_expat_count_var = tk.StringVar(value=\"0\")" in source
-    assert "bus_vietnamese_count_var = tk.StringVar(value=\"0\")" in source
-    assert "S\\u1ed1 l\\u01b0\\u1ee3ng n\\u00e0y \\u0111\\u01b0\\u1ee3c s\\u1eed d\\u1ee5ng chung cho 12 th\\u00e1ng FY." in source
-    assert "ensure_manual_bus_headcount_template(source_dir)" in source
+    assert "Thông tin xe buýt — nhập riêng, dùng chung cho 12 tháng" in source
+    assert "Người biệt phái đi xe buýt" in source
+    assert "Người Việt Nam đi xe buýt" in source
+    assert "bus_exp=tk.StringVar(value=\"0\")" in source
+    assert "bus_vn=tk.StringVar(value=\"0\")" in source
+    assert "source_conn=get_connection(self._operational_database())" in load_source
+    assert "manual_conn=get_connection(self._manual_input_store(fiscal_year))" in load_source
+    assert "source_rows=source_conn.execute(" in load_source
+    assert "timerows=source_conn.execute(" in load_source
+    assert "fact_manual_headcount_time_override" in load_source
+    assert "for r in manual_conn.execute(" in load_source
+    assert "busrow=manual_conn.execute(" in load_source
+    assert "source_rows=manual_conn.execute(" not in load_source
+    assert "timerows=manual_conn.execute(" not in load_source
 
-
-def test_headcount_gui_uses_canonical_manual_source_and_clears_on_cc_switch():
-    source = Path("src/universal_app.py").read_text(encoding="utf-8")
-
-    assert "resolve_manual_headcount_source_dir(self.source_dir.get() or BASE_DIR, base_dir=BASE_DIR)" in source
-    assert "csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)" in source
-    assert "bus_csv_path = ensure_manual_bus_headcount_template(source_dir)" in source
-    assert "result = parse_manual_headcount(conn, source_dir=source_dir)" in source
-
-    clear_start = source.index("def clear_table")
-    load_start = source.index("def load_selected_cc")
-    clear_call = source.index("clear_table()", load_start)
-    cc_parse = source.index("cc_code = parse_cc_code", load_start)
-    assert clear_call < cc_parse
-    assert 'field_var.set("")' in source[clear_start:load_start]
 
 
 def test_manual_headcount_bus_driver_template_columns_are_scalar_per_cc():
@@ -97,8 +92,9 @@ def test_headcount_save_blank_baseline_is_saved_as_zero_and_no_old_defaulting_so
     assert formatted == ""
 
     source = Path("src/universal_app.py").read_text(encoding="utf-8")
-    assert "Lưu chưa hoàn tất cho CC {cc_code}. Không có thay đổi nào được áp dụng." in source
-    assert "Đã lưu đầy đủ {rows} kỳ cho CC {cc}." in source
+    assert "conn=get_connection(self._manual_input_store(fiscal_year))" in source
+    assert "save_manual_baseline_override(conn,fiscal_year,cc" in source
+    assert "save_manual_time_overrides(conn,fiscal_year,cc" in source
     assert "staff_text = month_vars[period][\"staff\"].get().strip() or \"0\"" not in source
 
 

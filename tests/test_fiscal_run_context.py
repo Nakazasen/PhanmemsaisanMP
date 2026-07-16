@@ -1,3 +1,5 @@
+import json
+import os
 from pathlib import Path
 
 from src.parsers.manual_event_drivers import _default_period_for_fiscal_year
@@ -12,6 +14,12 @@ from src.services.fiscal_run import (
 )
 from src.utils.fiscal_periods import fiscal_baseline_period, fiscal_periods
 from src.utils.source_manifest import read_source_manifest
+from src.services.project_config import (
+    ProjectConfig,
+    discover_or_create_project,
+    read_last_project,
+    remember_last_project,
+)
 from scripts.run_e2e import _resolve_primary_reference_path
 
 
@@ -156,3 +164,103 @@ def test_fy_filename_cannot_mask_a_conflicting_business_sheet(tmp_path):
         assert "FY2028" in str(exc)
     else:
         raise AssertionError("conflicting evidence must be rejected")
+
+
+def test_project_paths_are_relative_and_portable_when_project_moves(tmp_path):
+    original = tmp_path / "original"
+    original.mkdir()
+    project = ProjectConfig.create_legacy_compatible(str(original), 2027)
+    project.save()
+
+    payload = json.loads((original / "project.json").read_text(encoding="utf-8"))
+    assert payload["operational_database"] == "mp2027.db"
+    assert payload["fiscal_years"]["2027"]["manual_input_store"] == "raw/FY2027/manual_inputs.db"
+
+    moved = tmp_path / "moved"
+    original.rename(moved)
+    reloaded = ProjectConfig.load(str(moved / "project.json"))
+    paths = reloaded.fiscal_paths(2027)
+
+    assert reloaded.operational_database == os.path.abspath(moved / "mp2027.db")
+    assert paths.template_path == os.path.abspath(moved / "docs" / "MP2027" / "FORM.xlsx")
+    assert paths.manual_input_store == os.path.abspath(moved / "raw" / "FY2027" / "manual_inputs.db")
+
+
+def test_manual_input_store_is_physically_isolated_by_fiscal_year(tmp_path):
+    project = ProjectConfig.create_legacy_compatible(str(tmp_path), 2027)
+    project.ensure_fiscal_year(2028)
+
+    fy2027 = project.fiscal_paths(2027)
+    fy2028 = project.fiscal_paths(2028)
+
+    assert fy2027.manual_input_store != fy2028.manual_input_store
+    assert fy2027.manual_input_store.endswith(os.path.join("raw", "FY2027", "manual_inputs.db"))
+    assert fy2028.manual_input_store.endswith(os.path.join("raw", "FY2028", "manual_inputs.db"))
+
+
+def test_recent_project_is_loaded_automatically_from_local_app_data(tmp_path):
+    app_dir = tmp_path / "application"
+    project_dir = tmp_path / "business-data"
+    local_app_data = tmp_path / "local-app-data"
+    app_dir.mkdir()
+    project_dir.mkdir()
+
+    project = ProjectConfig.create_legacy_compatible(str(project_dir), 2027)
+    project.save()
+    remember_last_project(project.config_path, local_app_data=str(local_app_data))
+
+    assert read_last_project(local_app_data=str(local_app_data)) == project.config_path
+    discovered, created = discover_or_create_project(
+        str(app_dir), 2027, local_app_data=str(local_app_data)
+    )
+
+    assert created is False
+    assert discovered.config_path == project.config_path
+    assert not (app_dir / "project.json").exists()
+
+
+def test_project_rejects_shared_manual_store_without_partial_mutation(tmp_path):
+    project = ProjectConfig.create_legacy_compatible(str(tmp_path), 2027)
+    project.ensure_fiscal_year(2028)
+    original = json.dumps(project.data, sort_keys=True)
+    shared_store = project.fiscal_paths(2027).manual_input_store
+
+    try:
+        project.update_fiscal_paths(2028, manual_input_store=shared_store)
+    except ValueError as exc:
+        assert "không được dùng chung kho nhập tay" in str(exc)
+    else:
+        raise AssertionError("two fiscal years must not share one manual input store")
+
+    assert json.dumps(project.data, sort_keys=True) == original
+
+
+def test_project_rejects_operational_database_that_is_a_manual_store(tmp_path):
+    project = ProjectConfig.create_legacy_compatible(str(tmp_path), 2027)
+    original = json.dumps(project.data, sort_keys=True)
+    manual_store = project.fiscal_paths(2027).manual_input_store
+
+    try:
+        project.set_operational_database(manual_store)
+    except ValueError as exc:
+        assert "không được trùng kho nhập tay FY2027" in str(exc)
+    else:
+        raise AssertionError("operational database must not also be a manual input store")
+
+    assert json.dumps(project.data, sort_keys=True) == original
+
+
+def test_project_load_rejects_manual_store_reused_by_two_fiscal_years(tmp_path):
+    project = ProjectConfig.create_legacy_compatible(str(tmp_path), 2027)
+    project.ensure_fiscal_year(2028)
+    project.data["fiscal_years"]["2028"]["manual_input_store"] = (
+        project.data["fiscal_years"]["2027"]["manual_input_store"]
+    )
+    project.save()
+
+    try:
+        ProjectConfig.load(project.config_path)
+    except ValueError as exc:
+        assert "không được dùng chung kho nhập tay" in str(exc)
+    else:
+        raise AssertionError("invalid manually edited project.json must be rejected at load time")

@@ -86,3 +86,7 @@ drafts/*.tmp
 # One-off repository investigation scripts
 .compare_*.py
 .inspect_*.py
+
+# Per-project runtime configuration (machine/data-root specific)
+project.json
+launcher.json

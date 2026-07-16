@@ -94,6 +94,7 @@ from src.services.fiscal_run import (
 from src.services.run_history import (
     RUN_STATUS_FAILED,
     RUN_STATUS_PRECHECK_FAILED,
+    RUN_STATUS_RUNNING,
     RUN_STATUS_SUCCEEDED,
     create_run_workspace,
     publish_run_output,
@@ -600,6 +601,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            fixed_assets_skeleton_start_row: int | None = None,
                            mp_saisan_complete_v1: bool = True,
                            db_path: str | None = None,
+                           operational_db_path: str | None = None,
+                           manual_input_store: str | None = None,
                            output_dir: str | None = None,
                            simulate_baseline_t3_from_t4: bool = False,
                            audit_exclude_incomplete_staffing: bool = False,
@@ -610,7 +613,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports every CC represented by generated facts.
-    - db_path/output_dir: optional isolation paths; production defaults are unchanged.
+    - operational_db_path: editable project database used as migration source.
+    - db_path/output_dir: optional isolation paths retained for tests/diagnostics.
     - simulate_baseline_t3_from_t4: audit-only fallback with explicit provenance.
     """
     if log_callback is None:
@@ -653,7 +657,9 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         system_cost_export = True
         system_cost_start_row = 179
 
-    production_db_path = os.path.abspath(os.path.join(BASE_DIR, "mp2027.db"))
+    production_db_path = os.path.abspath(
+        operational_db_path or os.path.join(BASE_DIR, "mp2027.db")
+    )
     requested_db_path = os.path.abspath(db_path) if db_path else None
     requested_output_dir = os.path.abspath(output_dir or os.path.join(os.getcwd(), f"OUTPUT_FY{fiscal_year}"))
     effective_history_root = run_history_root or os.environ.get("MP_MANAGER_TEST_HISTORY_ROOT")
@@ -691,6 +697,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             exchange_rate=exchange_rate,
             exchange_rate_source=exchange_rate_source,
             history_root=effective_history_root,
+            manual_input_store=manual_input_store,
             reference_policy=effective_reference_policy,
             base_dir=BASE_DIR,
         )
@@ -1263,6 +1270,9 @@ def main(argv=None):
     parser.add_argument('--source', type=str, default=None)
     parser.add_argument('--headcount-source', type=str, default=None)
     parser.add_argument('--uniform-policy', type=str, default=None)
+    parser.add_argument('--operational-db', type=str, default=None)
+    parser.add_argument('--manual-input-store', type=str, default=None)
+    parser.add_argument('--output-dir', type=str, default=None)
     parser.add_argument('--run-history-root', type=str, default=None)
     parser.add_argument(
         '--no-run-history',
@@ -1361,6 +1371,9 @@ def main(argv=None):
         target_cc=args.target_cc,
         headcount_source_dir=args.headcount_source,
         uniform_policy_path=args.uniform_policy,
+        operational_db_path=args.operational_db,
+        manual_input_store=args.manual_input_store,
+        output_dir=args.output_dir,
         run_history_root=args.run_history_root,
         preserve_run_history=not args.no_run_history,
         facility_file_order_preview=args.facility_file_order_preview,
