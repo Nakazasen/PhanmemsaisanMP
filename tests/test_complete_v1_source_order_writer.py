@@ -607,6 +607,37 @@ def test_complete_v1_writer_replaces_legacy_asset_totals_but_preserves_manual_as
         wb.close()
 
 
+def test_complete_v1_writer_keeps_explicit_zero_distinct_from_post_terminal_blank(tmp_path):
+    path = _workbook(tmp_path / "out.xlsx")
+    periods = ["202604", "202605", "202606"]
+    apply_complete_v1_source_order_to_workbook(
+        path,
+        start_row=30,
+        clear_until_row=90,
+        dynamic_allocation_rows=[
+            {
+                "source_file": CANONICAL_SOURCE_FILE_ORDER[1],
+                "account_code": 5006016242,
+                "description": "fixed asset explicit terminal zero",
+                "terms": {"202604": ["ROUND(10*$B$2,0)"]},
+                "explicit_zero_periods": {"202605"},
+                "audit_trail": "fixed_assets_audit_table=audit_fixed_asset_import_rows; fiscal_year=2027",
+            }
+        ],
+        fiscal_periods=periods,
+    )
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        row = next(row for row in range(30, 90) if ws.cell(row, 19).value == "fixed asset explicit terminal zero")
+        assert ws.cell(row, 6).value == "=ROUND(10*$B$2,0)"
+        assert ws.cell(row, 7).value == 0
+        assert ws.cell(row, 8).value is None
+        assert "fixed_assets_audit_table" in _note_text(ws.cell(row, 20))
+    finally:
+        wb.close()
+
+
 def test_complete_v1_writer_preserves_unmanaged_business_rows_inside_clear_range(tmp_path):
     path = tmp_path / "out.xlsx"
     wb = Workbook()

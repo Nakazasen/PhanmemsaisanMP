@@ -601,7 +601,7 @@ Chương trình thực hiện các việc chính:
 2. Ý NGHĨA CÁC MỤC TRÊN MÀN HÌNH CHÍNH
 
 Năm tài chính:
-- Nhập năm cần lập ngân sách, ví dụ 2027, 2028 hoặc 2029.
+- Nhập năm cần lập ngân sách. Luồng đã kiểm tra đầy đủ hiện là FY2027; chỉ chọn FY khác khi đã chuẩn bị đủ source workbook/sheet đúng năm.
 - Năm tài chính bắt đầu từ tháng 4 và kết thúc vào tháng 3 năm sau.
 - Khi thay đổi năm, tiêu đề chương trình và dữ liệu được sử dụng cũng thay đổi theo.
 
@@ -658,8 +658,7 @@ Khi nhấn "Cập nhật CSDL", chương trình sẽ:
 
 Ví dụ:
 - Chọn năm 2027: chương trình nhận dữ liệu kỳ 202604 đến 202703.
-- Chọn năm 2029: chương trình nhận dữ liệu kỳ 202804 đến 202903.
-- Dữ liệu năm 2027 không được dùng thay cho năm 2029.
+- Với FY khác, chương trình đổi kỳ tháng theo lịch (ví dụ FY2029 là 202804 đến 202903), nhưng không tự đổi tên hoặc tạo source workbook FY2029. Người dùng phải cung cấp và kiểm tra đủ nguồn đúng năm.
 
 5. KIỂM TRA VÀ BỔ SUNG NHÂN SỰ
 
@@ -784,6 +783,29 @@ Không xuất được tệp kết quả vì thiếu nguồn sự thật:
 - Không nhập số ước lượng nếu chưa được người phụ trách nghiệp vụ xác nhận.
 - Không bỏ qua cảnh báo trong Nhật ký xử lý.
 - Luôn mở và kiểm tra tệp Excel kết quả trước khi gửi chính thức.
+""".strip()
+
+# Current-code corrections kept next to the visible guide so the in-app help
+# remains accurate while older explanatory paragraphs are retained for history.
+USER_GUIDE_TEXT_LATEST += """
+
+ĐÍNH CHÍNH THEO CODE HIỆN TẠI
+
+- Lần chạy chính thức hiện được nghiệm thu theo bộ source FY2027 đang có. Ô Năm tài chính có thể nhận
+  năm khác và phần kỳ tháng sẽ đổi theo năm đó, nhưng nhiều workbook/sheet nguồn và rule xuất hiện tại
+  vẫn mang tên FY2027. Chỉ chạy FY khác khi đã chuẩn bị đủ source workbook đúng năm và kiểm tra output.
+- Nút "Cập nhật CSDL" chỉ đồng bộ nguồn nhân sự và thời gian. Các workbook chi phí (Facility, tài sản
+  cố định, IT, Tổng vụ, sinh nhật, NNN) được đọc lại khi bấm "CHẠY TÍNH TOÁN".
+- Sau khi chạy, mở thư mục OUTPUT_FY<năm>\\BAO_CAO_KIEM_TRA. Tên báo cáo hiện hành là
+  BAO_CAO_LAN_CHAY.xlsx, DU_LIEU_CON_THIEU.xlsx và KIEM_TRA_TY_GIA.xlsx; không tìm các tên .md/.csv
+  cũ trong tài liệu lịch sử.
+- Tài sản cố định được xuất theo thứ tự source/manifest động của complete-v1. Không coi dòng FORM 38/42
+  là vị trí đích cố định.
+- Khi cần giải thích chênh lệch tài sản cố định, chạy riêng bộ audit:
+  py scripts\\audit_fixed_assets_cross_trace.py
+  py scripts\\classify_fixed_assets_mismatches.py
+  py scripts\\build_fixed_assets_business_decision_pack.py
+  Lịch sử từng lần chạy nằm trong docs\\audits\\history\\fixed_assets và trong mp2027.db.
 """.strip()
 
 

@@ -38,8 +38,13 @@ Các input đang được repo kỳ vọng gồm:
 Output runtime mặc định không nên commit:
 
 - `OUTPUT_FY2027/MP_CC_<cost_center>.xlsx`
-- `OUTPUT_FY2027/MP2027_AUDIT_REPORT.md`
-- `OUTPUT_FY2027/MP2027_MISSING_INPUTS.csv`
+- `OUTPUT_FY2027/BAO_CAO_KIEM_TRA/BAO_CAO_LAN_CHAY.xlsx`
+- `OUTPUT_FY2027/BAO_CAO_KIEM_TRA/DU_LIEU_CON_THIEU.xlsx`
+- `OUTPUT_FY2027/BAO_CAO_KIEM_TRA/KIEM_TRA_TY_GIA.xlsx`
+
+Lịch sử audit riêng của tài sản cố định được lưu append-only tại
+[`docs/audits/history/fixed_assets`](docs/audits/history/fixed_assets). Lịch sử này được tạo khi chạy
+`py scripts/classify_fixed_assets_mismatches.py`; lần chạy GUI thông thường không tự chạy comparator này.
 
 ## Nguyên tắc nghiệp vụ an toàn
 
@@ -121,7 +126,7 @@ Các test được đánh dấu `requires_raw_excel` cần workbook thật trong
 - `docs/requirements/`: requirement và mapping nghiệp vụ đọc được bằng máy.
 - `docs/knowledge/`: knowledge base/handover nghiệp vụ derived.
 - `docs/MP2027/`: template/source curated nếu repo đang version hóa.
-- `raw/requirements/`: workbook requirement canonical.
+- `raw/`: workbook requirement canonical và các file nhập tay dùng chung.
 - `OUTPUT_FY2027/`: output runtime, không commit file sinh mới.
 
 ## Không được commit
@@ -156,5 +161,6 @@ Sau khi dọn, source code và input canonical trong Git không bị ảnh hư�
 - Thiếu `FORM.xlsx`: kiểm tra `docs/MP2027/FORM.xlsx`; không dùng root `FORM.xlsx` cũ làm fallback nếu code đã chặn.
 - Thiếu source workbook: đặt đúng file trong `docs/MP2027` hoặc chọn lại source trong GUI.
 - Thiếu headcount/bus/event/special cost: bổ sung CSV manual tương ứng, không để hệ thống tự đoán.
-- Output có missing input: đọc `OUTPUT_FY2027/MP2027_MISSING_INPUTS.csv` và audit report trước khi gửi budget.
+- Output có missing input: đọc `OUTPUT_FY2027/BAO_CAO_KIEM_TRA/DU_LIEU_CON_THIEU.xlsx` và
+  `BAO_CAO_LAN_CHAY.xlsx` trước khi gửi budget.
 - Packaging không tìm thấy `docs/MP2027`: kiểm tra portable bundle đã include thư mục docs/source cần thiết.

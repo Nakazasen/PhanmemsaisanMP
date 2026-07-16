@@ -1441,20 +1441,26 @@ class HubBuilder:
         self._write_explicit_form_rows(worksheet, cc_code)
 
     def _load_fixed_asset_source_order_rows(self, cc_code: int) -> list[dict[str, object]]:
-        """Aggregate asset USD by Category/month; VND rounding is deferred to Excel."""
+        """Build source-order values from VND amounts rounded per individual asset.
+
+        The parser applies the authoritative runtime rate and Excel rounding to
+        each asset before it reaches this aggregation.  Writing the resulting
+        VND value avoids a formula longer than Excel's 8,192-character limit
+        for cost centers with hundreds of assets.
+        """
         category_order = tuple(CATEGORY_SPECS)
         rows = self.conn.execute(
             """
-            SELECT description, account_code, period, SUM(COALESCE(amount_usd, 0)) AS amount_usd
+            SELECT description, account_code, period, amount_vnd, amount_usd
             FROM fact_input_data
             WHERE CAST(cc_code AS TEXT) = ? AND source = 'fixed_assets'
-              AND amount_usd IS NOT NULL AND amount_usd > 0
-            GROUP BY description, account_code, period
+              AND amount_usd IS NOT NULL
             ORDER BY description, period
             """,
             (str(cc_code),),
         ).fetchall()
-        grouped: dict[tuple[str, str], dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        grouped: dict[tuple[str, str], dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        explicit_zeroes: dict[tuple[str, str], set[str]] = defaultdict(set)
         for row in rows:
             description = str(row["description"] or "")
             parts = description.split("|", 2)
@@ -1466,13 +1472,18 @@ class HubBuilder:
             kind = "depreciation" if kind_token == "fixed_assets_depr" else "interest" if kind_token == "fixed_assets_interest" else ""
             if not kind:
                 continue
-            grouped[(kind, category_key)][str(row["period"])] += float(row["amount_usd"] or 0.0)
+            key = (kind, category_key)
+            period = str(row["period"])
+            rounded_vnd = int(round(float(row["amount_vnd"] or 0.0)))
+            grouped[key][period] += rounded_vnd
+            if float(row["amount_usd"] or 0.0) == 0.0:
+                explicit_zeroes[key].add(period)
 
         payload: list[dict[str, object]] = []
         for kind in ("depreciation", "interest"):
             for category_key in category_order:
                 months = dict(grouped.get((kind, category_key), {}))
-                if not any(amount > 0 for amount in months.values()):
+                if not any(amount != 0 for amount in months.values()):
                     continue
                 spec = CATEGORY_SPECS[category_key]
                 account_code = int(spec["depreciation_account"] if kind == "depreciation" else INTEREST_ACCOUNT)
@@ -1482,20 +1493,29 @@ class HubBuilder:
                     if kind == "depreciation"
                     else f"Lãi tài sản cố định - {label}"
                 )
-                terms = {
-                    period: [f"ROUND({self._format_number(amount_usd)}*$B$2,0)"]
-                    for period, amount_usd in months.items()
-                    if amount_usd > 0
+                numeric_months = {
+                    period: amount
+                    for period, amount in months.items()
+                    if amount != 0
+                }
+                explicit_zero_periods = {
+                    period for period in explicit_zeroes[(kind, category_key)] if months.get(period, 0) == 0
                 }
                 payload.append({
                     "source_file": CANONICAL_SOURCE_FILE_ORDER[1],
                     "account_code": account_code,
                     "description": description,
                     "months": {},
-                    "terms": terms,
-                    "numeric_months": {},
+                    "terms": {},
+                    "numeric_months": numeric_months,
+                    "explicit_zero_periods": explicit_zero_periods,
                     "highlight_periods": set(),
                     "provenance": f"fixed_assets_accounting|{kind}|{category_key}",
+                    "audit_trail": (
+                        "fixed_assets_audit_table=audit_fixed_asset_import_rows; "
+                        f"fiscal_year={self.fiscal_year}; depreciation_cc={cc_code}; "
+                        f"category_key={category_key}; account_code={account_code}"
+                    ),
                 })
         return payload
 

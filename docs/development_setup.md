@@ -45,6 +45,23 @@ py scripts/run_e2e.py --target-cc 1412000040
 
 Nếu thiếu dữ liệu thật, pipeline phải ghi missing input hoặc lỗi rõ; không tạo dữ liệu giả.
 
+Output kiểm tra nằm trong `OUTPUT_FY<năm>\BAO_CAO_KIEM_TRA`:
+
+- `BAO_CAO_LAN_CHAY.xlsx`: tổng hợp lần chạy.
+- `DU_LIEU_CON_THIEU.xlsx`: dữ liệu cần bổ sung/xác nhận.
+- `KIEM_TRA_TY_GIA.xlsx`: kiểm tra tỷ giá trên các workbook kết quả.
+
+Audit đối chiếu tài sản cố định là luồng riêng, không tự chạy trong E2E smoke:
+
+```powershell
+py scripts/audit_fixed_assets_cross_trace.py
+py scripts/classify_fixed_assets_mismatches.py
+py scripts/build_fixed_assets_business_decision_pack.py
+```
+
+Các lần audit được lưu append-only trong `docs/audits/history/fixed_assets` và trong các bảng
+`audit_fixed_asset_mismatch_runs`, `audit_fixed_asset_mismatch_history` của `mp2027.db`.
+
 ## Build portable
 
 Cài PyInstaller trong venv sạch chỉ có dependency cần thiết, sau đó chạy spec hiện tại.

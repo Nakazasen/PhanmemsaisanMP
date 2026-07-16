@@ -9,6 +9,11 @@ As of: `2026-07-16`
 
 | Document | Lifecycle | What remains active |
 |---|---|---|
+| `fixed_assets_cross_trace_audit_2026-07-16.md` | `OPEN_AUDIT` | Current quantitative successor evidence: calculation is not accepted; asset/reference ledgers separate manual layers, quantify per-asset rounding defects and retain 638 true source/reference monthly mismatches for decision-matrix review. |
+| `history/fixed_assets/run_index.csv` | `LIVING_AUDIT_LOG` | Append-only index of every fixed-assets decision-matrix run. Each run preserves its CSV/Markdown evidence snapshot and is also queryable in `mp2027.db`. |
+| `fixed_assets_true_mismatch_decision_matrix_2026-07-16.md` | `OPEN_AUDIT` | Current row-level successor: all 638 true mismatches have source/reference provenance and a decision status. Four terminal-continuation defects are proven; 634 remaining cells cannot be overwritten without the recorded business/source evidence. |
+| `fixed_assets_policy_output_verification_2026-07-16.json` | `OPEN_AUDIT` | Production integration evidence: parser-to-source-order writer matches all 649 FY2026 and 726 FY2027 source-derived expected cells and emits zero post-terminal fact rows. It does not authorize overwriting reference manual/snapshot layers. |
+| `fixed_assets_business_decision_requests_2026-07-16.md` | `OPEN_AUDIT` | Reviewer pack: condenses 273 snapshot/unknown cells into 32 actionable business requests with allowed responses and source/reference examples. |
 | `FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md` | `OPEN_AUDIT` | Active successor: evidence-first asset ledger/decision matrix across canonical, company sources, FY2026/FY2027 references and code; implementation remains open. |
 | `fixed_assets_gap_and_implementation_plan_2026-07-15.md` | `HISTORICAL` | Finding provenance only; its ask-Accounting-first workflow and `Chưa chốt` table are superseded by the deep-audit handover. |
 | `phase42n3y_final_user_claims_acceptance_audit.md` | `OPEN_AUDIT` | Current successor evidence for old defects, but partial: real monthly headcount for `1412000040` and full canonical-10.07 acceptance remain open. |

@@ -60,7 +60,7 @@ Không dùng phần trăm ước lượng cho readiness. Dùng trạng thái the
 | Default FORM path | PASS | Runtime ưu tiên `docs/MP2027/FORM.xlsx`. |
 | Source workbook manifest | PASS | `docs/MP2027/source_file_order.xlsx` điều khiển thứ tự parser, CSV manifest là fallback kỹ thuật. |
 | Facility / IT / GA / birthday / NNN parsers | PASS_WITH_SCOPE | Parser hiện có cho các nguồn chính; output cần audit theo từng CC khi dữ liệu nguồn đổi. |
-| Fixed assets | OPEN_DECISION / OPEN_AUDIT | Core schedule logic có trong code; theo GAP plan 2026-07-15, còn P0 rounding/FX, Accounting policy và comparator acceptance. |
+| Fixed assets | IMPLEMENTED_PENDING_BUSINESS_ACCEPTANCE | Parser/writer đã có per-asset rounding, FX theo lần chạy, terminal-month handling, fail-closed Q/cache, zero-vs-blank và provenance. Business snapshot/manual-layer decisions và comparator acceptance vẫn mở. |
 | Manual headcount channel | PARTIAL | Active path là `raw/headcount_manual.csv`; vẫn thiếu headcount thật cho một số CC. |
 | CC `1412000040` headcount | BLOCKED_BY_INPUT | Chưa có chuỗi headcount thật đủ để accept các claim phụ thuộc new-hire delta. |
 | Bus passenger drivers | PASS | GUI có input scalar; allocator nhân scalar count với monthly unit price từ GA source. |
@@ -170,10 +170,10 @@ Các nhãn dùng trong tài liệu/audit:
 |---:|---|---|---|
 | 36 | Khấu hao nhà | CURRENT_CODE_VERIFIED | Facility, công thức quy đổi USD/VND nếu nguồn USD. |
 | 37 | Khấu hao đất | CURRENT_CODE_VERIFIED | Facility. |
-| 38 | Khấu hao thiết bị | CURRENT_CODE_VERIFIED | Fixed assets nếu có dữ liệu. |
+| 38 | Khấu hao thiết bị | LEGACY_STAGING_ONLY; SOURCE_ORDER_DYNAMIC | Có thể là vùng staging legacy; complete-v1 không coi đây là fixed output row. Vị trí hiện hành phụ thuộc source manifest/order. |
 | 40 | Lãi nhà | CURRENT_CODE_VERIFIED | Facility. |
 | 41 | Lãi đất | CURRENT_CODE_VERIFIED | Facility. |
-| 42 | Lãi thiết bị | CURRENT_CODE_VERIFIED | Fixed assets nếu có dữ liệu. |
+| 42 | Lãi thiết bị | LEGACY_STAGING_ONLY; SOURCE_ORDER_DYNAMIC | Có thể là vùng staging legacy; complete-v1 không coi đây là fixed output row. Vị trí hiện hành phụ thuộc source manifest/order. |
 | 44 | Điện | CURRENT_CODE_VERIFIED | Facility amount. |
 | 45 | Nước | CURRENT_CODE_VERIFIED | Facility amount. |
 | 46 | Gas | CURRENT_CODE_VERIFIED | Headcount-based admin allocation. |
@@ -212,7 +212,29 @@ Pipeline cơ bản:
 5. Ghi SQLite `mp2027.db`.
 6. Allocation engine tính fact output và missing inputs.
 7. HubBuilder export `OUTPUT_FY2027/MP_CC_<cc>.xlsx`.
-8. Audit pipeline sinh `OUTPUT_FY2027/MP2027_AUDIT_REPORT.md` và `MP2027_MISSING_INPUTS.csv`.
+8. Audit pipeline sinh `OUTPUT_FY2027/BAO_CAO_KIEM_TRA/BAO_CAO_LAN_CHAY.xlsx`,
+   `DU_LIEU_CON_THIEU.xlsx` và `KIEM_TRA_TY_GIA.xlsx`.
+
+### Audit tài sản cố định và lịch sử giải thích
+
+Luồng tính tài sản cố định trong pipeline chính đọc source workbook theo manifest và xuất theo
+source-order động của complete-v1; không được giả định dòng FORM cố định 38/42. Code làm tròn từng
+tài sản trước khi cộng, dừng sau tháng hết khấu hao, giữ phân biệt ô trống/số 0 và ghi provenance
+source file/sheet/row vào CSDL.
+
+Để đối chiếu với file phòng ban và lưu lịch sử từng lần phân loại, chạy:
+
+```powershell
+py scripts/audit_fixed_assets_cross_trace.py
+py scripts/classify_fixed_assets_mismatches.py
+py scripts/build_fixed_assets_business_decision_pack.py
+```
+
+Mỗi lần chạy classifier tạo một thư mục mới trong
+`docs/audits/history/fixed_assets`, không ghi đè lịch sử cũ; đồng thời lưu các ô, bằng chứng và
+phân loại vào hai bảng `audit_fixed_asset_mismatch_runs` và
+`audit_fixed_asset_mismatch_history` trong `mp2027.db`. Đây là luồng audit bổ sung, không tự chạy
+khi người dùng chỉ bấm `CHẠY TÍNH TOÁN` trên GUI.
 
 ## 10. Manual input rules
 

@@ -129,6 +129,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
             id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT NOT NULL, period TEXT NOT NULL,
             amount_vnd REAL NOT NULL DEFAULT 0, amount_usd REAL DEFAULT NULL, cc_code INTEGER NOT NULL,
             account_code INTEGER NOT NULL, form_row INTEGER DEFAULT NULL,
+            fiscal_year INTEGER DEFAULT NULL, source_snapshot TEXT DEFAULT NULL,
             scenario_id TEXT DEFAULT 'base', description TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
@@ -168,6 +169,65 @@ def create_schema(conn: sqlite3.Connection) -> None:
             decided_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS audit_fixed_asset_import_rows (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fiscal_year INTEGER NOT NULL,
+            source_snapshot TEXT NOT NULL,
+            source_file TEXT NOT NULL,
+            source_sheet TEXT NOT NULL,
+            source_row INTEGER NOT NULL,
+            asset_no TEXT,
+            asset_text TEXT,
+            category_raw TEXT,
+            category_key TEXT,
+            control_cc TEXT,
+            depreciation_cc TEXT,
+            monthly_depr_usd REAL,
+            terminal_period TEXT,
+            terminal_depr_usd REAL,
+            apr_interest_usd REAL,
+            may_interest_usd REAL,
+            formula_cache_status TEXT NOT NULL,
+            inclusion_status TEXT NOT NULL,
+            exclusion_reason TEXT,
+            imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS audit_fixed_asset_mismatch_runs (
+            run_id TEXT PRIMARY KEY,
+            audit_date TEXT NOT NULL,
+            executed_at TEXT NOT NULL,
+            matrix_sha256 TEXT NOT NULL,
+            matrix_csv_path TEXT NOT NULL,
+            matrix_report_path TEXT NOT NULL,
+            history_snapshot_dir TEXT NOT NULL,
+            summary_json TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS audit_fixed_asset_mismatch_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id TEXT NOT NULL,
+            fiscal_year INTEGER NOT NULL,
+            cc_code TEXT NOT NULL,
+            account_code INTEGER NOT NULL,
+            period TEXT NOT NULL,
+            expected_vnd INTEGER,
+            reference_vnd INTEGER,
+            delta_vnd INTEGER,
+            reference_formula_kind TEXT,
+            source_asset_count INTEGER NOT NULL,
+            evidence_classification TEXT NOT NULL,
+            decision_status TEXT NOT NULL,
+            allowed_action TEXT NOT NULL,
+            classification_reason TEXT NOT NULL,
+            source_evidence_json TEXT NOT NULL,
+            reference_evidence_json TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(run_id, fiscal_year, cc_code, account_code, period),
+            FOREIGN KEY (run_id) REFERENCES audit_fixed_asset_mismatch_runs(run_id)
+        )""")
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS sys_params (
             key TEXT PRIMARY KEY, value TEXT NOT NULL, description TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
@@ -178,6 +238,14 @@ def create_schema(conn: sqlite3.Connection) -> None:
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_manual_hc_baseline_cc ON fact_manual_headcount_baseline_override(cc_code, period)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_manual_hc_time_cc ON fact_manual_headcount_time_override(cc_code, period)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_missing_inputs_source ON fact_missing_inputs(source, cc_code, period)")
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_fixed_asset_audit_snapshot "
+        "ON audit_fixed_asset_import_rows(fiscal_year, source_snapshot, source_sheet, source_row)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_fixed_asset_mismatch_history_lookup "
+        "ON audit_fixed_asset_mismatch_history(fiscal_year, cc_code, account_code, period)"
+    )
 
     for column_name, definition in (
         ("headcount_male", "REAL DEFAULT 0"),
@@ -193,6 +261,13 @@ def create_schema(conn: sqlite3.Connection) -> None:
             cursor.execute(f"ALTER TABLE fact_monthly_headcount ADD COLUMN {column_name} {definition}")
     if not _column_exists(conn, "fact_input_data", "form_row"):
         cursor.execute("ALTER TABLE fact_input_data ADD COLUMN form_row INTEGER DEFAULT NULL")
+    if not _column_exists(conn, "fact_input_data", "fiscal_year"):
+        cursor.execute("ALTER TABLE fact_input_data ADD COLUMN fiscal_year INTEGER DEFAULT NULL")
+    if not _column_exists(conn, "fact_input_data", "source_snapshot"):
+        cursor.execute("ALTER TABLE fact_input_data ADD COLUMN source_snapshot TEXT DEFAULT NULL")
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_input_source_fy ON fact_input_data(source, fiscal_year)"
+    )
 
     conn.commit()
 

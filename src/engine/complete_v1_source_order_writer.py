@@ -62,6 +62,7 @@ class StagedWorkbookRow:
     number_formats: dict[int, str]
     source_order_managed: bool = True
     red_month_cols: frozenset[int] = frozenset()
+    audit_trail: str = ""
 
 
 SOURCE_ROW_GROUPS = (
@@ -272,6 +273,8 @@ def _write_staged_row(ws, target_row: int, staged: StagedWorkbookRow) -> None:
         note_cell = ws.cell(target_row, NOTE_COL)
         note = _source_order_note_base(note_cell)
         source_note = f"source_file={staged.source_file}; original_row={staged.original_row}; {SOURCE_ORDER_MARKER}"
+        if staged.audit_trail:
+            source_note += f"; audit_trail={staged.audit_trail}"
         note_cell.value = None
         note_cell.comment = None
         _set_metadata_note_for_cell(note_cell, f"{note} | {source_note}" if note else source_note)
@@ -427,6 +430,7 @@ def _collect_dynamic_allocation_rows(
             DESCRIPTION_COL: row.get("description"),
         }
         highlight_periods = {str(period) for period in (row.get("highlight_periods") or set())}
+        explicit_zero_periods = {str(period) for period in (row.get("explicit_zero_periods") or set())}
         red_month_cols: set[int] = set()
         terms_by_period = row.get("terms") or {}
         numeric_by_period = row.get("numeric_months") or row.get("months") or {}
@@ -437,7 +441,7 @@ def _collect_dynamic_allocation_rows(
                 terms.append(str(int(numeric_value)) if numeric_value.is_integer() else str(numeric_value))
             if terms:
                 values[col] = "=" + "+".join(str(term).lstrip("=") for term in terms)
-            elif numeric_value:
+            elif numeric_value or period in explicit_zero_periods:
                 values[col] = numeric_value
             if period in highlight_periods:
                 red_month_cols.add(col)
@@ -454,6 +458,7 @@ def _collect_dynamic_allocation_rows(
                 number_formats={},
                 source_order_managed=True,
                 red_month_cols=frozenset(red_month_cols),
+                audit_trail=str(row.get("audit_trail") or ""),
             )
         )
     return staged
