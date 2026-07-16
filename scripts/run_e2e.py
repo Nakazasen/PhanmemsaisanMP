@@ -9,6 +9,7 @@ import sqlite3
 import argparse
 import csv
 import inspect
+import json
 import os
 import sys
 import time
@@ -79,6 +80,26 @@ from src.services.headcount_source_importer import import_headcount_time_sources
 from src.services.manual_staffing_overrides import (
     apply_manual_baseline_overrides,
     apply_manual_time_overrides,
+    copy_annual_manual_inputs,
+    migrate_legacy_fy2027_manual_inputs,
+)
+from src.services.fiscal_run import (
+    REFERENCE_POLICY_DISABLED,
+    REFERENCE_POLICY_EXPLICIT_SAME_FY,
+    REFERENCE_POLICY_LEGACY_FY2027_MAP,
+    create_fiscal_run_context,
+    detect_fiscal_year,
+    preflight_fiscal_run,
+)
+from src.services.run_history import (
+    RUN_STATUS_FAILED,
+    RUN_STATUS_PRECHECK_FAILED,
+    RUN_STATUS_SUCCEEDED,
+    create_run_workspace,
+    publish_run_output,
+    register_legacy_fy2027_database,
+    register_run,
+    write_run_manifest,
 )
 
 COMPLETE_V1_SOURCE_ORDER_START_ROW = 30
@@ -117,15 +138,15 @@ def _create_allocation_engine(conn, target_cc=None):
     return AllocationEngine(conn)
 
 
-def _default_template_path() -> str:
-    candidate = os.path.join(BASE_DIR, "docs", "MP2027", "FORM.xlsx")
+def _default_template_path(fiscal_year: int = 2027) -> str:
+    candidate = os.path.join(BASE_DIR, "docs", f"MP{fiscal_year}", "FORM.xlsx")
     if os.path.exists(candidate):
         return candidate
     # In packaged (COLLECT) mode, BASE_DIR is the exe dir but bundled data
     # lives under sys._MEIPASS (_internal/).
     meipass = getattr(sys, "_MEIPASS", None)
     if meipass:
-        meipass_candidate = os.path.join(meipass, "docs", "MP2027", "FORM.xlsx")
+        meipass_candidate = os.path.join(meipass, "docs", f"MP{fiscal_year}", "FORM.xlsx")
         if os.path.exists(meipass_candidate):
             return meipass_candidate
     raise FileNotFoundError(
@@ -134,16 +155,16 @@ def _default_template_path() -> str:
     )
 
 
-def _default_source_dir() -> str:
-    candidate = os.path.join(BASE_DIR, "docs", "MP2027")
+def _default_source_dir(fiscal_year: int = 2027) -> str:
+    candidate = os.path.join(BASE_DIR, "docs", f"MP{fiscal_year}")
     if os.path.isdir(candidate):
         return candidate
     meipass = getattr(sys, "_MEIPASS", None)
     if meipass:
-        meipass_candidate = os.path.join(meipass, "docs", "MP2027")
+        meipass_candidate = os.path.join(meipass, "docs", f"MP{fiscal_year}")
         if os.path.isdir(meipass_candidate):
             return meipass_candidate
-    return BASE_DIR
+    return candidate
 
 
 def _friendly_pipeline_error_message(error) -> str:
@@ -183,11 +204,8 @@ def _friendly_pipeline_error_message(error) -> str:
         return "Không tìm thấy tệp hoặc thư mục cần dùng. Hãy kiểm tra lại Tệp mẫu FORM và Thư mục nguồn."
     if text and any(marker in lower_text for marker in vietnamese_markers):
         return text
-    return (
-        "Đã xảy ra lỗi khi chạy chương trình. "
-        "Hãy kiểm tra lại Tệp mẫu FORM, Thư mục nguồn và chạy lại. "
-        "Nếu cần điều tra sâu, bật MP2027_DEBUG_TRACEBACK=1 để lấy chi tiết kỹ thuật."
-    )
+    error_type = type(error).__name__ if error is not None else "UnknownError"
+    return f"{error_type}: {text or 'Không có nội dung lỗi.'}"
 
 
 def _log_debug_traceback(log_callback) -> None:
@@ -197,8 +215,25 @@ def _log_debug_traceback(log_callback) -> None:
         log_callback("Chi tiết kỹ thuật đã được ẩn. Nếu cần điều tra sâu, bật MP2027_DEBUG_TRACEBACK=1 rồi chạy lại.")
 
 
+def _write_failure_traceback(run_context, error: BaseException) -> str | None:
+    """Persist the real exception so a failed business run is diagnosable."""
+    if run_context is None or not run_context.workspace_dir:
+        return None
+    reports_dir = os.path.join(str(run_context.workspace_dir), "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    path = os.path.join(reports_dir, "failure_traceback.txt")
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(f"{type(error).__name__}: {error}\n\n")
+        handle.write(traceback.format_exc())
+    return path
+
+
 def _default_reference_map_path() -> str:
     return os.path.join(BASE_DIR, "docs", "config", "reference_workbook_map.csv")
+
+
+class ReferenceNotConfiguredError(ValueError):
+    """No optional reference exists for this CC; this is not a data mismatch."""
 
 
 def _default_fixed_assets_skeleton_csv_path() -> str:
@@ -217,6 +252,7 @@ def _apply_complete_v1_source_order(
     *,
     dynamic_allocation_rows=None,
     fiscal_periods=None,
+    source_file_order=None,
 ) -> dict[str, int]:
     kwargs = {
         "start_row": COMPLETE_V1_SOURCE_ORDER_START_ROW,
@@ -225,6 +261,8 @@ def _apply_complete_v1_source_order(
     if dynamic_allocation_rows and fiscal_periods:
         kwargs["dynamic_allocation_rows"] = dynamic_allocation_rows
         kwargs["fiscal_periods"] = fiscal_periods
+    if source_file_order:
+        kwargs["source_file_order"] = source_file_order
     result = apply_complete_v1_source_order_to_workbook(workbook_path, **kwargs)
     log_callback(
         "Đã áp dụng ghi kết quả hoàn chỉnh theo thứ tự nguồn ({phase}): {summary}".format(
@@ -233,6 +271,21 @@ def _apply_complete_v1_source_order(
         )
     )
     return result
+
+
+def _annual_complete_v1_source_order(run_context) -> list[str]:
+    """Use the selected FY manifest rather than names embedded for FY2027."""
+    categories = ("facility", "fixed_assets", "it_simulation", "ga", "birthday", "allocation_rules", "nnn_paperwork")
+    names: list[str] = []
+    for category in categories:
+        paths = run_context.resolved_sources.get(category, ())
+        if not paths:
+            # Preflight will surface missing required sources; this guard keeps
+            # the writer deterministic for diagnostic FY2027 runs.
+            names.append(category)
+        else:
+            names.append(os.path.basename(paths[0]))
+    return names
 
 
 def _load_complete_v1_dynamic_allocation_rows(builder, target_cc) -> list[dict[str, object]]:
@@ -272,11 +325,15 @@ def _resolve_primary_reference_path(
     target_cc: int | str | None,
     primary_reference_path: str | None = None,
     reference_map_path: str | None = None,
+    *,
+    fiscal_year: int = 2027,
 ) -> str:
     """Resolve an explicit or mapped reference workbook for reference-assisted fill."""
     if primary_reference_path:
         resolved = os.path.abspath(primary_reference_path)
     else:
+        if int(fiscal_year) != 2027:
+            raise ValueError("FY từ 2028 chỉ dùng file tham chiếu được chọn rõ, đúng cùng năm tài chính.")
         target_text = str(target_cc or "")
         resolved = ""
         map_path = reference_map_path or _default_reference_map_path()
@@ -288,9 +345,19 @@ def _resolve_primary_reference_path(
                         resolved = candidate if os.path.isabs(candidate) else os.path.join(BASE_DIR, candidate)
                         break
         if not resolved:
-            raise ValueError("Điền theo tham chiếu cần --primary-reference-path hoặc bảng ánh xạ tham chiếu chính cho mã bộ phận này.")
+            raise ReferenceNotConfiguredError(
+                "Điền theo tham chiếu cần --primary-reference-path hoặc bảng ánh xạ tham chiếu chính cho mã bộ phận này."
+            )
     if not os.path.exists(resolved):
         raise FileNotFoundError(f"Không tìm thấy tệp tham chiếu chính để điền dữ liệu: {resolved}")
+    detected = detect_fiscal_year(resolved)
+    # FY2027's accepted legacy map predates annual labels in a few submitted
+    # files.  Preserve that compatibility, but never extend it to FY2028+.
+    if detected is None and int(fiscal_year) == 2027:
+        return resolved
+    if detected != int(fiscal_year):
+        found = f"FY{detected}" if detected else "không xác định"
+        raise ValueError(f"Tệp tham chiếu sai năm: cần FY{fiscal_year}, phát hiện {found}: {resolved}")
     return resolved
 
 
@@ -298,8 +365,12 @@ def _try_resolve_primary_reference_path(
     target_cc: int | str | None,
     primary_reference_path: str | None = None,
     reference_map_path: str | None = None,
+    *,
+    fiscal_year: int = 2027,
 ) -> str | None:
     """Resolve an optional reference workbook for canonical export."""
+    if int(fiscal_year) != 2027 and not primary_reference_path:
+        return None
     if not primary_reference_path and not reference_map_path:
         return None
     try:
@@ -307,8 +378,9 @@ def _try_resolve_primary_reference_path(
             target_cc=target_cc,
             primary_reference_path=primary_reference_path,
             reference_map_path=reference_map_path,
+            fiscal_year=fiscal_year,
         )
-    except ValueError:
+    except ReferenceNotConfiguredError:
         return None
 
 
@@ -504,6 +576,7 @@ def _exclude_incomplete_staffing_ccs_for_audit(conn, fiscal_year: int) -> list[s
 
 def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str, 
                            exchange_rate: float = 25450.0,
+                           exchange_rate_source: str = "explicit pipeline input",
                            target_cc: int = None,
                            headcount_source_dir: str | None = None,
                            log_callback=None,
@@ -529,7 +602,11 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            db_path: str | None = None,
                            output_dir: str | None = None,
                            simulate_baseline_t3_from_t4: bool = False,
-                           audit_exclude_incomplete_staffing: bool = False):
+                           audit_exclude_incomplete_staffing: bool = False,
+                           uniform_policy_path: str | None = None,
+                           run_history_root: str | None = None,
+                           reference_policy: str | None = None,
+                           preserve_run_history: bool = True):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports every CC represented by generated facts.
@@ -578,8 +655,14 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
 
     production_db_path = os.path.abspath(os.path.join(BASE_DIR, "mp2027.db"))
     requested_db_path = os.path.abspath(db_path) if db_path else None
+    requested_output_dir = os.path.abspath(output_dir or os.path.join(os.getcwd(), f"OUTPUT_FY{fiscal_year}"))
+    effective_history_root = run_history_root or os.environ.get("MP_MANAGER_TEST_HISTORY_ROOT")
+    run_context = None
+    preflight_failed = False
     if simulate_baseline_t3_from_t4 or audit_exclude_incomplete_staffing:
-        if requested_db_path is None or os.path.normcase(requested_db_path) == os.path.normcase(production_db_path):
+        if (requested_db_path is None and not preserve_run_history) or (
+            requested_db_path is not None and os.path.normcase(requested_db_path) == os.path.normcase(production_db_path)
+        ):
             return False, (
                 "Các tùy chọn audit chỉ được phép chạy với db_path cô lập, khác production mp2027.db."
             )
@@ -587,17 +670,86 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
     try:
         log_callback(f"Quy trình năm tài chính {fiscal_year} (Tỷ giá: {exchange_rate:,.0f})")
         
-        # 1. Setup Environment
-        db_path = requested_db_path or production_db_path
+        effective_reference_policy = reference_policy or (
+            REFERENCE_POLICY_EXPLICIT_SAME_FY
+            if primary_reference_path else (
+                REFERENCE_POLICY_LEGACY_FY2027_MAP
+                if int(fiscal_year) == 2027 else REFERENCE_POLICY_DISABLED
+            )
+        )
+        if primary_reference_path and effective_reference_policy != REFERENCE_POLICY_EXPLICIT_SAME_FY:
+            raise ValueError("File tham khảo do người dùng chọn chỉ được dùng với EXPLICIT_SAME_FY.")
+        if primary_reference_fill and effective_reference_policy == REFERENCE_POLICY_DISABLED:
+            raise ValueError("Điền theo tham khảo yêu cầu chọn rõ file cùng năm tài chính.")
+        run_context = create_fiscal_run_context(
+            fiscal_year,
+            template_path=template_path,
+            source_dir=source_dir,
+            headcount_source_dir=headcount_source_dir,
+            uniform_policy_path=uniform_policy_path,
+            output_dir=requested_output_dir,
+            exchange_rate=exchange_rate,
+            exchange_rate_source=exchange_rate_source,
+            history_root=effective_history_root,
+            reference_policy=effective_reference_policy,
+            base_dir=BASE_DIR,
+        )
+        preflight = preflight_fiscal_run(run_context)
+        run_context = run_context.with_resolution(preflight.resolved_sources)
+        # Keep the legacy FY2027 shared DB discoverable without modifying it.
+        if preserve_run_history and requested_db_path is None:
+            register_legacy_fy2027_database(str(run_context.history_root), production_db_path)
+        # The history workspace is safe to create before calculation: it holds
+        # only evidence and reports, never shared calculation data.
+        if preserve_run_history and requested_db_path is None:
+            initial_status = RUN_STATUS_RUNNING if preflight.ok else RUN_STATUS_PRECHECK_FAILED
+            run_context = create_run_workspace(
+                run_context,
+                target_cc=target_cc,
+                initial_status=initial_status,
+                initial_error_summary=(
+                    "\n".join(issue.as_text() for issue in preflight.issues)
+                    if not preflight.ok else None
+                ),
+            )
+            write_run_manifest(run_context)
+            report_path = os.path.join(str(run_context.workspace_dir), "reports", "preflight_report.json")
+            with open(report_path, "w", encoding="utf-8") as handle:
+                json.dump(preflight.as_dict(), handle, ensure_ascii=False, indent=2)
+            readable_report_path = os.path.join(str(run_context.workspace_dir), "reports", "preflight_report.md")
+            with open(readable_report_path, "w", encoding="utf-8") as handle:
+                handle.write(preflight.as_markdown())
+            log_callback(f"Báo cáo kiểm tra nguồn: {report_path}")
+        if not preflight.ok:
+            preflight_failed = True
+            preflight.raise_if_invalid()
 
-        # Output Directory
-        output_dir = os.path.abspath(output_dir or os.path.join(os.getcwd(), f"OUTPUT_FY{fiscal_year}"))
+        # Production runs are immutable. Explicit db_path is retained for
+        # isolated tests and diagnostic runs that deliberately manage storage.
+        if preserve_run_history and requested_db_path is None:
+            db_path = str(run_context.database_path)
+            output_dir = os.path.join(str(run_context.workspace_dir), "outputs")
+        else:
+            db_path = requested_db_path or production_db_path
+            output_dir = requested_output_dir
         os.makedirs(output_dir, exist_ok=True)
         
         # 2. Database & Loading
         conn = get_connection(db_path)
         create_schema(conn)
-        init_sys_params(conn, exchange_rate=exchange_rate, fiscal_year=fiscal_year)
+        init_sys_params(
+            conn,
+            exchange_rate=exchange_rate,
+            fiscal_year=fiscal_year,
+            exchange_rate_source=run_context.exchange_rate_source,
+        )
+        if run_context is not None and run_context.workspace_dir:
+            if fiscal_year == 2027:
+                migrated = migrate_legacy_fy2027_manual_inputs(
+                    run_context.manual_input_store, production_db_path
+                )
+                if sum(migrated.values()):
+                    log_callback("Đã chuyển dữ liệu nhập tay FY2027 từ kho cũ sang kho theo năm (không sửa mp2027.db).")
         
         # Clear old transaction data
         cursor = conn.cursor()
@@ -613,16 +765,19 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             fiscal_year=fiscal_year,
             exchange_rate=exchange_rate,
             search_dir=source_dir,
+            uniform_eligibility_path=run_context.uniform_policy_path,
         )
 
-        staffing_dir = os.path.abspath(headcount_source_dir or source_dir)
+        staffing_dir = os.path.abspath(run_context.headcount_source_dir)
         if not os.path.isdir(staffing_dir):
             raise FileNotFoundError(f"Thư mục nguồn nhân sự & thời gian không tồn tại: {staffing_dir}")
         log_callback(f"Đang đồng bộ nguồn nhân sự & thời gian FY{fiscal_year}: {staffing_dir}")
-        staffing_result = import_headcount_time_sources(conn, staffing_dir, fiscal_year)
-        manual_time_rows = apply_manual_time_overrides(conn, fiscal_year, target_cc=target_cc)
-        if manual_time_rows:
-            log_callback(f"Đã áp dụng {manual_time_rows} dòng thời gian nhập thủ công.")
+        staffing_result = import_headcount_time_sources(
+            conn,
+            staffing_dir,
+            fiscal_year,
+            target_cc=str(target_cc) if target_cc is not None else None,
+        )
         parser_results = {"headcount_time_sources": staffing_result}
         for line in _staffing_sync_log_lines(staffing_result):
             log_callback(line)
@@ -663,6 +818,18 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             )
         )
         manual_hc_result = _parse_manual_headcount(conn, source_dir)
+        # Copy editable annual entries only after parsers have refreshed their
+        # own manual tables.  In particular, the legacy CSV parser clears bus
+        # drivers; copying earlier silently discarded values entered in the UI.
+        copied_manual = copy_annual_manual_inputs(
+            conn, fiscal_year, run_context.manual_input_store
+        ) if run_context is not None and run_context.workspace_dir else {}
+        copied_total = sum(copied_manual.values())
+        if copied_total:
+            log_callback(f"Đã sao chép {copied_total} dữ liệu nhập tay của FY{fiscal_year} vào lần chạy cô lập.")
+        manual_time_rows = apply_manual_time_overrides(conn, fiscal_year, target_cc=target_cc)
+        if manual_time_rows:
+            log_callback(f"Đã áp dụng {manual_time_rows} dòng thời gian nhập thủ công.")
         manual_baseline_rows = apply_manual_baseline_overrides(conn, fiscal_year, target_cc=target_cc)
         if manual_baseline_rows:
             log_callback(f"Đã áp dụng {manual_baseline_rows} baseline T3 nhập thủ công.")
@@ -766,26 +933,31 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         _timed_call(log_callback, "xác định tài khoản và tính phân bổ", engine.run_allocation)
         
         # 5. Export Logic
-        builder = HubBuilder(conn, fiscal_year=fiscal_year)
+        source_file_by_category = {
+            category: os.path.basename(paths[0])
+            for category, paths in run_context.resolved_sources.items()
+            if paths
+        }
+        builder = HubBuilder(
+            conn, fiscal_year=fiscal_year, source_file_by_category=source_file_by_category
+        )
         
-        facility_source_path = os.path.join(source_dir, "施設課　MPFY2027.xlsx")
-        admin_source_path = os.path.join(source_dir, "総務課 FY2027 MP 振替予定.xlsx")
-        allocation_source_path = os.path.join(source_dir, "FY2027配賦額一覧 (2025.12.29).xlsx")
-        system_source_paths = [
-            os.path.join(source_dir, "システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls"),
-            os.path.join(source_dir, "システム課金金額(Simulation)_FY2027_July.2026 ~ Dec.2026(Change AMS & PLM price).xls"),
-            os.path.join(source_dir, "システム課金金額(Simulation)_FY2027_Jan.2027 ~ March.2027(Change SAP price).xls"),
-        ]
+        resolved = run_context.resolved_sources
+        facility_source_path = (resolved.get("facility") or [None])[0]
+        admin_source_path = (resolved.get("ga") or [None])[0]
+        allocation_source_path = (resolved.get("allocation_rules") or [None])[0]
+        system_source_paths = list(resolved.get("it_simulation") or [])
         if target_cc:
             # Single Export
             log_callback(f"Đang xuất riêng mã bộ phận: {target_cc}")
             out_path = os.path.join(output_dir, f"MP_CC_{target_cc}.xlsx")
             complete_v1_primary_path = None
-            if mp_saisan_complete_v1:
+            if mp_saisan_complete_v1 and run_context.reference_policy != REFERENCE_POLICY_DISABLED:
                 complete_v1_primary_path = _try_resolve_primary_reference_path(
                     target_cc=target_cc,
                     primary_reference_path=primary_reference_path,
                     reference_map_path=reference_map_path,
+                    fiscal_year=fiscal_year,
                 )
             builder.export_to_template(template_path, out_path, cc_code=target_cc)
             complete_v1_dynamic_allocation_rows = (
@@ -795,7 +967,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             )
             complete_v1_fiscal_periods = get_fy_months(fiscal_year) if mp_saisan_complete_v1 else []
             output_workbook_exists = os.path.exists(out_path)
-            if facility_file_order_export and output_workbook_exists and (explicit_facility_file_order_export or template_is_excel):
+            if facility_file_order_export and facility_source_path and output_workbook_exists and (explicit_facility_file_order_export or template_is_excel):
                 apply_facility_file_order_to_workbook(
                     workbook_path=out_path,
                     facility_source_path=facility_source_path,
@@ -803,16 +975,17 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     start_row=facility_file_order_start_row,
                 )
                 log_callback(f"Đã áp dụng xuất Cơ sở vật chất theo thứ tự tệp: {out_path}")
-            if admin_consumables_export and output_workbook_exists and (explicit_admin_consumables_export or template_is_excel):
+            if admin_consumables_export and admin_source_path and allocation_source_path and output_workbook_exists and (explicit_admin_consumables_export or template_is_excel):
                 apply_admin_consumables_to_workbook(
                     workbook_path=out_path,
                     admin_source_path=admin_source_path,
                     allocation_source_path=allocation_source_path,
                     cost_center=target_cc,
                     start_row=admin_consumables_start_row,
+                    fiscal_year=fiscal_year,
                 )
                 log_callback(f"Đã áp dụng xuất vật tư Tổng vụ: {out_path}")
-            if system_cost_export and output_workbook_exists and (explicit_system_cost_export or template_is_excel):
+            if system_cost_export and system_source_paths and output_workbook_exists and (explicit_system_cost_export or template_is_excel):
                 apply_system_cost_to_workbook(
                     workbook_path=out_path,
                     system_source_paths=system_source_paths,
@@ -826,12 +999,16 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 and template_is_excel
                 and (primary_reference_fill or complete_v1_primary_path or fixed_assets_reference_skeleton_export)
             ):
-                _apply_complete_v1_source_order(out_path, log_callback, phase="pre-reference")
+                _apply_complete_v1_source_order(
+                    out_path, log_callback, phase="pre-reference",
+                    source_file_order=_annual_complete_v1_source_order(run_context),
+                )
             if primary_reference_fill:
                 primary_path = _resolve_primary_reference_path(
                     target_cc=target_cc,
                     primary_reference_path=primary_reference_path,
                     reference_map_path=reference_map_path,
+                    fiscal_year=fiscal_year,
                 )
                 invariant_path = os.path.join(
                     BASE_DIR,
@@ -880,6 +1057,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     phase="final",
                     dynamic_allocation_rows=complete_v1_dynamic_allocation_rows,
                     fiscal_periods=complete_v1_fiscal_periods,
+                    source_file_order=_annual_complete_v1_source_order(run_context),
                 )
             log_callback(f"Hoàn tất: {output_dir}")
         else:
@@ -893,7 +1071,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             for cc in all_ccs:
                 out_path = os.path.join(output_dir, f"MP_CC_{cc}.xlsx")
                 if builder.export_to_template(template_path, out_path, cc_code=cc):
-                    if facility_file_order_export:
+                    if facility_file_order_export and facility_source_path:
                         apply_facility_file_order_to_workbook(
                             workbook_path=out_path,
                             facility_source_path=facility_source_path,
@@ -901,16 +1079,17 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             start_row=facility_file_order_start_row,
                         )
                         log_callback(f"Đã áp dụng xuất Cơ sở vật chất theo thứ tự tệp: {out_path}")
-                    if admin_consumables_export:
+                    if admin_consumables_export and admin_source_path and allocation_source_path:
                         apply_admin_consumables_to_workbook(
                             workbook_path=out_path,
                             admin_source_path=admin_source_path,
                             allocation_source_path=allocation_source_path,
                             cost_center=cc,
                             start_row=admin_consumables_start_row,
+                            fiscal_year=fiscal_year,
                         )
                         log_callback(f"Đã áp dụng xuất vật tư Tổng vụ: {out_path}")
-                    if system_cost_export:
+                    if system_cost_export and system_source_paths:
                         apply_system_cost_to_workbook(
                             workbook_path=out_path,
                             system_source_paths=system_source_paths,
@@ -923,6 +1102,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             target_cc=cc,
                             primary_reference_path=primary_reference_path,
                             reference_map_path=reference_map_path,
+                            fiscal_year=fiscal_year,
                         )
                         invariant_path = os.path.join(
                             BASE_DIR,
@@ -952,13 +1132,19 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     if mp_saisan_complete_v1:
                         complete_v1_dynamic_rows = _load_complete_v1_dynamic_allocation_rows(builder, cc)
                         complete_v1_periods = get_fy_months(fiscal_year)
-                        complete_v1_primary_path = _try_resolve_primary_reference_path(
-                            target_cc=cc,
-                            primary_reference_path=primary_reference_path,
-                            reference_map_path=reference_map_path,
-                        )
+                        complete_v1_primary_path = None
+                        if run_context.reference_policy != REFERENCE_POLICY_DISABLED:
+                            complete_v1_primary_path = _try_resolve_primary_reference_path(
+                                target_cc=cc,
+                                primary_reference_path=primary_reference_path,
+                                reference_map_path=reference_map_path,
+                                fiscal_year=fiscal_year,
+                            )
                         if complete_v1_primary_path:
-                            _apply_complete_v1_source_order(out_path, log_callback, phase="pre-reference")
+                            _apply_complete_v1_source_order(
+                                out_path, log_callback, phase="pre-reference",
+                                source_file_order=_annual_complete_v1_source_order(run_context),
+                            )
                             complete_result = apply_mp_saisan_complete_v1(
                                 workbook_path=out_path,
                                 target_cc=cc,
@@ -979,6 +1165,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             phase="final",
                             dynamic_allocation_rows=complete_v1_dynamic_rows,
                             fiscal_periods=complete_v1_periods,
+                            source_file_order=_annual_complete_v1_source_order(run_context),
                         )
                     count += 1
             
@@ -1017,6 +1204,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         log_callback(f"Báo cáo dữ liệu cần bổ sung: {audit_result['missing_csv_path']}")
 
         if facility_file_order_preview:
+            if not facility_source_path:
+                raise ValueError("Không tìm được nguồn Cơ sở vật chất đúng năm để tạo tệp xem trước.")
             preview_output = facility_preview_output or os.path.join(
                 BASE_DIR,
                 "dist",
@@ -1036,19 +1225,33 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             log_callback(f"Tệp xem trước Cơ sở vật chất theo thứ tự nguồn: {preview_path}")
         
         conn.close()
-        return True, output_dir
+        published_output = output_dir
+        if run_context is not None and run_context.workspace_dir:
+            published_output = publish_run_output(run_context, output_dir)
+            register_run(run_context, RUN_STATUS_SUCCEEDED, target_cc=target_cc, output_path=published_output)
+        return True, published_output
 
 
     except (FileNotFoundError, BadZipFile) as e:
         message = _friendly_pipeline_error_message(e)
         log_callback(f"LỖI: {message}")
+        trace_path = _write_failure_traceback(run_context, e)
+        if trace_path:
+            log_callback(f"Chi tiết lỗi đã lưu: {trace_path}")
         _log_debug_traceback(log_callback)
+        if run_context is not None and run_context.workspace_dir and not preflight_failed:
+            register_run(run_context, RUN_STATUS_FAILED, target_cc=target_cc, error_summary=message)
         return False, message
 
     except Exception as e:
         message = _friendly_pipeline_error_message(e)
         log_callback(f"LỖI: {message}")
+        trace_path = _write_failure_traceback(run_context, e)
+        if trace_path:
+            log_callback(f"Chi tiết lỗi đã lưu: {trace_path}")
         _log_debug_traceback(log_callback)
+        if run_context is not None and run_context.workspace_dir and not preflight_failed:
+            register_run(run_context, RUN_STATUS_FAILED, target_cc=target_cc, error_summary=message)
         return False, message
 
 def main(argv=None):
@@ -1056,10 +1259,18 @@ def main(argv=None):
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--fy', type=int, default=2027)
-    parser.add_argument('--template', type=str, default=_default_template_path())
-    parser.add_argument('--source', type=str, default=_default_source_dir())
+    parser.add_argument('--template', type=str, default=None)
+    parser.add_argument('--source', type=str, default=None)
     parser.add_argument('--headcount-source', type=str, default=None)
+    parser.add_argument('--uniform-policy', type=str, default=None)
+    parser.add_argument('--run-history-root', type=str, default=None)
+    parser.add_argument(
+        '--no-run-history',
+        action='store_true',
+        help='Diagnostic only: do not create the immutable run-history workspace.',
+    )
     parser.add_argument('--exchange-rate', type=float, default=25450.0)
+    parser.add_argument('--exchange-rate-source', type=str, default="explicit pipeline input")
     parser.add_argument('--target-cc', type=int, default=None)
     parser.add_argument(
         '--facility-file-order-preview',
@@ -1115,6 +1326,12 @@ def main(argv=None):
     )
     parser.add_argument('--reference-map-path', type=str, default=_default_reference_map_path())
     parser.add_argument(
+        '--reference-policy',
+        choices=(REFERENCE_POLICY_DISABLED, REFERENCE_POLICY_EXPLICIT_SAME_FY, REFERENCE_POLICY_LEGACY_FY2027_MAP),
+        default=None,
+        help='Chính sách dùng file kết quả tham khảo; FY2028+ chỉ chấp nhận EXPLICIT_SAME_FY với file cùng năm.',
+    )
+    parser.add_argument(
         '--fixed-assets-reference-skeleton-export',
         action='store_true',
         help='Explicit opt-in: append fixed-assets secondary skeleton rows with not-source-derived provenance.',
@@ -1132,14 +1349,20 @@ def main(argv=None):
         help=argparse.SUPPRESS,
     )
     args = parser.parse_args(argv)
+    template_path = args.template or os.path.join(BASE_DIR, "docs", f"MP{args.fy}", "FORM.xlsx")
+    source_dir = args.source or _default_source_dir(args.fy)
 
     success, message = run_universal_pipeline(
         fiscal_year=args.fy,
-        template_path=args.template,
-        source_dir=args.source,
+        template_path=template_path,
+        source_dir=source_dir,
         exchange_rate=args.exchange_rate,
+        exchange_rate_source=args.exchange_rate_source,
         target_cc=args.target_cc,
         headcount_source_dir=args.headcount_source,
+        uniform_policy_path=args.uniform_policy,
+        run_history_root=args.run_history_root,
+        preserve_run_history=not args.no_run_history,
         facility_file_order_preview=args.facility_file_order_preview,
         facility_preview_output=args.facility_preview_output,
         facility_preview_start_row=args.facility_preview_start_row,
@@ -1155,6 +1378,7 @@ def main(argv=None):
         file_order_export_v2=args.file_order_export_v2,
         primary_reference_path=args.primary_reference_path,
         reference_map_path=args.reference_map_path,
+        reference_policy=args.reference_policy,
         fixed_assets_reference_skeleton_export=args.fixed_assets_reference_skeleton_export,
         fixed_assets_skeleton_csv=args.fixed_assets_skeleton_csv,
         fixed_assets_skeleton_start_row=args.fixed_assets_skeleton_start_row,

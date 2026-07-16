@@ -11,6 +11,13 @@ import sqlite3
 import unicodedata
 
 from src.engine.account_resolver import AccountResolutionError, resolve_account_code_for_source
+from src.engine.uniform_cup_rules import (
+    LONG_SLEEVE_KEYS,
+    SUMMER_SHIRT_KEYS,
+    UNIFORM_ITEM_SPECS,
+    UNIFORM_ITEM_SPEC_BY_KEY,
+    uniform_item_key_for_rule,
+)
 from src.services.headcount_source_policy import HeadcountSourceError, load_canonical_headcount
 from src.utils import excel_helpers as helpers
 
@@ -181,14 +188,10 @@ BUS_RULE_SPECS = {
 BUS_UNIT_PRICE_SPECS = {
     "bus_expat_count": {
         "tokens": ("出向者送迎費", "xe dua don nguoi nhat", "xe đưa đón người nhật"),
-        "source_workbook": "総務課 FY2027 MP 振替予定.xlsx",
-        "source_sheet": "FY2027予定",
         "source_cells": "B9:M9",
     },
     "bus_vietnamese_count": {
         "tokens": ("ローカル社員送迎費", "xe dua don nguoi viet", "xe đưa đón người việt"),
-        "source_workbook": "総務課 FY2027 MP 振替予定.xlsx",
-        "source_sheet": "FY2027予定",
         "source_cells": "B10:M10",
     },
 }
@@ -202,7 +205,9 @@ class AllocationEngine:
         self.cost_centers = self._load_cost_centers()
         if self.target_cc and not self.cost_centers:
             raise ValueError(f"Không tìm thấy mã bộ phận trong danh mục hiện hành: {self.target_cc}")
-        fy_str = self.sys_params.get("fiscal_year", "FY2027")
+        fy_str = self.sys_params.get("fiscal_year")
+        if not fy_str:
+            raise ValueError("Thiếu năm tài chính trong dữ liệu lần chạy; không được tự mặc định FY2027.")
         self.fiscal_year = int(fy_str.replace("FY", ""))
         self.fy_months = helpers.get_fy_months(self.fiscal_year)
         self.period_index = {p: i for i, p in enumerate(self.fy_months)}
@@ -211,6 +216,7 @@ class AllocationEngine:
         self.bus_unit_price_cache = self._load_bus_unit_price_cache()
         self._missing_input_keys: set[tuple[str, str, str, str]] = set()
         self._account_resolution_cache: dict[tuple[str, str, str, int | None], int | None] = {}
+        self._uniform_new_hire_cache: dict[tuple[str, str], tuple[float, float, float]] = {}
 
     def _normalize_text(self, value: str) -> str:
         text = unicodedata.normalize("NFKD", str(value or ""))
@@ -253,8 +259,8 @@ class AllocationEngine:
             """
             SELECT cc_code, bus_expat_count, bus_vietnamese_count
             FROM fact_bus_headcount_drivers
-            WHERE source = 'manual'
-            """
+            WHERE source = 'manual' AND fiscal_year IN (?, 0)
+            """, (self.fiscal_year,)
         ).fetchall()
         return {
             str(row["cc_code"]).strip(): {
@@ -584,6 +590,364 @@ class AllocationEngine:
             for period in target_periods:
                 self._record_manual_driver_missing(cc["code"], period, area, reason, rule)
 
+    def _record_uniform_missing(
+        self,
+        cc_code: object,
+        period: str,
+        area: str,
+        message: str,
+        action: str,
+        rule=None,
+    ) -> None:
+        cc_key = str(cc_code).strip()
+        rule_id = int(rule["id"]) if rule is not None and rule["id"] is not None else None
+        key = (cc_key, str(period), area, message)
+        if key in self._missing_input_keys:
+            return
+        self._missing_input_keys.add(key)
+        self.conn.execute(
+            """
+            INSERT INTO fact_missing_inputs
+            (severity, cc_code, period, area, message, action, source, rule_id)
+            VALUES ('action', ?, ?, ?, ?, ?, 'allocator', ?)
+            """,
+            (cc_key, str(period), area, message, action, rule_id),
+        )
+
+    def _uniform_rule_map(self, rules) -> tuple[dict[str, object], dict[str, int]]:
+        matches: dict[str, list[object]] = {spec.key: [] for spec in UNIFORM_ITEM_SPECS}
+        for rule in rules:
+            for spec in UNIFORM_ITEM_SPECS:
+                if spec.matches_rule(rule["item_name"]):
+                    matches[spec.key].append(rule)
+        resolved = {key: values[0] for key, values in matches.items() if len(values) == 1}
+        counts = {key: len(values) for key, values in matches.items()}
+        return resolved, counts
+
+    def _uniform_new_hires(self, cc_code: object, period: str, rule=None) -> tuple[float, float, float]:
+        cache_key = (str(cc_code).strip(), period)
+        cached = self._uniform_new_hire_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        try:
+            staff_new = self._get_event_delta(cc_code, period, "headcount_staff", rule=rule)
+            worker_new = self._get_event_delta(cc_code, period, "headcount_worker", rule=rule)
+        except HeadcountSourceError as exc:
+            self._record_uniform_missing(
+                cc_code,
+                period,
+                "uniform_headcount_delta",
+                f"Không đủ dữ liệu tách nhân viên/công nhân để tính người mới: {exc}",
+                "Bổ sung số nhân viên và công nhân cho tháng hiện tại và tháng trước.",
+                rule,
+            )
+            staff_new = worker_new = 0.0
+        result = (staff_new, worker_new, staff_new + worker_new)
+        self._uniform_new_hire_cache[cache_key] = result
+        return result
+
+    def _uniform_entitlements_for_cc(self, cc_code: object):
+        return self.conn.execute(
+            """
+            SELECT item_key, item_name, source_file, source_sheet, source_cell
+            FROM map_cost_center_uniform_items
+            WHERE cc_code = ? AND eligible = 1
+            ORDER BY item_key
+            """,
+            (str(cc_code).strip(),),
+        ).fetchall()
+
+    def _uniform_audit_insert(
+        self,
+        *,
+        cc_code: str,
+        period: str,
+        item_key: str,
+        item_name: str,
+        release_type: str,
+        source_periods: list[str],
+        staff_new: float,
+        worker_new: float,
+        total_new: float,
+        issue_quantity: float,
+        unit_price: float,
+        amount_vnd: float,
+        account_code: int | None,
+        rule,
+        entitlement,
+        formula_expr: str,
+        status: str = "OK",
+    ) -> None:
+        self.conn.execute(
+            """
+            INSERT INTO audit_uniform_cup_calculation
+            (fiscal_year, cc_code, period, item_key, item_name, release_type,
+             source_periods, new_staff, new_worker, total_new_hires, issue_quantity,
+             unit_price, amount_vnd, account_code, rule_id, entitlement_source_file,
+             entitlement_source_sheet, entitlement_source_cell, formula_expr, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                self.fiscal_year, cc_code, period, item_key, item_name, release_type,
+                ";".join(source_periods), staff_new, worker_new, total_new, issue_quantity,
+                unit_price, amount_vnd, account_code,
+                int(rule["id"]) if rule is not None else None,
+                entitlement["source_file"], entitlement["source_sheet"], entitlement["source_cell"],
+                formula_expr, status,
+            ),
+        )
+
+    def _insert_uniform_fact(
+        self,
+        *,
+        cc_code: str,
+        period: str,
+        rule,
+        amount_vnd: float,
+        account_code: int,
+        business_identity: str,
+        formula_expr: str,
+        marker: str = "",
+    ) -> None:
+        description = (
+            f"Alloc: {rule['item_name']}|business_identity={business_identity}"
+            f"|formula_expr={formula_expr}"
+        )
+        if marker:
+            description += f"|{marker}"
+        self.conn.execute(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
+            VALUES (?, ?, ?, ?, ?, NULL, 'base', ?)
+            """,
+            (f"alloc_uniform_{int(rule['id'])}", period, amount_vnd, cc_code, account_code, description),
+        )
+
+    @staticmethod
+    def _description_value(description: object, key: str) -> str:
+        prefix = f"{key}="
+        for part in str(description or "").split("|"):
+            if part.startswith(prefix):
+                return part[len(prefix):].strip()
+        return ""
+
+    def _shirt_driver_components(self, cc_code: str, period: str, timing: str, rule):
+        month = int(period[-2:])
+        components: list[tuple[str, float, float, float, str]] = []
+        staff, worker, total = self._uniform_new_hires(cc_code, period, rule)
+        if timing == "summer_shirt":
+            if month != 1:
+                components.append((period, staff, worker, total, "new_hire_month"))
+            if month == 2:
+                january = self._fiscal_period_for_month_number(1)
+                if january:
+                    js, jw, jt = self._uniform_new_hires(cc_code, january, rule)
+                    components.append((january, js, jw, jt, "february_catchup_for_january"))
+        elif timing == "long_sleeve":
+            if month == 1 or month in {2, 3, 4, 10, 11, 12}:
+                components.append((period, staff, worker, total, "new_hire_month"))
+            if month == 10:
+                for source_month in range(5, 10):
+                    source_period = self._fiscal_period_for_month_number(source_month)
+                    if source_period:
+                        ss, sw, st = self._uniform_new_hires(cc_code, source_period, rule)
+                        components.append((source_period, ss, sw, st, "october_catchup_may_to_september"))
+        return components
+
+    def _process_uniform_cup_rules(self, rules) -> None:
+        if self.target_cc:
+            self.conn.execute(
+                "DELETE FROM fact_input_data WHERE source LIKE 'alloc_uniform_%' AND CAST(cc_code AS TEXT) = ?",
+                (self.target_cc,),
+            )
+            self.conn.execute(
+                "DELETE FROM audit_uniform_cup_calculation WHERE fiscal_year = ? AND cc_code = ?",
+                (self.fiscal_year, self.target_cc),
+            )
+        else:
+            self.conn.execute("DELETE FROM fact_input_data WHERE source LIKE 'alloc_uniform_%'")
+            self.conn.execute(
+                "DELETE FROM audit_uniform_cup_calculation WHERE fiscal_year = ?",
+                (self.fiscal_year,),
+            )
+
+        rule_map, rule_counts = self._uniform_rule_map(rules)
+        manual_periodic = {
+            (str(row["cc_code"]).strip(), str(row["period"])): row
+            for row in self.conn.execute(
+                """
+                SELECT cc_code, period, amount_vnd, account_code, description
+                FROM fact_input_data
+                WHERE source = 'manual_event_driver'
+                  AND description LIKE '%business_identity=periodic_cup%'
+                """
+            ).fetchall()
+        }
+
+        for cc in self.cost_centers:
+            cc_code = str(cc["code"]).strip()
+            entitlements = self._uniform_entitlements_for_cc(cc_code)
+            entitlement_by_key = {row["item_key"]: row for row in entitlements}
+            summer_selected = sorted(set(entitlement_by_key) & set(SUMMER_SHIRT_KEYS))
+            if len(summer_selected) > 1:
+                cells = ", ".join(entitlement_by_key[key]["source_cell"] for key in summer_selected)
+                self._record_uniform_missing(
+                    cc_code,
+                    ",".join(self.fy_months),
+                    "uniform_ambiguous_shirt",
+                    f"Phòng được đánh dấu đồng thời nhiều loại áo ngắn tay: {cells}",
+                    "Sửa file yêu cầu để mỗi phòng chỉ chọn một loại áo ngắn tay/polo/an ninh.",
+                )
+            long_selected = sorted(set(entitlement_by_key) & set(LONG_SLEEVE_KEYS))
+            if len(long_selected) > 1:
+                cells = ", ".join(entitlement_by_key[key]["source_cell"] for key in long_selected)
+                self._record_uniform_missing(
+                    cc_code,
+                    ",".join(self.fy_months),
+                    "uniform_ambiguous_long_sleeve",
+                    f"Phòng được đánh dấu đồng thời nhiều loại áo dài tay: {cells}",
+                    "Sửa file yêu cầu để mỗi phòng chỉ chọn một loại áo dài tay.",
+                )
+
+            for entitlement in entitlements:
+                item_key = str(entitlement["item_key"])
+                if item_key in SUMMER_SHIRT_KEYS and len(summer_selected) > 1:
+                    continue
+                if item_key in LONG_SLEEVE_KEYS and len(long_selected) > 1:
+                    continue
+                rule = rule_map.get(item_key)
+                if rule is None:
+                    self._record_uniform_missing(
+                        cc_code,
+                        ",".join(self.fy_months),
+                        "uniform_rule_mapping",
+                        f"Không xác định duy nhất dòng đơn giá cho {item_key}; số dòng khớp={rule_counts.get(item_key, 0)}",
+                        "Kiểm tra tên hạng mục và dòng đơn giá trong file phân bổ năm tài chính.",
+                    )
+                    continue
+                unit_price = float(rule["unit_price"] or 0.0)
+                if unit_price <= 0:
+                    self._record_uniform_missing(
+                        cc_code,
+                        ",".join(self.fy_months),
+                        "uniform_unit_price",
+                        f"Đơn giá không hợp lệ cho {item_key}",
+                        "Bổ sung đơn giá dương trong file phân bổ năm tài chính.",
+                        rule,
+                    )
+                    continue
+                target_acc = self._get_account_for_cc(
+                    str(cc["cost_type"]), rule["mfg_account"], rule["ga_account"], rule["sales_account"]
+                )
+                if not target_acc:
+                    self._record_uniform_missing(
+                        cc_code,
+                        ",".join(self.fy_months),
+                        "uniform_account",
+                        f"Không tìm được tài khoản cho {item_key} và loại chi phí {cc['cost_type']}",
+                        "Kiểm tra cột tài khoản sản xuất/chung/bán hàng trong file phân bổ.",
+                        rule,
+                    )
+                    continue
+
+                spec = UNIFORM_ITEM_SPEC_BY_KEY[item_key]
+                if spec.timing == "cup":
+                    for period in self.fy_months:
+                        staff, worker, total = self._uniform_new_hires(cc_code, period, rule)
+                        if worker > 0:
+                            formula = f"{self._format_formula_number(worker)}*{self._format_formula_number(unit_price)}*1"
+                            amount = worker * unit_price
+                            self._insert_uniform_fact(
+                                cc_code=cc_code, period=period, rule=rule, amount_vnd=amount,
+                                account_code=int(target_acc), business_identity="new_worker_cup", formula_expr=formula,
+                            )
+                            self._uniform_audit_insert(
+                                cc_code=cc_code, period=period, item_key=item_key, item_name=str(rule["item_name"]),
+                                release_type="new_worker", source_periods=[period], staff_new=staff,
+                                worker_new=worker, total_new=total, issue_quantity=worker, unit_price=unit_price,
+                                amount_vnd=amount, account_code=int(target_acc), rule=rule,
+                                entitlement=entitlement, formula_expr=formula,
+                            )
+                    for periodic_month in (8, 2):
+                        period = self._fiscal_period_for_month_number(periodic_month)
+                        if not period:
+                            continue
+                        manual_row = manual_periodic.get((cc_code, period))
+                        if manual_row is not None:
+                            description = str(manual_row["description"] or "")
+                            driver_value = float(self._description_value(description, "driver_value") or 0.0)
+                            manual_price = float(self._description_value(description, "unit_price") or unit_price)
+                            formula = self._description_value(description, "formula_expr") or (
+                                f"{self._format_formula_number(driver_value)}*"
+                                f"{self._format_formula_number(manual_price)}*1"
+                            )
+                            self._uniform_audit_insert(
+                                cc_code=cc_code, period=period, item_key=item_key,
+                                item_name=str(rule["item_name"]), release_type="periodic_manual",
+                                source_periods=[period], staff_new=0, worker_new=0, total_new=0,
+                                issue_quantity=driver_value, unit_price=manual_price,
+                                amount_vnd=float(manual_row["amount_vnd"] or 0.0),
+                                account_code=int(manual_row["account_code"]), rule=rule,
+                                entitlement=entitlement, formula_expr=formula,
+                                status="EXPLICIT_ZERO" if driver_value == 0 else "OK",
+                            )
+                            continue
+                        formula = f"0*{self._format_formula_number(unit_price)}*1"
+                        self._insert_uniform_fact(
+                            cc_code=cc_code, period=period, rule=rule, amount_vnd=0.0,
+                            account_code=int(target_acc), business_identity="periodic_cup",
+                            formula_expr=formula, marker=SEPARATE_COUNT_PLACEHOLDER_MARKER,
+                        )
+                        self._uniform_audit_insert(
+                            cc_code=cc_code, period=period, item_key=item_key, item_name=str(rule["item_name"]),
+                            release_type="periodic_missing", source_periods=[period], staff_new=0,
+                            worker_new=0, total_new=0, issue_quantity=0, unit_price=unit_price,
+                            amount_vnd=0, account_code=int(target_acc), rule=rule, entitlement=entitlement,
+                            formula_expr=formula, status="MISSING_PERIODIC_CUP_COUNT",
+                        )
+                        self._record_uniform_missing(
+                            cc_code,
+                            period,
+                            "periodic_cup_count",
+                            f"Chưa nhập số lượng cốc xếp định kỳ cho phòng {cc_code}, tháng {period[-2:]}",
+                            "Nhập số lượng nguyên từ 0 trở lên trong mục Cốc xếp định kỳ; nhập 0 nếu xác nhận không phát.",
+                            rule,
+                        )
+                    continue
+
+                for period in self.fy_months:
+                    if spec.timing in {"summer_shirt", "long_sleeve"}:
+                        components = self._shirt_driver_components(cc_code, period, spec.timing, rule)
+                    else:
+                        staff, worker, total = self._uniform_new_hires(cc_code, period, rule)
+                        components = [(period, staff, worker, total, "new_hire_month")]
+                    active = [component for component in components if component[3] > 0]
+                    if not active:
+                        continue
+                    driver_total = sum(component[3] for component in active)
+                    staff_total = sum(component[1] for component in active)
+                    worker_total = sum(component[2] for component in active)
+                    issue_quantity = driver_total * spec.quantity_per_hire
+                    amount = issue_quantity * unit_price
+                    formula = (
+                        f"{self._format_formula_number(driver_total)}*"
+                        f"{self._format_formula_number(unit_price)}*{spec.quantity_per_hire}"
+                    )
+                    release_types = sorted({component[4] for component in active})
+                    release_type = "+".join(release_types)
+                    self._insert_uniform_fact(
+                        cc_code=cc_code, period=period, rule=rule, amount_vnd=amount,
+                        account_code=int(target_acc), business_identity=f"uniform_{item_key}", formula_expr=formula,
+                    )
+                    self._uniform_audit_insert(
+                        cc_code=cc_code, period=period, item_key=item_key, item_name=str(rule["item_name"]),
+                        release_type=release_type, source_periods=[component[0] for component in active],
+                        staff_new=staff_total, worker_new=worker_total, total_new=driver_total,
+                        issue_quantity=issue_quantity, unit_price=unit_price, amount_vnd=amount,
+                        account_code=int(target_acc), rule=rule, entitlement=entitlement, formula_expr=formula,
+                    )
+
     def _bus_unit_price_for_period(self, driver_key: str, period: str, rule) -> tuple[float, str]:
         monthly_price = float(self.bus_unit_price_cache.get(driver_key, {}).get(period, 0.0) or 0.0)
         if monthly_price > 0:
@@ -599,8 +963,8 @@ class AllocationEngine:
         if source_kind == "ga_unit_price":
             spec = BUS_UNIT_PRICE_SPECS.get(driver_key, {})
             return {
-                "workbook": spec.get("source_workbook", "総務課 FY2027 MP 振替予定.xlsx"),
-                "sheet": spec.get("source_sheet", "FY2027予定"),
+                "workbook": self.sys_params.get("source_path_ga", "ga_unit_price"),
+                "sheet": self.sys_params.get("source_sheet_ga", ""),
                 "cells": spec.get("source_cells", ""),
             }
         if source_kind == "allocation_rules_master":
@@ -881,9 +1245,12 @@ class AllocationEngine:
         self._clear_allocator_missing_inputs()
         rules = self.conn.execute("SELECT * FROM map_allocation_rules").fetchall()
         cursor = self.conn.cursor()
+        self._process_uniform_cup_rules(rules)
 
         for rule in rules:
             if self._bus_rule_kind(rule) is not None:
+                continue
+            if uniform_item_key_for_rule(rule["item_name"]) is not None:
                 continue
             if self._is_suppressed_uniform_rule(rule):
                 continue

@@ -5,7 +5,11 @@ a = Analysis(
     ['src\\universal_app.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets', 'assets'), ('docs\\MP2027', 'docs\\MP2027')],
+    datas=[
+        ('assets', 'assets'),
+        ('docs\\MP2027', 'docs\\MP2027'),
+        ('raw\\Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx', 'raw'),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

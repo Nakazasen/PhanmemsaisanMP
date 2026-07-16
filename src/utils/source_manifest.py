@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 from functools import lru_cache
 from pathlib import Path
+import re
 
 import openpyxl
 
@@ -64,7 +65,16 @@ def _normalize_row(row: dict[str, object], base_dir: Path) -> dict[str, str] | N
         return None
     normalized = {key: str(row.get(key, "")).strip() for key in MANIFEST_COLUMNS}
     normalized["enabled"] = "0" if enabled in {"0", "false", "no", "n"} else "1"
-    normalized["_path"] = str(base_dir / filename)
+    # A manifest is an annual source boundary, not a general file picker.  Do
+    # not allow `../FY2027/...` (or an absolute path) to silently escape it.
+    candidate = (base_dir / filename).resolve()
+    try:
+        candidate.relative_to(base_dir.resolve())
+    except ValueError:
+        normalized["_path"] = ""
+        normalized["_invalid_path"] = "1"
+        return normalized
+    normalized["_path"] = str(candidate)
     return normalized
 
 
@@ -120,7 +130,9 @@ def _existing_enabled_entries(entries: list[dict[str, str]]) -> list[dict[str, s
     return [
         entry
         for entry in entries
-        if str(entry.get("enabled", "1")).strip() != "0" and Path(str(entry.get("_path", ""))).is_file()
+        if str(entry.get("enabled", "1")).strip() != "0"
+        and not entry.get("_invalid_path")
+        and Path(str(entry.get("_path", ""))).is_file()
     ]
 
 
@@ -150,15 +162,15 @@ def _classify_source_file(path: Path) -> str | None:
     lower = name.lower()
     if "fixed_assets_information" in lower or "固定資産情報" in name:
         return "fixed_assets"
-    if "simulation" in lower and "fy2027" in lower:
+    if "simulation" in lower and re.search(r"fy\s*20\d{2}", lower):
         return "it_simulation"
-    if "mpfy2027" in lower and "施設" in name:
+    if re.search(r"mpfy\s*20\d{2}", lower) and "施設" in name:
         return "facility"
-    if "fy2027 mp" in lower and "振替" in name:
+    if re.search(r"fy\s*20\d{2}\s+mp", lower) and "振替" in name:
         return "ga"
-    if "sinh" in lower and "fy2027" in lower:
+    if "sinh" in lower and re.search(r"fy\s*20\d{2}", lower):
         return "birthday"
-    if "配賦額一覧" in name or ("fy2027" in lower and "2025.12.29" in lower):
+    if "配賦額一覧" in name or (re.search(r"fy\s*20\d{2}", lower) and "allocation" in lower):
         return "allocation_rules"
     if "nnn" in lower or "giấy tờ" in lower or "giay to" in lower:
         return "nnn_paperwork"
@@ -236,7 +248,13 @@ def merge_manifest_with_detected(
     for row in _sort_entries(saved):
         filename = str(row.get("filename", "")).strip()
         key = filename.lower()
-        if not filename or key in seen or key not in detected_by_name:
+        if not filename or key in seen:
+            continue
+        if row.get("_invalid_path"):
+            merged.append(dict(row))
+            seen.add(key)
+            continue
+        if key not in detected_by_name:
             continue
         merged_row = dict(detected_by_name[key])
         merged_row.update(
@@ -245,7 +263,7 @@ def merge_manifest_with_detected(
                 "category": row.get("category", merged_row["category"]),
                 "enabled": row.get("enabled", "1"),
                 "description": row.get("description", merged_row.get("description", "")),
-                "_path": str(base_dir / filename),
+                "_path": str((base_dir / filename).resolve()),
             }
         )
         merged.append(merged_row)

@@ -837,7 +837,7 @@ def test_complete_v1_writer_does_not_duplicate_source_order_marker_on_rerun(tmp_
 def test_run_e2e_complete_v1_final_source_order_writer_runs_after_reference_fill():
     text = Path("scripts/run_e2e.py").read_text(encoding="utf-8")
 
-    assert "_apply_complete_v1_source_order(out_path, log_callback, phase=\"pre-reference\")" in text
+    assert "source_file_order=_annual_complete_v1_source_order(run_context)" in text
     assert "phase=\"final\"" in text
     assert "dynamic_allocation_rows=complete_v1_dynamic_allocation_rows" in text
     assert "dynamic_allocation_rows=complete_v1_dynamic_rows" in text

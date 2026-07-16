@@ -24,15 +24,9 @@ def test_default_output_group_order_matches_requirement_image():
         "nnn_paperwork",
     ]
     assert [spec.order_index for spec in specs] == list(range(1, 8))
-    assert [spec.source_file_name for spec in specs] == [
-        "施設課　MPFY2027.xlsx",
-        "固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx",
-        "システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls",
-        "総務課 FY2027 MP 振替予定.xlsx",
-        "Sinh nhật MP FY2027.xlsx",
-        "FY2027配賦額一覧 (2025.12.29).xlsx",
-        "Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx",
-    ]
+    # Production source names are resolved from the selected FY manifest.  A
+    # FY2027 filename list is kept only in the explicit compatibility module.
+    assert [spec.source_file_name for spec in specs] == ["", "", "", "", "", "", ""]
 
 
 def test_facility_is_file_order_group_with_six_costs():

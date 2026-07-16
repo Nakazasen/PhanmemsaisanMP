@@ -2,6 +2,7 @@
 MP2027 Manager - Master Data Loader
 Loads Cost Centers, Accounts, and Allocation Rules from source Excel files.
 """
+import csv
 import sqlite3
 import os
 import re
@@ -11,8 +12,11 @@ import openpyxl
 from src.db.schema import get_connection, create_schema, init_sys_params
 from src.utils.excel_helpers import normalize_cc_code, read_exchange_rate_from_form, validate_exchange_rate
 from src.utils.source_manifest import resolve_manifest_file
+from src.services.fiscal_run import resolve_uniform_policy_path
 
 import sys
+
+from src.engine.uniform_cup_rules import UNIFORM_ITEM_SPECS, normalize_uniform_text
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = os.path.dirname(sys.executable)
@@ -39,10 +43,127 @@ def _resolve_mp2027_docs_dir() -> str:
     )
 
 
-# Source file paths
-MP2027_DOCS_DIR = _resolve_mp2027_docs_dir()
+# Legacy defaults are resolved lazily.  Importing a shared loader must not
+# require FY2027 to exist when a future FY is supplied explicitly.
+MP2027_DOCS_DIR = os.path.join(BASE_DIR, "docs", "MP2027")
 FORM_PATH = os.path.join(MP2027_DOCS_DIR, 'FORM.xlsx')
 ALLOC_PATH = os.path.join(MP2027_DOCS_DIR, 'FY2027配賦額一覧 (2025.12.29).xlsx')
+UNIFORM_REQUIREMENTS_FILENAME = 'Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx'
+UNIFORM_REQUIREMENTS_SHEET = '原価センタ'
+
+
+def resolve_uniform_requirements_path(
+    explicit_path: str | None = None,
+    fiscal_year: int = 2027,
+) -> str:
+    if explicit_path:
+        path = os.path.abspath(explicit_path)
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"Không tìm thấy file yêu cầu đồng phục/cốc xếp: {path}")
+        return path
+
+    annual = resolve_uniform_policy_path(fiscal_year, base_dir=BASE_DIR)
+    if annual and os.path.isfile(annual):
+        return annual
+
+    # Only FY2027 can use the packaged legacy policy workbook.  Future fiscal
+    # years must provide a policy inside raw/FY<year>.
+    candidates = ()
+    if int(fiscal_year) == 2027:
+        candidates = (os.path.join(_packaged_base_dir(), "raw", UNIFORM_REQUIREMENTS_FILENAME),)
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    raise FileNotFoundError(
+        "Không tìm thấy nguồn đối tượng đồng phục/cốc xếp chính thức: "
+        + "; ".join(candidates)
+    )
+
+
+def load_uniform_entitlements(
+    conn: sqlite3.Connection,
+    requirements_path: str | None = None,
+    fiscal_year: int = 2027,
+) -> int:
+    """Load all F:U entitlement decisions with cell-level provenance."""
+    path = resolve_uniform_requirements_path(requirements_path, fiscal_year=fiscal_year)
+    workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    try:
+        if UNIFORM_REQUIREMENTS_SHEET not in workbook.sheetnames:
+            raise ValueError(f"Thiếu sheet {UNIFORM_REQUIREMENTS_SHEET} trong {path}")
+        worksheet = workbook[UNIFORM_REQUIREMENTS_SHEET]
+        headers: dict[str, int] = {}
+        duplicates: set[str] = set()
+        for column in range(1, worksheet.max_column + 1):
+            normalized = normalize_uniform_text(worksheet.cell(1, column).value)
+            if not normalized:
+                continue
+            if normalized in headers:
+                duplicates.add(normalized)
+            headers[normalized] = column
+        if duplicates:
+            raise ValueError(f"Cột bị trùng trong sheet {UNIFORM_REQUIREMENTS_SHEET}: {sorted(duplicates)}")
+
+        cc_header = normalize_uniform_text("原価センタ")
+        if cc_header not in headers:
+            raise ValueError(f"Thiếu cột mã phòng trong sheet {UNIFORM_REQUIREMENTS_SHEET}")
+        missing = [spec.header for spec in UNIFORM_ITEM_SPECS if normalize_uniform_text(spec.header) not in headers]
+        if missing:
+            raise ValueError("Thiếu cột đối tượng đồng phục/cốc xếp: " + ", ".join(missing))
+
+        rows: list[tuple[str, str, str, int, str, str, str]] = []
+        seen_cc: set[str] = set()
+        for row_number in range(2, worksheet.max_row + 1):
+            cc_code = normalize_cc_code(worksheet.cell(row_number, headers[cc_header]).value)
+            if not cc_code:
+                continue
+            if cc_code in seen_cc:
+                raise ValueError(f"Mã phòng bị trùng trong sheet {UNIFORM_REQUIREMENTS_SHEET}: {cc_code}")
+            seen_cc.add(cc_code)
+            for spec in UNIFORM_ITEM_SPECS:
+                column = headers[normalize_uniform_text(spec.header)]
+                raw_mark = str(worksheet.cell(row_number, column).value or "").strip()
+                if raw_mark not in ("", "〇"):
+                    raise ValueError(
+                        f"Dấu chọn không hợp lệ tại {UNIFORM_REQUIREMENTS_SHEET}!"
+                        f"{worksheet.cell(row_number, column).coordinate}: {raw_mark!r}"
+                    )
+                rows.append(
+                    (
+                        cc_code,
+                        spec.key,
+                        spec.header,
+                        1 if raw_mark == "〇" else 0,
+                        os.path.abspath(path),
+                        UNIFORM_REQUIREMENTS_SHEET,
+                        worksheet.cell(row_number, column).coordinate,
+                    )
+                )
+
+        known_cc = {str(row[0]).strip() for row in conn.execute("SELECT code FROM dim_cost_centers")}
+        source_cc = {row[0] for row in rows}
+        missing_cc = sorted(known_cc - source_cc)
+        unknown_cc = sorted(source_cc - known_cc)
+        if missing_cc or unknown_cc:
+            raise ValueError(
+                "Danh sách mã phòng của nguồn đồng phục không khớp danh mục hiện hành. "
+                f"Thiếu={missing_cc}; không nhận diện={unknown_cc}"
+            )
+
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM map_cost_center_uniform_items")
+        cursor.executemany(
+            """
+            INSERT INTO map_cost_center_uniform_items
+            (cc_code, item_key, item_name, eligible, source_file, source_sheet, source_cell)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+        conn.commit()
+        return len(rows)
+    finally:
+        workbook.close()
 
 
 def _normalize_text(value) -> str:
@@ -158,20 +279,30 @@ def _is_footnote_unit_price(value) -> bool:
     return re.fullmatch(r"[※*＊]\s*\d+", str(value).strip()) is not None
 
 
-MP2026_REFERENCE_UNIT_PRICES = (
-    (("月餅", "bánh trung thu", "banh trung thu", "luna cake"), 56000.0),
-    (("運動会", "đại hội thể thao", "dai hoi the thao", "sports day"), 107000.0),
-)
+def _apply_approved_unit_price_override(item_name: str, unit_price: float, fiscal_year: int) -> float:
+    """Apply an explicitly approved, year-scoped override only.
 
-
-def _apply_mp2026_reference_unit_price(item_name: str, unit_price: float) -> float:
-    """Use audited FY2026 FORM notes only when FY2027 rule price is blank/zero."""
+    A blank price in an annual allocation workbook must never inherit a price
+    from another fiscal year.  FY2027 compatibility values are data in the
+    approved override CSV, not a fallback rule for future years.
+    """
     if float(unit_price or 0.0) > 0:
         return float(unit_price)
+    path = os.path.join(BASE_DIR, "docs", "config", "approved_unit_price_overrides.csv")
+    if not os.path.isfile(path):
+        return float(unit_price or 0.0)
     normalized_item = _normalize_text(item_name)
-    for tokens, reference_price in MP2026_REFERENCE_UNIT_PRICES:
-        if any(_normalize_text(token) in normalized_item for token in tokens):
-            return reference_price
+    with open(path, "r", encoding="utf-8-sig", newline="") as handle:
+        for row in csv.DictReader(handle):
+            if str(row.get("fiscal_year", "")).strip() != str(int(fiscal_year)):
+                continue
+            token = _normalize_text(row.get("item_token", ""))
+            if not token or token not in normalized_item:
+                continue
+            try:
+                return float(str(row.get("approved_unit_price", "")).replace(",", ""))
+            except (TypeError, ValueError):
+                continue
     return float(unit_price or 0.0)
 
 
@@ -335,6 +466,8 @@ def load_allocation_rules(
 ) -> int:
     """Load allocation rules from FY2027配賦額一覧."""
     path = alloc_path or ALLOC_PATH
+    if fiscal_year != 2027 and not alloc_path:
+        path = os.path.join(search_dir or BASE_DIR, f"FY{fiscal_year}配賦額一覧.xlsx")
     if not path or not os.path.exists(path):
         discovered = find_allocation_rules_file(search_dir=search_dir, fiscal_year=fiscal_year)
         if discovered:
@@ -346,6 +479,10 @@ def load_allocation_rules(
     print(f"Đang đọc quy tắc phân bổ từ: {os.path.basename(path)}")
     xl = pd.ExcelFile(path, engine='openpyxl')
     target_sheet = _select_allocation_rules_sheet(xl.sheet_names, fiscal_year)
+    if f"FY{fiscal_year}" not in target_sheet.upper():
+        raise ValueError(
+            f"File quy tắc {path} không có sheet FY{fiscal_year}; không được dùng sheet của năm khác."
+        )
     print(f"Đang đọc quy tắc phân bổ từ trang tính: {target_sheet}")
     df = pd.read_excel(path, sheet_name=target_sheet, engine='openpyxl')
 
@@ -402,7 +539,7 @@ def load_allocation_rules(
                 unit_price = 0.0
             else:
                 continue
-        unit_price = _apply_mp2026_reference_unit_price(item_str, unit_price)
+        unit_price = _apply_approved_unit_price_override(item_str, unit_price, fiscal_year)
 
         def _safe_int(val):
             """Convert value to int, handling '-', empty strings, etc."""
@@ -464,12 +601,22 @@ def load_allocation_rules(
 def load_all(db_path: str = None, template_path: str = None,
              rules_path: str = None, fiscal_year: int = 2027,
              exchange_rate: float | None = None, search_dir: str | None = None,
-             exchange_rate_source: str = "explicit pipeline input") -> dict:
+             exchange_rate_source: str = "explicit pipeline input",
+             uniform_eligibility_path: str | None = None) -> dict:
     """Load all master data into the database with dynamic configuration."""
-    # Determine actual paths
-    t_path = template_path or FORM_PATH
+    # Future FY must name its own FORM; no implicit FY2027 fallback is allowed.
+    if template_path:
+        t_path = template_path
+    elif int(fiscal_year) == 2027:
+        t_path = FORM_PATH
+    else:
+        t_path = os.path.join(BASE_DIR, "docs", f"MP{int(fiscal_year)}", "FORM.xlsx")
+    if not os.path.isfile(t_path):
+        raise FileNotFoundError(f"Thiếu FORM đúng FY{fiscal_year}: {t_path}")
     discovery_dir = search_dir or (os.path.dirname(os.path.abspath(t_path)) if t_path else BASE_DIR)
-    r_path = rules_path or ALLOC_PATH
+    r_path = rules_path or (
+        ALLOC_PATH if int(fiscal_year) == 2027 else os.path.join(discovery_dir, f"FY{fiscal_year}配賦額一覧.xlsx")
+    )
 
     if exchange_rate is None:
         exchange_rate = read_exchange_rate_from_form(t_path)
@@ -491,22 +638,11 @@ def load_all(db_path: str = None, template_path: str = None,
         exchange_rate_source=exchange_rate_source,
     )
     
-    # Determine actual paths
-    t_path = template_path or FORM_PATH
-    discovery_dir = search_dir or (os.path.dirname(os.path.abspath(t_path)) if t_path else BASE_DIR)
-    r_path = rules_path or ALLOC_PATH
-    
-    # If the rules file contains the fiscal year in its name, 
-    # and we didn't get an explicit path, let's try to be smart
+    # Do not search a prior year for the allocation rule workbook.
     if not rules_path and not os.path.exists(r_path):
-        # Try finding a file like "FY2028配賦額一覧..." if current is 2027
-        potential_name = ALLOC_PATH.replace('2027', str(fiscal_year))
-        if os.path.exists(potential_name):
-            r_path = potential_name
-        else:
-            discovered = find_allocation_rules_file(search_dir=discovery_dir, fiscal_year=fiscal_year)
-            if discovered:
-                r_path = discovered
+        discovered = find_allocation_rules_file(search_dir=discovery_dir, fiscal_year=fiscal_year)
+        if discovered:
+            r_path = discovered
 
     results = {
         'cost_centers': load_cost_centers(conn, t_path),
@@ -518,6 +654,11 @@ def load_all(db_path: str = None, template_path: str = None,
             fiscal_year=fiscal_year,
         ),
     }
+    results['uniform_entitlements'] = load_uniform_entitlements(
+        conn,
+        uniform_eligibility_path,
+        fiscal_year=fiscal_year,
+    )
 
     conn.close()
     return results

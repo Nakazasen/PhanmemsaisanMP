@@ -20,7 +20,6 @@ from openpyxl.utils import get_column_letter
 
 from src.engine.column_s_normalizer import normalize_output_description_column_s
 from src.engine.output_mode import OutputGroupSpec, get_default_output_group_specs
-from src.engine.source_order_output import CANONICAL_SOURCE_FILE_ORDER
 from src.parsers.fixed_assets import CATEGORY_SPECS, INTEREST_ACCOUNT
 from src.services.headcount_source_policy import HeadcountSourceError, load_canonical_headcount
 from src.utils import excel_helpers as helpers
@@ -125,9 +124,10 @@ class ExportIntegrityError(RuntimeError):
 
 
 class HubBuilder:
-    def __init__(self, conn: sqlite3.Connection, fiscal_year: int = 2027):
+    def __init__(self, conn: sqlite3.Connection, fiscal_year: int = 2027, source_file_by_category: dict[str, str] | None = None):
         self.conn = conn
         self.fiscal_year = fiscal_year
+        self.source_file_by_category = dict(source_file_by_category or {})
         self.fy_months = helpers.get_fy_months(fiscal_year)
         self.rule_unit_price_by_source = self._load_rule_unit_price_by_source()
         self.rule_identity_by_source = self._load_rule_identity_by_source()
@@ -1502,7 +1502,7 @@ class HubBuilder:
                     period for period in explicit_zeroes[(kind, category_key)] if months.get(period, 0) == 0
                 }
                 payload.append({
-                    "source_file": CANONICAL_SOURCE_FILE_ORDER[1],
+                    "source_file": self.source_file_by_category.get("fixed_assets", "fixed_assets"),
                     "account_code": account_code,
                     "description": description,
                     "months": {},

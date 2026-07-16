@@ -11,9 +11,9 @@ from openpyxl import load_workbook
 from src.engine.cost_center_context import require_cost_center
 
 ADMIN_CONSUMABLE_ITEMS = (
-    ("toilet_paper", "トイレットペーパー", "FY2027予定", "トイレットペーパー"),
-    ("hand_soap", "手洗い洗剤", "FY2027予定", "手洗い洗剤"),
-    ("alcohol_disinfectant", "アルコール消毒", "Cách tính phân bổ 振替計算", "アルコール消毒"),
+    ("toilet_paper", "トイレットペーパー", "annual_plan", "トイレットペーパー"),
+    ("hand_soap", "手洗い洗剤", "annual_plan", "手洗い洗剤"),
+    ("alcohol_disinfectant", "アルコール消毒", "allocation", "アルコール消毒"),
 )
 
 
@@ -57,11 +57,11 @@ def _find_row_containing(worksheet, token: str) -> tuple[int | None, list[Any]]:
     return None, []
 
 
-def _month_sample(sheet_name: str, values: list[Any]) -> tuple[Any, Any]:
+def _month_sample(sheet_name: str, values: list[Any], fiscal_year: int) -> tuple[Any, Any]:
     if not values:
         return None, None
-    # FY2027予定 uses B:M as Apr-Mar monthly values.
-    if sheet_name == "FY2027予定" and len(values) >= 13:
+    # The annual plan always uses B:M as Apr-Mar monthly values.
+    if sheet_name == f"FY{int(fiscal_year)}予定" and len(values) >= 13:
         return values[1], values[12]
     # Calculation sheet rows use C:N as Apr-Mar totals/unit prices when present.
     if len(values) >= 14:
@@ -74,6 +74,7 @@ def preview_admin_consumables_file_order(
     allocation_source_path: str | Path | None = None,
     cost_center: str | int | None = None,
     start_row: int = 207,
+    fiscal_year: int = 2027,
 ) -> AdminConsumablesFileOrderPreview:
     """Build a read-only preview for the Admin consumables mini-batch."""
     admin_source = Path(admin_source_path)
@@ -82,11 +83,14 @@ def preview_admin_consumables_file_order(
     value_wb = load_workbook(admin_source, read_only=True, data_only=True)
     try:
         items: list[AdminConsumablePreviewItem] = []
-        for offset, (item_id, display_name, sheet_name, token) in enumerate(ADMIN_CONSUMABLE_ITEMS):
+        for offset, (item_id, display_name, sheet_kind, token) in enumerate(ADMIN_CONSUMABLE_ITEMS):
+            sheet_name = f"FY{int(fiscal_year)}予定" if sheet_kind == "annual_plan" else "Cách tính phân bổ 振替計算"
+            if sheet_name not in value_wb.sheetnames:
+                raise ValueError(f"Nguồn Tổng vụ không có sheet bắt buộc {sheet_name}.")
             worksheet = value_wb[sheet_name]
             source_row, row_values = _find_row_containing(worksheet, token)
             description = _normalize(row_values[0]) if row_values else None
-            apr, mar = _month_sample(sheet_name, row_values)
+            apr, mar = _month_sample(sheet_name, row_values, fiscal_year)
             confidence = "HIGH" if source_row is not None else "UNKNOWN"
             formula_policy = "COPY_SOURCE_MONTH_SAMPLE" if apr not in (None, "") or mar not in (None, "") else "UNKNOWN"
             note = "incremental Admin consumables placement after Facility block; not final global file-order"

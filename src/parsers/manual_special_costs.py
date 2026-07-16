@@ -51,7 +51,9 @@ def ensure_manual_special_costs_template(source_dir: str, fiscal_year: int) -> s
 
 def parse_manual_special_costs(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[str, int | str]:
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
-    fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip()) if fy_row else 2027
+    if not fy_row:
+        raise ValueError("Thiếu năm tài chính trong dữ liệu lần chạy; không được tự mặc định FY2027.")
+    fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip())
     valid_periods = set(get_fy_months(fiscal_year))
 
     search_dir = source_dir or os.getcwd()

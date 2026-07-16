@@ -598,7 +598,9 @@ def parse_manual_headcount(
 ) -> dict[str, int | str]:
     """Load manual headcount from CSV and write to fact_monthly_headcount source='manual'."""
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
-    fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip()) if fy_row else 2027
+    if not fy_row:
+        raise ValueError("Thiếu năm tài chính trong dữ liệu lần chạy; không được tự mặc định FY2027.")
+    fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip())
 
     search_dir = resolve_manual_headcount_source_dir(source_dir, base_dir=base_dir)
     os.makedirs(search_dir, exist_ok=True)

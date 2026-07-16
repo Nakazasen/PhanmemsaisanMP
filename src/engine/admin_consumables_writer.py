@@ -41,12 +41,14 @@ def apply_admin_consumables_to_open_workbook(
     allocation_source_path: str | Path | None = None,
     cost_center: str | int | None = None,
     start_row: int = 207,
+    fiscal_year: int = 2027,
 ) -> None:
     preview = preview_admin_consumables_file_order(
         admin_source_path=admin_source_path,
         allocation_source_path=allocation_source_path,
         cost_center=cost_center,
         start_row=start_row,
+        fiscal_year=fiscal_year,
     )
     worksheet = workbook[helpers.find_hub_sheet_name(workbook)]
     for item in preview.items:
@@ -66,6 +68,7 @@ def apply_admin_consumables_to_workbook(
     allocation_source_path: str | Path | None = None,
     cost_center: str | int | None = None,
     start_row: int = 207,
+    fiscal_year: int = 2027,
 ) -> Path:
     """Apply Admin consumables rows to an explicit existing workbook path."""
     workbook_file = Path(workbook_path)
@@ -83,6 +86,7 @@ def apply_admin_consumables_to_workbook(
             allocation_source_path=allocation_source_path,
             cost_center=cost_center,
             start_row=start_row,
+            fiscal_year=fiscal_year,
         )
         workbook.save(workbook_file)
     finally:

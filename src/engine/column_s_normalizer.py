@@ -11,7 +11,7 @@ from openpyxl import load_workbook
 
 from src.utils import excel_helpers as helpers
 
-DEFAULT_START_ROW = 30
+DEFAULT_START_ROW = 30  # Start row for data output
 DEFAULT_MONTH_COLUMNS = tuple(range(6, 18))  # F:Q
 DEFAULT_DESCRIPTION_COLUMN = 19  # S
 DEFAULT_LABEL_COLUMNS = (2, 3, 4, 5)  # B:E

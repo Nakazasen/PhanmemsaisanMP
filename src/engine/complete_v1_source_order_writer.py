@@ -314,10 +314,10 @@ def _source_rows_to_clear(ws) -> set[int]:
     return rows_to_clear
 
 
-def _collect_staged_rows(ws) -> list[StagedWorkbookRow]:
+def _collect_staged_rows(ws, source_file_order: tuple[str, ...]) -> list[StagedWorkbookRow]:
     staged: list[StagedWorkbookRow] = []
     for source_index, rows in SOURCE_ROW_GROUPS:
-        source_file = CANONICAL_SOURCE_FILE_ORDER[source_index]
+        source_file = source_file_order[source_index]
         for row in rows:
             if _has_generated_file_order_policy(ws.cell(row, NOTE_COL)):
                 continue
@@ -416,11 +416,12 @@ def _collect_preserved_unmanaged_rows(
 def _collect_dynamic_allocation_rows(
     dynamic_allocation_rows: Iterable[dict[str, object]] | None,
     fiscal_periods: Iterable[str] | None,
+    source_file_order: tuple[str, ...],
 ) -> list[StagedWorkbookRow]:
     if not dynamic_allocation_rows or not fiscal_periods:
         return []
     period_to_col = {str(period): MONTH_START_COL + index for index, period in enumerate(fiscal_periods)}
-    default_source_file = CANONICAL_SOURCE_FILE_ORDER[5]
+    default_source_file = source_file_order[5]
     staged: list[StagedWorkbookRow] = []
     for index, row in enumerate(dynamic_allocation_rows, start=1):
         source_file = str(row.get("source_file") or default_source_file)
@@ -521,11 +522,18 @@ def apply_complete_v1_source_order_to_workbook(
     clear_until_row: int = 212,
     dynamic_allocation_rows: Iterable[dict[str, object]] | None = None,
     fiscal_periods: Iterable[str] | None = None,
+    source_file_order: Iterable[str] | None = None,
+    fiscal_year: int | None = None,
 ) -> dict[str, int]:
     """Rewrite complete-v1 business rows into canonical source-file blocks."""
     workbook_file = Path(workbook_path)
     wb = load_workbook(workbook_file)
     try:
+        if source_file_order is None and fiscal_year not in (None, 2027):
+            raise ValueError("FY2028 trở đi phải truyền thứ tự nguồn đã phân giải từ manifest; không dùng danh sách FY2027.")
+        resolved_source_order = tuple(source_file_order or CANONICAL_SOURCE_FILE_ORDER)
+        if len(resolved_source_order) < len(SOURCE_ROW_GROUPS):
+            raise ValueError("Danh sách thứ tự nguồn không đủ nhóm nghiệp vụ.")
         try:
             ws = wb[helpers.find_hub_sheet_name(wb)]
         except ValueError:
@@ -533,17 +541,17 @@ def apply_complete_v1_source_order_to_workbook(
         source_rows_to_clear = _source_rows_to_clear(ws)
         staged = _collect_existing_source_order_rows(ws, start_row, clear_until_row)
         if not staged:
-            staged = _collect_staged_rows(ws)
-        dynamic_staged = _collect_dynamic_allocation_rows(dynamic_allocation_rows, fiscal_periods)
+            staged = _collect_staged_rows(ws, resolved_source_order)
+        dynamic_staged = _collect_dynamic_allocation_rows(dynamic_allocation_rows, fiscal_periods, resolved_source_order)
         has_dynamic_fixed_assets = any(
-            row.source_file == CANONICAL_SOURCE_FILE_ORDER[1] for row in dynamic_staged
+            row.source_file == resolved_source_order[1] for row in dynamic_staged
         )
         if has_dynamic_fixed_assets:
             staged = [
                 row
                 for row in staged
                 if not (
-                    row.source_file == CANONICAL_SOURCE_FILE_ORDER[1]
+                    row.source_file == resolved_source_order[1]
                     and row.original_row in (38, 42)
                 )
             ]
@@ -564,7 +572,7 @@ def apply_complete_v1_source_order_to_workbook(
         rows_written = 0
         blank_rows_written = 0
 
-        for source_file in CANONICAL_SOURCE_FILE_ORDER:
+        for source_file in resolved_source_order:
             group = [row for row in staged if row.source_file == source_file]
             if not group:
                 continue

@@ -86,6 +86,8 @@ from src.services.manual_staffing_overrides import (
     save_manual_baseline_override,
     save_manual_time_overrides,
 )
+from src.services.fiscal_run import annual_default_paths, create_fiscal_run_context, preflight_fiscal_run
+from src.services.run_history import list_runs
 from src.parsers.manual_event_drivers import TEMPLATE_COLUMNS, ensure_manual_event_drivers_template
 from src.parsers.manual_headcount import (
     BUS_DRIVER_COLUMNS,
@@ -284,30 +286,53 @@ def validate_bus_headcount_save_rows(rows, valid_cc_codes) -> list[dict]:
     return errors
 
 
-def _default_template_path() -> str:
-    external_mp2027 = os.path.join(BASE_DIR, "docs", "MP2027", "FORM.xlsx")
-    if os.path.exists(external_mp2027):
-        return external_mp2027
+def _annual_template_path(fiscal_year: int) -> str:
+    return os.path.join(BASE_DIR, "docs", f"MP{int(fiscal_year)}", "FORM.xlsx")
 
-    packaged_mp2027 = resource_path(os.path.join("docs", "MP2027", "FORM.xlsx"))
-    if os.path.exists(packaged_mp2027):
-        return packaged_mp2027
 
-    raise FileNotFoundError(
-        f"Không tìm thấy tệp mẫu bắt buộc: {external_mp2027}. "
-        "Không dùng FORM.xlsx cũ ở thư mục gốc vì tệp đó còn công thức mẫu cũ."
-    )
+def _annual_source_dir(fiscal_year: int) -> str:
+    return os.path.join(BASE_DIR, "docs", f"MP{int(fiscal_year)}")
+
+
+def _annual_headcount_source_dir(fiscal_year: int) -> str:
+    annual_dir = os.path.join(BASE_DIR, "raw", f"FY{int(fiscal_year)}")
+    if int(fiscal_year) == 2027:
+        has_workbook = os.path.isdir(annual_dir) and any(
+            name.lower().endswith((".xls", ".xlsx", ".xlsm"))
+            for name in os.listdir(annual_dir)
+        )
+        if not has_workbook:
+            return os.path.join(BASE_DIR, "raw")
+    return annual_dir
+
+
+def _annual_manual_input_store(fiscal_year: int) -> str:
+    """Editable staffing overrides are isolated by FY, never shared mp2027.db."""
+    path = annual_default_paths(int(fiscal_year), BASE_DIR)["manual_input_store"]
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    return path
+
+
+def _default_template_path(fiscal_year: int = 2027) -> str:
+    external_template = _annual_template_path(fiscal_year)
+    if os.path.exists(external_template):
+        return external_template
+    if int(fiscal_year) == 2027:
+        packaged_template = resource_path(os.path.join("docs", "MP2027", "FORM.xlsx"))
+        if os.path.exists(packaged_template):
+            return packaged_template
+    return external_template
 
 
 FORM_SYSTEM_ACCOUNT_CODES = {5005246282, 6005146628, 6005146542}
 
 
-def _external_template_path() -> str:
-    return os.path.join(BASE_DIR, "docs", "MP2027", "FORM.xlsx")
+def _external_template_path(fiscal_year: int = 2027) -> str:
+    return _annual_template_path(fiscal_year)
 
 
-def _external_source_dir() -> str:
-    return os.path.join(BASE_DIR, "docs", "MP2027")
+def _external_source_dir(fiscal_year: int = 2027) -> str:
+    return _annual_source_dir(fiscal_year)
 
 
 def _is_under_internal(path: str) -> bool:
@@ -321,8 +346,8 @@ def _is_under_internal(path: str) -> bool:
         return False
 
 
-def _validate_selected_template(path: str) -> str | None:
-    external_template = _external_template_path()
+def _validate_selected_template(path: str, fiscal_year: int = 2027) -> str | None:
+    external_template = _external_template_path(fiscal_year)
     if not os.path.isfile(path):
         return "Không tìm thấy tệp mẫu FORM.\n\n" + f"Hãy chọn tệp: {external_template}"
     if _is_legacy_root_template(path):
@@ -343,8 +368,8 @@ def _validate_selected_template(path: str) -> str | None:
         workbook.close()
     return None
 
-def _validate_selected_source_dir(path: str) -> str | None:
-    external_source = _external_source_dir()
+def _validate_selected_source_dir(path: str, fiscal_year: int = 2027) -> str | None:
+    external_source = _external_source_dir(fiscal_year)
     if not os.path.isdir(path):
         return (
             "Không tìm thấy thư mục nguồn.\n\n"
@@ -496,16 +521,12 @@ def _is_legacy_root_template(path: str) -> bool:
     return _sha256(root_form) != _sha256(canonical_form)
 
 
-def _default_source_dir() -> str:
-    external_mp2027 = os.path.join(BASE_DIR, "docs", "MP2027")
-    if os.path.isdir(external_mp2027):
-        return external_mp2027
-
-    packaged_mp2027 = resource_path(os.path.join("docs", "MP2027"))
-    if os.path.isdir(packaged_mp2027):
-        return packaged_mp2027
-
-    return BASE_DIR
+def _default_source_dir(fiscal_year: int = 2027) -> str:
+    external_source = _annual_source_dir(fiscal_year)
+    if os.path.isdir(external_source) or int(fiscal_year) != 2027:
+        return external_source
+    packaged_source = resource_path(os.path.join("docs", "MP2027"))
+    return packaged_source if os.path.isdir(packaged_source) else external_source
 
 USER_GUIDE_TEXT = """
 HƯỚNG DẪN SỬ DỤNG CHI TIẾT - MP2027 MANAGER
@@ -521,14 +542,15 @@ HƯỚNG DẪN SỬ DỤNG CHI TIẾT - MP2027 MANAGER
   Để trống nếu muốn xuất toàn bộ.
   Chọn 1 dòng trong danh sách nếu chỉ muốn chạy cho một CC.
 - Tệp mẫu:
-  Đường dẫn đến FORM MP2027. Bản đúng hiện tại là docs/MP2027/FORM.xlsx.
+  Đường dẫn đến FORM của năm đang chọn: docs/MP<YYYY>/FORM.xlsx.
 - Thư mục nguồn:
   Thư mục chứa các tệp Excel nguồn và các tệp nhập tay.
 
 3. QUY TRÌNH CHẠY ĐỀ XUẤT
-Bước 1: Kiểm tra tệp mẫu là docs/MP2027/FORM.xlsx, không dùng FORM_old.xlsx.
-Bước 2: Chọn đúng Thư mục nguồn chứa các tệp nghiệp vụ.
-Bước 3: Nhập Năm tài chính.
+Bước 1: Chọn năm tài chính cần lập.
+Bước 2: Kiểm tra tệp mẫu là docs/MP<YYYY>/FORM.xlsx, không dùng FORM_old.xlsx.
+Bước 3: Chọn đúng thư mục nguồn docs/MP<YYYY> và raw/FY<YYYY>.
+Bước 4: Chờ trạng thái “Đúng năm và đủ nguồn”; chỉ khi đó nút chạy mới được bật.
 Bước 4: Nếu cần, nhập bổ sung nhân sự bằng nút "Nhập nhân sự thủ công".
 Bước 5: Nếu có khoản chương trình không thể tự biết, bấm "Nhập sự kiện thiếu dữ liệu".
 Bước 6: Nếu chạy riêng, chọn 1 Trung tâm chi phí. Nếu không, để trống.
@@ -601,7 +623,7 @@ Chương trình thực hiện các việc chính:
 2. Ý NGHĨA CÁC MỤC TRÊN MÀN HÌNH CHÍNH
 
 Năm tài chính:
-- Nhập năm cần lập ngân sách. Luồng đã kiểm tra đầy đủ hiện là FY2027; chỉ chọn FY khác khi đã chuẩn bị đủ source workbook/sheet đúng năm.
+- Nhập năm cần lập ngân sách. Chương trình tự tạo 12 kỳ từ tháng 4 đến tháng 3 và chỉ chấp nhận nguồn cùng năm.
 - Năm tài chính bắt đầu từ tháng 4 và kết thúc vào tháng 3 năm sau.
 - Khi thay đổi năm, tiêu đề chương trình và dữ liệu được sử dụng cũng thay đổi theo.
 
@@ -791,9 +813,8 @@ USER_GUIDE_TEXT_LATEST += """
 
 ĐÍNH CHÍNH THEO CODE HIỆN TẠI
 
-- Lần chạy chính thức hiện được nghiệm thu theo bộ source FY2027 đang có. Ô Năm tài chính có thể nhận
-  năm khác và phần kỳ tháng sẽ đổi theo năm đó, nhưng nhiều workbook/sheet nguồn và rule xuất hiện tại
-  vẫn mang tên FY2027. Chỉ chạy FY khác khi đã chuẩn bị đủ source workbook đúng năm và kiểm tra output.
+- FY2027 là bộ dữ liệu đã nghiệm thu. Với FY2028 trở đi, phải chuẩn bị đầy đủ bộ nguồn cùng năm; chương trình
+  không tự dùng file, đơn giá, dấu chọn hoặc kết quả tham khảo của FY trước.
 - Nút "Cập nhật CSDL" chỉ đồng bộ nguồn nhân sự và thời gian. Các workbook chi phí (Facility, tài sản
   cố định, IT, Tổng vụ, sinh nhật, NNN) được đọc lại khi bấm "CHẠY TÍNH TOÁN".
 - Sau khi chạy, mở thư mục OUTPUT_FY<năm>\\BAO_CAO_KIEM_TRA. Tên báo cáo hiện hành là
@@ -806,6 +827,39 @@ USER_GUIDE_TEXT_LATEST += """
   py scripts\\classify_fixed_assets_mismatches.py
   py scripts\\build_fixed_assets_business_decision_pack.py
   Lịch sử từng lần chạy nằm trong docs\\audits\\history\\fixed_assets và trong mp2027.db.
+
+CHI PHÍ ĐỒNG PHỤC VÀ CỐC XẾP
+
+- Chương trình đọc dấu chọn của từng phòng từ sheet 原価センタ, cột F đến U, trong file yêu cầu
+  Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx. Phòng không được đánh dấu sẽ không bị tính.
+- Số người mới của từng tháng là phần tăng riêng của Nhân viên và Công nhân so với tháng trước;
+  tổng người mới bằng hai phần tăng này cộng lại. Tháng 4 cần dữ liệu tháng 3 của năm tài chính trước.
+- Quần, mũ và áo được cấp 2 cái/người; giày và áo khoác được cấp 1 cái/người.
+- Phòng được đánh dấu áo ngắn tay thì toàn bộ người mới dùng áo ngắn tay. Phòng được đánh dấu áo polo
+  thì toàn bộ người mới dùng áo polo. Phòng an ninh dùng cột áo riêng. Nếu nguồn đánh dấu trùng nhiều
+  loại áo, chương trình không tự chọn và sẽ báo người dùng sửa nguồn.
+- Người vào tháng 5 đến tháng 9 nhận áo ngắn tay/polo ngay tháng vào và nhận áo dài tay bổ sung tháng 10.
+  Người vào tháng 1 nhận áo dài tay tháng 1 và áo ngắn tay/polo bổ sung tháng 2. Người vào các tháng
+  2, 3, 4, 10, 11, 12 nhận cả hai nhóm áo trong tháng vào.
+- Cốc cho người mới chỉ tính theo phần tăng Công nhân. Cốc định kỳ chỉ áp dụng tháng 2 và tháng 8 cho
+  phòng được đánh dấu cốc xếp.
+- Để nhập cốc định kỳ: mở "Nhập sự kiện thiếu dữ liệu", chọn "Cốc xếp định kỳ", chọn tháng 2 hoặc
+  tháng 8 và nhập số lượng nguyên từ 0 trở lên. Nhập 0 nghĩa là đã xác nhận không phát. Để trống thì
+  kết quả bằng 0 và báo thiếu dữ liệu.
+- Chi phí cấp đổi đồng phục do hỏng/mất vẫn là số phát thực tế và không được chương trình suy ra từ
+  chênh lệch nhân sự.
+
+CHUẨN BỊ NĂM TÀI CHÍNH MỚI
+
+1. Tạo riêng các thư mục docs/MP<năm>, raw/FY<năm>, OUTPUT_FY<năm>.
+2. Đặt FORM, các file chi phí và source_file_order vào docs/MP<năm>.
+3. Đặt nguồn nhân sự/thời gian, bảng dấu đồng phục/cốc xếp và manual_inputs.db vào raw/FY<năm>.
+4. Mỗi file nguồn bắt buộc phải có dấu hiệu cùng năm trong tên file, tên trang hoặc tiêu đề. Không dùng
+   file cũ rồi chỉ đổi tên.
+5. Chọn năm trên màn hình, chờ kiểm tra nguồn đạt, rồi chạy thử một phòng trước. Nếu thiếu hoặc sai năm,
+   chương trình dừng trước khi tính và tạo báo cáo trong RUN_HISTORY/FY<năm>/<mã lần chạy>/reports.
+6. Kết quả chỉ được công bố khi chạy thành công. Lần chạy cũ và dữ liệu nhập tay của năm khác được giữ
+   riêng, không tham gia tính toán của năm mới.
 """.strip()
 
 
@@ -813,40 +867,148 @@ class MPManagerApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.geometry("980x720")
-
+        initial_fiscal_year = _default_fiscal_year()
         template_path = self._initial_saved_path(
-            "template_path", _default_template_path(), expect_directory=False
+            "template_path", _default_template_path(initial_fiscal_year), expect_directory=False
         )
-        self.fiscal_year = tk.StringVar(value=str(_default_fiscal_year()))
+        self.fiscal_year = tk.StringVar(value=str(initial_fiscal_year))
         self.exchange_rate = tk.StringVar(value=self._initial_exchange_rate(template_path))
         self.cc_code_filter = tk.StringVar(value="")
         self.template_path = tk.StringVar(value=template_path)
         self.source_dir = tk.StringVar(
-            value=self._initial_saved_path("cost_source_dir", _default_source_dir(), expect_directory=True)
+            value=self._initial_saved_path("cost_source_dir", _default_source_dir(initial_fiscal_year), expect_directory=True)
         )
         self.headcount_source_dir = tk.StringVar(
             value=self._initial_saved_path(
-                "headcount_source_dir", os.path.join(BASE_DIR, "raw"), expect_directory=True
+                "headcount_source_dir", _annual_headcount_source_dir(initial_fiscal_year), expect_directory=True
             )
         )
+        self._auto_path_fiscal_year = initial_fiscal_year
         self.headcount_source_status = tk.StringVar(value=self._initial_headcount_source_status())
+        self.preflight_status = tk.StringVar(value="Chưa kiểm tra nguồn cho năm tài chính đang chọn")
+        self._preflight_token = 0
+        self._approved_preflight_signature = None
+        self._approved_preflight_report = None
+        self._approved_uniform_policy_path = None
         self.last_excel_mtime = 0.0
         self.syncing_master = False
         self.ui_thread_id = threading.get_ident()
         self.ui_queue = queue.Queue()
 
         self.fiscal_year.trace_add("write", self._on_staffing_selection_changed)
+        self.template_path.trace_add("write", self._on_source_selection_changed)
+        self.source_dir.trace_add("write", self._on_source_selection_changed)
+        self.headcount_source_dir.trace_add("write", self._on_source_selection_changed)
         self.setup_styles()
         self.setup_ui()
         self._refresh_fiscal_year_labels()
         self.set_icon()
         self.root.after(50, self._drain_ui_queue)
         self.root.after(300, self.load_cc_list)
+        self.root.after(500, self._mark_preflight_stale)
 
     def _on_staffing_selection_changed(self, *_args):
         self._refresh_fiscal_year_labels()
+        try:
+            fiscal_year = int(self.fiscal_year.get())
+        except ValueError:
+            return
+        previous_year = getattr(self, "_auto_path_fiscal_year", fiscal_year)
+        old_template = _annual_template_path(previous_year)
+        old_source = _annual_source_dir(previous_year)
+        old_headcount = _annual_headcount_source_dir(previous_year)
+        if os.path.normcase(os.path.abspath(self.template_path.get())) == os.path.normcase(os.path.abspath(old_template)):
+            self.template_path.set(_annual_template_path(fiscal_year))
+        if os.path.normcase(os.path.abspath(self.source_dir.get())) == os.path.normcase(os.path.abspath(old_source)):
+            self.source_dir.set(_annual_source_dir(fiscal_year))
+        if os.path.normcase(os.path.abspath(self.headcount_source_dir.get())) == os.path.normcase(os.path.abspath(old_headcount)):
+            self.headcount_source_dir.set(_annual_headcount_source_dir(fiscal_year))
+        self._auto_path_fiscal_year = fiscal_year
         if hasattr(self, "headcount_source_status"):
             self.headcount_source_status.set("Cần đồng bộ cho năm tài chính hoặc thư mục mới")
+        self._mark_preflight_stale()
+
+    def _on_source_selection_changed(self, *_args):
+        self._mark_preflight_stale()
+
+    def _mark_preflight_stale(self):
+        """Disable calculation immediately when the selected source changes."""
+        if not hasattr(self, "start_btn"):
+            return
+        self._preflight_token += 1
+        self._approved_preflight_signature = None
+        self._approved_preflight_report = None
+        self._approved_uniform_policy_path = None
+        token = self._preflight_token
+        self.start_btn.configure(state=tk.DISABLED)
+        self.preflight_status.set("Đang kiểm tra nguồn của năm đã chọn...")
+        self.root.after(350, lambda: self._start_preflight_check(token))
+
+    def _start_preflight_check(self, token: int):
+        if token != self._preflight_token:
+            return
+        try:
+            fiscal_year = int(self.fiscal_year.get())
+            template = self.template_path.get().strip()
+            source = self.source_dir.get().strip()
+            headcount = self.headcount_source_dir.get().strip()
+            exchange_rate = validate_exchange_rate(self.exchange_rate.get())
+        except Exception as exc:
+            self.preflight_status.set(f"Nguồn chưa đạt: {exc}")
+            return
+
+        def worker():
+            try:
+                context = create_fiscal_run_context(
+                    fiscal_year,
+                    template_path=template,
+                    source_dir=source,
+                    headcount_source_dir=headcount,
+                    exchange_rate=exchange_rate,
+                    exchange_rate_source="FORM!B2 / người dùng xác nhận trên giao diện",
+                    base_dir=BASE_DIR,
+                )
+                report = preflight_fiscal_run(context)
+                summary = "Đạt" if report.ok else "; ".join(
+                    f"{issue.category}: {issue.reason}" for issue in report.issues[:2]
+                )
+                signature = (
+                    fiscal_year,
+                    os.path.abspath(template),
+                    os.path.abspath(source),
+                    os.path.abspath(headcount),
+                    float(exchange_rate),
+                )
+                self._run_on_ui_thread(
+                    self._finish_preflight_check,
+                    token,
+                    report.ok,
+                    summary,
+                    signature,
+                    report,
+                    context,
+                )
+            except Exception as exc:
+                self._run_on_ui_thread(
+                    self._finish_preflight_check, token, False, str(exc), None, None, None
+                )
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _finish_preflight_check(
+        self, token: int, ok: bool, summary: str, signature=None, report=None, context=None
+    ):
+        if token != self._preflight_token:
+            return
+        if ok:
+            self._approved_preflight_signature = signature
+            self._approved_preflight_report = report
+            self._approved_uniform_policy_path = getattr(context, "uniform_policy_path", None)
+            self.preflight_status.set("Đúng năm và đủ nguồn: có thể chạy tính toán")
+            self.start_btn.configure(state=tk.NORMAL)
+        else:
+            self.preflight_status.set("Nguồn chưa đạt: " + summary)
+            self.start_btn.configure(state=tk.DISABLED)
 
     @staticmethod
     def _initial_headcount_source_status() -> str:
@@ -1013,6 +1175,7 @@ class MPManagerApp:
             ("Nhập nhân sự thủ công", self.open_headcount_editor_v2),
             ("Nhập sự kiện thiếu dữ liệu", self.open_event_driver_editor),
             ("Thứ tự file nguồn", self.open_source_order_editor),
+            ("Lịch sử lần chạy", self.open_run_history),
             ("Hướng dẫn sử dụng chi tiết", self.open_user_guide),
         ):
             ttk.Button(actions, text=text, command=command).pack(side="left", padx=(0, 8))
@@ -1021,19 +1184,30 @@ class MPManagerApp:
             row=9, column=0, columnspan=3, sticky="ew", pady=16
         )
 
+        ttk.Button(
+            container,
+            text="Kiểm tra nguồn",
+            command=self._mark_preflight_stale,
+        ).grid(row=10, column=0, sticky="w")
+        ttk.Label(
+            container,
+            textvariable=self.preflight_status,
+            font=("Segoe UI", 9, "italic"),
+            wraplength=700,
+        ).grid(row=10, column=1, columnspan=2, sticky="w", padx=(8, 0))
         self.start_btn = ttk.Button(
             container,
             text="CHẠY TÍNH TOÁN",
             style="Primary.TButton",
             command=self.start_pipeline,
         )
-        self.start_btn.grid(row=10, column=0, columnspan=3, sticky="w")
+        self.start_btn.grid(row=11, column=0, columnspan=3, sticky="w", pady=(8, 0))
 
-        ttk.Label(container, text="Nhật ký xử lý").grid(row=11, column=0, columnspan=3, sticky="w", pady=(16, 4))
+        ttk.Label(container, text="Nhật ký xử lý").grid(row=12, column=0, columnspan=3, sticky="w", pady=(16, 4))
         self.log_widget = scrolledtext.ScrolledText(
             container, height=16, state=tk.DISABLED, font=("Consolas", 9)
         )
-        self.log_widget.grid(row=12, column=0, columnspan=3, sticky="nsew")
+        self.log_widget.grid(row=13, column=0, columnspan=3, sticky="nsew")
 
 
     def _run_on_ui_thread(self, callback, *args, **kwargs):
@@ -1555,7 +1729,7 @@ class MPManagerApp:
                 return
 
             template = self.template_path.get().strip()
-            template_error = _validate_selected_template(template)
+            template_error = _validate_selected_template(template, fiscal_year)
             if template_error:
                 raise ValueError(template_error)
 
@@ -1695,6 +1869,116 @@ class MPManagerApp:
         guide_text.configure(state=tk.DISABLED)
 
         ttk.Button(frame, text="Đóng", command=guide.destroy).pack(anchor="e", pady=(10, 0))
+
+    def open_run_history(self):
+        history_root = os.path.join(BASE_DIR, "RUN_HISTORY")
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Lịch sử các lần chạy")
+        dialog.geometry("1180x620")
+        frame = ttk.Frame(dialog, padding=12)
+        frame.pack(fill=tk.BOTH, expand=True)
+        fiscal_var = tk.StringVar(value=str(self._current_fiscal_year()))
+        status_var = tk.StringVar()
+        cc_var = tk.StringVar()
+        item_var = tk.StringVar()
+        date_var = tk.StringVar()
+        filters = ttk.Frame(frame)
+        filters.pack(fill=tk.X, pady=(0, 8))
+        for index, (label, variable, width) in enumerate((
+            ("Năm tài chính", fiscal_var, 10),
+            ("Trạng thái", status_var, 18),
+            ("Mã phòng", cc_var, 16),
+            ("Hạng mục", item_var, 18),
+            ("Ngày chạy", date_var, 16),
+        )):
+            ttk.Label(filters, text=label).grid(row=0, column=index * 2, sticky="w", padx=(0 if index == 0 else 8, 3))
+            if label == "Trạng thái":
+                widget = ttk.Combobox(filters, textvariable=variable, width=width, state="readonly", values=("", "PRECHECK_FAILED", "RUNNING", "SUCCEEDED", "FAILED", "LEGACY_FY2027"))
+            else:
+                widget = ttk.Entry(filters, textvariable=variable, width=width)
+            widget.grid(row=0, column=index * 2 + 1, sticky="w")
+        columns = ("run_id", "status", "started_at", "finished_at", "selected_cost_center", "output_path", "error_summary")
+        table = ttk.Treeview(frame, columns=columns, show="headings")
+        widths = {"run_id": 170, "status": 120, "started_at": 150, "finished_at": 150, "selected_cost_center": 120, "output_path": 210, "error_summary": 260}
+        labels = {"run_id": "Mã lần chạy", "status": "Trạng thái", "started_at": "Bắt đầu", "finished_at": "Kết thúc", "selected_cost_center": "Mã phòng", "output_path": "Kết quả", "error_summary": "Lỗi"}
+        for column in columns:
+            table.heading(column, text=labels[column])
+            table.column(column, width=widths[column], stretch=True)
+        table.pack(fill=tk.BOTH, expand=True)
+        selected_rows: dict[str, dict[str, object]] = {}
+
+        def contains_item(row: dict[str, object], item: str) -> bool:
+            if not item:
+                return True
+            database_path = str(row.get("database_path") or "")
+            if not os.path.isfile(database_path):
+                return False
+            try:
+                conn = sqlite3.connect(database_path)
+                try:
+                    return conn.execute(
+                        "SELECT 1 FROM fact_input_data WHERE source LIKE ? OR description LIKE ? LIMIT 1",
+                        (f"%{item}%", f"%{item}%"),
+                    ).fetchone() is not None
+                finally:
+                    conn.close()
+            except sqlite3.Error:
+                return False
+
+        def refresh():
+            for node in table.get_children():
+                table.delete(node)
+            selected_rows.clear()
+            try:
+                fiscal_year = int(fiscal_var.get()) if fiscal_var.get().strip() else None
+            except ValueError:
+                messagebox.showerror("Bộ lọc không hợp lệ", "Năm tài chính phải là số.", parent=dialog)
+                return
+            for row in list_runs(history_root, fiscal_year):
+                if status_var.get() and row.get("status") != status_var.get():
+                    continue
+                if cc_var.get().strip() and cc_var.get().strip() not in str(row.get("selected_cost_center") or ""):
+                    continue
+                if date_var.get().strip() and date_var.get().strip() not in str(row.get("started_at") or ""):
+                    continue
+                if not contains_item(row, item_var.get().strip()):
+                    continue
+                node = table.insert("", tk.END, values=[str(row.get(column) or "") for column in columns])
+                selected_rows[node] = row
+
+        def selected() -> dict[str, object] | None:
+            nodes = table.selection()
+            return selected_rows.get(nodes[0]) if nodes else None
+
+        def open_path(path: str):
+            if not path or not os.path.exists(path):
+                messagebox.showerror("Không tìm thấy", "Tệp hoặc thư mục của lần chạy này không còn tồn tại.", parent=dialog)
+                return
+            os.startfile(path)  # type: ignore[attr-defined]
+
+        def open_output():
+            row = selected()
+            if row:
+                open_path(str(row.get("output_path") or ""))
+
+        def open_run_file(relative: str):
+            row = selected()
+            if not row:
+                return
+            database_path = str(row.get("database_path") or "")
+            workspace = os.path.dirname(database_path) if database_path else ""
+            open_path(os.path.join(workspace, relative))
+
+        ttk.Button(filters, text="Lọc", command=refresh).grid(row=0, column=10, padx=(12, 0))
+        actions = ttk.Frame(frame)
+        actions.pack(fill=tk.X, pady=(8, 0))
+        ttk.Button(actions, text="Mở kết quả", command=open_output).pack(side=tk.LEFT)
+        ttk.Button(actions, text="Báo cáo kiểm tra", command=lambda: open_run_file(os.path.join("reports", "preflight_report.md"))).pack(side=tk.LEFT, padx=6)
+        ttk.Button(actions, text="Nhật ký đồng phục", command=lambda: open_run_file("run.db")).pack(side=tk.LEFT)
+        ttk.Button(actions, text="Nhật ký tài sản", command=lambda: open_run_file("run.db")).pack(side=tk.LEFT, padx=6)
+        ttk.Button(actions, text="Mở CSDL lần chạy", command=lambda: open_run_file("run.db")).pack(side=tk.LEFT)
+        refresh()
+        ttk.Label(frame, text="Lịch sử chỉ để tra cứu; không thể sửa dữ liệu của lần chạy cũ.").pack(anchor="w", pady=(8, 0))
 
     def open_headcount_editor(self):
         try:
@@ -1967,7 +2251,7 @@ class MPManagerApp:
         def load_cc(*_):
             clear(); cc=cc_code()
             if not cc:return
-            conn=get_connection(os.path.join(BASE_DIR,"mp2027.db")); create_schema(conn)
+            conn=get_connection(_annual_manual_input_store(fiscal_year)); create_schema(conn)
             try:
                 fy_period_list = get_fy_months(fiscal_year)
                 period_placeholders = ",".join("?" for _ in fy_period_list)
@@ -1997,7 +2281,10 @@ class MPManagerApp:
                         if period not in fy_periods:
                             v["expat"].set(f"{float(r['headcount_expat'] or 0):g}"); v["staff"].set(f"{float(r['headcount_staff'] or 0):g}"); v["worker"].set(f"{float(r['headcount_worker'] or 0):g}")
                         v["male"].set(f"{float(r['headcount_male'] or 0):g}" if period.endswith("12") else ""); v["female"].set(f"{float(r['headcount_female'] or 0):g}" if period.endswith("12") else ""); v["note"].set(r["description"] or "")
-                busrow=conn.execute("SELECT * FROM fact_bus_headcount_drivers WHERE cc_code=?",(cc,)).fetchone()
+                busrow=conn.execute(
+                    "SELECT * FROM fact_bus_headcount_drivers WHERE cc_code=? AND fiscal_year=?",
+                    (cc, fiscal_year),
+                ).fetchone()
                 if busrow: bus_exp.set(f"{float(busrow['bus_expat_count'] or 0):g}"); bus_vn.set(f"{float(busrow['bus_vietnamese_count'] or 0):g}"); bus_note.set(busrow["description"] or "")
                 timerows=conn.execute(
                     f"""SELECT * FROM fact_headcount_time_source
@@ -2023,10 +2310,10 @@ class MPManagerApp:
             if not cc:return
             try: be=nonneg(bus_exp.get(),"Bus JP"); bv=nonneg(bus_vn.get(),"Bus Việt Nam")
             except ValueError as exc: messagebox.showerror("Dữ liệu không hợp lệ",str(exc)); return
-            conn=get_connection(os.path.join(BASE_DIR,"mp2027.db")); create_schema(conn)
+            conn=get_connection(_annual_manual_input_store(fiscal_year)); create_schema(conn)
             try:
                 with conn:
-                    conn.execute("INSERT INTO fact_bus_headcount_drivers(cc_code,bus_expat_count,bus_vietnamese_count,source,description) VALUES(?,?,?,'manual',?) ON CONFLICT(cc_code) DO UPDATE SET bus_expat_count=excluded.bus_expat_count,bus_vietnamese_count=excluded.bus_vietnamese_count,description=excluded.description",(cc,be,bv,bus_note.get().strip()))
+                    conn.execute("INSERT INTO fact_bus_headcount_drivers(cc_code,fiscal_year,bus_expat_count,bus_vietnamese_count,source,description) VALUES(?,?,?,?,'manual',?) ON CONFLICT(cc_code) DO UPDATE SET fiscal_year=excluded.fiscal_year,bus_expat_count=excluded.bus_expat_count,bus_vietnamese_count=excluded.bus_vietnamese_count,description=excluded.description",(cc,fiscal_year,be,bv,bus_note.get().strip()))
                     baseline_period=periods[0]; baseline=month_vars[baseline_period]
                     expat=nonneg(baseline["expat"].get(),f"JP {baseline_period}"); staff=nonneg(baseline["staff"].get(),f"Nhân viên {baseline_period}"); worker=nonneg(baseline["worker"].get(),f"Công nhân {baseline_period}")
                     save_manual_baseline_override(conn,fiscal_year,cc,expat,staff,worker,baseline["note"].get().strip())
@@ -2073,7 +2360,7 @@ class MPManagerApp:
             text=(
                 "Mục này dùng cho khoản tiền mà chương trình không thể tự biết. "
                 "Ví dụ: số người đi xe bus, quà không đi du lịch, kỷ niệm 10 năm, VISA/Passport ở dòng FORM khác. "
-                "Có thể nhập account_jp_name để tự resolve account_code và unit_price_key để tự lấy đơn giá từ FY2027配賦額一覧. "
+                "Có thể nhập account_jp_name để tự resolve account_code và unit_price_key để tự lấy đơn giá từ file phân bổ của năm đang chạy. "
                 "Nếu không có số thật, hãy để trống; chương trình sẽ không tự bịa số."
             ),
             wraplength=1180,
@@ -2085,9 +2372,9 @@ class MPManagerApp:
         ttk.Label(
             guide,
             text=(
-                "target_month/period = tháng ghi chi phí, ví dụ 202705 là tháng 5 FY2027.  "
+                "target_month/period = tháng ghi chi phí, ví dụ 202805 là tháng 5 của FY2028.  "
                 "event_type có thể dùng month_specific_driver cho event theo tháng riêng.  "
-                "Nếu nhập unit_price thì đơn giá nhập tay được ưu tiên; nếu bỏ trống unit_price, nhập unit_price_key/allocation_content để tự lấy đơn giá từ FY2027配賦額一覧.  "
+                "Nếu nhập unit_price thì đơn giá nhập tay được ưu tiên; nếu bỏ trống unit_price, nhập unit_price_key/allocation_content để tự lấy đơn giá từ file phân bổ của năm đang chạy.  "
                 "Có thể bỏ trống account_code nếu nhập account_jp_name/account_name, ví dụ 福利厚生費.  "
                 "row/form_row = dòng FORM cần ghi, ví dụ 66 cho 社員旅行.  "
                 "Sample help-only: 1412000089,202705,社員旅行 Du lịch công ty,month_specific_driver,111,社員旅行,福利厚生費,66,Sample: company trip May driver."
@@ -2121,6 +2408,7 @@ class MPManagerApp:
 
         cc_choices = self._get_cc_choices()
         event_help = {
+            "Cốc xếp định kỳ": "Chỉ dùng cho phòng được đánh dấu cốc xếp; nhập số lượng phát thực tế vào tháng 2 hoặc tháng 8. Nhập 0 nếu xác nhận không phát.",
             "Du lịch công ty": "Dùng khi cần nhập số người/số tiền cho chuyến du lịch công ty.",
             "Quà không đi du lịch": "Dùng cho người không tham gia du lịch nhưng có quà hoặc khoản hỗ trợ riêng.",
             "My Episode": "Dùng khi có khoản My Episode thật trong tháng đó.",
@@ -2135,6 +2423,7 @@ class MPManagerApp:
             "Khác": "Dùng khi khoản cần nhập chưa có trong danh sách. Hãy ghi chú rõ nguồn số liệu.",
         }
         event_choices = [
+            "Cốc xếp định kỳ",
             "Du lịch công ty",
             "Quà không đi du lịch",
             "My Episode",
@@ -2286,6 +2575,10 @@ class MPManagerApp:
                 if not cc_code or not period or not event_name:
                     raise ValueError("Cần nhập Mã CC, Tháng ghi chi phí và Sự kiện.")
                 count = validate_numeric(count_var.get(), "số người/count")
+                if event_name == "Cốc xếp định kỳ":
+                    count = validate_non_negative_int(count_var.get(), "Số lượng cốc xếp định kỳ")
+                    if int(period[-2:]) not in {2, 8}:
+                        raise ValueError("Cốc xếp định kỳ chỉ được nhập cho tháng 2 hoặc tháng 8.")
                 unit_price = validate_numeric(unit_price_var.get(), "đơn giá")
                 unit_price_key = unit_price_key_var.get().strip()
                 amount_vnd = validate_numeric(amount_var.get(), "số tiền")
@@ -2382,6 +2675,13 @@ class MPManagerApp:
         def refresh_event_help(*_args):
             selected = event_var.get().strip()
             event_help_var.set(event_help.get(selected, "Gợi ý: hãy nhập số thật từ người phụ trách nghiệp vụ. Không nhập số ước lượng nếu chưa được chốt."))
+            if selected == "Cốc xếp định kỳ":
+                event_type_var.set("manual_count_unit_price")
+                unit_price_var.set("")
+                unit_price_key_var.set("折りたたみコップ Cốc xếp")
+                account_var.set("")
+                account_jp_name_var.set("福利厚生費")
+                amount_var.set("")
 
         event_combo.bind("<<ComboboxSelected>>", refresh_event_help)
         tree.bind("<<TreeviewSelect>>", on_select)
@@ -2451,12 +2751,12 @@ class MPManagerApp:
 
             template = self.template_path.get()
             source = self.source_dir.get()
-            template_error = _validate_selected_template(template)
+            template_error = _validate_selected_template(template, fiscal_year)
             if template_error:
                 messagebox.showerror("Lỗi", template_error)
                 return
 
-            source_error = _validate_selected_source_dir(source)
+            source_error = _validate_selected_source_dir(source, fiscal_year)
             if source_error:
                 messagebox.showerror("Lỗi", source_error)
                 return
@@ -2472,6 +2772,25 @@ class MPManagerApp:
             if not os.path.isdir(headcount_source):
                 messagebox.showerror("Lỗi", "Hãy chọn thư mục nguồn nhân sự & thời gian hợp lệ.")
                 return
+            signature = (
+                fiscal_year,
+                os.path.abspath(template),
+                os.path.abspath(source),
+                os.path.abspath(headcount_source),
+                float(exchange_rate),
+            )
+            if (
+                signature != self._approved_preflight_signature
+                or not getattr(self._approved_preflight_report, "ok", False)
+            ):
+                messagebox.showerror(
+                    "Nguồn chưa được xác nhận",
+                    "Bộ nguồn hiện tại chưa có kết quả kiểm tra đạt còn hiệu lực. "
+                    "Hãy bấm “Kiểm tra nguồn”, chờ trạng thái đạt rồi chạy lại.",
+                )
+                self._mark_preflight_stale()
+                return
+
             if target_cc is None:
                 proceed = messagebox.askokcancel(
                     "Xuất toàn bộ Trung tâm chi phí",
@@ -2560,8 +2879,13 @@ class MPManagerApp:
                 headcount_source,
                 "--exchange-rate",
                 str(rate),
+                "--exchange-rate-source",
+                "FORM!B2 / người dùng xác nhận trên giao diện",
             ]
         )
+        approved_uniform = getattr(self, "_approved_uniform_policy_path", None)
+        if approved_uniform:
+            cmd.extend(["--uniform-policy", str(approved_uniform)])
         if target_cc:
             cmd.extend(["--target-cc", str(target_cc)])
         return cmd
@@ -2572,7 +2896,7 @@ class MPManagerApp:
         args=getattr(self,"_last_pipeline_args",None)
         if not args:return None
         fiscal_year,_,_,_,_,target_cc=args
-        conn=get_connection(os.path.join(BASE_DIR,"mp2027.db")); create_schema(conn)
+        conn=get_connection(_annual_manual_input_store(fiscal_year)); create_schema(conn)
         try: missing=find_missing_baseline_ccs(conn,fiscal_year,target_cc=target_cc)
         finally: conn.close()
         return (fiscal_year,target_cc,missing) if missing else None
@@ -2583,7 +2907,7 @@ class MPManagerApp:
         preview=", ".join(missing_ccs[:12])+("…" if len(missing_ccs)>12 else "")
         ttk.Label(dialog,text=f"CC cần xử lý: {preview}\n\nChọn một hành động. Chương trình sẽ không tiếp tục tính toán nếu bạn đóng hộp thoại.",wraplength=640,justify="left").pack(anchor="w",padx=18)
         def use_april():
-            conn=get_connection(os.path.join(BASE_DIR,"mp2027.db")); create_schema(conn)
+            conn=get_connection(_annual_manual_input_store(fiscal_year)); create_schema(conn)
             try:
                 with conn: copied=copy_missing_baselines_from_april(conn,fiscal_year,target_cc=target_cc)
             finally: conn.close()
@@ -2618,7 +2942,9 @@ class MPManagerApp:
                 self._open_baseline_recovery_dialog(*recovery)
             else:
                 messagebox.showerror("Thất bại", message)
-        self.start_btn.configure(state=tk.NORMAL)
+        # Source paths may have changed while the subprocess was running; do
+        # not re-enable calculation until the current selection is checked.
+        self._mark_preflight_stale()
 
 
 if __name__ == "__main__":

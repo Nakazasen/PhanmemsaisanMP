@@ -9,6 +9,7 @@ from typing import Any
 
 from src.engine.account_resolver import AccountResolutionError, resolve_account_code_for_connection
 from src.utils.excel_helpers import get_fy_months, normalize_cc_code, safe_float
+from src.utils.fiscal_periods import fiscal_period_for_month
 
 
 TEMPLATE_FILENAME = "event_drivers_manual.csv"
@@ -17,92 +18,101 @@ EXPLICIT_ZERO_COUNT_MARKER = "explicit_zero_count=1"
 
 EVENT_DEFAULTS = (
     {
-        "tokens": ("部門方針発表会後の決起コンパ", "phương châm bộ phận", "phuong cham bo phan"),
-        "period": "202604",
+        "tokens": ("cốc xếp định kỳ", "coc xep dinh ky", "折りたたみコップ定期"),
+        "period": None,
         "form_row": None,
-        "unit_price_key": "FY2027部門方針発表会後の決起コンパ",
+        "unit_price_key": "折りたたみコップ Cốc xếp",
+        "account_jp_name": "福利厚生費",
+        "business_identity": "periodic_cup",
+        "separate_count": True,
+    },
+    {
+        "tokens": ("部門方針発表会後の決起コンパ", "phương châm bộ phận", "phuong cham bo phan"),
+        "posting_month": 4,
+        "form_row": None,
+        "unit_price_key": "部門方針発表会後の決起コンパ",
         "separate_count": True,
     },
     {
         "tokens": ("tiệc khuấy động năm tài chính", "決起コンパ"),
-        "period": "202605",
+        "posting_month": 5,
         "form_row": None,
         "unit_price_key": "Tiệc khuấy động năm tài chính決起コンパ",
         "separate_count": False,
     },
     {
         "tokens": ("社員旅行不参加", "không thể tham gia du lịch", "khong the tham gia du lich"),
-        "period": "202606",
+        "posting_month": 6,
         "form_row": None,
         "unit_price_key": "社員旅行不参加対象者へのギフト贈呈",
         "separate_count": True,
     },
     {
         "tokens": ("マイエピソード", "cảm nghĩ về triết lý kinh doanh", "cam nghi ve triet ly kinh doanh"),
-        "period": "202607",
+        "posting_month": 7,
         "form_row": None,
         "unit_price_key": "マイエピソード ～フィロソフィの実践～参加賞",
         "separate_count": True,
     },
     {
         "tokens": ("京セラフェスティバル", "lễ hội kyocera", "le hoi kyocera"),
-        "period": "202609",
+        "posting_month": 9,
         "form_row": 66,
         "unit_price_key": "京セラフェスティバル",
         "separate_count": False,
     },
     {
         "tokens": ("月餅", "bánh trung thu", "banh trung thu"),
-        "period": "202609",
+        "posting_month": 9,
         "form_row": 71,
         "unit_price_key": "月餅",
         "separate_count": False,
     },
     {
         "tokens": ("10年勤続記念コンパ", "tiệc kỷ niệm 10 năm", "tiec ky niem 10 nam"),
-        "period": "202610",
+        "posting_month": 10,
         "form_row": None,
         "unit_price_key": "10年勤続記念コンパ",
         "separate_count": True,
     },
     {
         "tokens": ("10年勤続記念品", "quà kỷ niệm", "qua ky niem"),
-        "period": "202610",
+        "posting_month": 10,
         "form_row": None,
         "unit_price_key": "10年勤続記念品",
         "separate_count": True,
     },
     {
         "tokens": ("会社設立記念", "sự kiện tri ân", "su kien tri an"),
-        "period": "202610",
+        "posting_month": 10,
         "form_row": 68,
         "unit_price_key": "会社設立記念 感謝イベント",
         "separate_count": False,
     },
     {
         "tokens": ("ポケットカレンダー", "lịch bỏ túi", "lich bo tui"),
-        "period": "202611",
+        "posting_month": 11,
         "form_row": 82,
         "unit_price_key": "ポケットカレンダー",
         "separate_count": False,
     },
     {
         "tokens": ("運動会", "đại hội thể thao", "dai hoi the thao"),
-        "period": "202611",
+        "posting_month": 11,
         "form_row": 67,
         "unit_price_key": "運動会",
         "separate_count": False,
     },
     {
         "tokens": ("忘年会補助金", "hỗ trợ tiệc tất niên", "ho tro tiec tat nien"),
-        "period": "202702",
+        "posting_month": 2,
         "form_row": None,
         "unit_price_key": "忘年会補助金",
         "separate_count": False,
     },
     {
         "tokens": ("お年玉", "tiền lì xì", "tien li xi"),
-        "period": "202702",
+        "posting_month": 2,
         "form_row": 63,
         "unit_price_key": "お年玉",
         "separate_count": False,
@@ -318,6 +328,42 @@ def _resolve_unit_price(conn: sqlite3.Connection, unit_price_key: str) -> float 
     return unit_price if unit_price > 0 else None
 
 
+def _default_period_for_fiscal_year(event_default: dict[str, Any], fiscal_year: int) -> str | None:
+    """Resolve a business posting month for the selected fiscal year."""
+    posting_month = event_default.get("posting_month")
+    if posting_month not in (None, ""):
+        try:
+            month = int(posting_month)
+        except (TypeError, ValueError):
+            return None
+        return fiscal_period_for_month(fiscal_year, month) if 1 <= month <= 12 else None
+    # Read old user-maintained rows for FY2027, but always translate the month
+    # instead of carrying their calendar year into a later fiscal run.
+    value = str(event_default.get("period", "") or "").strip()
+    if not value:
+        return None
+    if not (len(value) == 6 and value.isdigit()):
+        return value
+    return fiscal_period_for_month(fiscal_year, int(value[-2:]))
+
+
+def _resolve_default_unit_price(conn: sqlite3.Connection, event_default: dict[str, Any]) -> float | None:
+    direct = _resolve_unit_price(conn, str(event_default.get("unit_price_key", "") or ""))
+    if direct is not None:
+        return direct
+    tokens = [_normalize_unit_price_key(token) for token in event_default.get("tokens", ())]
+    tokens = [token for token in tokens if len(token) >= 4]
+    matches = []
+    for row in conn.execute("SELECT item_name, unit_price FROM map_allocation_rules").fetchall():
+        item = _normalize_unit_price_key(row["item_name"])
+        if any(token in item for token in tokens):
+            matches.append(row)
+    if len(matches) != 1:
+        return None
+    price = safe_float(matches[0]["unit_price"])
+    return price if price > 0 else None
+
+
 def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[str, int | str]:
     """Load manual event counts/amounts into fact_input_data.
 
@@ -326,7 +372,9 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
     guessing.
     """
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
-    fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip()) if fy_row else 2027
+    if not fy_row:
+        raise ValueError("Thiếu năm tài chính trong dữ liệu lần chạy; không được tự mặc định FY2027.")
+    fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip())
     fy_months = get_fy_months(fiscal_year)
     valid_periods = set(fy_months)
 
@@ -352,6 +400,7 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
     skipped = 0
     errors = 0
     error_messages: list[str] = []
+    periodic_cup_keys: set[tuple[str, str]] = set()
 
     with open(template_path, "r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
@@ -377,8 +426,12 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
             cc_code = normalize_cc_code(row.get("cc_code"))
             event_name = str(row.get("event_name", "") or "").strip()
             event_default = _event_default_for_name(event_name)
-            if event_default and not any(str(row.get(col, "") or "").strip() for col in ("period", "target_month", "source_month", "posting_rule", "target_month_rule")):
-                row["period"] = event_default["period"]
+            if (
+                event_default
+                and (event_default.get("posting_month") not in (None, "") or event_default.get("period"))
+                and not any(str(row.get(col, "") or "").strip() for col in ("period", "target_month", "source_month", "posting_rule", "target_month_rule"))
+            ):
+                row["period"] = _default_period_for_fiscal_year(event_default, fiscal_year)
             if (
                 event_default
                 and event_default.get("form_row") is not None
@@ -410,6 +463,8 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
             if not account_name_ok:
                 errors += 1
                 continue
+            if not account_jp_name and event_default:
+                account_jp_name = str(event_default.get("account_jp_name", "") or "")
 
             account_code_text = str(row.get("account_code", "") or "").strip()
             if account_code_text:
@@ -429,6 +484,33 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
             if not cc_code or cc_code not in valid_cc_codes or not target_periods or not event_name:
                 errors += 1
                 continue
+            business_identity = str(event_default.get("business_identity", "") or "") if event_default else ""
+            if business_identity == "periodic_cup":
+                if any(int(period[-2:]) not in {2, 8} for period in target_periods):
+                    errors += 1
+                    error_messages.append("Cốc xếp định kỳ chỉ được nhập cho tháng 2 hoặc tháng 8")
+                    continue
+                entitlement = conn.execute(
+                    """
+                    SELECT source_file, source_sheet, source_cell
+                    FROM map_cost_center_uniform_items
+                    WHERE cc_code = ? AND item_key = 'collapsible_cup' AND eligible = 1
+                    """,
+                    (cc_code,),
+                ).fetchone()
+                if entitlement is None:
+                    errors += 1
+                    error_messages.append(f"Phòng {cc_code} không thuộc đối tượng cốc xếp")
+                    continue
+                duplicate_keys = {(cc_code, period) for period in target_periods} & periodic_cup_keys
+                if duplicate_keys:
+                    errors += 1
+                    error_messages.append(
+                        "Dòng cốc xếp định kỳ bị trùng: "
+                        + ", ".join(f"{cc}/{period}" for cc, period in sorted(duplicate_keys))
+                    )
+                    continue
+                periodic_cup_keys.update((cc_code, period) for period in target_periods)
             form_row_text, form_row_ok = _merged_value(row, "form_row", "row")
             if not form_row_ok:
                 errors += 1
@@ -450,6 +532,14 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
 
             count = safe_float(row.get("count"))
             explicit_zero_count = _is_explicit_zero(row.get("count"))
+            if business_identity == "periodic_cup":
+                raw_count = str(row.get("count", "") or "").strip()
+                if not raw_count or count < 0 or abs(count - round(count)) > 1e-9:
+                    errors += 1
+                    error_messages.append(
+                        f"Số lượng cốc xếp định kỳ phải là số nguyên từ 0 trở lên: cc={cc_code}"
+                    )
+                    continue
             unit_price = safe_float(row.get("unit_price"))
             amount_vnd = safe_float(row.get("amount_vnd"))
             formula_expr = None
@@ -462,6 +552,8 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                     unit_price_key = str(event_default.get("unit_price_key", "") or "")
                 if unit_price_key:
                     resolved_unit_price = _resolve_unit_price(conn, unit_price_key)
+                    if resolved_unit_price is None and event_default:
+                        resolved_unit_price = _resolve_default_unit_price(conn, event_default)
                     if resolved_unit_price is None:
                         errors += 1
                         continue
@@ -484,6 +576,17 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
 
             final_description = description or event_name
             final_description = f"{event_name}: {final_description}|formula_expr={formula_expr}{shift_metadata}"
+            if business_identity:
+                final_description += (
+                    f"|business_identity={business_identity}"
+                    f"|driver_value={_format_number(count)}|unit_price={_format_number(unit_price)}"
+                )
+            if business_identity == "periodic_cup":
+                final_description += (
+                    f"|entitlement_source_file={entitlement['source_file']}"
+                    f"|entitlement_source_sheet={entitlement['source_sheet']}"
+                    f"|entitlement_source_cell={entitlement['source_cell']}"
+                )
             if explicit_zero_count:
                 final_description = f"{final_description}|{EXPLICIT_ZERO_COUNT_MARKER}"
             if repeat_all_months:

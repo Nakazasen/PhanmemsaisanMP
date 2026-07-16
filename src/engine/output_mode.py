@@ -45,7 +45,7 @@ _DEFAULT_OUTPUT_GROUP_SPECS: tuple[OutputGroupSpec, ...] = (
     OutputGroupSpec(
         group_id="facility",
         display_name="Facility",
-        source_file_name="施設課　MPFY2027.xlsx",
+        source_file_name="",
         output_mode=OutputMode.FILE_ORDER_GROUP,
         order_index=1,
         cost_items=(
@@ -63,7 +63,7 @@ _DEFAULT_OUTPUT_GROUP_SPECS: tuple[OutputGroupSpec, ...] = (
     OutputGroupSpec(
         group_id="fixed_assets",
         display_name="Fixed Assets",
-        source_file_name="固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx",
+        source_file_name="",
         output_mode=OutputMode.FILE_ORDER_GROUP,
         order_index=2,
         cost_items=("fixed_asset_depreciation", "fixed_asset_interest"),
@@ -73,7 +73,7 @@ _DEFAULT_OUTPUT_GROUP_SPECS: tuple[OutputGroupSpec, ...] = (
     OutputGroupSpec(
         group_id="system_cost",
         display_name="System Cost",
-        source_file_name="システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls",
+        source_file_name="",
         output_mode=OutputMode.FILE_ORDER_SINGLE_ROW,
         order_index=3,
         cost_items=("one combined row",),
@@ -83,7 +83,7 @@ _DEFAULT_OUTPUT_GROUP_SPECS: tuple[OutputGroupSpec, ...] = (
     OutputGroupSpec(
         group_id="admin_allocation",
         display_name="Admin allocation",
-        source_file_name="総務課 FY2027 MP 振替予定.xlsx",
+        source_file_name="",
         output_mode=OutputMode.FILE_ORDER_GROUP,
         order_index=4,
         blank_row_after_group=True,
@@ -92,7 +92,7 @@ _DEFAULT_OUTPUT_GROUP_SPECS: tuple[OutputGroupSpec, ...] = (
     OutputGroupSpec(
         group_id="birthday",
         display_name="Birthday",
-        source_file_name="Sinh nhật MP FY2027.xlsx",
+        source_file_name="",
         output_mode=OutputMode.FILE_ORDER_SINGLE_ROW,
         order_index=5,
         cost_items=("birthday",),
@@ -102,7 +102,7 @@ _DEFAULT_OUTPUT_GROUP_SPECS: tuple[OutputGroupSpec, ...] = (
     OutputGroupSpec(
         group_id="allocation_master",
         display_name="Allocation master",
-        source_file_name="FY2027配賦額一覧 (2025.12.29).xlsx",
+        source_file_name="",
         output_mode=OutputMode.FILE_ORDER_GROUP,
         order_index=6,
         blank_row_after_group=True,
@@ -111,7 +111,7 @@ _DEFAULT_OUTPUT_GROUP_SPECS: tuple[OutputGroupSpec, ...] = (
     OutputGroupSpec(
         group_id="nnn_paperwork",
         display_name="NNN paperwork",
-        source_file_name="Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx",
+        source_file_name="",
         output_mode=OutputMode.FILE_ORDER_SINGLE_ROW,
         order_index=7,
         cost_items=("nnn_paperwork",),

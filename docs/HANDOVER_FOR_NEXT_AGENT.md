@@ -4,6 +4,13 @@
 
 MP2027 Manager là app Python/Tkinter cho Windows để gom dữ liệu budget MP FY2027 từ nhiều Excel source, tính phân bổ hiện có, export FORM theo Cost Center và sinh audit/missing input.
 
+## Trạng thái đa năm tài chính
+
+- Đã có `FiscalRunContext` và kiểm tra nguồn theo FY. FY mới chỉ nhận `docs/MP<YYYY>`, `raw/FY<YYYY>` và `OUTPUT_FY<YYYY>`; không fallback sang FY2027.
+- Mỗi lần chạy chính thức có workspace `RUN_HISTORY/FY<YYYY>/<run_id>/run.db`, manifest checksum và catalogue `RUN_HISTORY/run_history.db`.
+- Sinh nhật, sự kiện nhập tay, NNN, đồng phục/cốc xếp và các kỳ tháng dùng năm được chọn thay vì năm 2027 ghi cố định. Đơn giá sinh nhật đọc từ quy tắc phân bổ của FY đang chạy.
+- FY2027 vẫn dùng đường dẫn cũ chỉ như lớp tương thích đã nêu rõ; không áp dụng lớp này cho FY2028 trở đi.
+
 ## 1. Đọc theo thứ tự này
 
 1. `docs/handover/CURRENT_OPEN_ITEMS.md` — backlog/handover hiện hành duy nhất
@@ -40,6 +47,7 @@ Nguồn chi tiết: `docs/handover/CURRENT_OPEN_ITEMS.md`.
 - `OPEN_DECISION`: NNN row/account ngoài row 137; data governance trước public/push.
 - `BLOCKED_BY_INPUT`: headcount thật CC `1412000040`; December male/female và recruitment health-check drivers; các event driver chưa có source ổn định.
 - `IMPLEMENTED_PENDING_ACCEPTANCE`: GUI đã chuyển heavy pipeline sang child process/UI queue nhưng chưa có current Windows acceptance.
+- `IMPLEMENTED_PENDING_ACCEPTANCE`: chi phí đồng phục/cốc xếp đã có bộ tính riêng, dấu chọn F:U có nguồn ô, lịch cấp áo, nhập cốc định kỳ, cảnh báo chặn và nhật ký chi tiết; kiểm thử cùng lần chạy FY2027 cho CC `1412000036` đã đạt, còn chờ người nghiệp vụ duyệt file mẫu.
 - `OPEN_AUDIT`: fixed-assets phải cross-trace đủ canonical/source/reference/code trước khi hỏi policy còn thiếu; các module implemented khác cần audit output hiện hành đối chiếu canonical 10.07 sau khi đủ input thật.
 - `CLOSED/SUPERSEDED`: empty output cũ, duplicate new-hire, total-headcount fallback, Column S, reference garbage, spacing giữa written blocks, bus generic event backlog và gas blocker 13.07 không còn là hạng mục mở độc lập.
 

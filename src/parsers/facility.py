@@ -126,7 +126,9 @@ def parse_facility(conn: sqlite3.Connection, source_dir: str = None) -> dict:
     rate = float(rate_row[0]) if rate_row else 25450.0
     
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
-    fy_str = fy_row[0] if fy_row else "FY2027"
+    if not fy_row:
+        raise ValueError("Thiếu năm tài chính trong dữ liệu lần chạy; không được tự mặc định FY2027.")
+    fy_str = fy_row[0]
     fy_int = int(fy_str.replace('FY', ''))
     fy_months = get_fy_months(fy_int)
 
@@ -138,11 +140,8 @@ def parse_facility(conn: sqlite3.Connection, source_dir: str = None) -> dict:
         path = manifest_path
     print(f"Đang mở tệp Cơ sở vật chất: {path}")
     if not os.path.exists(path):
-        # Try local folder
-        path = f'施設課　MP{fy_str}.xlsx'
-        if not os.path.exists(path):
-            print(f"Cảnh báo: không tìm thấy tệp Cơ sở vật chất: {path} trong {search_dir}")
-            return {'total': 0}
+        print(f"Cảnh báo: không tìm thấy tệp Cơ sở vật chất: {path} trong {search_dir}")
+        return {'total': 0}
 
     results = {}
     cursor = conn.cursor()

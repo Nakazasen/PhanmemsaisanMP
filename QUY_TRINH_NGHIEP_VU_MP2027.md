@@ -1,5 +1,22 @@
 # MP2027 Manager - Quy trình nghiệp vụ, vận hành và handover kỹ thuật
 
+## Vận hành nhiều năm tài chính
+
+Chương trình dùng chung cho FY2027, FY2028 và các năm sau. Mỗi năm phải có bộ dữ liệu riêng, không được dùng lại dữ liệu năm trước:
+
+| Nội dung | Đường dẫn của FY<YYYY> |
+|---|---|
+| FORM và file chi phí | `docs/MP<YYYY>` |
+| Nhân sự, thời gian, bảng dấu chọn đồng phục/cốc xếp, dữ liệu nhập tay | `raw/FY<YYYY>` |
+| File công bố kết quả | `OUTPUT_FY<YYYY>` |
+| Lịch sử bất biến | `RUN_HISTORY/FY<YYYY>/<run_id>` |
+
+Khi chọn năm, chương trình tự đề xuất các đường dẫn trên. Người dùng có thể chọn tay một đường dẫn khác, nhưng hệ thống kiểm tra trước phải xác nhận toàn bộ file đúng FY đã chọn. Thiếu file, thiếu sheet FY, có hai file cùng loại, thiếu nhóm tháng hệ thống, dữ liệu nhập tay khác năm hoặc phát hiện file FY khác đều dừng trước khi tính; không tự lấy FORM, đơn giá, nhân sự, bảng đồng phục hoặc số liệu của năm trước.
+
+Mỗi lần chạy chính thức tạo một thư mục lịch sử riêng có `run.db`, `run_manifest.json`, báo cáo JSON/Markdown, checksum nguồn và bản kết quả. Chỉ lần chạy thành công mới được chép nguyên khối sang `OUTPUT_FY<YYYY>`; nếu lỗi khi công bố, kết quả công bố trước đó được khôi phục. Có thể mở nút **Lịch sử lần chạy** để lọc theo năm, ngày, trạng thái, mã phòng hoặc hạng mục, sau đó mở kết quả, báo cáo kiểm tra hoặc CSDL của lần chạy. Lịch sử chỉ đọc, không sửa.
+
+Để chuẩn bị FY mới, người nghiệp vụ tạo đủ `docs/MP<YYYY>`, `raw/FY<YYYY>` và bảng thứ tự nguồn của năm, rồi chọn năm đó trên giao diện. Không sao chép đơn giá hoặc dấu chọn từ FY cũ nếu chưa có file nguồn FY mới được duyệt.
+
 Ngày cập nhật: `2026-07-11`
 
 `IMPLEMENTATION_VERIFIED_AT_COMMIT=12d92325a0fffa9b03b6251d27210dbb69e032d0`
@@ -415,3 +432,13 @@ Trạng thái implementation verified tới commit `12d92325a0fffa9b03b6251d2721
 - Six-claim final acceptance remains partial because real headcount input for CC `1412000040` is still missing.
 
 Không bắt đầu bằng refactor lớn. Việc có giá trị nhất là bổ sung/chốt dữ liệu thật còn thiếu, chạy targeted audit, rồi chỉ sửa code khi audit chỉ ra lỗi cụ thể.
+
+## 19. Đồng phục và cốc xếp
+
+- Chương trình đọc dấu `〇` tại cột F:U của trang `原価センタ`; không phân loại áo theo nhân viên/công nhân và không tự ưu tiên áo polo.
+- Nếu phòng được chọn áo ngắn tay hoặc áo polo thì toàn bộ người mới của phòng dùng đúng loại đó. Phòng an ninh dùng hạng mục riêng. Nếu chọn trùng nhiều loại áo ngắn tay, chi phí áo bằng 0 và chương trình yêu cầu sửa nguồn.
+- Người mới mỗi tháng là phần tăng không âm so với tháng trước. Quần, áo, giày, mũ dùng tổng nhân viên mới và công nhân mới; cốc người mới chỉ dùng công nhân mới.
+- Áo cấp theo mùa: tháng 2 cấp bù áo ngắn tay/polo cho người vào tháng 1; tháng 10 cấp bù áo dài tay cho người vào tháng 5–9.
+- Cốc định kỳ chỉ nhập ở tháng 2 hoặc tháng 8 trong cửa sổ `Nhập sự kiện thiếu dữ liệu` → `Cốc xếp định kỳ`. Phải nhập số nguyên từ 0 trở lên; số 0 là đã xác nhận không phát, còn để trống thì chi phí bằng 0 và có cảnh báo.
+- Chi phí cấp đổi do hỏng hoặc mất vẫn phải lấy số phát thực tế, chương trình không suy ra từ số người mới.
+- Nhật ký `audit_uniform_cup_calculation` lưu dấu chọn nguồn, số người mới, tháng nguồn, số lượng, đơn giá, công thức, tài khoản và loại phát để giải thích lại cho người dùng.

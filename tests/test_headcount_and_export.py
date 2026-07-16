@@ -9,7 +9,8 @@ import uuid
 import openpyxl
 
 from src.audit.pipeline_audit import write_pipeline_audit_report
-from src.db.loader import _apply_mp2026_reference_unit_price, _parse_unit_price, load_allocation_rules
+from src.db.fy2027_compat import apply_audited_fy2027_reference_price
+from src.db.loader import _parse_unit_price, load_allocation_rules
 from src.db.schema import create_schema, init_sys_params
 from src.engine.allocator import AllocationEngine
 from src.engine.complete_v1_source_order_writer import apply_complete_v1_source_order_to_workbook
@@ -2079,9 +2080,9 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
         self.assertIsNone(_parse_unit_price("abc"))
 
     def test_mp2026_reference_unit_price_fills_zero_rule_prices(self):
-        self.assertEqual(_apply_mp2026_reference_unit_price("月餅 Bánh Trung Thu", 0), 56000.0)
-        self.assertEqual(_apply_mp2026_reference_unit_price("運動会 Đại hội thể thao", 0), 107000.0)
-        self.assertEqual(_apply_mp2026_reference_unit_price("運動会 Đại hội thể thao", 123), 123.0)
+        self.assertEqual(apply_audited_fy2027_reference_price("月餅 Bánh Trung Thu", 0), 56000.0)
+        self.assertEqual(apply_audited_fy2027_reference_price("運動会 Đại hội thể thao", 0), 107000.0)
+        self.assertEqual(apply_audited_fy2027_reference_price("運動会 Đại hội thể thao", 123), 123.0)
 
 
     def test_allocation_loader_prefers_fiscal_year_sheet(self):
@@ -3828,11 +3829,21 @@ class TestManualSpecialCosts(unittest.TestCase):
     def test_birthday_workbook_parser_exports_to_row_59(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
+        _seed_complete_staffing_time(conn, cc_code)
         conn.execute(
             """
             INSERT INTO dim_accounts
             (code, name_jp, name_vn, group_name, group_vn, mfg_code, ga_code, sales_code)
             VALUES (5004086291, '福利厚生費', 'Welfare', NULL, NULL, 5004086291, 6004086551, 7004086777)
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO map_allocation_rules
+            (source_dept,item_name,account_name,mfg_account,ga_account,sales_account,
+             posting_month,unit_price,unit,driver_type,driver_raw)
+            VALUES ('General Affairs','Birthday sinh nhat','Welfare',5004086291,6004086551,
+                    7004086777,'monthly',152000,'person','headcount_all','test')
             """
         )
         conn.commit()

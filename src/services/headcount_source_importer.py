@@ -89,11 +89,41 @@ def cleanup_headcount_truth(conn: sqlite3.Connection, fiscal_year: int) -> dict[
     return counts
 
 
-def scan_headcount_time_sources(source_dir: str, fiscal_year: int) -> list[Any]:
+def _target_workbook_paths(
+    workbook_paths: list[str],
+    target_cc: str | None,
+    target_names: tuple[str, ...],
+) -> list[str]:
+    """Narrow a single-CC run without weakening the full-year preflight scan."""
+    if not target_cc:
+        return workbook_paths
+    normalized_names = {
+        _normalized_department_name(name)
+        for name in target_names
+        if str(name or "").strip()
+    }
+    matches = []
+    for path in workbook_paths:
+        filename = _normalized_department_name(os.path.basename(path))
+        if str(target_cc) in filename or any(name in filename for name in normalized_names):
+            matches.append(path)
+    # Fail safely: if naming conventions changed, retain the old complete scan
+    # so the selected CC can still be discovered from workbook contents.
+    return matches or workbook_paths
+
+
+def scan_headcount_time_sources(
+    source_dir: str,
+    fiscal_year: int,
+    *,
+    target_cc: str | None = None,
+    target_names: tuple[str, ...] = (),
+) -> list[Any]:
     workbook_paths = sorted(set(
         glob.glob(os.path.join(source_dir, "*.xls"))
         + glob.glob(os.path.join(source_dir, "*.xlsx"))
     ))
+    workbook_paths = _target_workbook_paths(workbook_paths, target_cc, target_names)
     official = [
         parse_headcount_time_plan(path, fiscal_year)
         for path in workbook_paths
@@ -127,10 +157,17 @@ def review_headcount_time_sources(
     fiscal_year: int,
     *,
     scan_results: list[Any] | None = None,
+    target_cc: str | None = None,
 ) -> dict[str, Any]:
     """Scan and classify staffing workbooks without writing the database."""
-    results = scan_results if scan_results is not None else scan_headcount_time_sources(source_dir, fiscal_year)
     master_names = _master_names(conn)
+    target_names = master_names.get(str(target_cc), ("", "")) if target_cc else ("", "")
+    results = scan_results if scan_results is not None else scan_headcount_time_sources(
+        source_dir,
+        fiscal_year,
+        target_cc=str(target_cc) if target_cc else None,
+        target_names=tuple(target_names),
+    )
     importable: list[Any] = []
     unknown_cost_centers: list[Any] = []
     name_mismatches: list[Any] = []
@@ -206,13 +243,18 @@ def import_headcount_time_sources(
     rejected_unknown_files: set[str] | None = None,
     approved_name_files: set[str] | None = None,
     scan_results: list[Any] | None = None,
+    target_cc: str | None = None,
 ) -> dict[str, Any]:
     """Import reviewed sources atomically; all approval lists are exact absolute paths."""
     approved_unknown = {os.path.abspath(path) for path in (approved_unknown_files or set())}
     rejected_unknown = {os.path.abspath(path) for path in (rejected_unknown_files or set())}
     approved_names = {os.path.abspath(path) for path in (approved_name_files or set())}
     review = review_headcount_time_sources(
-        conn, source_dir, fiscal_year, scan_results=scan_results
+        conn,
+        source_dir,
+        fiscal_year,
+        scan_results=scan_results,
+        target_cc=target_cc,
     )
     skipped: list[tuple[Any, str]] = []
     errors = list(review["errors"])

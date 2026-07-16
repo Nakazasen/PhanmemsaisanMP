@@ -9,11 +9,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterable
 
-from src.engine.output_mode import get_default_output_group_specs
+from src.engine.fy2027_compat import FY2027_COMPAT_SOURCE_FILE_ORDER
 
-CANONICAL_SOURCE_FILE_ORDER = list(
-    spec.source_file_name for spec in get_default_output_group_specs()
-)
+# Compatibility only. Production calls pass the resolved annual manifest from
+# FiscalRunContext to the complete writer; they do not use this sequence.
+CANONICAL_SOURCE_FILE_ORDER = list(FY2027_COMPAT_SOURCE_FILE_ORDER)
 
 
 @dataclass(frozen=True)

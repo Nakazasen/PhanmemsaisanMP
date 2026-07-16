@@ -333,3 +333,37 @@ requirements:
     implementation_status: "implemented_in_code_existing"
     evidence:
       - "src/parsers/manual_special_costs.py"
+
+  - id: uniform_and_periodic_cup
+    business_name_vi: "Chi phí đồng phục và cốc xếp"
+    source: "File yêu cầu chính thức và file phân bổ FY2027"
+    canonical_reference: "File Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx, bản người dùng sửa ngày 16.07.2026"
+    source_file_hint: "raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx; docs/MP2027/FY2027配賦額一覧 (2025.12.29).xlsx"
+    sheet_hint: "原価センタ F:U; Hạng mục cần cải tiến 412:453; FY2027配賦額一覧"
+    filter: "Theo mã phòng, dấu 〇, tháng năm tài chính và phần tăng nhân viên/công nhân"
+    cost_center_field: "Mã Cost Center tại cột A trang 原価センタ"
+    account_resolution: "Bộ phân giải tài khoản hiện tại theo loại chi phí của phòng"
+    target: "FORM xuất theo từng Cost Center và nhật ký audit_uniform_cup_calculation"
+    form_rows: "Không ghi chết; lấy từ quy tắc phân bổ và bộ phân giải tài khoản"
+    months: "FY2027: 202604..202703"
+    calculation: "Người mới là phần tăng không âm so với tháng trước; quần/áo/mũ nhân 2; giày/áo khoác/cốc nhân 1; cốc người mới chỉ dùng công nhân mới; áo theo lịch tháng 2 và tháng 10"
+    formula_kind: "uniform_cup_new_hire_and_periodic"
+    fail_closed_conditions:
+      - "Thiếu tháng hiện tại hoặc tháng trước của dữ liệu nhân sự"
+      - "Một phòng được đánh dấu đồng thời nhiều loại áo ngắn tay"
+      - "Thiếu hoặc trùng quy tắc/đơn giá/tài khoản"
+      - "Cốc định kỳ tháng 2 hoặc tháng 8 chưa nhập số lượng"
+    audit:
+      expected_trace: "Lưu mã phòng, hạng mục, ô dấu chọn, nhân viên mới, công nhân mới, tháng nguồn, số lượng, đơn giá, công thức, tài khoản và loại phát"
+    tests:
+      - "tests/test_uniform_cup_allocation.py"
+      - "tests/test_manual_event_drivers.py"
+    status: "implemented_pending_business_acceptance"
+    implementation_status: "implemented_and_e2e_verified_2026_07_16"
+    evidence:
+      - "src/engine/uniform_cup_rules.py"
+      - "src/engine/allocator.py"
+      - "src/db/loader.py"
+      - "src/db/schema.py"
+      - "src/parsers/manual_event_drivers.py"
+      - "src/universal_app.py"

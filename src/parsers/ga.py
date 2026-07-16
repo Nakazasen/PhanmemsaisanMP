@@ -542,7 +542,9 @@ def _parse_admin_allocation_tables(
 def parse_ga(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[str, int]:
     """Main entry for GA parsing."""
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
-    fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip()) if fy_row else 2027
+    if not fy_row:
+        raise ValueError("Thiếu năm tài chính trong dữ liệu lần chạy; không được tự mặc định FY2027.")
+    fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip())
     fy_months = get_fy_months(fiscal_year)
 
     path = _find_ga_file(source_dir, fiscal_year)
@@ -563,6 +565,16 @@ def parse_ga(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[st
         workbook.close()
     if not main_sheet:
         return {"total": 0, "working_days": 0, "headcount": 0, "admin_allocation": 0}
+    cursor.execute(
+        """INSERT OR REPLACE INTO sys_params(key,value,description,updated_at)
+        VALUES('source_path_ga', ?, 'Actual annual General Affairs workbook', CURRENT_TIMESTAMP)""",
+        (str(path),),
+    )
+    cursor.execute(
+        """INSERT OR REPLACE INTO sys_params(key,value,description,updated_at)
+        VALUES('source_sheet_ga', ?, 'Actual annual General Affairs rate sheet', CURRENT_TIMESTAMP)""",
+        (str(main_sheet),),
+    )
     main_df = pd.read_excel(excel_file, sheet_name=main_sheet, header=None, engine="openpyxl")
     unit_price_records = _parse_ga_main_sheet(main_df, fy_months)
     for record in unit_price_records:

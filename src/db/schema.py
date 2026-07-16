@@ -97,6 +97,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS fact_bus_headcount_drivers (
             cc_code TEXT PRIMARY KEY,
+            fiscal_year INTEGER NOT NULL DEFAULT 0,
             bus_expat_count REAL DEFAULT 0,
             bus_vietnamese_count REAL DEFAULT 0,
             source TEXT DEFAULT "manual",
@@ -105,7 +106,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
         )''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS fact_manual_headcount_baseline_override (
-            period TEXT NOT NULL, cc_code TEXT NOT NULL,
+            period TEXT NOT NULL, cc_code TEXT NOT NULL, fiscal_year INTEGER NOT NULL DEFAULT 0,
             headcount_all REAL DEFAULT 0, headcount_expat REAL DEFAULT 0,
             headcount_staff REAL DEFAULT 0, headcount_worker REAL DEFAULT 0,
             headcount_male REAL DEFAULT 0, headcount_female REAL DEFAULT 0,
@@ -116,7 +117,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
         )''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS fact_manual_headcount_time_override (
-            period TEXT NOT NULL, cc_code TEXT NOT NULL,
+            period TEXT NOT NULL, cc_code TEXT NOT NULL, fiscal_year INTEGER NOT NULL DEFAULT 0,
             fixed_hours_expat REAL DEFAULT 0, fixed_hours_local REAL DEFAULT 0,
             overtime_hours_expat REAL DEFAULT 0, overtime_hours_local REAL DEFAULT 0,
             description TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -167,6 +168,43 @@ def create_schema(conn: sqlite3.Connection) -> None:
             decision TEXT NOT NULL,
             reason TEXT NOT NULL,
             decided_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS audit_uniform_cup_calculation (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fiscal_year INTEGER NOT NULL,
+            cc_code TEXT NOT NULL,
+            period TEXT NOT NULL,
+            item_key TEXT NOT NULL,
+            item_name TEXT NOT NULL,
+            release_type TEXT NOT NULL,
+            source_periods TEXT,
+            new_staff REAL NOT NULL DEFAULT 0,
+            new_worker REAL NOT NULL DEFAULT 0,
+            total_new_hires REAL NOT NULL DEFAULT 0,
+            issue_quantity REAL NOT NULL DEFAULT 0,
+            unit_price REAL NOT NULL DEFAULT 0,
+            amount_vnd REAL NOT NULL DEFAULT 0,
+            account_code INTEGER,
+            rule_id INTEGER,
+            entitlement_source_file TEXT,
+            entitlement_source_sheet TEXT,
+            entitlement_source_cell TEXT,
+            formula_expr TEXT,
+            status TEXT NOT NULL DEFAULT 'OK',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS map_cost_center_uniform_items (
+            cc_code TEXT NOT NULL,
+            item_key TEXT NOT NULL,
+            item_name TEXT NOT NULL,
+            eligible INTEGER NOT NULL DEFAULT 0 CHECK (eligible IN (0, 1)),
+            source_file TEXT NOT NULL,
+            source_sheet TEXT NOT NULL,
+            source_cell TEXT NOT NULL,
+            imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (cc_code, item_key)
         )""")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS audit_fixed_asset_import_rows (
@@ -239,6 +277,14 @@ def create_schema(conn: sqlite3.Connection) -> None:
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_manual_hc_time_cc ON fact_manual_headcount_time_override(cc_code, period)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_missing_inputs_source ON fact_missing_inputs(source, cc_code, period)")
     cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_uniform_items_eligible "
+        "ON map_cost_center_uniform_items(cc_code, eligible, item_key)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_uniform_cup_audit_lookup "
+        "ON audit_uniform_cup_calculation(fiscal_year, cc_code, period, item_key)"
+    )
+    cursor.execute(
         "CREATE INDEX IF NOT EXISTS idx_fixed_asset_audit_snapshot "
         "ON audit_fixed_asset_import_rows(fiscal_year, source_snapshot, source_sheet, source_row)"
     )
@@ -259,6 +305,13 @@ def create_schema(conn: sqlite3.Connection) -> None:
     ):
         if not _column_exists(conn, "fact_monthly_headcount", column_name):
             cursor.execute(f"ALTER TABLE fact_monthly_headcount ADD COLUMN {column_name} {definition}")
+    for table_name in (
+        "fact_bus_headcount_drivers",
+        "fact_manual_headcount_baseline_override",
+        "fact_manual_headcount_time_override",
+    ):
+        if not _column_exists(conn, table_name, "fiscal_year"):
+            cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN fiscal_year INTEGER NOT NULL DEFAULT 0")
     if not _column_exists(conn, "fact_input_data", "form_row"):
         cursor.execute("ALTER TABLE fact_input_data ADD COLUMN form_row INTEGER DEFAULT NULL")
     if not _column_exists(conn, "fact_input_data", "fiscal_year"):

@@ -401,7 +401,9 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
 def parse_it_simulation(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[str, int]:
     """Discover and parse IT Simulation files."""
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
-    fy_str = fy_row[0] if fy_row else "FY2027"
+    if not fy_row:
+        raise ValueError("Thiếu năm tài chính trong dữ liệu lần chạy; không được tự mặc định FY2027.")
+    fy_str = fy_row[0]
     fy_int = int(str(fy_str).replace("FY", ""))
     fy_months = get_fy_months(fy_int)
 
