@@ -270,7 +270,10 @@ def _matches_structure(workbook) -> tuple[str, ...]:
     has_nnn_headers = (
         any(token in all_blob for token in ("cost center", "costcenter", "原価センタ", "cc_code"))
         and any(token in all_blob for token in ("account code", "accountcode", "勘定科目", "ma tai khoan"))
-        and any(token in all_blob for token in ("2025", "2026", "2027", "2028", "4月", "apr"))
+        and (
+            re.search(r"(?<!\d)20\d{2}(?!\d)", all_blob) is not None
+            or any(token in all_blob for token in ("4月", "apr"))
+        )
     )
     if has_fy_sheet and has_nnn_headers:
         matches.add("nnn_paperwork")

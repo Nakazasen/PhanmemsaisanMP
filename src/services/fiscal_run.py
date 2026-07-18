@@ -21,7 +21,13 @@ import openpyxl
 
 from src.engine.uniform_cup_rules import UNIFORM_ITEM_SPECS, normalize_uniform_text
 from src.utils import excel_helpers
-from src.utils.fiscal_periods import fiscal_baseline_period, fiscal_periods
+from src.utils.fiscal_periods import (
+    SystemSourcePeriodError,
+    fiscal_baseline_period,
+    fiscal_periods,
+    map_system_source_periods,
+    system_source_periods_for_file,
+)
 from src.utils.source_manifest import read_source_manifest, resolve_manifest_files
 
 
@@ -53,17 +59,6 @@ REFERENCE_POLICY_LEGACY_FY2027_MAP = "LEGACY_FY2027_MAP"
 _FY_PATTERN = re.compile(r"(?<!\d)FY\s*(20\d{2})(?!\d)", re.IGNORECASE)
 _MPFY_PATTERN = re.compile(r"MPFY\s*(20\d{2})(?!\d)", re.IGNORECASE)
 _PERIOD_PATTERN = re.compile(r"(?<!\d)(20\d{2})(0[1-9]|1[0-2])(?!\d)")
-_MONTH_YEAR_PATTERN = re.compile(
-    r"(?i)(?<![A-Za-z])(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|"
-    r"jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
-    r"[.\s_-]*(20\d{2})\b"
-)
-_MONTH_NAMES = {
-    "jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3, "march": 3,
-    "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6, "jul": 7, "july": 7,
-    "aug": 8, "august": 8, "sep": 9, "september": 9, "oct": 10, "october": 10,
-    "nov": 11, "november": 11, "dec": 12, "december": 12,
-}
 
 
 @dataclass(frozen=True)
@@ -703,24 +698,11 @@ def _workbook_period_coverage(path: str, fiscal_year: int) -> tuple[str, ...]:
 
 
 def _filename_period_coverage(path: str, fiscal_year: int) -> tuple[str, ...]:
-    """Read a system-source month range from its filename without hardcoding FY."""
-    text = Path(path).name
-    periods = {f"{match.group(1)}{match.group(2)}" for match in _PERIOD_PATTERN.finditer(text)}
-    calendar_months = [
-        (int(match.group(2)), _MONTH_NAMES[match.group(1).lower()])
-        for match in _MONTH_YEAR_PATTERN.finditer(text)
-    ]
-    if len(calendar_months) >= 2:
-        start_year, start_month = calendar_months[0]
-        end_year, end_month = calendar_months[-1]
-        cursor_year, cursor_month = start_year, start_month
-        while (cursor_year, cursor_month) <= (end_year, end_month):
-            periods.add(f"{cursor_year}{cursor_month:02d}")
-            cursor_year, cursor_month = (
-                (cursor_year + 1, 1) if cursor_month == 12 else (cursor_year, cursor_month + 1)
-            )
-    expected = set(fiscal_periods(fiscal_year))
-    return tuple(period for period in fiscal_periods(fiscal_year) if period in periods and period in expected)
+    """Return shared System Cost filename coverage for the audit table."""
+    try:
+        return system_source_periods_for_file(path, fiscal_year)
+    except SystemSourcePeriodError:
+        return ()
 
 
 def _preflight_headcount_coverage(context: FiscalRunContext) -> tuple[tuple[str, ...], str | None]:
@@ -1003,8 +985,6 @@ def preflight_fiscal_run(
             continue
         if category != "it_simulation" and len(paths) != 1:
             issues.append(SourceIssue(category, "; ".join(paths), None, "Có nhiều nguồn cùng loại", "Chỉ giữ một nguồn hoặc chọn rõ trong manifest."))
-        if category == "it_simulation" and len(paths) != 3:
-            issues.append(SourceIssue(category, "; ".join(paths), None, "Phải có đúng ba file hệ thống", "Bổ sung đủ nhóm tháng 4–6, 7–12 và 1–3."))
         for path in paths:
             # Uniform policy has a stricter sequential pipeline below:
             # existence -> structure -> fiscal evidence -> FORM compatibility.
@@ -1028,20 +1008,37 @@ def preflight_fiscal_run(
                     f"Thay bằng nguồn xác nhận đúng FY{context.fiscal_year}.",
                 ))
 
-    system_periods = {
-        period
-        for path in sources.get("it_simulation", ())
-        for period in _filename_period_coverage(path, context.fiscal_year)
-    }
-    expected_system_periods = set(fiscal_periods(context.fiscal_year))
-    if len(sources.get("it_simulation", ())) == 3 and system_periods != expected_system_periods:
-        missing = ", ".join(period for period in fiscal_periods(context.fiscal_year) if period not in system_periods)
-        issues.append(SourceIssue(
-            "it_simulation", "; ".join(sources.get("it_simulation", ()),), context.fiscal_year,
-            f"Ba file hệ thống không bao phủ đủ 12 kỳ của FY; còn thiếu: {missing or 'không xác định được kỳ từ tên file'}.",
-            "Chọn đúng ba file hệ thống bao phủ lần lượt tháng 4–6, 7–12 và 1–3 của FY đang chạy.",
-            period_coverage=tuple(period for period in fiscal_periods(context.fiscal_year) if period in system_periods),
-        ))
+    system_paths = sources.get("it_simulation", ())
+    if system_paths:
+        try:
+            system_assignments = map_system_source_periods(
+                system_paths,
+                context.fiscal_year,
+            )
+        except SystemSourcePeriodError as exc:
+            covered_periods = tuple(
+                period
+                for path in system_paths
+                for period in _filename_period_coverage(path, context.fiscal_year)
+            )
+            issues.append(SourceIssue(
+                "it_simulation",
+                "; ".join(exc.paths or system_paths),
+                context.fiscal_year,
+                str(exc),
+                "Đổi tên hoặc chọn các file System Cost sao cho mỗi file thể hiện rõ khoảng kỳ, không thiếu và không trùng kỳ trong FY đang chạy.",
+                period_coverage=tuple(dict.fromkeys(covered_periods)),
+                code=exc.code,
+            ))
+        else:
+            system_periods = {
+                period
+                for assignment in system_assignments
+                for period in assignment.periods
+            }
+            expected_system_periods = set(fiscal_periods(context.fiscal_year))
+            if system_periods != expected_system_periods:
+                raise AssertionError("System Cost period mapping returned incomplete coverage")
 
     fixed_asset_paths = sources.get("fixed_assets", ())
     if len(fixed_asset_paths) == 1:

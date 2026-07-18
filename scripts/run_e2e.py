@@ -1083,6 +1083,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 apply_system_cost_to_workbook(
                     workbook_path=out_path,
                     system_source_paths=system_source_paths,
+                    fiscal_year=fiscal_year,
                     cost_center=target_cc,
                     start_row=system_cost_start_row,
                 )
@@ -1187,6 +1188,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                         apply_system_cost_to_workbook(
                             workbook_path=out_path,
                             system_source_paths=system_source_paths,
+                            fiscal_year=fiscal_year,
                             cost_center=cc,
                             start_row=system_cost_start_row,
                         )

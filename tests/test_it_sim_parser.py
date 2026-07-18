@@ -139,7 +139,7 @@ class TestItSimAccountCodeMapping(unittest.TestCase):
         init_sys_params(conn, exchange_rate=26273, fiscal_year=2027)
 
         with TemporaryDirectory() as temp_dir:
-            source_path = Path(temp_dir) / "システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls"
+            source_path = Path(temp_dir) / "システム課金金額(Simulation)_FY2027_Apr.2026 ~ March.2027.xls"
             source_path.write_bytes(b"placeholder")
 
             with patch(

@@ -16,7 +16,8 @@ from urllib.parse import quote
 
 import pandas as pd
 
-from src.utils.excel_helpers import extract_cc_code, get_fy_months, safe_float
+from src.utils.excel_helpers import extract_cc_code, safe_float
+from src.utils.fiscal_periods import map_system_source_periods
 from src.utils.source_manifest import resolve_manifest_files
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -31,11 +32,6 @@ COMPONENT_SHEETS = {
     "vps": ("vps",),
     "ams": ("ams",),
 }
-FILE_RANGES = [
-    (0, 3, ("apr", "june")),
-    (3, 9, ("july", "dec")),
-    (9, 12, ("jan", "march")),
-]
 
 
 def _normalize_text(value: object) -> str:
@@ -405,30 +401,13 @@ def parse_it_simulation(conn: sqlite3.Connection, source_dir: str | None = None)
         raise ValueError("Thiếu năm tài chính trong dữ liệu lần chạy; không được tự mặc định FY2027.")
     fy_str = fy_row[0]
     fy_int = int(str(fy_str).replace("FY", ""))
-    fy_months = get_fy_months(fy_int)
-
     search_dir = source_dir or BASE_DIR
     manifest_files = resolve_manifest_files(search_dir, "it_simulation")
-    all_files = [os.path.basename(path) for path in manifest_files] if manifest_files else os.listdir(search_dir)
-    manifest_by_name = {os.path.basename(path): path for path in manifest_files}
-    files_to_parse: list[tuple[str, list[str]]] = []
-
-    for start, end, keywords in FILE_RANGES:
-        months = fy_months[start:end]
-        matched_path: str | None = None
-        for name in all_files:
-            lower_name = name.lower()
-            if not lower_name.endswith(".xls") or "simulation" not in lower_name:
-                continue
-            if str(fy_int) not in name and str(fy_int - 1) not in name:
-                continue
-            if any(keyword in lower_name for keyword in keywords):
-                matched_path = manifest_by_name.get(name, os.path.join(search_dir, name))
-                break
-        if matched_path:
-            files_to_parse.append((matched_path, months))
-        else:
-            print(f"Thông tin: không tìm thấy tệp mô phỏng hệ thống cho {keywords}")
+    assignments = map_system_source_periods(manifest_files, fy_int)
+    files_to_parse = [
+        (assignment.path, list(assignment.periods))
+        for assignment in assignments
+    ]
 
     cursor = conn.cursor()
     cursor.execute("DELETE FROM fact_input_data WHERE source = 'it_sim'")

@@ -9,6 +9,7 @@ from src.engine.source_order_output import (
     source_order_index,
 )
 from src.utils.source_manifest import (
+    classify_source_candidate,
     detect_source_files,
     inventory_source_files,
     merge_manifest_with_detected,
@@ -186,3 +187,20 @@ def test_fast_manifest_inventory_never_opens_or_classifies_workbooks(monkeypatch
     assert rows[0]["enabled"] == "0"
     assert rows[0]["status"] == "needs_review"
     assert rows[0]["detection_method"] == "inventory"
+
+
+def test_nnn_fy2029_structure_is_recognized_without_finite_year_allowlist(tmp_path):
+    path = tmp_path / "renamed-future-source.xlsx"
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = "FY2029"
+    worksheet.append(["Cost Center", "Account Code", "2029"])
+    worksheet.append(["CC001", "611000", 1])
+    workbook.save(path)
+    workbook.close()
+
+    result = classify_source_candidate(path)
+
+    assert result["category"] == "nnn_paperwork"
+    assert result["status"] == "recognized"
+    assert result["detection_method"] == "structure"

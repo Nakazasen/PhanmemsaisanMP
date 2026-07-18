@@ -2,6 +2,8 @@ import json
 import os
 from pathlib import Path
 
+import pytest
+
 from src.parsers.manual_event_drivers import _default_period_for_fiscal_year
 from src.parsers.nnn_paperwork import month_map_for_fiscal_year
 from src.services.fiscal_run import (
@@ -13,7 +15,12 @@ from src.services.fiscal_run import (
     resolve_uniform_policy_path,
     validate_fiscal_year_evidence,
 )
-from src.utils.fiscal_periods import fiscal_baseline_period, fiscal_periods
+from src.utils.fiscal_periods import (
+    SystemSourcePeriodError,
+    fiscal_baseline_period,
+    fiscal_periods,
+    map_system_source_periods,
+)
 from src.utils.source_manifest import read_source_manifest
 from src.services.project_config import (
     ProjectConfig,
@@ -81,6 +88,73 @@ def test_system_source_filename_ranges_cover_the_selected_fiscal_year():
     ):
         covered.update(_filename_period_coverage(name, 2028))
     assert covered == set(fiscal_periods(2028))
+
+
+@pytest.mark.parametrize(
+    "paths",
+    [
+        ["system_FY2028_Apr.2027 ~ March.2028.xls"],
+        [
+            "system_FY2028_Apr.2027 ~ Sep.2027.xls",
+            "system_FY2028_Oct.2027 ~ March.2028.xls",
+        ],
+        [
+            "system_FY2028_Apr.2027 ~ June.2027.xls",
+            "system_FY2028_July.2027 ~ Dec.2027.xls",
+            "system_FY2028_Jan.2028 ~ March.2028.xls",
+        ],
+        [
+            "system_FY2028_Apr.2027 ~ June.2027.xls",
+            "system_FY2028_July.2027 ~ Sep.2027.xls",
+            "system_FY2028_Oct.2027 ~ Dec.2027.xls",
+            "system_FY2028_Jan.2028 ~ March.2028.xls",
+        ],
+    ],
+)
+def test_system_source_mapping_accepts_one_to_four_files(paths):
+    assignments = map_system_source_periods(paths, 2028)
+    covered = [period for assignment in assignments for period in assignment.periods]
+    assert covered == fiscal_periods(2028)
+
+
+def test_system_source_mapping_is_independent_of_input_order():
+    paths = [
+        "system_FY2028_Jan.2028 ~ March.2028.xls",
+        "system_FY2028_Apr.2027 ~ June.2027.xls",
+        "system_FY2028_July.2027 ~ Dec.2027.xls",
+    ]
+    assignments = map_system_source_periods(paths, 2028)
+    assert [Path(item.path).name for item in assignments] == [
+        "system_FY2028_Apr.2027 ~ June.2027.xls",
+        "system_FY2028_July.2027 ~ Dec.2027.xls",
+        "system_FY2028_Jan.2028 ~ March.2028.xls",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("paths", "expected_code"),
+    [
+        (["system_FY2028_Apr.2027 ~ Feb.2028.xls"], "SYSTEM_PERIOD_MISSING"),
+        (
+            [
+                "system_FY2028_Apr.2027 ~ Dec.2027.xls",
+                "system_FY2028_Dec.2027 ~ March.2028.xls",
+            ],
+            "SYSTEM_PERIOD_OVERLAP",
+        ),
+        (["system_FY2028_unknown.xls"], "SYSTEM_PERIOD_UNRECOGNIZED"),
+        (["system_FY2028_March.2028 ~ Apr.2027.xls"], "SYSTEM_PERIOD_REVERSED"),
+        (
+            ["system_FY2028_Apr.2027 ~ Sep.2027 ~ March.2028.xls"],
+            "SYSTEM_PERIOD_AMBIGUOUS",
+        ),
+        (["system_FY2028_March.2027 ~ March.2028.xls"], "SYSTEM_PERIOD_OUTSIDE_FY"),
+    ],
+)
+def test_system_source_mapping_fails_closed(paths, expected_code):
+    with pytest.raises(SystemSourcePeriodError) as exc_info:
+        map_system_source_periods(paths, 2028)
+    assert exc_info.value.code == expected_code
 
 
 def test_manifest_cannot_escape_selected_annual_source_directory(tmp_path):
