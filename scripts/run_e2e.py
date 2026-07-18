@@ -91,6 +91,7 @@ from src.services.fiscal_run import (
     detect_fiscal_year,
     preflight_fiscal_run,
 )
+from src.services.preflight_cache import cached_preflight_fiscal_run
 from src.services.run_history import (
     PipelineStageEvidence,
     RUN_STATUS_FAILED,
@@ -292,10 +293,14 @@ def _annual_complete_v1_source_order(run_context) -> list[str]:
 
 
 def _load_complete_v1_dynamic_allocation_rows(builder, target_cc) -> list[dict[str, object]]:
-    loader = getattr(builder, "_load_append_rows", None)
-    if not callable(loader):
-        return []
-    return loader(str(target_cc))
+    rows: list[dict[str, object]] = []
+    allocation_loader = getattr(builder, "_load_append_rows", None)
+    if callable(allocation_loader):
+        rows.extend(allocation_loader(str(target_cc)))
+    nnn_loader = getattr(builder, "_load_nnn_source_order_rows", None)
+    if callable(nnn_loader):
+        rows.extend(nnn_loader(str(target_cc)))
+    return rows
 
 
 def _translate_complete_v1_phase(phase: str) -> str:
@@ -314,6 +319,7 @@ def _format_complete_v1_result_vi(result: dict[str, int]) -> str:
         "blank_rows_written": "dòng trống",
         "start_row": "dòng bắt đầu",
         "end_row": "dòng kết thúc",
+        "nnn_rows_written": "dòng NNN",
         "layout_fills_cleared": "ô nền đã xóa",
         "item_ids_cleared": "mã mục đã xóa",
     }
@@ -641,6 +647,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            reference_policy: str | None = None,
                            preserve_run_history: bool = True,
                            accepted_missing_categories: tuple[str, ...] = (),
+                           project_config_path: str | None = None,
                            mp_saisan_complete_v1: bool = True):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
@@ -737,25 +744,39 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             base_dir=BASE_DIR,
         )
         preflight_started = time.perf_counter()
-        preflight = preflight_fiscal_run(run_context)
-        accepted_missing = tuple(sorted({str(value) for value in accepted_missing_categories}))
-        unaccepted_preflight_issues = preflight.unaccepted_issues(accepted_missing)
-        incomplete_run = bool(preflight.continuable_issues) and not unaccepted_preflight_issues
-        run_context = run_context.with_resolution(preflight.resolved_sources)
+        preflight_cache_hit = False
+        if project_config_path:
+            preflight, preflight_cache_hit = cached_preflight_fiscal_run(
+                run_context,
+                extra_paths=(project_config_path,),
+            )
+            log_callback(
+                "Kiểm tra nguồn: dùng kết quả đã duyệt, metadata không đổi."
+                if preflight_cache_hit else
+                "Kiểm tra nguồn: cache không khớp, đã quét sâu lại toàn bộ nguồn."
+            )
+        else:
+            preflight = preflight_fiscal_run(run_context)
+        blocking_preflight_issues = preflight.blocking_issues
+        skipped_source_issues = preflight.skipped_issues
+        skipped_categories = tuple(sorted({issue.category for issue in skipped_source_issues}))
+        incomplete_run = bool(skipped_source_issues) and not blocking_preflight_issues
+        usable_sources = preflight.usable_sources
+        run_context = run_context.with_resolution(usable_sources)
         # Keep the legacy FY2027 shared DB discoverable without modifying it.
         if preserve_run_history and requested_db_path is None:
             register_legacy_fy2027_database(str(run_context.history_root), production_db_path)
         # The history workspace is safe to create before calculation: it holds
         # only evidence and reports, never shared calculation data.
         if preserve_run_history and requested_db_path is None:
-            initial_status = RUN_STATUS_RUNNING if not unaccepted_preflight_issues else RUN_STATUS_PRECHECK_FAILED
+            initial_status = RUN_STATUS_RUNNING if not blocking_preflight_issues else RUN_STATUS_PRECHECK_FAILED
             run_context = create_run_workspace(
                 run_context,
                 target_cc=target_cc,
                 initial_status=initial_status,
                 initial_error_summary=(
-                    "\n".join(issue.as_text() for issue in unaccepted_preflight_issues)
-                    if unaccepted_preflight_issues else None
+                    "\n".join(issue.as_text() for issue in blocking_preflight_issues)
+                    if blocking_preflight_issues else None
                 ),
             )
             stage_evidence = PipelineStageEvidence(
@@ -766,7 +787,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             stage_evidence.start("preflight", started_perf=preflight_started)
             write_run_manifest(run_context)
             report_payload = preflight.as_dict()
-            report_payload["accepted_missing_categories"] = list(accepted_missing)
+            report_payload["usable_sources"] = {key: list(value) for key, value in usable_sources.items()}
+            report_payload["skipped_categories"] = list(skipped_categories)
             report_payload["incomplete_run"] = incomplete_run
             report_path = os.path.join(str(run_context.workspace_dir), "reports", "preflight_report.json")
             with open(report_path, "w", encoding="utf-8") as handle:
@@ -776,30 +798,31 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 handle.write(preflight.as_markdown())
                 if incomplete_run:
                     handle.write(
-                        "\n> KẾT QUẢ CHƯA ĐẦY ĐỦ: người dùng đã chấp nhận thiếu các nhóm nguồn: "
-                        + ", ".join(accepted_missing)
+                        "\n> KẾT QUẢ CHƯA ĐẦY ĐỦ: các nhóm nguồn sau không thuộc phạm vi tính hoặc bị bỏ qua: "
+                        + ", ".join(skipped_categories)
                         + ".\n"
                     )
             log_callback(f"Báo cáo kiểm tra nguồn: {report_path}")
-        if unaccepted_preflight_issues:
+        if blocking_preflight_issues:
             preflight_failed = True
-            preflight_error = "\n".join(issue.as_text() for issue in unaccepted_preflight_issues)
+            preflight_error = "\n".join(issue.as_text() for issue in blocking_preflight_issues)
             if stage_evidence is not None:
                 stage_evidence.finalize(
                     RUN_STATUS_PRECHECK_FAILED,
                     error_summary=preflight_error,
                 )
-            preflight.raise_if_invalid(accepted_missing)
+            preflight.raise_if_invalid()
         if incomplete_run:
-            log_callback(
-                "CẢNH BÁO — KẾT QUẢ CHƯA ĐẦY ĐỦ: thiếu nguồn "
-                + ", ".join(accepted_missing)
-                + ". Các phần bị ảnh hưởng không dùng dữ liệu từ lần chạy cũ."
-            )
+            log_callback("CẢNH BÁO — KẾT QUẢ CHƯA ĐẦY ĐỦ. Phạm vi nguồn bị bỏ qua:")
+            for issue in skipped_source_issues:
+                log_callback(f"  - {issue.as_text()} | tác động={issue.impact}")
+            log_callback("Các phần bị ảnh hưởng không dùng dữ liệu từ lần chạy cũ.")
         if stage_evidence is not None:
             stage_evidence.complete(details={
-                "status": "INCOMPLETE_ACCEPTED" if incomplete_run else "PASS",
-                "accepted_missing_categories": list(accepted_missing),
+                "status": "INCOMPLETE" if incomplete_run else "PASS",
+                "cache_hit": preflight_cache_hit,
+                "skipped_categories": list(skipped_categories),
+                "usable_categories": sorted(usable_sources),
             })
 
         # Production runs are immutable. Explicit db_path is retained for
@@ -841,14 +864,19 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             stage_evidence.complete()
             stage_evidence.start("import_sources")
         
-        log_callback("Đang nạp dữ liệu gốc...")
+        log_callback("Đang nạp dữ liệu gốc theo phạm vi preflight đã duyệt...")
+        allocation_paths = usable_sources.get("allocation_rules", ())
+        uniform_paths = usable_sources.get("uniform_policy", ())
         load_all(
             db_path=db_path,
             template_path=template_path,
+            rules_path=allocation_paths[0] if allocation_paths else None,
             fiscal_year=fiscal_year,
             exchange_rate=exchange_rate,
             search_dir=source_dir,
-            uniform_eligibility_path=run_context.uniform_policy_path,
+            uniform_eligibility_path=uniform_paths[0] if uniform_paths else None,
+            include_allocation_rules=bool(allocation_paths),
+            include_uniform_entitlements=bool(uniform_paths),
         )
 
         staffing_dir = os.path.abspath(run_context.headcount_source_dir)
@@ -869,37 +897,85 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             raise ValueError(
                 f"Không tìm thấy tệp kế hoạch nhân sự & thời gian FY{fiscal_year} trong {staffing_dir}."
             )
-        
-        # 3. Parsers
+
+        # 3. Parsers: never rediscover or execute a category excluded by preflight.
         manifest_lines = describe_manifest(source_dir)
         if manifest_lines:
             log_callback("Thứ tự tệp nguồn đã cấu hình:")
             for line in manifest_lines:
                 log_callback(f"  {line}")
 
-        facility_result = _timed_call(log_callback, "đọc Cơ sở vật chất", parse_facility, conn, source_dir=source_dir)
-        parser_results["facility"] = facility_result
-        fixed_assets_result = _timed_call(
-            log_callback, "đọc Tài sản cố định", parse_fixed_assets, conn, source_dir=source_dir
-        )
-        parser_results["fixed_assets"] = fixed_assets_result
-        it_result = _timed_call(
-            log_callback, "đọc Mô phỏng hệ thống", parse_it_simulation, conn, source_dir=source_dir
-        )
-        parser_results["it_simulation"] = it_result
-        ga_result = _timed_call(log_callback, "đọc Tổng vụ", parse_ga, conn, source_dir=source_dir)
-        parser_results["ga"] = ga_result
-        log_callback(f"Dữ liệu Tổng vụ: đơn giá={ga_result.get('total', 0)}, nhân sự={ga_result.get('headcount', 0)}")
-        birthday_result = parse_birthday_workbook(conn, source_dir=source_dir)
-        parser_results["birthday_workbook"] = birthday_result
-        log_callback(
-            "Tệp sinh nhật: thêm={inserted}, bỏ qua={skipped}, lỗi={errors}, tệp={path}".format(
-                inserted=birthday_result.get("inserted", 0),
-                skipped=birthday_result.get("skipped", 0),
-                errors=birthday_result.get("errors", 0),
-                path=birthday_result.get("path", ""),
+        def skipped_result(category):
+            result = {"status": "SKIPPED", "reason": "Không thuộc usable source scope", "files": 0}
+            parser_results[category] = result
+            log_callback(f"Bỏ qua {category}: không có nguồn hợp lệ trong phạm vi lần chạy.")
+            return result
+
+        if "facility" in usable_sources:
+            facility_result = _timed_call(
+                log_callback,
+                "đọc Cơ sở vật chất",
+                parse_facility,
+                conn,
+                workbook_path=usable_sources["facility"][0],
             )
-        )
+            parser_results["facility"] = facility_result
+        else:
+            facility_result = skipped_result("facility")
+
+        if "fixed_assets" in usable_sources:
+            fixed_assets_result = _timed_call(
+                log_callback,
+                "đọc Tài sản cố định",
+                parse_fixed_assets,
+                conn,
+                fa_path=usable_sources["fixed_assets"][0],
+            )
+            parser_results["fixed_assets"] = fixed_assets_result
+        else:
+            fixed_assets_result = skipped_result("fixed_assets")
+
+        if "it_simulation" in usable_sources:
+            it_result = _timed_call(
+                log_callback,
+                "đọc Mô phỏng hệ thống",
+                parse_it_simulation,
+                conn,
+                source_paths=usable_sources["it_simulation"],
+            )
+            parser_results["it_simulation"] = it_result
+        else:
+            it_result = skipped_result("it_simulation")
+
+        if "ga" in usable_sources:
+            ga_result = _timed_call(
+                log_callback,
+                "đọc Tổng vụ",
+                parse_ga,
+                conn,
+                workbook_path=usable_sources["ga"][0],
+            )
+            parser_results["ga"] = ga_result
+            log_callback(f"Dữ liệu Tổng vụ: đơn giá={ga_result.get('total', 0)}, nhân sự={ga_result.get('headcount', 0)}")
+        else:
+            ga_result = skipped_result("ga")
+
+        if "birthday" in usable_sources:
+            birthday_result = parse_birthday_workbook(
+                conn,
+                workbook_path=usable_sources["birthday"][0],
+            )
+            parser_results["birthday_workbook"] = birthday_result
+            log_callback(
+                "Tệp sinh nhật: thêm={inserted}, bỏ qua={skipped}, lỗi={errors}, tệp={path}".format(
+                    inserted=birthday_result.get("inserted", 0),
+                    skipped=birthday_result.get("skipped", 0),
+                    errors=birthday_result.get("errors", 0),
+                    path=birthday_result.get("path", ""),
+                )
+            )
+        else:
+            birthday_result = skipped_result("birthday_workbook")
         manual_hc_result = _parse_manual_headcount(conn, source_dir)
         # Copy editable annual entries only after parsers have refreshed their
         # own manual tables.  In particular, the legacy CSV parser clears bus
@@ -947,16 +1023,22 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 path=manual_event_result.get("template_path", ""),
             )
         )
-        nnn_result = parse_nnn_paperwork(conn, source_dir=source_dir)
-        parser_results["nnn_paperwork"] = nnn_result
-        log_callback(
-            "Tệp giấy tờ NNN: thêm={inserted}, bỏ qua={skipped}, lỗi={errors}, tệp={path}".format(
-                inserted=nnn_result.get("inserted", 0),
-                skipped=nnn_result.get("skipped", 0),
-                errors=nnn_result.get("errors", 0),
-                path=nnn_result.get("path", ""),
+        if "nnn_paperwork" in usable_sources:
+            nnn_result = parse_nnn_paperwork(
+                conn,
+                workbook_path=usable_sources["nnn_paperwork"][0],
             )
-        )
+            parser_results["nnn_paperwork"] = nnn_result
+            log_callback(
+                "Tệp giấy tờ NNN: thêm={inserted}, bỏ qua={skipped}, lỗi={errors}, tệp={path}".format(
+                    inserted=nnn_result.get("inserted", 0),
+                    skipped=nnn_result.get("skipped", 0),
+                    errors=nnn_result.get("errors", 0),
+                    path=nnn_result.get("path", ""),
+                )
+            )
+        else:
+            nnn_result = skipped_result("nnn_paperwork")
 
         if stage_evidence is not None:
             stage_evidence.complete(details={"parser_count": len(parser_results)})
@@ -1277,8 +1359,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             with open(marker_path, "w", encoding="utf-8") as marker:
                 marker.write(
                     "KẾT QUẢ CHƯA ĐẦY ĐỦ\n\n"
-                    "Lần chạy này được người dùng xác nhận tiếp tục dù thiếu nguồn độc lập: "
-                    + ", ".join(accepted_missing)
+                    "Lần chạy này bỏ qua các category nguồn độc lập sau: "
+                    + ", ".join(skipped_categories)
                     + ".\n"
                     "Các phần bị ảnh hưởng không dùng dữ liệu từ lần chạy cũ.\n"
                 )
@@ -1367,8 +1449,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 target_cc=target_cc,
                 output_path=published_output,
                 error_summary=(
-                    "KẾT QUẢ CHƯA ĐẦY ĐỦ — đã chấp nhận thiếu nguồn: "
-                    + ", ".join(accepted_missing)
+                    "KẾT QUẢ CHƯA ĐẦY ĐỦ — category nguồn bị bỏ qua: "
+                    + ", ".join(skipped_categories)
                     if incomplete_run else None
                 ),
             )
@@ -1428,6 +1510,12 @@ def main(argv=None):
     parser.add_argument('--manual-input-store', type=str, default=None)
     parser.add_argument('--output-dir', type=str, default=None)
     parser.add_argument('--run-history-root', type=str, default=None)
+    parser.add_argument(
+        '--project-config',
+        type=str,
+        default=None,
+        help='Project config tracked by the metadata-fingerprinted preflight cache.',
+    )
     parser.add_argument(
         '--no-run-history',
         action='store_true',
@@ -1557,6 +1645,7 @@ def main(argv=None):
         fixed_assets_skeleton_csv=args.fixed_assets_skeleton_csv,
         fixed_assets_skeleton_start_row=args.fixed_assets_skeleton_start_row,
         mp_saisan_complete_v1=True,
+        project_config_path=args.project_config,
     )
     return 0 if success else 1
 

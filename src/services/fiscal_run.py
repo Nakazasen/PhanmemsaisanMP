@@ -31,7 +31,7 @@ from src.utils.fiscal_periods import (
 from src.utils.source_manifest import read_source_manifest, resolve_manifest_files
 
 
-REQUIRED_SOURCE_CATEGORIES = (
+SOURCE_CATEGORIES = (
     "facility",
     "fixed_assets",
     "it_simulation",
@@ -41,17 +41,17 @@ REQUIRED_SOURCE_CATEGORIES = (
     "nnn_paperwork",
     "uniform_policy",
 )
+# Compatibility alias: this is a registry of supported source categories, not a
+# policy that every category must exist for every fiscal year.
+REQUIRED_SOURCE_CATEGORIES = SOURCE_CATEGORIES
 ISSUE_BLOCKING = "BLOCKING"
-ISSUE_CONTINUABLE_MISSING_SOURCE = "CONTINUABLE_MISSING_SOURCE"
+ISSUE_SOURCE_SKIPPED = "SOURCE_SKIPPED"
+ISSUE_CONTINUABLE_MISSING_SOURCE = ISSUE_SOURCE_SKIPPED
 ISSUE_INFORMATION = "INFORMATION"
-CONTINUABLE_MISSING_SOURCE_CATEGORIES = frozenset({
-    "facility",
-    "fixed_assets",
-    "it_simulation",
-    "ga",
-    "birthday",
-    "nnn_paperwork",
-})
+SOURCE_SCOPED_CATEGORIES = frozenset(SOURCE_CATEGORIES) | {
+    "source_inventory",
+    "form_uniform_master",
+}
 REFERENCE_POLICY_DISABLED = "DISABLED"
 REFERENCE_POLICY_EXPLICIT_SAME_FY = "EXPLICIT_SAME_FY"
 REFERENCE_POLICY_LEGACY_FY2027_MAP = "LEGACY_FY2027_MAP"
@@ -122,7 +122,11 @@ class SourceIssue:
 
     @property
     def is_continuable(self) -> bool:
-        return self.severity == ISSUE_CONTINUABLE_MISSING_SOURCE
+        return self.severity == ISSUE_SOURCE_SKIPPED
+
+    @property
+    def is_source_skipped(self) -> bool:
+        return self.severity == ISSUE_SOURCE_SKIPPED
 
     def as_dict(self) -> dict[str, object]:
         candidate = Path(self.path) if self.path else None
@@ -282,33 +286,83 @@ class RunPreflightReport:
 
     @property
     def blocking_issues(self) -> tuple[SourceIssue, ...]:
-        return tuple(issue for issue in self.issues if not issue.is_continuable)
+        return tuple(issue for issue in self.issues if issue.severity == ISSUE_BLOCKING)
+
+    @property
+    def skipped_issues(self) -> tuple[SourceIssue, ...]:
+        return tuple(issue for issue in self.issues if issue.is_source_skipped)
 
     @property
     def continuable_issues(self) -> tuple[SourceIssue, ...]:
-        return tuple(issue for issue in self.issues if issue.is_continuable)
+        """Compatibility alias for callers built before subset-run support."""
+        return self.skipped_issues
+
+    @property
+    def can_run(self) -> bool:
+        """Whether shared run prerequisites are safe, regardless of source count."""
+        return not self.blocking_issues
 
     @property
     def can_continue_incomplete(self) -> bool:
-        return bool(self.continuable_issues) and not self.blocking_issues
+        return self.can_run and bool(self.skipped_issues)
+
+    @property
+    def usable_sources(self) -> dict[str, tuple[str, ...]]:
+        """Only source paths that passed validation; never rediscover rejected files."""
+        rejected_categories = {
+            issue.category for issue in self.skipped_issues
+            if issue.category in SOURCE_SCOPED_CATEGORIES
+            and issue.category != "it_simulation"
+        }
+        # Inventory issues point at one unclassified workbook and must not hide
+        # otherwise valid, explicitly classified categories.
+        rejected_categories.discard("source_inventory")
+        if "form_uniform_master" in rejected_categories:
+            rejected_categories.add("uniform_policy")
+
+        system_paths = tuple(self.resolved_sources.get("it_simulation", ()))
+        rejected_system_paths: set[str] = set()
+        reject_all_system = False
+        for issue in self.skipped_issues:
+            if issue.category != "it_simulation":
+                continue
+            if issue.path in system_paths:
+                rejected_system_paths.add(issue.path)
+            else:
+                # Overlap/duplicate issues can involve more than one path. Do not
+                # guess which file should win; isolate the category in that case.
+                reject_all_system = True
+
+        usable: dict[str, tuple[str, ...]] = {}
+        for category, paths in self.resolved_sources.items():
+            if category in rejected_categories or not paths:
+                continue
+            if category == "it_simulation":
+                filtered = () if reject_all_system else tuple(
+                    path for path in paths if path not in rejected_system_paths
+                )
+                if filtered:
+                    usable[category] = filtered
+            else:
+                usable[category] = tuple(paths)
+        return usable
 
     def accepted_missing_categories(self) -> tuple[str, ...]:
-        return tuple(sorted({issue.category for issue in self.continuable_issues}))
+        """Compatibility metadata; subset runs no longer require acceptance flags."""
+        return tuple(sorted({issue.category for issue in self.skipped_issues}))
 
     def unaccepted_issues(self, accepted_categories: Iterable[str] = ()) -> tuple[SourceIssue, ...]:
-        accepted = {str(category) for category in accepted_categories}
-        return tuple(
-            issue for issue in self.issues
-            if not (issue.is_continuable and issue.category in accepted)
-        )
+        # Source-scoped failures are always isolated. The argument remains for
+        # compatibility with saved commands and older callers.
+        return self.blocking_issues
 
     def raise_if_invalid(self, accepted_categories: Iterable[str] = ()) -> None:
-        remaining = self.unaccepted_issues(accepted_categories)
+        remaining = self.blocking_issues
         if not remaining:
             return
         detail = "\n".join(f"- {issue.as_text()}" for issue in remaining)
         raise ValueError(
-            f"Kiểm tra nguồn FY{self.fiscal_year} không đạt. Chương trình chưa tạo dữ liệu tính toán.\n{detail}"
+            f"Kiểm tra điều kiện chạy FY{self.fiscal_year} không đạt. Chương trình chưa tạo dữ liệu tính toán.\n{detail}"
         )
 
 
@@ -803,7 +857,7 @@ def _preflight_checks(
             detected_fiscal_year=evidence.resolved_fiscal_year,
             expected_fiscal_year=context.fiscal_year,
             status=(
-                "WARNING" if issue and issue.is_continuable else
+                "SKIPPED" if issue and issue.is_source_skipped else
                 "FAILED" if issue else
                 "OK"
             ),
@@ -906,11 +960,11 @@ def preflight_fiscal_run(
                 "source_inventory",
                 str(entry["filename"]),
                 None,
-                "Có workbook nguồn chưa được xử lý: " + (str(entry["reason"]) or "chưa nhận diện được loại nguồn"),
-                "Mở ‘Thứ tự file nguồn’, xác nhận loại phù hợp hoặc chủ động đánh dấu Bỏ qua.",
+                "Workbook chưa được chọn để tính: " + (str(entry["reason"]) or "chưa nhận diện được loại nguồn"),
+                "Mở ‘Thứ tự file nguồn’ để xác nhận loại, hoặc giữ trạng thái Bỏ qua.",
                 code="SOURCE_NEEDS_REVIEW",
-                severity=ISSUE_BLOCKING,
-                impact="Workbook chưa rõ mục đích có thể làm thiếu chi phí nếu bị bỏ sót.",
+                severity=ISSUE_SOURCE_SKIPPED,
+                impact="Workbook này không được đưa vào kết quả; các nguồn đã xác nhận vẫn được chạy.",
             ))
 
     notify("Đang kiểm tra FORM sạch và đúng cấu trúc...")
@@ -955,36 +1009,28 @@ def preflight_fiscal_run(
         ))
 
     notify("Đang kiểm tra FY và cấu trúc của từng nguồn chi phí...")
-    manifest_present = any(
-        (Path(context.source_dir) / name).is_file()
-        for name in ("source_file_order.csv", "source_file_order.xlsx")
-    )
-    strict_categories = context.fiscal_year != 2027 or manifest_present
-    for category in REQUIRED_SOURCE_CATEGORIES:
+    for category in SOURCE_CATEGORIES:
         paths = sources.get(category, ())
         if not paths:
-            if strict_categories:
-                issues.append(SourceIssue(
-                    category,
-                    "",
-                    None,
-                    "Không tìm thấy nguồn bắt buộc",
-                    "Bổ sung đúng file năm đã chọn vào danh sách file hoặc thư mục nguồn.",
-                    code="MISSING_SOURCE",
-                    severity=(
-                        ISSUE_CONTINUABLE_MISSING_SOURCE
-                        if category in CONTINUABLE_MISSING_SOURCE_CATEGORIES else
-                        ISSUE_BLOCKING
-                    ),
-                    impact=(
-                        "Phần chi phí của nguồn này sẽ bằng 0 hoặc để trống trong kết quả."
-                        if category in CONTINUABLE_MISSING_SOURCE_CATEGORIES else
-                        "Thiếu nguồn nền tảng nên chưa thể bảo đảm kết quả tính toán."
-                    ),
-                ))
+            issues.append(SourceIssue(
+                category,
+                "",
+                None,
+                "Không có nguồn được chọn cho category này",
+                "Không cần bổ sung nếu category nằm ngoài phạm vi lần chạy.",
+                code="MISSING_SOURCE",
+                severity=ISSUE_SOURCE_SKIPPED,
+                impact="Category này không được tính; các nguồn hợp lệ khác vẫn được chạy.",
+            ))
             continue
         if category != "it_simulation" and len(paths) != 1:
-            issues.append(SourceIssue(category, "; ".join(paths), None, "Có nhiều nguồn cùng loại", "Chỉ giữ một nguồn hoặc chọn rõ trong manifest."))
+            issues.append(SourceIssue(
+                category, "; ".join(paths), None,
+                "Có nhiều nguồn cùng loại nên không thể chọn an toàn",
+                "Chọn rõ một nguồn trong manifest; category này sẽ được bỏ qua ở lần chạy hiện tại.",
+                severity=ISSUE_SOURCE_SKIPPED,
+                impact="Category này không được tính; các nguồn hợp lệ khác vẫn được chạy.",
+            ))
         for path in paths:
             # Uniform policy has a stricter sequential pipeline below:
             # existence -> structure -> fiscal evidence -> FORM compatibility.
@@ -1005,40 +1051,61 @@ def preflight_fiscal_run(
                     path,
                     evidence.resolved_fiscal_year,
                     reason,
-                    f"Thay bằng nguồn xác nhận đúng FY{context.fiscal_year}.",
+                    f"Thay bằng nguồn xác nhận đúng FY{context.fiscal_year}; category này đang được bỏ qua.",
+                    severity=ISSUE_SOURCE_SKIPPED,
+                    impact="Nguồn này không được tính; các nguồn hợp lệ khác vẫn được chạy.",
                 ))
 
     system_paths = sources.get("it_simulation", ())
     if system_paths:
-        try:
-            system_assignments = map_system_source_periods(
-                system_paths,
-                context.fiscal_year,
-            )
-        except SystemSourcePeriodError as exc:
-            covered_periods = tuple(
-                period
-                for path in system_paths
-                for period in _filename_period_coverage(path, context.fiscal_year)
-            )
-            issues.append(SourceIssue(
-                "it_simulation",
-                "; ".join(exc.paths or system_paths),
-                context.fiscal_year,
-                str(exc),
-                "Đổi tên hoặc chọn các file System Cost sao cho mỗi file thể hiện rõ khoảng kỳ, không thiếu và không trùng kỳ trong FY đang chạy.",
-                period_coverage=tuple(dict.fromkeys(covered_periods)),
-                code=exc.code,
-            ))
-        else:
-            system_periods = {
-                period
-                for assignment in system_assignments
-                for period in assignment.periods
-            }
-            expected_system_periods = set(fiscal_periods(context.fiscal_year))
-            if system_periods != expected_system_periods:
-                raise AssertionError("System Cost period mapping returned incomplete coverage")
+        rejected_system_paths = {
+            issue.path for issue in issues
+            if issue.category == "it_simulation" and issue.path in system_paths
+        }
+        valid_system_paths: list[str] = []
+        for path in system_paths:
+            if path in rejected_system_paths:
+                continue
+            try:
+                map_system_source_periods(
+                    (path,),
+                    context.fiscal_year,
+                    require_complete=False,
+                )
+            except SystemSourcePeriodError as exc:
+                issues.append(SourceIssue(
+                    "it_simulation",
+                    path,
+                    context.fiscal_year,
+                    str(exc),
+                    "Đổi tên/chọn file thể hiện rõ khoảng kỳ; chỉ file này bị bỏ qua.",
+                    period_coverage=tuple(exc.periods),
+                    code=exc.code,
+                    severity=ISSUE_SOURCE_SKIPPED,
+                    impact="File System Cost này không được dùng; các file hợp lệ khác vẫn được tính.",
+                ))
+            else:
+                valid_system_paths.append(path)
+
+        if valid_system_paths:
+            try:
+                map_system_source_periods(
+                    valid_system_paths,
+                    context.fiscal_year,
+                    require_complete=False,
+                )
+            except SystemSourcePeriodError as exc:
+                issues.append(SourceIssue(
+                    "it_simulation",
+                    "; ".join(exc.paths or valid_system_paths),
+                    context.fiscal_year,
+                    str(exc),
+                    "Loại file trùng kỳ hoặc sửa phạm vi kỳ; System Cost sẽ bị bỏ qua để tránh tự chọn sai.",
+                    period_coverage=tuple(exc.periods),
+                    code=exc.code,
+                    severity=ISSUE_SOURCE_SKIPPED,
+                    impact="System Cost không được ghi; các category hợp lệ khác vẫn được chạy.",
+                ))
 
     fixed_asset_paths = sources.get("fixed_assets", ())
     if len(fixed_asset_paths) == 1:
@@ -1047,19 +1114,29 @@ def preflight_fiscal_run(
             issues.append(SourceIssue(
                 "fixed_assets", fixed_asset_paths[0], evidence.resolved_fiscal_year,
                 f"Không đọc được snapshot tài sản cố định: {evidence.inspection_error}",
-                "Cung cấp file snapshot tài sản cố định mở được và chứa dữ liệu cần tính cho FY đang chạy.",
+                "Cung cấp file snapshot mở được; category này đang được bỏ qua.",
+                severity=ISSUE_SOURCE_SKIPPED,
+                impact="Tài sản cố định không được tính; các category hợp lệ khác vẫn được chạy.",
             ))
 
     allocation_paths = sources.get("allocation_rules", ())
     if len(allocation_paths) == 1 and not _allocation_has_exact_sheet(allocation_paths[0], context.fiscal_year):
-        issues.append(SourceIssue("allocation_rules", allocation_paths[0], detect_fiscal_year(allocation_paths[0]), "Không có sheet quy tắc đúng FY", f"Bổ sung sheet FY{context.fiscal_year}."))
+        issues.append(SourceIssue(
+            "allocation_rules", allocation_paths[0], detect_fiscal_year(allocation_paths[0]),
+            "Không có sheet quy tắc đúng FY", f"Bổ sung sheet FY{context.fiscal_year}; category này đang được bỏ qua.",
+            severity=ISSUE_SOURCE_SKIPPED,
+            impact="Không nạp quy tắc phân bổ từ file này; các nguồn hợp lệ khác vẫn được chạy.",
+        ))
 
     for category in ("ga", "birthday", "nnn_paperwork"):
         paths = sources.get(category, ())
         if len(paths) == 1 and not _workbook_has_fiscal_sheet(paths[0], context.fiscal_year):
             issues.append(SourceIssue(
                 category, paths[0], detect_fiscal_year(paths[0]),
-                "Không có sheet xác nhận đúng năm tài chính", f"Bổ sung sheet FY{context.fiscal_year}; không dùng sheet của năm khác."
+                "Không có sheet xác nhận đúng năm tài chính",
+                f"Bổ sung sheet FY{context.fiscal_year}; category này đang được bỏ qua.",
+                severity=ISSUE_SOURCE_SKIPPED,
+                impact="Category này không được tính; các nguồn hợp lệ khác vẫn được chạy.",
             ))
 
     notify("Đang kiểm tra policy và độ tương thích với FORM...")
@@ -1073,7 +1150,9 @@ def preflight_fiscal_run(
                 str(uniform_path),
                 None,
                 "File policy đồng phục/cốc xếp không tồn tại",
-                "Chọn file policy hợp lệ hoặc để trống cấu hình để tự dò trong project của FY.",
+                "Chọn file policy hợp lệ; category này đang được bỏ qua.",
+                severity=ISSUE_SOURCE_SKIPPED,
+                impact="Đồng phục/cốc xếp không được tính; các category khác vẫn được chạy.",
             ))
         elif not _is_uniform_policy(uniform_path):
             issues.append(SourceIssue(
@@ -1081,7 +1160,9 @@ def preflight_fiscal_run(
                 str(uniform_path),
                 detect_fiscal_year(uniform_path),
                 "Thiếu sheet 原価センタ hoặc các cột policy đồng phục/cốc xếp F:U",
-                "Dùng bảng dấu chọn đồng phục/cốc xếp đúng cấu trúc.",
+                "Dùng bảng policy đúng cấu trúc; category này đang được bỏ qua.",
+                severity=ISSUE_SOURCE_SKIPPED,
+                impact="Đồng phục/cốc xếp không được tính; các category khác vẫn được chạy.",
             ))
         else:
             evidence = inspect_fiscal_year_evidence(uniform_path)
@@ -1096,7 +1177,9 @@ def preflight_fiscal_run(
                     str(uniform_path),
                     evidence.resolved_fiscal_year,
                     fiscal_reason,
-                    f"Thay bằng policy được xác nhận đúng FY{context.fiscal_year}.",
+                    f"Thay bằng policy FY{context.fiscal_year}; category này đang được bỏ qua.",
+                    severity=ISSUE_SOURCE_SKIPPED,
+                    impact="Đồng phục/cốc xếp không được tính; các category khác vẫn được chạy.",
                 ))
             else:
                 uniform_ready = True
@@ -1109,7 +1192,9 @@ def preflight_fiscal_run(
                 context.uniform_policy_path or context.template_path,
                 detect_fiscal_year(context.uniform_policy_path) if context.uniform_policy_path else None,
                 master_uniform_error,
-                "Sửa danh mục phòng/tài khoản trong FORM hoặc danh sách phòng của bảng đồng phục để hai nguồn khớp nhau.",
+                "Sửa policy hoặc FORM; policy đồng phục sẽ bị bỏ qua cho lần chạy hiện tại.",
+                severity=ISSUE_SOURCE_SKIPPED,
+                impact="Đồng phục/cốc xếp không được tính; các category khác vẫn được chạy.",
             ))
 
     notify("Đang tổng hợp kết quả kiểm tra an toàn...")

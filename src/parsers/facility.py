@@ -119,8 +119,12 @@ def parse_facility_sheet(df: pd.DataFrame, config: dict, fy_months: list) -> lis
         i += 1
     return records
 
-def parse_facility(conn: sqlite3.Connection, source_dir: str = None) -> dict:
-    """Parse all sheets from the facility file and insert into fact_input_data."""
+def parse_facility(
+    conn: sqlite3.Connection,
+    source_dir: str = None,
+    workbook_path: str | None = None,
+) -> dict:
+    """Parse the approved facility workbook and insert into fact_input_data."""
     # Get dynamic parameters from DB
     rate_row = conn.execute("SELECT value FROM sys_params WHERE key='exchange_rate_usd_vnd'").fetchone()
     rate = float(rate_row[0]) if rate_row else 25450.0
@@ -132,12 +136,12 @@ def parse_facility(conn: sqlite3.Connection, source_dir: str = None) -> dict:
     fy_int = int(fy_str.replace('FY', ''))
     fy_months = get_fy_months(fy_int)
 
-    # Use source_dir if provided
+    # Explicit preflight-approved path wins; discovery remains for legacy callers.
     search_dir = source_dir or BASE_DIR
-    manifest_path = resolve_manifest_file(search_dir, "facility")
-    path = os.path.join(search_dir, f'施設課　MP{fy_str}.xlsx')
-    if manifest_path:
-        path = manifest_path
+    path = workbook_path
+    if path is None:
+        manifest_path = resolve_manifest_file(search_dir, "facility")
+        path = manifest_path or os.path.join(search_dir, f'施設課　MP{fy_str}.xlsx')
     print(f"Đang mở tệp Cơ sở vật chất: {path}")
     if not os.path.exists(path):
         print(f"Cảnh báo: không tìm thấy tệp Cơ sở vật chất: {path} trong {search_dir}")

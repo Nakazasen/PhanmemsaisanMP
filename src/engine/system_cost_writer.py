@@ -44,7 +44,13 @@ def apply_system_cost_to_open_workbook(
     )
     if item.confidence == 'HIGH':
         for offset, value in enumerate(item.month_values):
-            ws.cell(row=item.planned_row, column=MONTH_START_COL + offset, value=value)
+            if value is not None:
+                ws.cell(row=item.planned_row, column=MONTH_START_COL + offset, value=value)
+    else:
+        for offset, value in enumerate(item.month_values):
+            if value is not None:
+                ws.cell(row=item.planned_row, column=MONTH_START_COL + offset, value=value)
+
     _clear_row(ws, preview.blank_row_after)
     normalize_output_description_column_s(ws)
 

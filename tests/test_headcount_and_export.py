@@ -5330,6 +5330,48 @@ class TestHubBuilderExport(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_nnn_source_order_rows_resolve_source_accounts_by_cc_cost_type(self):
+        conn = _mk_conn()
+        cc_code = _seed_export_ready_cc(conn, cost_type="製造")
+        periods = get_fy_months(2027)
+        conn.executemany(
+            """
+            INSERT INTO dim_accounts
+            (code, name_jp, name_vn, group_name, mfg_code, ga_code, sales_code)
+            VALUES (?, ?, 'Fee', '手数料', ?, ?, NULL)
+            """,
+            [
+                (5005246286, 'その他手数料（製）', 5005246286, None),
+                (6005246673, 'その他手数料（一般）', None, 6005246673),
+            ],
+        )
+        conn.executemany(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, cc_code, account_code, form_row, scenario_id, description)
+            VALUES ('nnn_paperwork', ?, ?, ?, ?, 137, 'base', ?)
+            """,
+            [
+                (periods[4], 2000000, cc_code, 5005246286, "NNN paperwork: VN0001 Worker A|formula_expr=1820000+130000+50000"),
+                (periods[6], 2450000, cc_code, 6005246673, "NNN paperwork: VN0002 Worker B|formula_expr=1000000+1000000+50000+400000"),
+            ],
+        )
+        conn.commit()
+        try:
+            rows = HubBuilder(conn, fiscal_year=2027)._load_nnn_source_order_rows(cc_code)
+            self.assertEqual(len(rows), 2)
+            self.assertEqual({row["account_code"] for row in rows}, {5005246286})
+            self.assertTrue(all(row["source_group_index"] == 6 for row in rows))
+            rows_by_description = {row["description"]: row for row in rows}
+            worker_a = rows_by_description["NNN paperwork: VN0001 Worker A"]
+            worker_b = rows_by_description["NNN paperwork: VN0002 Worker B"]
+            self.assertEqual(dict(worker_a["terms"])[periods[4]], ["1820000+130000+50000"])
+            self.assertEqual(dict(worker_b["terms"])[periods[6]], ["1000000+1000000+50000+400000"])
+            self.assertIn("raw_account_code=6005246673", worker_b["audit_trail"])
+            self.assertIn("resolved_account_code=5005246286", worker_b["audit_trail"])
+        finally:
+            conn.close()
+
     def test_nnn_paperwork_does_not_export_unknown_cost_center(self):
         conn = _mk_conn()
         cc_code_target = _seed_export_ready_cc(conn, code=1412000004)

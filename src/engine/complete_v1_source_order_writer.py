@@ -99,6 +99,10 @@ def _row_has_visible_month_cost(ws, row: int) -> bool:
     return worksheet_row_has_cost(ws, row, MONTH_COLS)
 
 
+def _staged_row_has_month_payload(row: StagedWorkbookRow) -> bool:
+    return any(_norm(row.values.get(col)) for col in MONTH_COLS)
+
+
 def _copy_staged_row(
     ws,
     source_file: str,
@@ -421,10 +425,12 @@ def _collect_dynamic_allocation_rows(
     if not dynamic_allocation_rows or not fiscal_periods:
         return []
     period_to_col = {str(period): MONTH_START_COL + index for index, period in enumerate(fiscal_periods)}
-    default_source_file = source_file_order[5]
     staged: list[StagedWorkbookRow] = []
     for index, row in enumerate(dynamic_allocation_rows, start=1):
-        source_file = str(row.get("source_file") or default_source_file)
+        source_group_index = int(row.get("source_group_index", 5))
+        if not 0 <= source_group_index < len(source_file_order):
+            raise ValueError(f"Dynamic source group index ngoài manifest: {source_group_index}")
+        source_file = str(row.get("source_file") or source_file_order[source_group_index])
         synthetic_row = 10000 + index
         values: dict[int, object] = {
             ACCOUNT_COL: row.get("account_code"),
@@ -447,6 +453,12 @@ def _collect_dynamic_allocation_rows(
             if period in highlight_periods:
                 red_month_cols.add(col)
         values[TOTAL_COL] = f"=SUM(F{synthetic_row}:Q{synthetic_row})"
+        has_month_payload = any(col in values for col in MONTH_COLS)
+        if source_group_index == 6 and has_month_payload:
+            if not _norm(values.get(ACCOUNT_COL)):
+                raise ValueError("NNN paperwork có chi phí nhưng thiếu account code; dừng xuất để tránh 経費➝NG.")
+            if not _norm(values.get(DESCRIPTION_COL)):
+                raise ValueError("NNN paperwork có chi phí nhưng thiếu mô tả nguồn; dừng xuất.")
         if not _norm(values.get(DESCRIPTION_COL)) or not _norm(values.get(ACCOUNT_COL)):
             continue
         staged.append(
@@ -546,6 +558,9 @@ def apply_complete_v1_source_order_to_workbook(
         has_dynamic_fixed_assets = any(
             row.source_file == resolved_source_order[1] for row in dynamic_staged
         )
+        has_dynamic_nnn = any(
+            row.source_file == resolved_source_order[6] for row in dynamic_staged
+        )
         if has_dynamic_fixed_assets:
             staged = [
                 row
@@ -555,8 +570,27 @@ def apply_complete_v1_source_order_to_workbook(
                     and row.original_row in (38, 42)
                 )
             ]
+        if has_dynamic_nnn:
+            staged = [
+                row
+                for row in staged
+                if row.source_file != resolved_source_order[6]
+            ]
         staged = _drop_staged_rows_duplicated_by_dynamic(staged, dynamic_staged)
         staged.extend(dynamic_staged)
+        invalid_nnn_rows = [
+            row
+            for row in staged
+            if row.source_file == resolved_source_order[6]
+            and _staged_row_has_month_payload(row)
+            and not _norm(row.values.get(ACCOUNT_COL))
+        ]
+        if invalid_nnn_rows:
+            original_rows = ", ".join(str(row.original_row) for row in invalid_nnn_rows)
+            raise ValueError(
+                "NNN paperwork có chi phí nhưng thiếu account code "
+                f"(original_row={original_rows}); dừng xuất để tránh 経費➝NG."
+            )
         preserved = _collect_preserved_unmanaged_rows(
             ws,
             start_row,
@@ -606,6 +640,9 @@ def apply_complete_v1_source_order_to_workbook(
             "blank_rows_written": blank_rows_written,
             "start_row": start_row,
             "end_row": current_row - 1 if rows_written or preserved_rows_written else start_row - 1,
+            "nnn_rows_written": sum(
+                1 for row in staged if row.source_file == resolved_source_order[6]
+            ),
             **layout_stats,
         }
     finally:

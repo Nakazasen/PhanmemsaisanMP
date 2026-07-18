@@ -13,7 +13,7 @@ from typing import Callable, Iterable
 from src.services.fiscal_run import FiscalRunContext, RunPreflightReport, preflight_fiscal_run
 from src.services.project_config import launcher_config_path
 
-CACHE_SCHEMA_VERSION = 1
+CACHE_SCHEMA_VERSION = 2
 FINGERPRINT_RULE_VERSION = 1
 CACHE_FILENAME = "preflight_cache.json"
 MAX_CACHE_ENTRIES = 32

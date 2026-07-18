@@ -30,7 +30,29 @@ def test_no_OUTPUT_FY2027_or_dist_dirty_in_repo_root(monkeypatch,tmp_path):
  assert not Path.cwd().samefile(Path(__file__).resolve().parents[1])
 
 
-def test_invalid_system_cost_mapping_does_not_mutate_open_workbook():
+def test_partial_system_cost_mapping_is_allowed_and_marks_missing_periods():
+ workbook = Workbook()
+ worksheet = workbook.active
+ worksheet["E211"] = "existing-item"
+ worksheet["F211"] = 123456
+ worksheet["S211"] = "existing-description"
+ try:
+  from src.utils.fiscal_periods import map_system_source_periods
+  assignments = map_system_source_periods(
+   ["system_FY2028_Apr.2027 ~ Feb.2028.xls"],
+   2028,
+   require_complete=False,
+  )
+  assert len(assignments) == 1
+  assert len(assignments[0].periods) == 11
+  assert worksheet["E211"].value == "existing-item"
+  assert worksheet["F211"].value == 123456
+  assert worksheet["S211"].value == "existing-description"
+ finally:
+  workbook.close()
+
+
+def test_overlapping_system_cost_mapping_does_not_mutate_open_workbook():
  workbook = Workbook()
  worksheet = workbook.active
  worksheet["E211"] = "existing-item"
@@ -40,11 +62,14 @@ def test_invalid_system_cost_mapping_does_not_mutate_open_workbook():
   with pytest.raises(SystemSourcePeriodError) as exc_info:
    apply_system_cost_to_open_workbook(
     workbook,
-    ["system_FY2028_Apr.2027 ~ Feb.2028.xls"],
+    [
+     "system_FY2028_Apr.2027 ~ Dec.2027.xls",
+     "system_FY2028_Dec.2027 ~ March.2028.xls",
+    ],
     fiscal_year=2028,
     cost_center="CC001",
    )
-  assert exc_info.value.code == "SYSTEM_PERIOD_MISSING"
+  assert exc_info.value.code == "SYSTEM_PERIOD_OVERLAP"
   assert worksheet["E211"].value == "existing-item"
   assert worksheet["F211"].value == 123456
   assert worksheet["S211"].value == "existing-description"

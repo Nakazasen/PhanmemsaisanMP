@@ -435,6 +435,35 @@ class TestSharedAccountResolver(unittest.TestCase):
         self.assertEqual(resolve_account_code(db_path, 1412000099, 5004086291), 6004086551)
         self.assertEqual(resolve_account_code(db_path, 1412000100, 5004086291), 7004086777)
 
+    def test_shared_numeric_variant_disambiguates_same_group_by_account_name_stem(self):
+        from src.engine.account_resolver import resolve_account_code_for_connection
+
+        db_path, conn = self._mk_split_variant_db()
+        try:
+            conn.executemany(
+                """
+                INSERT INTO dim_accounts
+                (code, name_jp, name_vn, group_name, group_vn, mfg_code, ga_code, sales_code)
+                VALUES (?, ?, NULL, '手数料', NULL, ?, ?, NULL)
+                """,
+                [
+                    (5005246285, "取扱手数料（製）", 5005246285, None),
+                    (5005246286, "その他手数料（製）", 5005246286, None),
+                    (5005246287, "ＫＤＣ手数料（製）", 5005246287, None),
+                    (6005246542, "その他手数料", 6005246542, 6005246542),
+                    (6005246636, "取扱手数料（一般）", None, 6005246636),
+                    (6005246673, "その他手数料（一般）", None, 6005246673),
+                    (6005246674, "ＫＤＣ手数料（一般）", None, 6005246674),
+                ],
+            )
+            conn.commit()
+            self.assertEqual(
+                resolve_account_code_for_connection(conn, "1412000040", 6005246673),
+                5005246286,
+            )
+        finally:
+            conn.close()
+
     def test_manual_event_driver_uses_shared_connection_resolver(self):
         from unittest.mock import patch
         from src.parsers import manual_event_drivers

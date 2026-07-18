@@ -1,7 +1,7 @@
 import ast
 from pathlib import Path
 
-from src.services.fiscal_run import RunPreflightReport
+from src.services.fiscal_run import RunPreflightReport, SourceIssue
 
 
 def _source(path: str) -> str:
@@ -136,15 +136,15 @@ def test_complete_v1_single_export_finalizes_source_order_after_reference_layer(
     monkeypatch.setattr(run_e2e, "init_sys_params", lambda conn, exchange_rate, fiscal_year, **kwargs: None)
     monkeypatch.setattr(run_e2e, "load_all", lambda **kwargs: None)
     monkeypatch.setattr(run_e2e, "describe_manifest", lambda source_dir: [])
-    monkeypatch.setattr(run_e2e, "parse_facility", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_fixed_assets", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_it_simulation", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_ga", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_birthday_workbook", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_facility", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_fixed_assets", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_it_simulation", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_ga", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_birthday_workbook", lambda *args, **kwargs: {})
     monkeypatch.setattr(run_e2e, "parse_manual_headcount", lambda conn, source_dir, base_dir=None: {})
-    monkeypatch.setattr(run_e2e, "parse_manual_special_costs", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_manual_event_drivers", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_nnn_paperwork", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_manual_special_costs", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_manual_event_drivers", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_nnn_paperwork", lambda *args, **kwargs: {})
     monkeypatch.setattr(run_e2e, "AllocationEngine", lambda conn: type("Engine", (), {"run_allocation": lambda self: None})())
     monkeypatch.setattr(run_e2e, "HubBuilder", Builder)
     monkeypatch.setattr(run_e2e, "write_pipeline_audit_report", lambda **kwargs: {"report_path": "audit.md", "missing_csv_path": "missing.csv"})
@@ -236,6 +236,17 @@ def test_complete_v1_single_export_without_reference_still_finalizes_source_orde
         "preflight_fiscal_run",
         lambda context: RunPreflightReport(
             fiscal_year=2027,
+            issues=(
+                SourceIssue(
+                    category="uniform_policy",
+                    path="",
+                    detected_fiscal_year=None,
+                    reason="Không có nguồn trong phạm vi lần chạy.",
+                    action="Category được bỏ qua độc lập.",
+                    status="SKIPPED",
+                    severity="SOURCE_SKIPPED",
+                ),
+            ),
             resolved_sources={
                 "facility": (str(tmp_path / "facility.xlsx"),),
                 "ga": (str(tmp_path / "ga.xlsx"),),
@@ -260,15 +271,15 @@ def test_complete_v1_single_export_without_reference_still_finalizes_source_orde
     monkeypatch.setattr(run_e2e, "init_sys_params", lambda conn, exchange_rate, fiscal_year, **kwargs: None)
     monkeypatch.setattr(run_e2e, "load_all", lambda **kwargs: None)
     monkeypatch.setattr(run_e2e, "describe_manifest", lambda source_dir: [])
-    monkeypatch.setattr(run_e2e, "parse_facility", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_fixed_assets", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_it_simulation", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_ga", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_birthday_workbook", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_facility", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_fixed_assets", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_it_simulation", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_ga", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_birthday_workbook", lambda *args, **kwargs: {})
     monkeypatch.setattr(run_e2e, "parse_manual_headcount", lambda conn, source_dir, base_dir=None: {})
-    monkeypatch.setattr(run_e2e, "parse_manual_special_costs", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_manual_event_drivers", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_nnn_paperwork", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_manual_special_costs", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_manual_event_drivers", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_nnn_paperwork", lambda *args, **kwargs: {})
     monkeypatch.setattr(run_e2e, "AllocationEngine", lambda conn: type("Engine", (), {"run_allocation": lambda self: None})())
     monkeypatch.setattr(run_e2e, "HubBuilder", Builder)
     monkeypatch.setattr(run_e2e, "write_pipeline_audit_report", lambda **kwargs: {"report_path": "audit.md", "missing_csv_path": "missing.csv"})
@@ -286,7 +297,7 @@ def test_complete_v1_single_export_without_reference_still_finalizes_source_orde
 
     monkeypatch.setattr(run_e2e, "apply_complete_v1_source_order_to_workbook", fake_source_order)
 
-    ok, _ = run_e2e.run_universal_pipeline(
+    ok, published_output = run_e2e.run_universal_pipeline(
         fiscal_year=2027,
         template_path="FORM.xlsx",
         source_dir="raw",
@@ -303,6 +314,9 @@ def test_complete_v1_single_export_without_reference_still_finalizes_source_orde
         "system",
         ("source-order", 30, 199),
     ]
+    incomplete_marker = Path(published_output) / "BAO_CAO_KIEM_TRA" / "KET_QUA_CHUA_DAY_DU.txt"
+    assert incomplete_marker.is_file()
+    assert "uniform_policy" in incomplete_marker.read_text(encoding="utf-8")
 
 
 def test_fixed_assets_parser_uses_audited_header_detection_not_h_to_j_shortcut():
@@ -311,3 +325,33 @@ def test_fixed_assets_parser_uses_audited_header_detection_not_h_to_j_shortcut()
     assert "LEGACY_COLUMN_MAP" in text
     assert '"control_cc": 7' in text
     assert "helpers.extract_cc_code(row[9]" not in text
+
+
+def test_visible_header_fiscal_year_labels_follow_selected_run_year():
+    from openpyxl import Workbook
+
+    from src.engine.hub_builder import HubBuilder
+
+    workbook = Workbook()
+    visible = workbook.active
+    visible.title = "Output"
+    visible["A1"] = "MP FY2027_各予定"
+    visible["A2"] = "FY 2027"
+    visible["A3"] = '=IF(A2="FY2027", 1, 0)'
+    visible["A11"] = "Historical note FY2027"
+
+    hidden = workbook.create_sheet("Metadata")
+    hidden.sheet_state = "hidden"
+    hidden["A1"] = "FY2027"
+
+    builder = HubBuilder.__new__(HubBuilder)
+    builder.fiscal_year = 2026
+
+    changed = builder._normalize_visible_fiscal_year_labels(workbook)
+
+    assert changed == 2
+    assert visible["A1"].value == "MP FY2026_各予定"
+    assert visible["A2"].value == "FY2026"
+    assert visible["A3"].value == '=IF(A2="FY2027", 1, 0)'
+    assert visible["A11"].value == "Historical note FY2027"
+    assert hidden["A1"].value == "FY2027"

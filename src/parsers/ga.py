@@ -539,15 +539,19 @@ def _parse_admin_allocation_tables(
     return inserted
 
 
-def parse_ga(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[str, int]:
-    """Main entry for GA parsing."""
+def parse_ga(
+    conn: sqlite3.Connection,
+    source_dir: str | None = None,
+    workbook_path: str | None = None,
+) -> dict[str, int]:
+    """Main entry for GA parsing using an approved path when supplied."""
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
     if not fy_row:
         raise ValueError("Thiếu năm tài chính trong dữ liệu lần chạy; không được tự mặc định FY2027.")
     fiscal_year = int(str(fy_row[0]).upper().replace("FY", "").strip())
     fy_months = get_fy_months(fiscal_year)
 
-    path = _find_ga_file(source_dir, fiscal_year)
+    path = workbook_path or _find_ga_file(source_dir, fiscal_year)
     if not path or not os.path.exists(path):
         return {"total": 0, "working_days": 0, "headcount": 0, "admin_allocation": 0}
 

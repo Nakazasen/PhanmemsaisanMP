@@ -149,6 +149,38 @@ def _find_account_code_by_keywords(conn: sqlite3.Connection, keywords: tuple[str
     return unique_matches[0]
 
 
+_ACCOUNT_NAME_COST_TYPE_SUFFIXES = (
+    "（製造）",
+    "（一般）",
+    "（販売）",
+    "（製）",
+    "(製造)",
+    "(一般)",
+    "(販売)",
+    "(製)",
+)
+
+
+def _account_name_stem(value: Any) -> str:
+    text = "".join(str(value or "").split())
+    for suffix in _ACCOUNT_NAME_COST_TYPE_SUFFIXES:
+        if text.endswith(suffix):
+            return text[: -len(suffix)]
+    return text
+
+
+_ACCOUNT_SUFFIXES_BY_COLUMN = {
+    "mfg_code": ("（製造）", "（製）", "(製造)", "(製)"),
+    "ga_code": ("（一般）", "(一般)"),
+    "sales_code": ("（販売）", "(販売)"),
+}
+
+
+def _has_target_cost_type_suffix(value: Any, column: str) -> bool:
+    text = "".join(str(value or "").split())
+    return any(text.endswith(suffix) for suffix in _ACCOUNT_SUFFIXES_BY_COLUMN.get(column, ()))
+
+
 def _candidate_rows_for_group_name(conn: sqlite3.Connection, group_name: str) -> list[sqlite3.Row]:
     if not group_name:
         return []
@@ -181,6 +213,23 @@ def _pick_row_for_cost_type_with_conn(
         if len(sibling_valid_rows) == 1:
             return sibling_valid_rows[0]
         if len(sibling_valid_rows) > 1:
+            source_stems = {
+                _account_name_stem(row["name_jp"])
+                for row in rows
+                if _account_name_stem(row["name_jp"])
+            }
+            semantic_matches = [
+                row for row in sibling_valid_rows if _account_name_stem(row["name_jp"]) in source_stems
+            ]
+            target_suffix_matches = [
+                row for row in semantic_matches if _has_target_cost_type_suffix(row["name_jp"], column)
+            ]
+            if len(target_suffix_matches) == 1:
+                return target_suffix_matches[0]
+            if len(target_suffix_matches) > 1:
+                raise AccountResolutionError(f"Ambiguous grouped account rows for account lookup: {account_key}")
+            if len(semantic_matches) == 1:
+                return semantic_matches[0]
             raise AccountResolutionError(f"Ambiguous grouped account rows for account lookup: {account_key}")
 
     return rows[0]

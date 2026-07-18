@@ -1025,19 +1025,20 @@ class MPManagerApp:
                     manual_input_store=paths.manual_input_store,
                     base_dir=self.project.root_dir,
                 )
+                checker = lambda active_context: preflight_fiscal_run(
+                    active_context,
+                    progress=lambda message: self._run_on_ui_thread(
+                        self._update_preflight_progress,
+                        token,
+                        message,
+                    ),
+                )
                 if force_refresh:
                     report, cache_hit = cached_preflight_fiscal_run(
                         context,
                         force_refresh=True,
                         extra_paths=(self.project.config_path,),
-                        checker=lambda active_context: preflight_fiscal_run(
-                            active_context,
-                            progress=lambda message: self._run_on_ui_thread(
-                                self._update_preflight_progress,
-                                token,
-                                message,
-                            ),
-                        ),
+                        checker=checker,
                     )
                 else:
                     report = get_cached_preflight(
@@ -1046,30 +1047,35 @@ class MPManagerApp:
                     )
                     cache_hit = report is not None
                     if report is None:
-                        self._run_on_ui_thread(
-                            self._finish_preflight_check,
-                            token,
-                            False,
-                            (
-                                "Nguồn đã thay đổi hoặc chưa có kết quả quét nội dung. "
-                                "Bấm ‘Quét kỹ lại nội dung’ để xác nhận nguồn"
-                            ),
-                            None,
-                            None,
+                        # A cache miss is not a source failure. Compute a fresh
+                        # report instead of leaving the user with a disabled Start button.
+                        report, cache_hit = cached_preflight_fiscal_run(
                             context,
-                            False,
-                            time.perf_counter() - started_at,
+                            force_refresh=True,
+                            extra_paths=(self.project.config_path,),
+                            checker=checker,
                         )
-                        return
                 if report.ok:
-                    summary = "Đủ nguồn và đúng năm"
-                elif report.can_continue_incomplete:
-                    missing = ", ".join(report.accepted_missing_categories())
-                    summary = f"Thiếu nguồn chi phí có thể chấp nhận: {missing}"
+                    summary = "Đủ nguồn đã chọn và đúng năm"
+                elif report.can_run:
+                    issue_lines = []
+                    for issue in report.skipped_issues:
+                        label = CATEGORY_DISPLAY_NAMES.get(issue.category, issue.category)
+                        filename = os.path.basename(issue.path) if issue.path else "(không có file)"
+                        issue_lines.append(
+                            f"{label} — {filename}: {issue.reason}. Tác động: {issue.impact}"
+                        )
+                    summary = "Kết quả chưa đầy đủ; " + " | ".join(issue_lines)
                 else:
-                    summary = "; ".join(
-                        f"{issue.reason}. {issue.action}" for issue in report.blocking_issues[:2]
-                    )
+                    issue_lines = []
+                    for issue in report.blocking_issues:
+                        label = CATEGORY_DISPLAY_NAMES.get(issue.category, issue.category)
+                        filename = os.path.basename(issue.path) if issue.path else "(không có file)"
+                        issue_lines.append(
+                            f"{label} — {filename}: {issue.reason}. Cần làm: {issue.action}"
+                        )
+                    summary = " | ".join(issue_lines) or "Có điều kiện nền tảng chưa đạt"
+
                 signature = (
                     fiscal_year,
                     os.path.abspath(template),
@@ -1120,15 +1126,15 @@ class MPManagerApp:
     ):
         if token != self._preflight_token:
             return
-        reusable = bool(ok or getattr(report, "can_continue_incomplete", False))
+        reusable = bool(getattr(report, "can_run", False))
         if reusable:
             self._approved_preflight_signature = signature
             self._approved_preflight_report = report
             self._approved_uniform_policy_path = getattr(context, "uniform_policy_path", None)
-            if ok:
-                prefix = "Đúng năm và đủ nguồn: có thể chạy tính toán"
+            if getattr(report, "skipped_issues", ()):
+                prefix = "Cảnh báo: kết quả chưa đầy đủ; các nguồn lỗi đã được cách ly"
             else:
-                prefix = "Cảnh báo: " + summary + ". Có thể chạy sau khi xác nhận."
+                prefix = "Đúng năm và đủ các nguồn đã chọn: có thể chạy tính toán"
             mode = "cache hợp lệ" if cache_hit else "quét nội dung mới"
             self.preflight_status.set(
                 f"{prefix} — {mode}, hoàn tất trong {elapsed_seconds:.1f} giây"
@@ -3322,36 +3328,33 @@ class MPManagerApp:
             approved_report = self._approved_preflight_report
             if (
                 signature != self._approved_preflight_signature
-                or not (
-                    getattr(approved_report, "ok", False)
-                    or getattr(approved_report, "can_continue_incomplete", False)
-                )
+                or not getattr(approved_report, "can_run", False)
             ):
                 messagebox.showerror(
                     "Nguồn chưa được xác nhận",
-                    "Bộ nguồn hiện tại chưa có kết quả kiểm tra còn hiệu lực. "
+                    "Bộ nguồn hiện tại còn điều kiện nền tảng chưa đạt. "
                     "Hãy chờ đối chiếu xong hoặc bấm “Kiểm tra lại từ đầu”.",
                 )
                 self._mark_preflight_stale()
                 return
 
-            accepted_missing_categories = ()
-            if getattr(approved_report, "can_continue_incomplete", False):
-                accepted_missing_categories = approved_report.accepted_missing_categories()
+            if getattr(approved_report, "skipped_issues", ()):
                 warning_lines = "\n".join(
-                    f"• {CATEGORY_DISPLAY_NAMES.get(issue.category, 'Nguồn dữ liệu')}: {issue.impact}"
-                    for issue in approved_report.continuable_issues
+                    f"• {CATEGORY_DISPLAY_NAMES.get(issue.category, issue.category)} — "
+                    f"{os.path.basename(issue.path) if issue.path else '(không có file)'}: "
+                    f"{issue.reason}. Tác động: {issue.impact}"
+                    for issue in approved_report.skipped_issues
                 )
                 proceed_incomplete = messagebox.askyesno(
-                    "Xác nhận chạy với nguồn chưa đầy đủ",
-                    "Một số nguồn chi phí độc lập đang thiếu:\n\n"
+                    "Xác nhận chạy với phạm vi nguồn đã chọn",
+                    "Một số nguồn sẽ được bỏ qua độc lập:\n\n"
                     + warning_lines
-                    + "\n\nKết quả sẽ được đánh dấu CHƯA ĐẦY ĐỦ và không lấy lại dữ liệu cũ "
-                    "cho các phần bị ảnh hưởng. Bạn có muốn tiếp tục không?",
+                    + "\n\nKết quả sẽ được đánh dấu CHƯA ĐẦY ĐỦ; các phần bị ảnh hưởng "
+                    "sẽ để trống và không lấy dữ liệu từ lần chạy cũ. Bạn có muốn tiếp tục không?",
                 )
                 if not proceed_incomplete:
                     return
-            self._accepted_missing_categories = accepted_missing_categories
+            self._accepted_missing_categories = ()
 
             if target_cc is None:
                 proceed = messagebox.askokcancel(
@@ -3462,13 +3465,12 @@ class MPManagerApp:
             "--manual-input-store", paths.manual_input_store,
             "--output-dir", paths.output_dir,
             "--run-history-root", paths.history_root,
+            "--project-config", self.project.config_path,
         ])
         if approved_uniform:
             cmd.extend(["--uniform-policy", str(approved_uniform)])
         if target_cc:
             cmd.extend(["--target-cc", str(target_cc)])
-        for category in getattr(self, "_accepted_missing_categories", ()):
-            cmd.extend(["--accept-missing-source", str(category)])
         return cmd
 
     def _missing_baseline_context(self, result):

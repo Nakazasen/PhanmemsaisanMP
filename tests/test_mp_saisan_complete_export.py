@@ -74,7 +74,7 @@ def test_electricity_water_aliases_do_not_duplicate():
 def test_complete_mode_requires_valid_source_inputs(tmp_path):
     ok, message = run_universal_pipeline(2027, str(_wb(tmp_path / "target.xlsx")), str(tmp_path), target_cc=1412000040)
     assert ok is False
-    assert "Kiểm tra nguồn" in message or "template" in message
+    assert "nhân sự" in message and "FY2027" in message
 
 
 def test_complete_mode_uses_reference_map_for_1412000040(tmp_path):
@@ -199,15 +199,15 @@ def test_complete_v1_missing_reference_map_orchestration_contract(monkeypatch, t
     monkeypatch.setattr(run_e2e, "init_sys_params", lambda conn, exchange_rate, fiscal_year, **kwargs: None)
     monkeypatch.setattr(run_e2e, "load_all", lambda **kwargs: None)
     monkeypatch.setattr(run_e2e, "describe_manifest", lambda source_dir: [])
-    monkeypatch.setattr(run_e2e, "parse_facility", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_fixed_assets", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_it_simulation", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_ga", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_birthday_workbook", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_facility", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_fixed_assets", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_it_simulation", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_ga", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_birthday_workbook", lambda *args, **kwargs: {})
     monkeypatch.setattr(run_e2e, "parse_manual_headcount", lambda conn, source_dir, base_dir=None: {})
-    monkeypatch.setattr(run_e2e, "parse_manual_special_costs", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_manual_event_drivers", lambda conn, source_dir: {})
-    monkeypatch.setattr(run_e2e, "parse_nnn_paperwork", lambda conn, source_dir: {})
+    monkeypatch.setattr(run_e2e, "parse_manual_special_costs", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_manual_event_drivers", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "parse_nnn_paperwork", lambda *args, **kwargs: {})
     monkeypatch.setattr(run_e2e, "AllocationEngine", Engine)
     monkeypatch.setattr(run_e2e, "HubBuilder", Builder)
     monkeypatch.setattr(run_e2e, "write_pipeline_audit_report", lambda **kwargs: {"report_path": "audit.md", "missing_csv_path": "missing.csv"})

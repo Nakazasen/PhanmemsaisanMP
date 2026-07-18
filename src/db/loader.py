@@ -602,8 +602,10 @@ def load_all(db_path: str = None, template_path: str = None,
              rules_path: str = None, fiscal_year: int = 2027,
              exchange_rate: float | None = None, search_dir: str | None = None,
              exchange_rate_source: str = "explicit pipeline input",
-             uniform_eligibility_path: str | None = None) -> dict:
-    """Load all master data into the database with dynamic configuration."""
+             uniform_eligibility_path: str | None = None,
+             include_allocation_rules: bool = True,
+             include_uniform_entitlements: bool = True) -> dict:
+    """Load shared master data and only the explicitly enabled optional sources."""
     # Future FY must name its own FORM; no implicit FY2027 fallback is allowed.
     if template_path:
         t_path = template_path
@@ -627,9 +629,9 @@ def load_all(db_path: str = None, template_path: str = None,
 
     conn = get_connection(db_path)
     # Ensure Row factory for Row-based access in loaders if needed (schema.py usually sets this)
-    conn.row_factory = sqlite3.Row 
+    conn.row_factory = sqlite3.Row
     create_schema(conn)
-    
+
     # Initialize system params with SSOT rate
     init_sys_params(
         conn,
@@ -637,9 +639,10 @@ def load_all(db_path: str = None, template_path: str = None,
         fiscal_year=fiscal_year,
         exchange_rate_source=exchange_rate_source,
     )
-    
-    # Do not search a prior year for the allocation rule workbook.
-    if not rules_path and not os.path.exists(r_path):
+
+    # Do not discover an allocation workbook when preflight excluded the
+    # category from this run's approved source scope.
+    if include_allocation_rules and not rules_path and not os.path.exists(r_path):
         discovered = find_allocation_rules_file(search_dir=discovery_dir, fiscal_year=fiscal_year)
         if discovered:
             r_path = discovered
@@ -647,17 +650,23 @@ def load_all(db_path: str = None, template_path: str = None,
     results = {
         'cost_centers': load_cost_centers(conn, t_path),
         'accounts': load_accounts(conn, t_path),
-        'allocation_rules': load_allocation_rules(
-            conn,
-            r_path,
-            search_dir=discovery_dir,
-            fiscal_year=fiscal_year,
+        'allocation_rules': (
+            load_allocation_rules(
+                conn,
+                r_path,
+                search_dir=discovery_dir,
+                fiscal_year=fiscal_year,
+            )
+            if include_allocation_rules else 0
         ),
     }
-    results['uniform_entitlements'] = load_uniform_entitlements(
-        conn,
-        uniform_eligibility_path,
-        fiscal_year=fiscal_year,
+    results['uniform_entitlements'] = (
+        load_uniform_entitlements(
+            conn,
+            uniform_eligibility_path,
+            fiscal_year=fiscal_year,
+        )
+        if include_uniform_entitlements else 0
     )
 
     conn.close()

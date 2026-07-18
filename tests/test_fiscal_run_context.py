@@ -65,7 +65,7 @@ def test_preflight_fy2028_never_falls_back_to_fy2027_sources(tmp_path):
     assert any(issue.category == "uniform_policy" for issue in report.issues)
     assert all("FY2027" not in " ".join(paths) for paths in report.resolved_sources.values())
     checks = report.as_dict()["checks"]
-    assert any(check["category"] == "uniform_policy" and check["status"] == "FAILED" for check in checks)
+    assert any(check["category"] == "uniform_policy" and check["status"] == "SKIPPED" for check in checks)
     assert "Kiểm tra nguồn trước khi chạy FY2028" in report.as_markdown()
 
 
@@ -532,7 +532,7 @@ def test_preflight_cache_corruption_falls_back_to_deep_check(tmp_path):
     assert calls == ["deep"]
 
 
-def test_preflight_blocks_unknown_source_until_user_decides(tmp_path):
+def test_preflight_skips_unknown_source_without_making_it_a_global_blocker(tmp_path):
     import openpyxl
 
     source_dir = tmp_path / "sources"
@@ -555,9 +555,9 @@ def test_preflight_blocks_unknown_source_until_user_decides(tmp_path):
 
     review_issues = [issue for issue in report.issues if issue.code == "SOURCE_NEEDS_REVIEW"]
     assert review_issues
-    assert review_issues[0].severity == "BLOCKING"
+    assert review_issues[0].severity == "SOURCE_SKIPPED"
     assert "new_cost_source.xlsx" in review_issues[0].path
-    assert not report.can_continue_incomplete
+    assert review_issues[0] not in report.blocking_issues
 
 
 def test_preflight_cache_ignores_nested_annual_source_files(tmp_path):

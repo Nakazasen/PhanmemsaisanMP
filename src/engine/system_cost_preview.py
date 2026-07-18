@@ -56,7 +56,11 @@ def preview_system_cost_file_order(
     start_row: int = 211,
 ):
     cc_key = require_cost_center(cost_center, context="System Cost preview")
-    assignments = map_system_source_periods(system_source_paths, fiscal_year)
+    assignments = map_system_source_periods(
+        system_source_paths,
+        fiscal_year,
+        require_complete=False,
+    )
     period_indexes = {
         period: index for index, period in enumerate(fiscal_periods(fiscal_year))
     }

@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections import defaultdict
 from copy import copy
 import os
+import re
 import shutil
 import sqlite3
 from typing import Optional
@@ -18,6 +19,7 @@ import unicodedata
 import openpyxl
 from openpyxl.utils import get_column_letter
 
+from src.engine.account_resolver import AccountResolutionError, resolve_account_code_for_connection
 from src.engine.column_s_normalizer import normalize_output_description_column_s
 from src.engine.output_mode import OutputGroupSpec, get_default_output_group_specs
 from src.parsers.fixed_assets import CATEGORY_SPECS, INTEREST_ACCOUNT
@@ -145,6 +147,25 @@ class HubBuilder:
         text = "".join(ch for ch in text if not unicodedata.combining(ch))
         text = text.replace("\n", " ").replace("\u3000", " ").strip().lower()
         return " ".join(text.split())
+
+    def _normalize_visible_fiscal_year_labels(self, workbook) -> int:
+        """Replace template FY labels in visible header rows with the selected FY."""
+        replacement = f"FY{int(self.fiscal_year)}"
+        fiscal_label = re.compile(r"FY\s*20\d{2}(?!\d)", re.IGNORECASE)
+        changed = 0
+        for worksheet in workbook.worksheets:
+            if worksheet.sheet_state != "visible":
+                continue
+            for row in worksheet.iter_rows(min_row=1, max_row=min(10, worksheet.max_row)):
+                for cell in row:
+                    value = cell.value
+                    if not isinstance(value, str) or value.startswith("="):
+                        continue
+                    normalized = fiscal_label.sub(replacement, value)
+                    if normalized != value:
+                        cell.value = normalized
+                        changed += 1
+        return changed
 
     def _format_number(self, value: float) -> str:
         number = float(value or 0.0)
@@ -1607,6 +1628,59 @@ class HubBuilder:
         allocation_rows = list(grouped.values())
         return self._load_fixed_asset_source_order_rows(cc_code) + allocation_rows
 
+    def _load_nnn_source_order_rows(self, cc_code: int) -> list[dict[str, object]]:
+        rows = self.conn.execute(
+            """
+            SELECT account_code, description, period, SUM(amount_vnd) AS amount
+            FROM fact_input_data
+            WHERE cc_code = ?
+              AND source = 'nnn_paperwork'
+              AND account_code > 0
+            GROUP BY account_code, description, period
+            ORDER BY account_code, description, period
+            """,
+            (str(cc_code),),
+        ).fetchall()
+
+        grouped: dict[tuple[int, str], dict[str, object]] = {}
+        for row in rows:
+            description = str(row["description"] or "")
+            clean_description = self._strip_explicit_formula_metadata(description)
+            raw_account_code = int(row["account_code"])
+            try:
+                account_code = resolve_account_code_for_connection(self.conn, cc_code, raw_account_code)
+            except AccountResolutionError as exc:
+                raise ExportIntegrityError(
+                    "Không thể chuẩn hóa account NNN theo cost type của Cost Center "
+                    f"{cc_code}: raw_account={raw_account_code}. {exc}"
+                ) from exc
+            key = (account_code, clean_description)
+            bucket = grouped.setdefault(
+                key,
+                {
+                    "account_code": account_code,
+                    "description": self._append_output_description(clean_description, description),
+                    "months": {},
+                    "terms": defaultdict(list),
+                    "numeric_months": defaultdict(float),
+                    "highlight_periods": set(),
+                    "source_group_index": 6,
+                    "audit_trail": (
+                        f"nnn_account_resolved_by_cc; raw_account_code={raw_account_code}; "
+                        f"resolved_account_code={account_code}; cc_code={cc_code}"
+                    ),
+                },
+            )
+            period = str(row["period"])
+            term = self._explicit_formula_term_from_description(description) or self._alloc_formula_term_from_row(row)
+            if term:
+                bucket["terms"][period].append(term)
+            else:
+                amount = float(row["amount"] or 0.0)
+                bucket["numeric_months"][period] += amount
+                bucket["months"][period] = bucket["numeric_months"][period]
+        return list(grouped.values())
+
     def export_to_template(
         self,
         template_path: str,
@@ -1683,6 +1757,7 @@ class HubBuilder:
                     current_row += 1
 
                 normalize_output_description_column_s(worksheet)
+                self._normalize_visible_fiscal_year_labels(workbook)
                 workbook.save(temp_output_path)
                 self._validate_exported_workbook(workbook, temp_output_path, target_cc, fact_count)
             finally:

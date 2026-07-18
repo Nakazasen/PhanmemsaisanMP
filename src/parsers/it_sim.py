@@ -394,16 +394,28 @@ def parse_it_sim_file(path: str, target_months: list[str]) -> list[dict[str, obj
     return records
 
 
-def parse_it_simulation(conn: sqlite3.Connection, source_dir: str | None = None) -> dict[str, int]:
-    """Discover and parse IT Simulation files."""
+def parse_it_simulation(
+    conn: sqlite3.Connection,
+    source_dir: str | None = None,
+    source_paths: list[str] | tuple[str, ...] | None = None,
+) -> dict[str, int]:
+    """Parse only approved IT Simulation paths, or discover for legacy callers."""
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
     if not fy_row:
         raise ValueError("Thiếu năm tài chính trong dữ liệu lần chạy; không được tự mặc định FY2027.")
     fy_str = fy_row[0]
     fy_int = int(str(fy_str).replace("FY", ""))
     search_dir = source_dir or BASE_DIR
-    manifest_files = resolve_manifest_files(search_dir, "it_simulation")
-    assignments = map_system_source_periods(manifest_files, fy_int)
+    manifest_files = (
+        list(source_paths)
+        if source_paths is not None
+        else resolve_manifest_files(search_dir, "it_simulation")
+    )
+    assignments = map_system_source_periods(
+        manifest_files,
+        fy_int,
+        require_complete=False,
+    )
     files_to_parse = [
         (assignment.path, list(assignment.periods))
         for assignment in assignments

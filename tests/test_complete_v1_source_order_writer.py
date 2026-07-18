@@ -550,6 +550,85 @@ def test_complete_v1_writer_drops_legacy_staged_row_when_dynamic_allocation_repl
         wb.close()
 
 
+def test_complete_v1_writer_replaces_blank_and_stale_nnn_source_block_idempotently(tmp_path):
+    path = tmp_path / "out_dynamic_nnn.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    ws.cell(137, 10).value = "=1820000+130000+50000"
+    ws.cell(137, 12).value = "=1000000+1000000+50000+400000"
+    ws.cell(137, 19).value = "legacy merged NNN"
+    wb.save(path)
+    wb.close()
+
+    periods = ["202604", "202605", "202606", "202607", "202608", "202609", "202610", "202611", "202612", "202701", "202702", "202703"]
+    dynamic_rows = [
+        {
+            "source_group_index": 6,
+            "account_code": 5005246286,
+            "description": "NNN paperwork: Worker A",
+            "terms": {"202608": ["1820000+130000+50000"]},
+        },
+        {
+            "source_group_index": 6,
+            "account_code": 5005246286,
+            "description": "NNN paperwork: Worker B",
+            "terms": {"202610": ["1000000+1000000+50000+400000"]},
+        },
+    ]
+
+    first = apply_complete_v1_source_order_to_workbook(
+        path,
+        start_row=30,
+        clear_until_row=190,
+        dynamic_allocation_rows=dynamic_rows,
+        fiscal_periods=periods,
+    )
+
+    # Simulate an artifact created before account canonicalization changed:
+    # the managed NNN row has the same source/description but a stale account.
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        stale_row = next(
+            row
+            for row in range(30, 191)
+            if ws.cell(row, 19).value == "NNN paperwork: Worker B"
+        )
+        ws.cell(stale_row, 2).value = 6005246673
+        wb.save(path)
+    finally:
+        wb.close()
+
+    second = apply_complete_v1_source_order_to_workbook(
+        path,
+        start_row=30,
+        clear_until_row=190,
+        dynamic_allocation_rows=dynamic_rows,
+        fiscal_periods=periods,
+    )
+
+    assert first["nnn_rows_written"] == 2
+    assert second["nnn_rows_written"] == 2
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        nnn_rows = [
+            row
+            for row in range(30, 191)
+            if CANONICAL_SOURCE_FILE_ORDER[6] in _note_text(ws.cell(row, 20))
+        ]
+        assert len(nnn_rows) == 2
+        assert {ws.cell(row, 2).value for row in nnn_rows} == {5005246286}
+        assert all(ws.cell(row, 2).value for row in nnn_rows)
+        rows_by_description = {ws.cell(row, 19).value: row for row in nnn_rows}
+        assert ws.cell(rows_by_description["NNN paperwork: Worker A"], 10).value == "=1820000+130000+50000"
+        assert ws.cell(rows_by_description["NNN paperwork: Worker B"], 12).value == "=1000000+1000000+50000+400000"
+        assert all(ws.cell(row, 19).value != "legacy merged NNN" for row in range(30, 191))
+    finally:
+        wb.close()
+
+
 def test_complete_v1_writer_replaces_legacy_asset_totals_but_preserves_manual_asset_row(tmp_path):
     path = tmp_path / "out_fixed_assets_dynamic.xlsx"
     wb = Workbook()
