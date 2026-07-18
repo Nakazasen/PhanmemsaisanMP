@@ -1,12 +1,20 @@
+import json
 from pathlib import Path
+import shutil
+import sqlite3
 
+import src.services.run_history as run_history_module
 from src.services.fiscal_run import create_fiscal_run_context
 from src.services.run_history import (
+    PipelineStageEvidence,
     RUN_STATUS_FAILED,
     RUN_STATUS_LEGACY_FY2027,
+    RUN_STATUS_PRECHECK_FAILED,
     RUN_STATUS_RUNNING,
     RUN_STATUS_SUCCEEDED,
+    RUN_STATUS_SUCCEEDED_INCOMPLETE,
     create_run_workspace,
+    filter_runs,
     list_runs,
     register_run,
     register_legacy_fy2027_database,
@@ -83,6 +91,15 @@ def test_preflight_failure_is_kept_in_its_own_history_workspace(tmp_path):
     assert (workspace / "run_manifest.json").is_file()
     assert (workspace / "reports" / "preflight_report.json").is_file()
     assert (workspace / "reports" / "preflight_report.md").is_file()
+    evidence = json.loads(
+        (workspace / "reports" / "pipeline_stage_evidence.json").read_text(encoding="utf-8")
+    )
+    assert evidence["status"] == RUN_STATUS_PRECHECK_FAILED
+    assert evidence["current_stage"] is None
+    assert [stage["name"] for stage in evidence["stages"]] == ["preflight"]
+    assert evidence["stages"][0]["status"] == "FAIL"
+    assert evidence["stages"][0]["error_summary"]
+    assert evidence["error_summary"]
 
 
 def test_terminal_history_cannot_be_mutated(tmp_path):
@@ -132,6 +149,135 @@ def test_publish_failure_restores_the_previous_public_output(tmp_path):
 
     assert (destination / "accepted.txt").read_text(encoding="utf-8") == "accepted"
     assert not (destination / "new.txt").exists()
+    assert not list(tmp_path.glob(".OUTPUT_FY2028.*"))
+
+
+def test_publish_merge_updates_only_target_cc_and_current_reports(tmp_path):
+    destination = tmp_path / "OUTPUT_FY2028"
+    reports = destination / "BAO_CAO_KIEM_TRA"
+    reports.mkdir(parents=True)
+    (destination / "MP_CC_1412000006.xlsx").write_bytes(b"accepted-cc06")
+    (destination / "MP_CC_1412000004.xlsx").write_bytes(b"old-cc04")
+    (reports / "BAO_CAO_LAN_CHAY.xlsx").write_bytes(b"old-report")
+
+    staged = tmp_path / "staged"
+    staged_reports = staged / "BAO_CAO_KIEM_TRA"
+    staged_reports.mkdir(parents=True)
+    (staged / "MP_CC_1412000004.xlsx").write_bytes(b"new-cc04")
+    (staged_reports / "BAO_CAO_LAN_CHAY.xlsx").write_bytes(b"new-report")
+    context = create_fiscal_run_context(2028, output_dir=destination, history_root=tmp_path, run_id="merge")
+
+    assert publish_run_output(
+        context,
+        str(staged),
+        mode="merge",
+        target_cc="1412000004",
+    ) == str(destination)
+
+    assert (destination / "MP_CC_1412000006.xlsx").read_bytes() == b"accepted-cc06"
+    assert (destination / "MP_CC_1412000004.xlsx").read_bytes() == b"new-cc04"
+    assert (destination / "BAO_CAO_KIEM_TRA" / "BAO_CAO_LAN_CHAY.xlsx").read_bytes() == b"new-report"
+    assert not list(tmp_path.glob(".OUTPUT_FY2028.*"))
+
+
+def test_publish_merge_does_not_delete_prepared_report_directory(tmp_path, monkeypatch):
+    destination = tmp_path / "OUTPUT_FY2028"
+    reports = destination / "BAO_CAO_KIEM_TRA"
+    reports.mkdir(parents=True)
+    (destination / "MP_CC_1412000004.xlsx").write_bytes(b"old-cc04")
+    (reports / "BAO_CAO_LAN_CHAY.xlsx").write_bytes(b"old-report")
+
+    staged = tmp_path / "staged"
+    staged_reports = staged / "BAO_CAO_KIEM_TRA"
+    staged_reports.mkdir(parents=True)
+    (staged / "MP_CC_1412000004.xlsx").write_bytes(b"new-cc04")
+    (staged_reports / "BAO_CAO_LAN_CHAY.xlsx").write_bytes(b"new-report")
+    context = create_fiscal_run_context(2028, output_dir=destination, history_root=tmp_path, run_id="merge-no-delete")
+
+    real_rmtree = shutil.rmtree
+
+    def reject_report_delete(path, *args, **kwargs):
+        candidate = Path(path)
+        if candidate.name == "BAO_CAO_KIEM_TRA" and ".publishing" in str(candidate.parent):
+            raise AssertionError("merge must not delete the prepared report directory")
+        return real_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(run_history_module.shutil, "rmtree", reject_report_delete)
+
+    assert publish_run_output(
+        context,
+        str(staged),
+        mode="merge",
+        target_cc="1412000004",
+    ) == str(destination)
+    assert (reports / "BAO_CAO_LAN_CHAY.xlsx").read_bytes() == b"new-report"
+    assert not list(tmp_path.glob(".OUTPUT_FY2028.*"))
+
+
+def test_successful_publish_retains_locked_backup_without_failing(tmp_path, monkeypatch):
+    destination = tmp_path / "OUTPUT_FY2028"
+    destination.mkdir()
+    (destination / "accepted.txt").write_text("accepted", encoding="utf-8")
+    staged = tmp_path / "staged"
+    staged.mkdir()
+    (staged / "new.txt").write_text("new", encoding="utf-8")
+    context = create_fiscal_run_context(
+        2028,
+        output_dir=destination,
+        history_root=tmp_path,
+        run_id="locked-backup",
+    )
+
+    real_rmtree = shutil.rmtree
+    locked_attempts = []
+
+    def lock_retired_backup(path, *args, **kwargs):
+        candidate = Path(path)
+        if candidate.name.endswith(".backup"):
+            locked_attempts.append(candidate)
+            raise PermissionError(5, "simulated Windows backup lock", str(candidate))
+        return real_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(run_history_module.shutil, "rmtree", lock_retired_backup)
+    monkeypatch.setattr(run_history_module.time, "sleep", lambda _seconds: None)
+
+    assert publish_run_output(context, str(staged)) == str(destination)
+    backup = tmp_path / ".OUTPUT_FY2028.locked-backup.backup"
+    assert len(locked_attempts) == 6
+    assert (destination / "new.txt").read_text(encoding="utf-8") == "new"
+    assert not (destination / "accepted.txt").exists()
+    assert (backup / "accepted.txt").read_text(encoding="utf-8") == "accepted"
+
+
+def test_publish_merge_failure_after_publish_restores_complete_public_output(tmp_path):
+    destination = tmp_path / "OUTPUT_FY2028"
+    destination.mkdir()
+    (destination / "MP_CC_1412000006.xlsx").write_bytes(b"accepted-cc06")
+    (destination / "MP_CC_1412000004.xlsx").write_bytes(b"accepted-cc04")
+    staged = tmp_path / "staged"
+    staged.mkdir()
+    (staged / "MP_CC_1412000004.xlsx").write_bytes(b"rejected-cc04")
+    context = create_fiscal_run_context(2028, output_dir=destination, history_root=tmp_path, run_id="merge-rollback")
+
+    def fail_after_publish(stage):
+        if stage == "published":
+            raise RuntimeError("simulated merge publication failure")
+
+    try:
+        publish_run_output(
+            context,
+            str(staged),
+            mode="merge",
+            target_cc="1412000004",
+            failure_injector=fail_after_publish,
+        )
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("merge publication failure must be surfaced")
+
+    assert (destination / "MP_CC_1412000006.xlsx").read_bytes() == b"accepted-cc06"
+    assert (destination / "MP_CC_1412000004.xlsx").read_bytes() == b"accepted-cc04"
     assert not list(tmp_path.glob(".OUTPUT_FY2028.*"))
 
 
@@ -210,3 +356,112 @@ def test_selected_fy_bus_input_is_copied_and_visible_to_the_run(tmp_path):
         "SELECT fiscal_year,bus_expat_count,bus_vietnamese_count FROM fact_bus_headcount_drivers WHERE cc_code='CC'"
     ).fetchone()
     assert tuple(row) == (2028, 3, 4)
+
+
+def test_pipeline_connection_cleanup_rolls_back_before_close():
+    from scripts.run_e2e import _close_pipeline_connection
+
+    events = []
+
+    class Connection:
+        def rollback(self):
+            events.append("rollback")
+
+        def close(self):
+            events.append("close")
+
+    _close_pipeline_connection(Connection(), rollback=True)
+
+    assert events == ["rollback", "close"]
+
+
+def test_pipeline_connection_cleanup_does_not_mask_original_failure():
+    from scripts.run_e2e import _close_pipeline_connection
+
+    messages = []
+
+    class BrokenConnection:
+        def rollback(self):
+            raise RuntimeError("rollback failed")
+
+        def close(self):
+            raise RuntimeError("close failed")
+
+    _close_pipeline_connection(
+        BrokenConnection(),
+        rollback=True,
+        log_callback=messages.append,
+        suppress_errors=True,
+    )
+
+    assert len(messages) == 1
+    assert "rollback failed" in messages[0]
+    assert "close failed" in messages[0]
+
+
+def test_pipeline_stage_evidence_is_atomic_and_terminal(tmp_path):
+    recorder = PipelineStageEvidence(tmp_path, "run-stage-test")
+
+    recorder.start("preflight")
+    recorder.complete(details={"status": "PASS"})
+    recorder.finalize(RUN_STATUS_SUCCEEDED)
+
+    payload = json.loads(recorder.path.read_text(encoding="utf-8"))
+    assert payload["run_id"] == "run-stage-test"
+    assert payload["status"] == RUN_STATUS_SUCCEEDED
+    assert payload["current_stage"] is None
+    assert payload["total_elapsed_seconds"] >= 0
+    assert payload["stages"] == [
+        {
+            "name": "preflight",
+            "status": "PASS",
+            "elapsed_seconds": payload["stages"][0]["elapsed_seconds"],
+            "finished_at": payload["stages"][0]["finished_at"],
+            "details": {"status": "PASS"},
+        }
+    ]
+    assert not recorder.path.with_suffix(".json.tmp").exists()
+
+
+def test_incomplete_success_is_a_distinct_terminal_history_state(tmp_path):
+    context = create_fiscal_run_context(2028, history_root=tmp_path, run_id="incomplete")
+    register_run(context, RUN_STATUS_RUNNING)
+    register_run(
+        context,
+        RUN_STATUS_SUCCEEDED_INCOMPLETE,
+        output_path="published",
+        error_summary="KẾT QUẢ CHƯA ĐẦY ĐỦ",
+    )
+
+    rows = list_runs(str(tmp_path), 2028)
+    assert rows[0]["status"] == RUN_STATUS_SUCCEEDED_INCOMPLETE
+    assert rows[0]["error_summary"] == "KẾT QUẢ CHƯA ĐẦY ĐỦ"
+
+
+def test_filter_runs_matches_item_without_failing_on_incomplete_run_database(tmp_path):
+    history = tmp_path / "RUN_HISTORY"
+    first = create_run_workspace(
+        create_fiscal_run_context(2028, history_root=history, run_id="matching"),
+        target_cc="1412000036",
+    )
+    create_run_workspace(
+        create_fiscal_run_context(2028, history_root=history, run_id="without-table"),
+        target_cc="1412000099",
+    )
+
+    conn = sqlite3.connect(first.database_path)
+    try:
+        conn.execute("CREATE TABLE fact_input_data (source TEXT, description TEXT)")
+        conn.execute(
+            "INSERT INTO fact_input_data(source, description) VALUES (?, ?)",
+            ("facility", "Chi phí thuê văn phòng"),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    rows = filter_runs(str(history), 2028, item="thuê văn phòng")
+    assert [row["run_id"] for row in rows] == ["matching"]
+
+    rows = filter_runs(str(history), 2028, cost_center="1412000099")
+    assert [row["run_id"] for row in rows] == ["without-table"]

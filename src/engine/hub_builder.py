@@ -199,30 +199,50 @@ class HubBuilder:
 
     def _find_recurring_admin_rows(self, worksheet) -> dict[str, int]:
         specs = {
-            "gas": (5005056281, ("ガス代", "食堂燃料", "tien gas", "gas")),
-            "handwash": (5005016372, ("手洗い", "nuoc rua tay", "hand wash")),
-            "toilet_paper": (5005016372, ("トイレット", "giay ve sinh", "toilet paper")),
-            "cleaning": (5005246286, ("清掃", "lam sach", "cleaning fee")),
+            "gas": (46, 5005056281, ("ガス代", "食堂燃料", "tien gas", "gas")),
+            "handwash": (48, 5005016372, ("手洗い", "nuoc rua tay", "hand wash")),
+            "toilet_paper": (49, 5005016372, ("トイレット", "giay ve sinh", "toilet paper")),
+            "cleaning": (51, 5005246286, ("清掃", "lam sach", "cleaning fee")),
         }
         resolved: dict[str, int] = {}
-        for item_key, (account_code, tokens) in specs.items():
+        for item_key, (canonical_row, account_code, tokens) in specs.items():
             normalized_tokens = tuple(self._normalize_text(token) for token in tokens)
-            matches: list[int] = []
+            exact_matches: list[int] = []
+            label_matches_with_blank_account: list[int] = []
             for row_index in range(1, worksheet.max_row + 1):
-                if self._as_int(worksheet.cell(row=row_index, column=ACCOUNT_COL).value) != account_code:
-                    continue
+                row_account = self._as_int(worksheet.cell(row=row_index, column=ACCOUNT_COL).value)
                 text = " ".join(
                     self._normalize_text(worksheet.cell(row=row_index, column=column).value)
                     for column in (DESCRIPTION_COL, WBS_COL)
                 )
-                if any(token in text for token in normalized_tokens):
-                    matches.append(row_index)
-            if len(matches) != 1:
-                detail = "không tìm thấy" if not matches else f"tìm thấy nhiều dòng {matches}"
+                if not any(token in text for token in normalized_tokens):
+                    continue
+                if row_account == account_code:
+                    exact_matches.append(row_index)
+                elif row_account is None:
+                    label_matches_with_blank_account.append(row_index)
+
+            matches = exact_matches or label_matches_with_blank_account
+            if len(matches) == 1:
+                resolved[item_key] = matches[0]
+                continue
+            if len(matches) > 1:
                 raise ExportIntegrityError(
-                    f"FORM không xác định duy nhất dòng {item_key} theo mã tài khoản và tên khoản chi phí: {detail}."
+                    f"FORM không xác định duy nhất dòng {item_key} theo mã tài khoản và tên khoản chi phí: "
+                    f"tìm thấy nhiều dòng {matches}."
                 )
-            resolved[item_key] = matches[0]
+
+            canonical_identity = " ".join(
+                self._normalize_text(worksheet.cell(row=canonical_row, column=column).value)
+                for column in (ACCOUNT_COL, DESCRIPTION_COL, WBS_COL)
+                if worksheet.cell(row=canonical_row, column=column).value is not None
+            )
+            if canonical_identity:
+                raise ExportIntegrityError(
+                    f"FORM không xác định duy nhất dòng {item_key} theo mã tài khoản và tên khoản chi phí: "
+                    f"không tìm thấy; dòng chuẩn {canonical_row} đang chứa identity khác."
+                )
+            resolved[item_key] = canonical_row
         return resolved
 
     def _resolve_it_system_account_code(self, cc_code: int, fact_account_codes: set[int]) -> int | None:
@@ -353,13 +373,16 @@ class HubBuilder:
     def _append_last_row(self, worksheet) -> int:
         return max(int(worksheet.max_row or 0), MIN_APPEND_LAST_ROW)
 
-    def _clear_template_account_column(
+    def _clear_template_business_payload(
         self,
         worksheet,
         start_row: int = TEMPLATE_ACCOUNT_CLEAR_START_ROW,
     ) -> None:
         for row_index in range(max(int(start_row or 1), 1), self._append_last_row(worksheet) + 1):
-            worksheet.cell(row=row_index, column=ACCOUNT_COL).value = None
+            for column_index in (ACCOUNT_COL, DESCRIPTION_COL, WBS_COL):
+                cell = worksheet.cell(row=row_index, column=column_index)
+                if helpers.is_form_template_payload_value(cell):
+                    cell.value = None
 
     def _cell_has_user_visible_value(self, worksheet, row_index: int, column_index: int) -> bool:
         value = worksheet.cell(row=row_index, column=column_index).value
@@ -1023,6 +1046,24 @@ class HubBuilder:
             and part != EXPLICIT_ZERO_COUNT_MARKER
         ).strip()
 
+    def _append_output_description(self, grouped_description: str, original_description: str) -> str:
+        parts = [part.strip() for part in str(grouped_description or "").split("|") if part.strip()]
+        identity = ""
+        visible_parts: list[str] = []
+        for part in parts:
+            if part.startswith("business_identity="):
+                identity = part.split("=", 1)[1].strip()
+            else:
+                visible_parts.append(part)
+        visible = "|".join(visible_parts).strip()
+        if identity == "new_worker_cup":
+            return f"{visible} - công nhân mới"
+        if identity == "periodic_cup":
+            if MISSING_SEPARATE_COUNT_MARKER in str(original_description or ""):
+                return f"{visible} định kỳ - chưa nhập số lượng"
+            return f"{visible} định kỳ"
+        return grouped_description
+
     def _parse_it_component_term(self, description: str) -> tuple[str, float, float] | None:
         parts = description.split("|")
         if len(parts) < 5 or parts[0:2] != ["it_sim", "component_term"]:
@@ -1095,7 +1136,7 @@ class HubBuilder:
                     component_key = parts[2]
                     component_usd_by_period[period][component_key] = float(row["amount_usd"] or 0.0)
 
-        row_index = self._find_it_system_total_row(worksheet)
+        row_index = getattr(self, "_resolved_it_system_row", None) or self._find_it_system_total_row(worksheet)
         account_code = self._resolve_it_system_account_code(cc_code, account_codes)
         if account_code is None:
             raise RuntimeError(
@@ -1546,7 +1587,7 @@ class HubBuilder:
                 key,
                 {
                     "account_code": int(row["account_code"]),
-                    "description": clean_description,
+                    "description": self._append_output_description(clean_description, description),
                     "months": {},
                     "terms": defaultdict(list),
                     "numeric_months": defaultdict(float),
@@ -1612,7 +1653,8 @@ class HubBuilder:
                     value=int(target_cc) if target_cc.isdigit() else target_cc,
                 )
                 self._resolved_recurring_rows = self._find_recurring_admin_rows(worksheet)
-                self._clear_template_account_column(worksheet)
+                self._resolved_it_system_row = self._find_it_system_total_row(worksheet)
+                self._clear_template_business_payload(worksheet)
                 self._write_source_staffing_time_rows(worksheet, target_cc)
                 self._write_fixed_rows(worksheet, target_cc)
 

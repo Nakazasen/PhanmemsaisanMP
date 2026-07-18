@@ -30,6 +30,7 @@ def _builder_with_asset_rows(rows):
     builder = HubBuilder.__new__(HubBuilder)
     builder.conn = conn
     builder.fiscal_year = 2027
+    builder.source_file_by_category = {"fixed_assets": "fixed_assets"}
     return builder, conn
 
 

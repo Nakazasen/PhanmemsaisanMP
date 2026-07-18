@@ -10,6 +10,7 @@ from src.services.fiscal_run import (
     create_fiscal_run_context,
     inspect_fiscal_year_evidence,
     preflight_fiscal_run,
+    resolve_uniform_policy_path,
     validate_fiscal_year_evidence,
 )
 from src.utils.fiscal_periods import fiscal_baseline_period, fiscal_periods
@@ -264,3 +265,291 @@ def test_project_load_rejects_manual_store_reused_by_two_fiscal_years(tmp_path):
         assert "không được dùng chung kho nhập tay" in str(exc)
     else:
         raise AssertionError("invalid manually edited project.json must be rejected at load time")
+
+
+def _write_minimal_uniform_policy(path: Path) -> None:
+    from openpyxl import Workbook
+    from src.engine.uniform_cup_rules import UNIFORM_ITEM_SPECS
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "原価センタ"
+    sheet.cell(1, 1, "原価センタ")
+    for column, spec in enumerate(UNIFORM_ITEM_SPECS, start=2):
+        sheet.cell(1, column, spec.header)
+    workbook.save(path)
+    workbook.close()
+
+
+def test_new_project_leaves_uniform_policy_unset_for_annual_discovery(tmp_path):
+    project = ProjectConfig.create_legacy_compatible(str(tmp_path), 2027)
+
+    assert project.data["fiscal_years"]["2027"]["uniform_policy"] == ""
+    assert project.fiscal_paths(2027).uniform_policy_path is None
+
+
+def test_missing_generated_uniform_placeholder_is_migrated_as_unset(tmp_path):
+    project = ProjectConfig.create_legacy_compatible(str(tmp_path), 2027)
+    project.data["fiscal_years"]["2027"]["uniform_policy"] = (
+        "docs/MP2027/uniform_eligibility.xlsx"
+    )
+
+    assert project.fiscal_paths(2027).uniform_policy_path is None
+
+
+def test_missing_custom_uniform_policy_remains_explicit_and_fail_closed(tmp_path):
+    project = ProjectConfig.create_legacy_compatible(str(tmp_path), 2027)
+    project.data["fiscal_years"]["2027"]["uniform_policy"] = "custom/missing.xlsx"
+
+    selected = project.fiscal_paths(2027).uniform_policy_path
+    context = create_fiscal_run_context(2027, uniform_policy_path=selected, base_dir=tmp_path)
+    report = preflight_fiscal_run(context)
+    uniform_issues = [issue for issue in report.issues if issue.category == "uniform_policy"]
+
+    assert selected == os.path.abspath(tmp_path / "custom" / "missing.xlsx")
+    assert context.uniform_policy_path == selected
+    assert len(uniform_issues) == 1
+    assert "không tồn tại" in uniform_issues[0].reason
+    assert not any(issue.category == "form_uniform_master" for issue in report.issues)
+
+
+def test_uniform_discovery_follows_moved_project_root(tmp_path):
+    original = tmp_path / "original"
+    original.mkdir()
+    policy = original / "raw" / "canonical.xlsx"
+    _write_minimal_uniform_policy(policy)
+    project = ProjectConfig.create_legacy_compatible(str(original), 2027)
+    project.save()
+
+    moved = tmp_path / "moved"
+    original.rename(moved)
+    reloaded = ProjectConfig.load(str(moved / "project.json"))
+    paths = reloaded.fiscal_paths(2027)
+    context = create_fiscal_run_context(
+        2027,
+        uniform_policy_path=paths.uniform_policy_path,
+        base_dir=reloaded.root_dir,
+    )
+
+    assert context.uniform_policy_path == os.path.abspath(moved / "raw" / "canonical.xlsx")
+
+
+def test_future_fy_uniform_discovery_is_annual_and_rejects_ambiguity(tmp_path):
+    legacy = tmp_path / "raw" / "legacy_FY2027.xlsx"
+    annual_a = tmp_path / "raw" / "FY2028" / "policy_a_FY2028.xlsx"
+    annual_b = tmp_path / "raw" / "FY2028" / "policy_b_FY2028.xlsx"
+    _write_minimal_uniform_policy(legacy)
+    _write_minimal_uniform_policy(annual_a)
+
+    assert resolve_uniform_policy_path(2028, base_dir=tmp_path) == str(annual_a.resolve())
+
+    annual_a.unlink()
+    assert resolve_uniform_policy_path(2028, base_dir=tmp_path) is None
+
+    _write_minimal_uniform_policy(annual_a)
+    _write_minimal_uniform_policy(annual_b)
+    try:
+        resolve_uniform_policy_path(2028, base_dir=tmp_path)
+    except ValueError as exc:
+        assert "nhiều file" in str(exc)
+    else:
+        raise AssertionError("ambiguous annual uniform policies must be rejected")
+
+
+def _preflight_cache_context(tmp_path):
+    from src.services.fiscal_run import create_fiscal_run_context
+
+    source_dir = tmp_path / "sources"
+    headcount_dir = tmp_path / "headcount"
+    source_dir.mkdir()
+    headcount_dir.mkdir()
+    return create_fiscal_run_context(
+        2028,
+        template_path=str(tmp_path / "FORM.xlsx"),
+        source_dir=str(source_dir),
+        headcount_source_dir=str(headcount_dir),
+        manual_input_store=str(tmp_path / "manual.db"),
+        base_dir=tmp_path,
+    )
+
+
+def test_preflight_cache_hit_avoids_second_deep_check(tmp_path):
+    from src.services.fiscal_run import RunPreflightReport
+    from src.services.preflight_cache import cached_preflight_fiscal_run
+
+    context = _preflight_cache_context(tmp_path)
+    cache_path = str(tmp_path / "preflight_cache.json")
+    calls = []
+
+    def checker(_context):
+        calls.append("deep")
+        return RunPreflightReport(2028)
+
+    first, first_hit = cached_preflight_fiscal_run(context, cache_path=cache_path, checker=checker)
+    second, second_hit = cached_preflight_fiscal_run(context, cache_path=cache_path, checker=checker)
+
+    assert first.ok and second.ok
+    assert not first_hit
+    assert second_hit
+    assert calls == ["deep"]
+
+
+def test_preflight_cache_misses_when_source_changes(tmp_path):
+    from src.services.fiscal_run import RunPreflightReport
+    from src.services.preflight_cache import cached_preflight_fiscal_run
+
+    context = _preflight_cache_context(tmp_path)
+    cache_path = str(tmp_path / "preflight_cache.json")
+    calls = []
+
+    def checker(_context):
+        calls.append("deep")
+        return RunPreflightReport(2028)
+
+    cached_preflight_fiscal_run(context, cache_path=cache_path, checker=checker)
+    (tmp_path / "sources" / "facility.xlsx").write_bytes(b"changed")
+    _, cache_hit = cached_preflight_fiscal_run(context, cache_path=cache_path, checker=checker)
+
+    assert not cache_hit
+    assert calls == ["deep", "deep"]
+
+
+def test_preflight_cache_force_refresh_bypasses_valid_entry(tmp_path):
+    from src.services.fiscal_run import RunPreflightReport
+    from src.services.preflight_cache import cached_preflight_fiscal_run
+
+    context = _preflight_cache_context(tmp_path)
+    cache_path = str(tmp_path / "preflight_cache.json")
+    calls = []
+
+    def checker(_context):
+        calls.append("deep")
+        return RunPreflightReport(2028)
+
+    cached_preflight_fiscal_run(context, cache_path=cache_path, checker=checker)
+    _, cache_hit = cached_preflight_fiscal_run(
+        context, cache_path=cache_path, force_refresh=True, checker=checker
+    )
+
+    assert not cache_hit
+    assert calls == ["deep", "deep"]
+
+
+def test_preflight_cache_corruption_falls_back_to_deep_check(tmp_path):
+    from src.services.fiscal_run import RunPreflightReport
+    from src.services.preflight_cache import cached_preflight_fiscal_run
+
+    context = _preflight_cache_context(tmp_path)
+    cache_path = tmp_path / "preflight_cache.json"
+    cache_path.write_text("not-json", encoding="utf-8")
+    calls = []
+
+    def checker(_context):
+        calls.append("deep")
+        return RunPreflightReport(2028)
+
+    report, cache_hit = cached_preflight_fiscal_run(
+        context, cache_path=str(cache_path), checker=checker
+    )
+
+    assert report.ok
+    assert not cache_hit
+    assert calls == ["deep"]
+
+
+def test_preflight_blocks_unknown_source_until_user_decides(tmp_path):
+    import openpyxl
+
+    source_dir = tmp_path / "sources"
+    headcount_dir = tmp_path / "headcount"
+    source_dir.mkdir()
+    headcount_dir.mkdir()
+    workbook = openpyxl.Workbook()
+    workbook.active["A1"] = "unrecognized business source"
+    workbook.save(source_dir / "new_cost_source.xlsx")
+    context = create_fiscal_run_context(
+        2028,
+        template_path=str(tmp_path / "FORM.xlsx"),
+        source_dir=str(source_dir),
+        headcount_source_dir=str(headcount_dir),
+        manual_input_store=str(tmp_path / "manual.db"),
+        base_dir=tmp_path,
+    )
+
+    report = preflight_fiscal_run(context)
+
+    review_issues = [issue for issue in report.issues if issue.code == "SOURCE_NEEDS_REVIEW"]
+    assert review_issues
+    assert review_issues[0].severity == "BLOCKING"
+    assert "new_cost_source.xlsx" in review_issues[0].path
+    assert not report.can_continue_incomplete
+
+
+def test_preflight_cache_ignores_nested_annual_source_files(tmp_path):
+    from src.services.fiscal_run import RunPreflightReport
+    from src.services.preflight_cache import cached_preflight_fiscal_run
+
+    context = _preflight_cache_context(tmp_path)
+    cache_path = str(tmp_path / "preflight_cache.json")
+    calls = []
+
+    def checker(_context):
+        calls.append("deep")
+        return RunPreflightReport(2028)
+
+    cached_preflight_fiscal_run(context, cache_path=cache_path, checker=checker)
+    nested = tmp_path / "sources" / "archive"
+    nested.mkdir()
+    (nested / "old.xlsx").write_bytes(b"not consumed by top-level scanner")
+    _, cache_hit = cached_preflight_fiscal_run(context, cache_path=cache_path, checker=checker)
+
+    assert cache_hit
+    assert calls == ["deep"]
+
+
+def test_preflight_cache_tracks_nested_headcount_files(tmp_path):
+    from src.services.fiscal_run import RunPreflightReport
+    from src.services.preflight_cache import cached_preflight_fiscal_run
+
+    context = _preflight_cache_context(tmp_path)
+    cache_path = str(tmp_path / "preflight_cache.json")
+    calls = []
+
+    def checker(_context):
+        calls.append("deep")
+        return RunPreflightReport(2028)
+
+    cached_preflight_fiscal_run(context, cache_path=cache_path, checker=checker)
+    nested = tmp_path / "headcount" / "monthly"
+    nested.mkdir()
+    (nested / "apr.xlsx").write_bytes(b"tracked recursively")
+    _, cache_hit = cached_preflight_fiscal_run(context, cache_path=cache_path, checker=checker)
+
+    assert not cache_hit
+    assert calls == ["deep", "deep"]
+
+
+def test_preflight_cache_saves_report_against_post_check_state(tmp_path):
+    from src.services.fiscal_run import RunPreflightReport
+    from src.services.preflight_cache import cached_preflight_fiscal_run
+
+    context = _preflight_cache_context(tmp_path)
+    cache_path = str(tmp_path / "preflight_cache.json")
+    calls = []
+
+    def checker(_context):
+        calls.append("deep")
+        (tmp_path / "manual.db").write_bytes(b"initialized during preflight")
+        return RunPreflightReport(2028)
+
+    _, first_hit = cached_preflight_fiscal_run(
+        context, cache_path=cache_path, checker=checker
+    )
+    _, second_hit = cached_preflight_fiscal_run(
+        context, cache_path=cache_path, checker=checker
+    )
+
+    assert not first_hit
+    assert second_hit
+    assert calls == ["deep"]

@@ -149,15 +149,15 @@ def write_pipeline_audit_report(
     target_cc: object | None,
     parser_results: dict[str, dict[str, Any]],
 ) -> dict[str, str]:
-    """Write an audit markdown report and a missing-input CSV.
+    """Write business-facing Excel audit reports for the completed run.
 
-    This report is intentionally business-facing: it explains what the system did,
-    what it did not infer, and what the user must provide to make output complete.
+    The returned ``missing_report_path`` points to ``DU_LIEU_CON_THIEU.xlsx``.
+    ``missing_csv_path`` remains as a compatibility alias for older callers.
     """
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     report_path = out_dir / "BAO_CAO_LAN_CHAY.xlsx"
-    missing_csv_path = out_dir / "DU_LIEU_CON_THIEU.xlsx"
+    missing_report_path = out_dir / "DU_LIEU_CON_THIEU.xlsx"
 
     fy_months = get_fy_months(fiscal_year)
     manual_hc_ccs = _manual_headcount_ccs(conn)
@@ -262,9 +262,12 @@ def write_pipeline_audit_report(
     missing_sheet.append([])
     missing_sheet.append(["Mức độ", "Trung tâm chi phí", "Kỳ liên quan", "Nội dung", "Việc cần làm"])
     for row in concise_rows:
+        area_label = area_names.get(row["area"], row["area"] or "Dữ liệu chưa đầy đủ")
+        detail = str(row["message"] or "").strip()
+        content = f"{area_label}: {detail}" if detail else area_label
         missing_sheet.append([
             severity_names.get(row["severity"], "Cần xem lại"), row["cc_code"], row["period"],
-            area_names.get(row["area"], row["message"] or "Dữ liệu chưa đầy đủ"), row["action"],
+            content, row["action"],
         ])
     if not concise_rows:
         missing_sheet.append(["Không có", "", "", "Chưa phát hiện dữ liệu cần bổ sung", "Không cần xử lý"])
@@ -303,8 +306,13 @@ def write_pipeline_audit_report(
         missing_sheet.column_dimensions[column].width = width
     for column, width in zip("ABC", (42, 20, 24)):
         report_sheet.column_dimensions[column].width = width
-    missing_book.save(missing_csv_path)
+    missing_book.save(missing_report_path)
     report_book.save(report_path)
     missing_book.close()
     report_book.close()
-    return {"report_path": str(report_path), "missing_csv_path": str(missing_csv_path)}
+    missing_path = str(missing_report_path)
+    return {
+        "report_path": str(report_path),
+        "missing_report_path": missing_path,
+        "missing_csv_path": missing_path,
+    }

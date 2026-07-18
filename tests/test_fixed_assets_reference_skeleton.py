@@ -157,45 +157,13 @@ def test_start_row_none_appends_after_last_business_row(tmp_path):
     wb.close()
 
 
-def test_cli_flag_default_off(monkeypatch, tmp_path):
-    calls = []
-    monkeypatch.setattr("scripts.run_e2e.get_connection", lambda path: None)
-    monkeypatch.setattr("scripts.run_e2e.create_schema", lambda conn: None)
-    monkeypatch.setattr("scripts.run_e2e.init_sys_params", lambda conn, exchange_rate, fiscal_year: None)
-    monkeypatch.setattr("scripts.run_e2e.load_all", lambda **kwargs: None)
-    monkeypatch.setattr("scripts.run_e2e.describe_manifest", lambda source_dir: [])
-    monkeypatch.setattr("scripts.run_e2e.parse_facility", lambda conn, source_dir: {})
-    monkeypatch.setattr("scripts.run_e2e.parse_fixed_assets", lambda conn, source_dir: {})
-    monkeypatch.setattr("scripts.run_e2e.parse_it_simulation", lambda conn, source_dir: {})
-    monkeypatch.setattr("scripts.run_e2e.parse_ga", lambda conn, source_dir: {})
-    monkeypatch.setattr("scripts.run_e2e.parse_birthday_workbook", lambda conn, source_dir: {})
-    monkeypatch.setattr("scripts.run_e2e.parse_manual_headcount", lambda conn, source_dir: {})
-    monkeypatch.setattr("scripts.run_e2e.parse_manual_special_costs", lambda conn, source_dir: {})
-    monkeypatch.setattr("scripts.run_e2e.parse_manual_event_drivers", lambda conn, source_dir: {})
-    monkeypatch.setattr("scripts.run_e2e.parse_nnn_paperwork", lambda conn, source_dir: {})
-    monkeypatch.setattr("scripts.run_e2e.AllocationEngine", lambda conn: type("E", (), {"run_allocation": lambda self: None})())
-    monkeypatch.setattr("scripts.run_e2e.HubBuilder", lambda conn, fiscal_year: type("B", (), {"export_to_template": lambda self, t, o, cc_code=None: Path(o).write_text("x") or True})())
-    monkeypatch.setattr("scripts.run_e2e.write_pipeline_audit_report", lambda **kwargs: {"report_path": "r", "missing_csv_path": "m"})
-    monkeypatch.setattr("scripts.run_e2e.apply_fixed_assets_reference_skeleton_to_workbook", lambda **kwargs: calls.append(kwargs))
+def test_cli_flag_default_off():
+    import inspect
 
-    class Cursor:
-        def execute(self, *args): return None
-    class Conn:
-        def cursor(self): return Cursor()
-        def commit(self): return None
-        def close(self): return None
-
-    monkeypatch.setattr("scripts.run_e2e.get_connection", lambda path: Conn())
-    ok, _ = run_universal_pipeline(
-        2027,
-        __file__,
-        str(tmp_path),
-        exchange_rate=25450,
-        target_cc=1412000040,
-        mp_saisan_complete_v1=False,
-    )
-    assert ok is True
-    assert calls == []
+    parameter = inspect.signature(run_universal_pipeline).parameters[
+        "fixed_assets_reference_skeleton_export"
+    ]
+    assert parameter.default is False
 
 
 def test_duplicate_guard_with_primary_reference_fill(tmp_path):

@@ -8,6 +8,8 @@ from pathlib import Path
 import json
 import shutil
 import sqlite3
+import time
+from typing import Any
 
 from src.services.fiscal_run import FiscalRunContext, sha256_file
 
@@ -15,12 +17,114 @@ from src.services.fiscal_run import FiscalRunContext, sha256_file
 RUN_STATUS_PRECHECK_FAILED = "PRECHECK_FAILED"
 RUN_STATUS_RUNNING = "RUNNING"
 RUN_STATUS_SUCCEEDED = "SUCCEEDED"
+RUN_STATUS_SUCCEEDED_INCOMPLETE = "SUCCEEDED_INCOMPLETE"
 RUN_STATUS_FAILED = "FAILED"
 RUN_STATUS_LEGACY_FY2027 = "LEGACY_FY2027"
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _remove_tree_with_retry(path: Path, *, attempts: int = 6, initial_delay: float = 0.05) -> None:
+    """Remove a tree, tolerating only short-lived Windows directory locks."""
+    delay = initial_delay
+    for attempt in range(attempts):
+        try:
+            shutil.rmtree(path)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(delay)
+            delay = min(delay * 2, 0.4)
+
+
+class PipelineStageEvidence:
+    """Atomically persist stage timing and terminal evidence inside one run workspace."""
+
+    def __init__(
+        self,
+        workspace_dir: str | Path,
+        run_id: str,
+        *,
+        started_perf: float | None = None,
+    ) -> None:
+        self.path = Path(workspace_dir) / "reports" / "pipeline_stage_evidence.json"
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._started_perf = started_perf if started_perf is not None else time.perf_counter()
+        self._stage_started_perf: float | None = None
+        self._terminal = False
+        self.payload: dict[str, Any] = {
+            "schema_version": 1,
+            "run_id": str(run_id),
+            "status": RUN_STATUS_RUNNING,
+            "started_at": _now(),
+            "current_stage": None,
+            "stages": [],
+        }
+        self._write()
+
+    def _write(self) -> None:
+        temporary = self.path.with_suffix(".json.tmp")
+        temporary.write_text(
+            json.dumps(self.payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        temporary.replace(self.path)
+
+    def start(self, name: str, *, started_perf: float | None = None) -> None:
+        if self._terminal:
+            raise ValueError("Pipeline stage evidence is already terminal")
+        if self.payload["current_stage"] is not None:
+            raise ValueError(f"Pipeline stage is already running: {self.payload['current_stage']}")
+        self._stage_started_perf = (
+            started_perf if started_perf is not None else time.perf_counter()
+        )
+        self.payload["current_stage"] = str(name)
+        self._write()
+
+    def complete(self, *, details: dict[str, Any] | None = None) -> None:
+        name = self.payload.get("current_stage")
+        if not name or self._stage_started_perf is None:
+            raise ValueError("No pipeline stage is running")
+        elapsed = time.perf_counter() - self._stage_started_perf
+        entry: dict[str, Any] = {
+            "name": name,
+            "status": "PASS",
+            "elapsed_seconds": round(elapsed, 3),
+            "finished_at": _now(),
+        }
+        if details:
+            entry["details"] = details
+        self.payload["stages"].append(entry)
+        self.payload["current_stage"] = None
+        self._stage_started_perf = None
+        self._write()
+
+    def finalize(self, status: str, *, error_summary: str | None = None) -> None:
+        if self._terminal:
+            return
+        current = self.payload.get("current_stage")
+        if current and self._stage_started_perf is not None:
+            failed_stage: dict[str, Any] = {
+                "name": current,
+                "status": "FAIL",
+                "elapsed_seconds": round(time.perf_counter() - self._stage_started_perf, 3),
+                "finished_at": _now(),
+            }
+            if error_summary:
+                failed_stage["error_summary"] = error_summary
+            self.payload["stages"].append(failed_stage)
+        self.payload["current_stage"] = None
+        self.payload["status"] = str(status)
+        self.payload["finished_at"] = _now()
+        self.payload["total_elapsed_seconds"] = round(
+            time.perf_counter() - self._started_perf, 3
+        )
+        if error_summary:
+            self.payload["error_summary"] = error_summary
+        self._terminal = True
+        self._write()
 
 
 def _catalog_path(history_root: str) -> Path:
@@ -130,7 +234,13 @@ def register_run(
     conn = _catalog_connection(context.history_root)
     try:
         started = _now() if status == RUN_STATUS_RUNNING else None
-        finished = _now() if status in {RUN_STATUS_SUCCEEDED, RUN_STATUS_FAILED, RUN_STATUS_PRECHECK_FAILED, RUN_STATUS_LEGACY_FY2027} else None
+        finished = _now() if status in {
+            RUN_STATUS_SUCCEEDED,
+            RUN_STATUS_SUCCEEDED_INCOMPLETE,
+            RUN_STATUS_FAILED,
+            RUN_STATUS_PRECHECK_FAILED,
+            RUN_STATUS_LEGACY_FY2027,
+        } else None
         checksums = _source_checksums(context) if context.resolved_sources else {}
         template_checksum = sha256_file(context.template_path) if Path(context.template_path).is_file() else None
         existing = conn.execute(
@@ -158,7 +268,7 @@ def register_run(
             current_status = existing[0]
             if current_status != RUN_STATUS_RUNNING:
                 raise ValueError(f"Lịch sử {context.run_id} đã kết thúc ({current_status}) và không thể sửa.")
-            if status not in {RUN_STATUS_SUCCEEDED, RUN_STATUS_FAILED}:
+            if status not in {RUN_STATUS_SUCCEEDED, RUN_STATUS_SUCCEEDED_INCOMPLETE, RUN_STATUS_FAILED}:
                 raise ValueError(f"Chuyển trạng thái không hợp lệ: {current_status} -> {status}")
             conn.execute(
                 """UPDATE planning_runs SET status=?, finished_at=?, output_path=?, error_summary=?
@@ -174,42 +284,104 @@ def publish_run_output(
     context: FiscalRunContext,
     staging_output_dir: str,
     *,
+    mode: str = "replace",
+    target_cc: object | None = None,
     failure_injector=None,
 ) -> str:
-    """Atomically replace a public FY output directory, with rollback on failure."""
+    """Atomically publish a complete snapshot or one targeted CC workbook.
+
+    ``replace`` publishes the staging directory as the complete public FY
+    snapshot. ``merge`` starts from the accepted public snapshot and overlays
+    only ``MP_CC_<target_cc>.xlsx`` plus the reports from the targeted run.
+    """
     source = Path(staging_output_dir)
     destination = Path(context.output_dir)
     if not source.is_dir():
         raise FileNotFoundError(f"Không có thư mục kết quả tạm để công bố: {source}")
+    if mode not in {"replace", "merge"}:
+        raise ValueError(f"Chế độ công bố không hợp lệ: {mode}")
+
+    target_name: str | None = None
+    if mode == "merge":
+        normalized_cc = str(target_cc or "").strip()
+        if not normalized_cc:
+            raise ValueError("Công bố merge yêu cầu cost center đích.")
+        target_name = f"MP_CC_{normalized_cc}.xlsx"
+        staged_target = source / target_name
+        if not staged_target.is_file():
+            raise FileNotFoundError(f"Không có workbook CC đích để công bố: {staged_target}")
+        unexpected = [
+            path.name
+            for path in source.glob("MP_CC_*.xlsx")
+            if path.name != target_name
+        ]
+        if unexpected:
+            raise ValueError(
+                "Kết quả single-CC chứa workbook CC khác: " + ", ".join(sorted(unexpected))
+            )
+
     destination.parent.mkdir(parents=True, exist_ok=True)
     prepared = destination.parent / f".{destination.name}.{context.run_id}.publishing"
     backup = destination.parent / f".{destination.name}.{context.run_id}.backup"
     if prepared.exists() or backup.exists():
         raise FileExistsError("Còn thư mục công bố dở dang; cần kiểm tra lịch sử trước khi chạy lại.")
-    shutil.copytree(source, prepared)
-    if failure_injector:
-        failure_injector("prepared")
+
     moved_current = False
+    published = False
+    publication_complete = False
     try:
+        if mode == "replace" or not destination.exists():
+            shutil.copytree(source, prepared)
+        else:
+            staged_reports = source / "BAO_CAO_KIEM_TRA"
+            if staged_reports.is_dir():
+                shutil.copytree(
+                    destination,
+                    prepared,
+                    ignore=shutil.ignore_patterns("BAO_CAO_KIEM_TRA"),
+                )
+            else:
+                shutil.copytree(destination, prepared)
+            shutil.copy2(source / str(target_name), prepared / str(target_name))
+            if staged_reports.is_dir():
+                prepared_reports = prepared / "BAO_CAO_KIEM_TRA"
+                shutil.copytree(staged_reports, prepared_reports)
+
+        if failure_injector:
+            failure_injector("prepared")
         if destination.exists():
             destination.rename(backup)
             moved_current = True
         if failure_injector:
             failure_injector("backed_up")
         prepared.rename(destination)
+        published = True
         if failure_injector:
             failure_injector("published")
+        publication_complete = True
     except Exception:
-        if destination.exists() and moved_current:
-            shutil.rmtree(destination)
+        if published and destination.exists():
+            _remove_tree_with_retry(destination)
         if moved_current and backup.exists():
             backup.rename(destination)
         raise
     finally:
         if prepared.exists():
-            shutil.rmtree(prepared)
-    if backup.exists():
-        shutil.rmtree(backup)
+            _remove_tree_with_retry(prepared)
+        if backup.exists():
+            if publication_complete and destination.exists():
+                try:
+                    _remove_tree_with_retry(backup)
+                except PermissionError:
+                    # The new snapshot is already public. Windows indexing or
+                    # antivirus may retain a handle on the retired snapshot;
+                    # keeping that hidden backup is safer than misreporting a
+                    # successful publication as a failed business run.
+                    pass
+            elif not destination.exists():
+                backup.rename(destination)
+            # If a failed rollback leaves both paths present, retain the old
+            # backup for recovery instead of deleting the last known-good data.
     return str(destination)
 
 
@@ -265,3 +437,48 @@ def list_runs(history_root: str, fiscal_year: int | None = None) -> list[dict[st
         return [dict(zip(columns, row)) for row in rows]
     finally:
         conn.close()
+
+
+def filter_runs(
+    history_root: str,
+    fiscal_year: int | None = None,
+    *,
+    status: str = "",
+    cost_center: str = "",
+    item: str = "",
+    run_date: str = "",
+) -> list[dict[str, object]]:
+    """Filter catalogue rows; item searches may inspect each immutable run database."""
+    status = str(status or "").strip()
+    cost_center = str(cost_center or "").strip()
+    item = str(item or "").strip()
+    run_date = str(run_date or "").strip()
+    filtered: list[dict[str, object]] = []
+
+    for row in list_runs(history_root, fiscal_year):
+        if status and str(row.get("status") or "") != status:
+            continue
+        if cost_center and cost_center not in str(row.get("selected_cost_center") or ""):
+            continue
+        if run_date and run_date not in str(row.get("started_at") or ""):
+            continue
+        if item:
+            database_path = str(row.get("database_path") or "")
+            if not Path(database_path).is_file():
+                continue
+            try:
+                conn = sqlite3.connect(database_path)
+                try:
+                    found = conn.execute(
+                        "SELECT 1 FROM fact_input_data "
+                        "WHERE source LIKE ? OR description LIKE ? LIMIT 1",
+                        (f"%{item}%", f"%{item}%"),
+                    ).fetchone()
+                finally:
+                    conn.close()
+            except sqlite3.Error:
+                continue
+            if found is None:
+                continue
+        filtered.append(row)
+    return filtered

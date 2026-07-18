@@ -312,6 +312,7 @@ class HeadcountTimeSourceTests(unittest.TestCase):
             "template_path": "unused-form.xlsx",
             "source_dir": "unused-source",
             "simulate_baseline_t3_from_t4": True,
+            "preserve_run_history": False,
         }
         missing_path = run_universal_pipeline(**common)
         production_path = run_universal_pipeline(

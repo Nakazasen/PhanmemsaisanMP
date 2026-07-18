@@ -196,7 +196,10 @@ class ProjectConfig:
             "template": _portable_path(os.path.join(docs_dir, "FORM.xlsx"), self.root_dir),
             "cost_source_dir": _portable_path(docs_dir, self.root_dir),
             "headcount_source_dir": _portable_path(raw_dir, self.root_dir),
-            "uniform_policy": _portable_path(os.path.join(docs_dir, "uniform_eligibility.xlsx"), self.root_dir),
+            # An empty value means "auto-discover inside this fiscal project".
+            # Do not persist a plausible-looking file that may not exist: any
+            # non-empty value is an explicit, fail-closed user selection.
+            "uniform_policy": "",
             "manual_input_store": _portable_path(os.path.join(raw_dir, "manual_inputs.db"), self.root_dir),
             "output_dir": _portable_path(os.path.join(root, f"OUTPUT_FY{year}"), self.root_dir),
             "history_root": _portable_path(os.path.join(root, "RUN_HISTORY"), self.root_dir),
@@ -210,6 +213,18 @@ class ProjectConfig:
         if not isinstance(entry, dict):
             raise ValueError(f"Cấu hình FY{year} phải là JSON object")
         uniform = self.resolve_path(entry.get("uniform_policy"))
+        generated_placeholder = os.path.join(
+            self.root_dir, "docs", f"MP{year}", "uniform_eligibility.xlsx"
+        )
+        # Version 1 originally persisted this nonexistent placeholder. Treat
+        # only that exact missing path as unset so legacy FY2027 discovery can
+        # run; custom explicit paths remain fail-closed even when missing.
+        if (
+            uniform
+            and self._same_path(uniform, generated_placeholder)
+            and not os.path.isfile(uniform)
+        ):
+            uniform = ""
         return FiscalProjectPaths(
             fiscal_year=year,
             template_path=self.resolve_path(entry.get("template")),

@@ -293,35 +293,82 @@ def save_manual_baseline_override(conn: sqlite3.Connection, fiscal_year: int, cc
     apply_manual_baseline_overrides(conn, fiscal_year, target_cc=cc)
 
 
-def copy_missing_baselines_from_april(conn: sqlite3.Connection, fiscal_year: int, target_cc: object | None = None) -> list[str]:
-    """Persist user-approved T4 staffing as T3 without overwriting observed T3."""
+def copy_missing_baselines_from_april(
+    conn: sqlite3.Connection,
+    fiscal_year: int,
+    target_cc: object | None = None,
+    *,
+    source_conn: sqlite3.Connection | None = None,
+) -> list[str]:
+    """Persist user-approved T4 staffing as T3 without overwriting observed T3.
+
+    ``conn`` is the editable annual manual-input store.  ``source_conn`` may be
+    an immutable failed-run snapshot containing the imported department plan;
+    when omitted, the legacy same-database behavior is preserved.
+    """
     baseline = fiscal_baseline_period(fiscal_year)
     april = fiscal_periods(fiscal_year)[0]
-    target_clause = "AND CAST(april.cc_code AS TEXT)=?" if target_cc is not None else ""
-    params = [baseline, april]
+    source = source_conn or conn
+    params: list[object] = [april]
+    target_clause = ""
     if target_cc is not None:
+        target_clause = "AND CAST(cc_code AS TEXT)=?"
         params.append(str(target_cc).strip())
-    conn.execute(
-        f"""INSERT INTO fact_manual_headcount_baseline_override
-            (period,cc_code,fiscal_year,headcount_all,headcount_expat,headcount_staff,
-             headcount_worker,headcount_male,headcount_female,split_status,
-             headcount_local_total,description,source_file,source_sheet,updated_at)
-            SELECT ?,april.cc_code,?,april.headcount_all,april.headcount_expat,
-                   april.headcount_staff,april.headcount_worker,april.headcount_male,
-                   april.headcount_female,april.split_status,april.headcount_local_total,
-                   'USER_APPROVED_BASELINE_T3_FROM_T4',april.source_file,april.source_sheet,CURRENT_TIMESTAMP
-            FROM fact_monthly_headcount AS april
-            WHERE april.period=? AND april.source='department_plan' {target_clause}
-              AND NOT EXISTS(SELECT 1 FROM fact_monthly_headcount AS baseline
-                  WHERE baseline.period=? AND baseline.source='manual'
-                    AND CAST(baseline.cc_code AS TEXT)=CAST(april.cc_code AS TEXT))
-              AND NOT EXISTS(SELECT 1 FROM fact_manual_headcount_baseline_override AS saved
-                  WHERE saved.fiscal_year=? AND saved.period=? AND CAST(saved.cc_code AS TEXT)=CAST(april.cc_code AS TEXT))""",
-        [*params, int(fiscal_year), baseline, int(fiscal_year), baseline],
-    )
+    april_rows = source.execute(
+        f"""SELECT CAST(cc_code AS TEXT),headcount_all,headcount_expat,
+                   headcount_staff,headcount_worker,headcount_male,
+                   headcount_female,split_status,headcount_local_total,
+                   source_file,source_sheet
+            FROM fact_monthly_headcount
+            WHERE period=? AND source='department_plan' {target_clause}
+            ORDER BY CAST(cc_code AS TEXT)""",
+        params,
+    ).fetchall()
+
+    seen: set[str] = set()
+    for row in april_rows:
+        cc = str(row[0]).strip()
+        if cc in seen:
+            raise ValueError(f"Có nhiều hơn một nguồn T4 department_plan cho CC {cc}.")
+        seen.add(cc)
+        required_values = [row[index] for index in (1, 2, 3, 4, 8)]
+        if any(value is None for value in required_values):
+            raise ValueError(f"Dữ liệu T4 của CC {cc} thiếu thành phần nhân sự bắt buộc.")
+        values = [float(value) for value in required_values]
+        total, expat, staff, worker, local_total = values
+        if any(value < 0 for value in values):
+            raise ValueError(f"Dữ liệu T4 của CC {cc} có giá trị nhân sự âm.")
+        if abs(local_total - (staff + worker)) > 1e-6 or abs(total - (expat + local_total)) > 1e-6:
+            raise ValueError(f"Dữ liệu T4 của CC {cc} không cân đối thành phần nhân sự.")
+        existing_manual = conn.execute(
+            """SELECT 1 FROM fact_monthly_headcount
+               WHERE period=? AND source='manual' AND CAST(cc_code AS TEXT)=? LIMIT 1""",
+            (baseline, cc),
+        ).fetchone()
+        existing_saved = conn.execute(
+            """SELECT 1 FROM fact_manual_headcount_baseline_override
+               WHERE fiscal_year=? AND period=? AND CAST(cc_code AS TEXT)=? LIMIT 1""",
+            (int(fiscal_year), baseline, cc),
+        ).fetchone()
+        if existing_manual is not None or existing_saved is not None:
+            continue
+        conn.execute(
+            """INSERT INTO fact_manual_headcount_baseline_override
+               (period,cc_code,fiscal_year,headcount_all,headcount_expat,headcount_staff,
+                headcount_worker,headcount_male,headcount_female,split_status,
+                headcount_local_total,description,source_file,source_sheet,updated_at)
+               VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)""",
+            (
+                baseline, cc, int(fiscal_year), total, expat, staff, worker,
+                float(row[5] or 0), float(row[6] or 0), row[7], local_total,
+                "USER_APPROVED_BASELINE_T3_FROM_T4", row[9], row[10],
+            ),
+        )
+
     copied = [str(row[0]) for row in conn.execute(
         """SELECT CAST(cc_code AS TEXT) FROM fact_manual_headcount_baseline_override
-           WHERE fiscal_year=? AND period=? AND description='USER_APPROVED_BASELINE_T3_FROM_T4' ORDER BY 1""", (int(fiscal_year), baseline)
+           WHERE fiscal_year=? AND period=? AND description='USER_APPROVED_BASELINE_T3_FROM_T4' ORDER BY 1""",
+        (int(fiscal_year), baseline),
     ).fetchall()]
     if target_cc is not None:
         copied = [cc for cc in copied if cc == str(target_cc).strip()]

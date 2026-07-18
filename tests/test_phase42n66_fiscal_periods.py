@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from src.parsers.fixed_assets import HEADER_ALIASES, LEGACY_COLUMN_MAP
 from src.parsers.manual_headcount import get_required_headcount_periods, validate_manual_headcount_rows, validate_manual_bus_headcount_rows
 from src.utils.fiscal_periods import fiscal_baseline_period, fiscal_month_labels, fiscal_period_for_month, fiscal_periods
 from src.utils.excel_helpers import get_fy_months, get_month_mapping
@@ -102,11 +103,9 @@ def test_bus_scalar_contract_has_no_period():
 
 
 def test_scope_guards_fixed_assets_and_canonical_writer_unchanged():
-    fixed = Path("src/parsers/fixed_assets.py").read_text(encoding="utf-8")
-    assert "HEADER_ALIASES" in fixed
-    assert "LEGACY_COLUMN_MAP" in fixed
-    assert '"cc_code": 7' in fixed
-    assert "helpers.extract_cc_code(row[9]" not in fixed
+    assert "depreciation_cc" in HEADER_ALIASES
+    assert LEGACY_COLUMN_MAP["control_cc"] == 7
+    assert LEGACY_COLUMN_MAP["depreciation_cc"] == 9
     canonical = Path("src/engine/complete_v1_source_order_writer.py").read_text(encoding="utf-8")
     assert "MANAGED_CLEAR_COLS" in canonical
 

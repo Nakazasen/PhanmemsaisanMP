@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 import scripts.run_e2e as run_e2e
+from src.services.fiscal_run import RunPreflightReport
 
 
 def test_default_cli_or_export_behavior_unchanged():
@@ -31,26 +32,63 @@ def test_facility_preview_flag_creates_preview_workbook(monkeypatch, tmp_path):
         def fetchall(self):
             return []
 
+        def fetchone(self):
+            return (0,)
+
     class FakeConn:
         def cursor(self):
             return FakeCursor()
 
+        def execute(self, *args, **kwargs):
+            return FakeCursor()
+
+        def executemany(self, *args, **kwargs):
+            return FakeCursor()
+
         def commit(self):
+            return None
+
+        def rollback(self):
             return None
 
         def close(self):
             return None
 
     class FakeHubBuilder:
-        def __init__(self, conn, fiscal_year):
+        def __init__(self, conn, fiscal_year, **kwargs):
             self.conn = conn
             self.fiscal_year = fiscal_year
 
         def export_to_template(self, template_path, output_path, cc_code=None):
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(output_path).write_text("placeholder", encoding="utf-8")
             calls.append(("export", template_path, output_path, cc_code))
             return True
 
+    (tmp_path / "raw").mkdir()
     monkeypatch.setattr(run_e2e, "get_connection", lambda db_path: FakeConn())
+    monkeypatch.setattr(
+        run_e2e,
+        "preflight_fiscal_run",
+        lambda context: RunPreflightReport(
+            fiscal_year=2027,
+            resolved_sources={
+                "facility": (str(tmp_path / "raw" / "施設課　MPFY2027.xlsx"),),
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        run_e2e,
+        "import_headcount_time_sources",
+        lambda *args, **kwargs: {
+            "files": 1,
+            "imported_files": 1,
+            "skipped": [],
+            "errors": [],
+            "results": [],
+        },
+    )
+    monkeypatch.setattr(run_e2e, "_staffing_preflight", lambda *args, **kwargs: [])
     monkeypatch.setattr(run_e2e, "create_schema", fake_noop)
     monkeypatch.setattr(run_e2e, "init_sys_params", fake_noop)
     monkeypatch.setattr(run_e2e, "load_all", fake_noop)
@@ -67,6 +105,8 @@ def test_facility_preview_flag_creates_preview_workbook(monkeypatch, tmp_path):
     monkeypatch.setattr(run_e2e, "AllocationEngine", lambda conn: type("Engine", (), {"run_allocation": lambda self: None})())
     monkeypatch.setattr(run_e2e, "HubBuilder", FakeHubBuilder)
     monkeypatch.setattr(run_e2e, "write_pipeline_audit_report", lambda **kwargs: {"report_path": "audit.md", "missing_csv_path": "missing.csv"})
+    monkeypatch.setattr(run_e2e, "audit_exchange_rate_workbook", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "write_exchange_rate_audit_report", lambda *args, **kwargs: "exchange-audit.xlsx")
     monkeypatch.setattr(
         run_e2e,
         "write_facility_file_order_preview_workbook",
@@ -81,6 +121,7 @@ def test_facility_preview_flag_creates_preview_workbook(monkeypatch, tmp_path):
         target_cc=1412000040,
         facility_file_order_preview=True,
         facility_preview_output=str(output),
+        mp_saisan_complete_v1=False,
     )
 
     assert ok

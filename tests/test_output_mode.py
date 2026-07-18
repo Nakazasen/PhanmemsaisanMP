@@ -103,15 +103,13 @@ def test_sort_output_groups_by_file_order():
     ]
 
 
-def test_no_writer_integration_yet():
+def test_hub_builder_uses_canonical_fixed_row_writer_without_obsolete_helpers():
     hub_builder = Path("src/engine/hub_builder.py").read_text(encoding="utf-8")
 
     assert "sort_output_groups_by_file_order" not in hub_builder
-    assert "insert_rows" not in hub_builder
     assert "blank_row_after_group" not in hub_builder
     assert "_write_file_order" not in hub_builder
     assert "_write_blank" not in hub_builder
-    assert "self._output_group_specs()" not in hub_builder
     assert "self._write_fixed_rows(worksheet, target_cc)" in hub_builder
 
 

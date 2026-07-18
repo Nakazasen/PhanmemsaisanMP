@@ -177,8 +177,12 @@ def parse_extracted_headcount_time_plan(path: str, fiscal_year: int) -> PlanPars
                     "headcount_worker": worker,
                     "split_status": status,
                     "fixed_hours_expat": float(values["fixed_hours_expat"] or 0),
+                    "fixed_hours_staff": values["fixed_hours_staff"],
+                    "fixed_hours_worker": values["fixed_hours_worker"],
                     "fixed_hours_local": float(values["fixed_hours_local"] or 0),
                     "overtime_hours_expat": float(values["overtime_hours_expat"] or 0),
+                    "overtime_hours_staff": values["overtime_hours_staff"],
+                    "overtime_hours_worker": values["overtime_hours_worker"],
                     "overtime_hours_local": float(values["overtime_hours_local"] or 0),
                     "source_cells": "Master Plan C:N; rows 10-28",
                 }

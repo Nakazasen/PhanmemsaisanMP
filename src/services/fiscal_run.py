@@ -15,11 +15,12 @@ import os
 import re
 import subprocess
 import uuid
-from typing import Iterable
+from typing import Callable, Iterable
 
 import openpyxl
 
 from src.engine.uniform_cup_rules import UNIFORM_ITEM_SPECS, normalize_uniform_text
+from src.utils import excel_helpers
 from src.utils.fiscal_periods import fiscal_baseline_period, fiscal_periods
 from src.utils.source_manifest import read_source_manifest, resolve_manifest_files
 
@@ -34,6 +35,17 @@ REQUIRED_SOURCE_CATEGORIES = (
     "nnn_paperwork",
     "uniform_policy",
 )
+ISSUE_BLOCKING = "BLOCKING"
+ISSUE_CONTINUABLE_MISSING_SOURCE = "CONTINUABLE_MISSING_SOURCE"
+ISSUE_INFORMATION = "INFORMATION"
+CONTINUABLE_MISSING_SOURCE_CATEGORIES = frozenset({
+    "facility",
+    "fixed_assets",
+    "it_simulation",
+    "ga",
+    "birthday",
+    "nnn_paperwork",
+})
 REFERENCE_POLICY_DISABLED = "DISABLED"
 REFERENCE_POLICY_EXPLICIT_SAME_FY = "EXPLICIT_SAME_FY"
 REFERENCE_POLICY_LEGACY_FY2027_MAP = "LEGACY_FY2027_MAP"
@@ -109,6 +121,13 @@ class SourceIssue:
     status: str = "FAILED"
     sheet: str | None = None
     period_coverage: tuple[str, ...] = ()
+    code: str = "SOURCE_VALIDATION_FAILED"
+    severity: str = ISSUE_BLOCKING
+    impact: str = "Không thể bảo đảm kết quả tính toán chính xác."
+
+    @property
+    def is_continuable(self) -> bool:
+        return self.severity == ISSUE_CONTINUABLE_MISSING_SOURCE
 
     def as_dict(self) -> dict[str, object]:
         candidate = Path(self.path) if self.path else None
@@ -118,6 +137,9 @@ class SourceIssue:
             "detected_fiscal_year": self.detected_fiscal_year,
             "expected_fiscal_year": None,
             "status": self.status,
+            "code": self.code,
+            "severity": self.severity,
+            "impact": self.impact,
             "checksum": sha256_file(candidate) if candidate and candidate.is_file() else None,
             "sheet": self.sheet,
             "period_coverage": list(self.period_coverage),
@@ -125,10 +147,29 @@ class SourceIssue:
             "required_action": self.action,
         }
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, object]) -> "SourceIssue":
+        return cls(
+            category=str(payload.get("category", "")),
+            path=str(payload.get("selected_path", "")),
+            detected_fiscal_year=(
+                int(payload["detected_fiscal_year"])
+                if payload.get("detected_fiscal_year") is not None else None
+            ),
+            reason=str(payload.get("reason", "")),
+            action=str(payload.get("required_action", "")),
+            status=str(payload.get("status", "FAILED")),
+            sheet=str(payload["sheet"]) if payload.get("sheet") is not None else None,
+            period_coverage=tuple(str(value) for value in payload.get("period_coverage", []) or []),
+            code=str(payload.get("code", "SOURCE_VALIDATION_FAILED")),
+            severity=str(payload.get("severity", ISSUE_BLOCKING)),
+            impact=str(payload.get("impact", "Không thể bảo đảm kết quả tính toán chính xác.")),
+        )
+
     def as_text(self) -> str:
         detected = f"FY{self.detected_fiscal_year}" if self.detected_fiscal_year else "không xác định"
         return (
-            f"[{self.category}] file={self.path or '(không có)'}; "
+            f"[{self.category}/{self.code}/{self.severity}] file={self.path or '(không có)'}; "
             f"năm phát hiện={detected}; lý do={self.reason}; cần làm={self.action}"
         )
 
@@ -162,6 +203,24 @@ class SourceCheck:
             "required_action": self.required_action,
         }
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, object]) -> "SourceCheck":
+        return cls(
+            category=str(payload.get("category", "")),
+            selected_path=str(payload.get("selected_path", "")),
+            detected_fiscal_year=(
+                int(payload["detected_fiscal_year"])
+                if payload.get("detected_fiscal_year") is not None else None
+            ),
+            expected_fiscal_year=int(payload.get("expected_fiscal_year", 0) or 0),
+            status=str(payload.get("status", "FAILED")),
+            checksum=str(payload["checksum"]) if payload.get("checksum") is not None else None,
+            sheet=str(payload["sheet"]) if payload.get("sheet") is not None else None,
+            period_coverage=tuple(str(value) for value in payload.get("period_coverage", []) or []),
+            reason=str(payload.get("reason", "")),
+            required_action=str(payload.get("required_action", "")),
+        )
+
 
 @dataclass(frozen=True)
 class RunPreflightReport:
@@ -179,10 +238,23 @@ class RunPreflightReport:
         return {
             "fiscal_year": self.fiscal_year,
             "ok": self.ok,
+            "can_continue_incomplete": self.can_continue_incomplete,
             "issues": issues,
             "checks": [check.as_dict() for check in self.checks],
             "resolved_sources": {key: list(value) for key, value in self.resolved_sources.items()},
         }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, object]) -> "RunPreflightReport":
+        return cls(
+            fiscal_year=int(payload.get("fiscal_year", 0) or 0),
+            issues=tuple(SourceIssue.from_dict(row) for row in payload.get("issues", []) or []),
+            resolved_sources={
+                str(key): tuple(str(path) for path in paths)
+                for key, paths in dict(payload.get("resolved_sources", {}) or {}).items()
+            },
+            checks=tuple(SourceCheck.from_dict(row) for row in payload.get("checks", []) or []),
+        )
 
     def as_markdown(self) -> str:
         """Human-readable companion to the JSON provenance report."""
@@ -213,10 +285,33 @@ class RunPreflightReport:
     def ok(self) -> bool:
         return not self.issues
 
-    def raise_if_invalid(self) -> None:
-        if self.ok:
+    @property
+    def blocking_issues(self) -> tuple[SourceIssue, ...]:
+        return tuple(issue for issue in self.issues if not issue.is_continuable)
+
+    @property
+    def continuable_issues(self) -> tuple[SourceIssue, ...]:
+        return tuple(issue for issue in self.issues if issue.is_continuable)
+
+    @property
+    def can_continue_incomplete(self) -> bool:
+        return bool(self.continuable_issues) and not self.blocking_issues
+
+    def accepted_missing_categories(self) -> tuple[str, ...]:
+        return tuple(sorted({issue.category for issue in self.continuable_issues}))
+
+    def unaccepted_issues(self, accepted_categories: Iterable[str] = ()) -> tuple[SourceIssue, ...]:
+        accepted = {str(category) for category in accepted_categories}
+        return tuple(
+            issue for issue in self.issues
+            if not (issue.is_continuable and issue.category in accepted)
+        )
+
+    def raise_if_invalid(self, accepted_categories: Iterable[str] = ()) -> None:
+        remaining = self.unaccepted_issues(accepted_categories)
+        if not remaining:
             return
-        detail = "\n".join(f"- {issue.as_text()}" for issue in self.issues)
+        detail = "\n".join(f"- {issue.as_text()}" for issue in remaining)
         raise ValueError(
             f"Kiểm tra nguồn FY{self.fiscal_year} không đạt. Chương trình chưa tạo dữ liệu tính toán.\n{detail}"
         )
@@ -529,6 +624,9 @@ def resolve_ordered_sources(context: FiscalRunContext) -> tuple[dict[str, object
             "order": int(str(entry.get("order", "9999")) or 9999),
             "path": path,
             "filename": str(entry.get("filename", "")),
+            "status": str(entry.get("status", "recognized")),
+            "detection_method": str(entry.get("detection_method", "")),
+            "reason": str(entry.get("reason", "")),
             "fiscal_year": detect_fiscal_year(path) if path else None,
             "checksum": sha256_file(path) if path and Path(path).is_file() else None,
             "invalid_path": bool(entry.get("_invalid_path")),
@@ -722,7 +820,11 @@ def _preflight_checks(
             selected_path=path,
             detected_fiscal_year=evidence.resolved_fiscal_year,
             expected_fiscal_year=context.fiscal_year,
-            status="FAILED" if issue else "OK",
+            status=(
+                "WARNING" if issue and issue.is_continuable else
+                "FAILED" if issue else
+                "OK"
+            ),
             checksum=sha256_file(path) if is_file else None,
             sheet=(
                 "原価センタ" if category == "uniform_policy" and is_file else
@@ -744,18 +846,33 @@ def _preflight_checks(
     return tuple(checks)
 
 
-def _template_looks_valid(path: str) -> bool:
+def _template_validation_error(path: str) -> str | None:
     candidate = Path(path)
     if candidate.name.lower() == "form_old.xlsx" or not candidate.is_file():
-        return False
+        return "FORM không tồn tại hoặc không đúng cấu trúc."
     try:
-        workbook = openpyxl.load_workbook(candidate, read_only=True, data_only=True)
+        workbook = openpyxl.load_workbook(candidate, read_only=True, data_only=False)
     except Exception:
-        return False
+        return "FORM không thể mở hoặc không đúng cấu trúc."
     try:
-        return any("内訳" in name or "採算" in name for name in workbook.sheetnames)
+        if not any("内訳" in name or "採算" in name for name in workbook.sheetnames):
+            return "FORM không có sheet chi tiết MP đúng cấu trúc."
+        try:
+            issue_cells = excel_helpers.find_form_template_hygiene_issues(workbook)
+        except ValueError:
+            return "FORM không có sheet chi tiết MP đúng cấu trúc."
+        if issue_cells:
+            return (
+                "FORM còn dữ liệu của bộ phận cũ tại các ô: "
+                f"{', '.join(issue_cells)}."
+            )
+        return None
     finally:
         workbook.close()
+
+
+def _template_looks_valid(path: str) -> bool:
+    return _template_validation_error(path) is None
 
 
 def _validate_form_master_and_uniform(context: FiscalRunContext) -> str | None:
@@ -785,9 +902,15 @@ def _validate_form_master_and_uniform(context: FiscalRunContext) -> str | None:
     return None
 
 
-def preflight_fiscal_run(context: FiscalRunContext) -> RunPreflightReport:
+def preflight_fiscal_run(
+    context: FiscalRunContext,
+    *,
+    progress: Callable[[str], None] | None = None,
+) -> RunPreflightReport:
     """Validate annual isolation without writing to calculation or output storage."""
+    notify = progress or (lambda _message: None)
     issues: list[SourceIssue] = []
+    notify("Đang kiểm kê toàn bộ workbook nguồn chi phí...")
     sources = resolve_annual_sources(context)
     ordered = resolve_ordered_sources(context)
     for entry in ordered:
@@ -796,11 +919,32 @@ def preflight_fiscal_run(context: FiscalRunContext) -> RunPreflightReport:
                 str(entry["category"]), str(entry["filename"]), None,
                 "Đường dẫn manifest đi ra ngoài thư mục nguồn của năm", "Sửa filename trong manifest; không dùng ../ hoặc đường dẫn tuyệt đối."
             ))
+        if entry["status"] == "needs_review":
+            issues.append(SourceIssue(
+                "source_inventory",
+                str(entry["filename"]),
+                None,
+                "Có workbook nguồn chưa được xử lý: " + (str(entry["reason"]) or "chưa nhận diện được loại nguồn"),
+                "Mở ‘Thứ tự file nguồn’, xác nhận loại phù hợp hoặc chủ động đánh dấu Bỏ qua.",
+                code="SOURCE_NEEDS_REVIEW",
+                severity=ISSUE_BLOCKING,
+                impact="Workbook chưa rõ mục đích có thể làm thiếu chi phí nếu bị bỏ sót.",
+            ))
 
-    if not _template_looks_valid(context.template_path):
-        issues.append(SourceIssue("template", context.template_path, detect_fiscal_year(context.template_path), "FORM không tồn tại hoặc không đúng cấu trúc", "Chọn FORM mới nhất của FY đã chọn."))
+    notify("Đang kiểm tra FORM sạch và đúng cấu trúc...")
+    template_error = _template_validation_error(context.template_path)
+    if template_error:
+        issues.append(SourceIssue(
+            "template",
+            context.template_path,
+            detect_fiscal_year(context.template_path),
+            template_error,
+            "Chọn FORM sạch đúng FY; không dùng FORM còn mã phòng, nhân sự hoặc chi phí cũ.",
+            code="FORM_TEMPLATE_NOT_CLEAN",
+        ))
     if not Path(context.source_dir).is_dir():
         issues.append(SourceIssue("source_dir", context.source_dir, None, "Thư mục nguồn chi phí không tồn tại", f"Tạo hoặc chọn docs/MP{context.fiscal_year}."))
+    notify("Đang kiểm tra nguồn nhân sự và dữ liệu nhập tay...")
     if not Path(context.headcount_source_dir).is_dir():
         issues.append(SourceIssue("headcount", context.headcount_source_dir, None, "Thư mục nguồn nhân sự không tồn tại", f"Tạo hoặc chọn raw/FY{context.fiscal_year}."))
     elif not _has_headcount_workbook(Path(context.headcount_source_dir)):
@@ -828,6 +972,7 @@ def preflight_fiscal_run(context: FiscalRunContext) -> RunPreflightReport:
             f"Dùng kho raw/FY{context.fiscal_year}/manual_inputs.db với từng dòng mang fiscal_year={context.fiscal_year}.",
         ))
 
+    notify("Đang kiểm tra FY và cấu trúc của từng nguồn chi phí...")
     manifest_present = any(
         (Path(context.source_dir) / name).is_file()
         for name in ("source_file_order.csv", "source_file_order.xlsx")
@@ -837,23 +982,42 @@ def preflight_fiscal_run(context: FiscalRunContext) -> RunPreflightReport:
         paths = sources.get(category, ())
         if not paths:
             if strict_categories:
-                issues.append(SourceIssue(category, "", None, "Không tìm thấy nguồn bắt buộc", "Bổ sung đúng file năm đã chọn vào manifest hoặc thư mục nguồn."))
+                issues.append(SourceIssue(
+                    category,
+                    "",
+                    None,
+                    "Không tìm thấy nguồn bắt buộc",
+                    "Bổ sung đúng file năm đã chọn vào danh sách file hoặc thư mục nguồn.",
+                    code="MISSING_SOURCE",
+                    severity=(
+                        ISSUE_CONTINUABLE_MISSING_SOURCE
+                        if category in CONTINUABLE_MISSING_SOURCE_CATEGORIES else
+                        ISSUE_BLOCKING
+                    ),
+                    impact=(
+                        "Phần chi phí của nguồn này sẽ bằng 0 hoặc để trống trong kết quả."
+                        if category in CONTINUABLE_MISSING_SOURCE_CATEGORIES else
+                        "Thiếu nguồn nền tảng nên chưa thể bảo đảm kết quả tính toán."
+                    ),
+                ))
             continue
         if category != "it_simulation" and len(paths) != 1:
             issues.append(SourceIssue(category, "; ".join(paths), None, "Có nhiều nguồn cùng loại", "Chỉ giữ một nguồn hoặc chọn rõ trong manifest."))
         if category == "it_simulation" and len(paths) != 3:
             issues.append(SourceIssue(category, "; ".join(paths), None, "Phải có đúng ba file hệ thống", "Bổ sung đủ nhóm tháng 4–6, 7–12 và 1–3."))
         for path in paths:
+            # Uniform policy has a stricter sequential pipeline below:
+            # existence -> structure -> fiscal evidence -> FORM compatibility.
+            # Running generic FY validation here would produce cascading issues.
+            if category == "uniform_policy":
+                continue
             evidence = inspect_fiscal_year_evidence(path)
             # Fixed-asset snapshot workbooks can legitimately use a prior
             # calendar snapshot label instead of an annual FY marker.
             reason = validate_fiscal_year_evidence(
                 evidence,
                 context.fiscal_year,
-                required=(
-                    category != "fixed_assets"
-                    and not (category == "uniform_policy" and context.fiscal_year == 2027)
-                ),
+                required=category != "fixed_assets",
             )
             if reason:
                 issues.append(SourceIssue(
@@ -901,24 +1065,57 @@ def preflight_fiscal_run(context: FiscalRunContext) -> RunPreflightReport:
                 "Không có sheet xác nhận đúng năm tài chính", f"Bổ sung sheet FY{context.fiscal_year}; không dùng sheet của năm khác."
             ))
 
+    notify("Đang kiểm tra policy và độ tương thích với FORM...")
     uniform_paths = sources.get("uniform_policy", ())
+    uniform_ready = False
     if len(uniform_paths) == 1:
-        try:
-            if not _is_uniform_policy(Path(uniform_paths[0])):
-                raise ValueError("thiếu trang 原価センタ hoặc cột F:U")
-        except Exception as exc:
-            issues.append(SourceIssue("uniform_policy", uniform_paths[0], detect_fiscal_year(uniform_paths[0]), str(exc), "Dùng bảng dấu chọn đồng phục/cốc xếp hợp lệ."))
+        uniform_path = Path(uniform_paths[0])
+        if not uniform_path.is_file():
+            issues.append(SourceIssue(
+                "uniform_policy",
+                str(uniform_path),
+                None,
+                "File policy đồng phục/cốc xếp không tồn tại",
+                "Chọn file policy hợp lệ hoặc để trống cấu hình để tự dò trong project của FY.",
+            ))
+        elif not _is_uniform_policy(uniform_path):
+            issues.append(SourceIssue(
+                "uniform_policy",
+                str(uniform_path),
+                detect_fiscal_year(uniform_path),
+                "Thiếu sheet 原価センタ hoặc các cột policy đồng phục/cốc xếp F:U",
+                "Dùng bảng dấu chọn đồng phục/cốc xếp đúng cấu trúc.",
+            ))
+        else:
+            evidence = inspect_fiscal_year_evidence(uniform_path)
+            fiscal_reason = validate_fiscal_year_evidence(
+                evidence,
+                context.fiscal_year,
+                required=context.fiscal_year != 2027,
+            )
+            if fiscal_reason:
+                issues.append(SourceIssue(
+                    "uniform_policy",
+                    str(uniform_path),
+                    evidence.resolved_fiscal_year,
+                    fiscal_reason,
+                    f"Thay bằng policy được xác nhận đúng FY{context.fiscal_year}.",
+                ))
+            else:
+                uniform_ready = True
 
-    master_uniform_error = _validate_form_master_and_uniform(context)
-    if master_uniform_error:
-        issues.append(SourceIssue(
-            "form_uniform_master",
-            context.uniform_policy_path or context.template_path,
-            detect_fiscal_year(context.uniform_policy_path) if context.uniform_policy_path else None,
-            master_uniform_error,
-            "Sửa danh mục phòng/tài khoản trong FORM hoặc danh sách phòng của bảng đồng phục để hai nguồn khớp nhau.",
-        ))
+    if uniform_ready:
+        master_uniform_error = _validate_form_master_and_uniform(context)
+        if master_uniform_error:
+            issues.append(SourceIssue(
+                "form_uniform_master",
+                context.uniform_policy_path or context.template_path,
+                detect_fiscal_year(context.uniform_policy_path) if context.uniform_policy_path else None,
+                master_uniform_error,
+                "Sửa danh mục phòng/tài khoản trong FORM hoặc danh sách phòng của bảng đồng phục để hai nguồn khớp nhau.",
+            ))
 
+    notify("Đang tổng hợp kết quả kiểm tra an toàn...")
     return RunPreflightReport(
         context.fiscal_year,
         tuple(issues),

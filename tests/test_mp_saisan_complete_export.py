@@ -3,6 +3,8 @@ from pathlib import Path
 import pytest
 from openpyxl import Workbook, load_workbook
 
+from src.services.fiscal_run import RunPreflightReport
+
 from scripts.run_e2e import run_universal_pipeline
 from src.engine.mp_saisan_complete_export import (
     PROVENANCE_PRIORITY,
@@ -69,10 +71,10 @@ def test_electricity_water_aliases_do_not_duplicate():
     assert canonical_description("Nước") == canonical_description("water")
 
 
-def test_complete_mode_default_off(tmp_path):
+def test_complete_mode_requires_valid_source_inputs(tmp_path):
     ok, message = run_universal_pipeline(2027, str(_wb(tmp_path / "target.xlsx")), str(tmp_path), target_cc=1412000040)
     assert ok is False
-    assert "System Cost row" in message or "template" in message
+    assert "Kiểm tra nguồn" in message or "template" in message
 
 
 def test_complete_mode_uses_reference_map_for_1412000040(tmp_path):
@@ -117,7 +119,8 @@ def test_no_overwrite_rows_200_212(tmp_path):
     wb.close()
 
 
-def test_complete_v1_missing_reference_map_exports_without_reference_layer(monkeypatch, tmp_path):
+def test_complete_v1_missing_reference_map_orchestration_contract(monkeypatch, tmp_path):
+    """Fast mocked orchestration coverage; this is not real pipeline acceptance."""
     import scripts.run_e2e as run_e2e
 
     export_calls = []
@@ -127,11 +130,26 @@ def test_complete_v1_missing_reference_map_exports_without_reference_layer(monke
         def execute(self, *args):
             return None
 
+        def fetchone(self):
+            return (0,)
+
+        def fetchall(self):
+            return []
+
     class Conn:
         def cursor(self):
             return Cursor()
 
+        def execute(self, *args, **kwargs):
+            return Cursor()
+
+        def executemany(self, *args, **kwargs):
+            return Cursor()
+
         def commit(self):
+            return None
+
+        def rollback(self):
             return None
 
         def close(self):
@@ -142,6 +160,9 @@ def test_complete_v1_missing_reference_map_exports_without_reference_layer(monke
             pass
 
         def export_to_template(self, *args, **kwargs):
+            output_path = args[1]
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(output_path).write_text("placeholder", encoding="utf-8")
             export_calls.append((args, kwargs))
             return True
 
@@ -154,8 +175,28 @@ def test_complete_v1_missing_reference_map_exports_without_reference_layer(monke
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(run_e2e, "get_connection", lambda path: Conn())
+    monkeypatch.setattr(
+        run_e2e,
+        "preflight_fiscal_run",
+        lambda context: RunPreflightReport(
+            fiscal_year=2027,
+            resolved_sources={},
+        ),
+    )
+    monkeypatch.setattr(
+        run_e2e,
+        "import_headcount_time_sources",
+        lambda *args, **kwargs: {
+            "files": 1,
+            "imported_files": 1,
+            "skipped": [],
+            "errors": [],
+            "results": [],
+        },
+    )
+    monkeypatch.setattr(run_e2e, "_staffing_preflight", lambda *args, **kwargs: [])
     monkeypatch.setattr(run_e2e, "create_schema", lambda conn: None)
-    monkeypatch.setattr(run_e2e, "init_sys_params", lambda conn, exchange_rate, fiscal_year: None)
+    monkeypatch.setattr(run_e2e, "init_sys_params", lambda conn, exchange_rate, fiscal_year, **kwargs: None)
     monkeypatch.setattr(run_e2e, "load_all", lambda **kwargs: None)
     monkeypatch.setattr(run_e2e, "describe_manifest", lambda source_dir: [])
     monkeypatch.setattr(run_e2e, "parse_facility", lambda conn, source_dir: {})
@@ -170,8 +211,10 @@ def test_complete_v1_missing_reference_map_exports_without_reference_layer(monke
     monkeypatch.setattr(run_e2e, "AllocationEngine", Engine)
     monkeypatch.setattr(run_e2e, "HubBuilder", Builder)
     monkeypatch.setattr(run_e2e, "write_pipeline_audit_report", lambda **kwargs: {"report_path": "audit.md", "missing_csv_path": "missing.csv"})
+    monkeypatch.setattr(run_e2e, "audit_exchange_rate_workbook", lambda *args, **kwargs: {})
+    monkeypatch.setattr(run_e2e, "write_exchange_rate_audit_report", lambda *args, **kwargs: "exchange-audit.xlsx")
     monkeypatch.setattr(run_e2e, "apply_mp_saisan_complete_v1", lambda **kwargs: complete_reference_calls.append(kwargs) or {})
-    monkeypatch.setattr(run_e2e, "_apply_complete_v1_source_order", lambda workbook_path, log_callback, phase: {"phase": phase})
+    monkeypatch.setattr(run_e2e, "_apply_complete_v1_source_order", lambda workbook_path, log_callback, phase, **kwargs: {"phase": phase})
 
     ok, message = run_e2e.run_universal_pipeline(
         2027,

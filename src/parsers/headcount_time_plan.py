@@ -171,8 +171,12 @@ def parse_headcount_time_plan(path: str, fiscal_year: int) -> PlanParseResult:
                 "headcount_staff": values["headcount_staff"][index],
                 "headcount_worker": values["headcount_worker"][index],
                 "fixed_hours_expat": values["fixed_hours_expat"][index],
+                "fixed_hours_staff": values["fixed_hours_staff"][index],
+                "fixed_hours_worker": values["fixed_hours_worker"][index],
                 "fixed_hours_local": values["fixed_hours_local_total"][index],
                 "overtime_hours_expat": values["overtime_hours_expat"][index],
+                "overtime_hours_staff": values["overtime_hours_staff"][index],
+                "overtime_hours_worker": values["overtime_hours_worker"][index],
                 "overtime_hours_local": values["overtime_hours_local_total"][index],
                 "source_cells": "C:N; rows 10-28",
             })

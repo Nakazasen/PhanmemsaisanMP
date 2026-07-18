@@ -1,6 +1,6 @@
 # MP2027 — Current Open Items
 
-As of: `2026-07-16`  
+As of: `2026-07-18`
 Canonical requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`
 
 > [!IMPORTANT]
@@ -28,7 +28,7 @@ Canonical requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPne
 | FA-OPEN | `OPEN_AUDIT` | `fixed_assets_cross_trace_audit_2026-07-16.md` tái chạy giữ 1.474 ô (404 exact, 222 historical rounding-order, 638 true mismatch, 203 missing reference, 7 extra reference). `fixed_assets_true_mismatch_decision_matrix_2026-07-16.csv` phủ 638/638 ô: 4 post-terminal đã được chứng minh, 361 input tĩnh/tầng thủ công (gồm 12 ô mixed static+formula), 198 snapshot-formula mâu thuẫn, 72 asset không có trong snapshot nguồn, chỉ 1 ô chưa giải thích. `fixed_assets_policy_output_verification_2026-07-16.json` chứng minh production parser→writer khớp 649/649 FY2026 và 726/726 FY2027 source-derived monthly cells, zero fact sau terminal, audit provenance included/excluded. Writer nhận VND đã `ROUND` theo từng asset (tránh công thức Excel >8.192 ký tự); code Q/cache fail-closed, zero≠blank, identity source-row và scoped import theo FY. `fixed_assets_business_decision_requests_2026-07-16.csv` nén 273 ô cần review thành 32 yêu cầu nghiệp vụ có evidence/examples và lựa chọn trả lời. Calculation vẫn chưa được accept vì chưa có quyết định nghiệp vụ cho 634 ô còn lại và category/account mapping hiện chưa có nguồn governance độc lập theo FY. | Nghiệp vụ xử lý 32 request trong `fixed_assets_business_decision_requests_2026-07-16.csv`: chọn source snapshot/chính sách cho 200 ô mâu thuẫn, cung cấp asset register/giải thích row-level cho 73 ô chưa xác định, và chốt nguồn governance mapping category→account; sau đó chạy comparator trên export thực tế FY2026/FY2027 và FY tương lai. Không được ghi đè input tĩnh/tầng thủ công. |
 | HC-1412000040 | `BLOCKED_BY_INPUT` | `phase42n3y` found zero canonical monthly headcount rows for target CC. New-hire logic now fails closed instead of fabricating amounts. | Cung cấp baseline `202603` và periods `202604..202703` cho CC `1412000040`, rồi regenerate acceptance. |
 | HEALTH-DEC | `BLOCKED_BY_INPUT` | Health-check rows 57/58 need real December male/female and/or recruitment drivers where the canonical rule applies. | Cung cấp/chốt driver thật cho health-check trước khi audit output rows 57/58. |
-| EVENT-REAL | `BLOCKED_BY_INPUT` | Manual event channel exists, but no-trip gift, My Episode, 10-year event, company anniversary and any unparsed event need confirmed rows. | Điền schema-valid rows in `docs/MP2027/event_drivers_manual.csv` (or explicitly confirm none). |
+| EVENT-REAL | `BLOCKED_BY_INPUT` | Manual event channel exists and parser/export integration is regression-tested, but production event counts and any unparsed event still require confirmation. The test fixture supplies explicit FORM rows; it does not invent operational input. | Điền schema-valid rows in `docs/MP2027/event_drivers_manual.csv` (or explicitly confirm none). |
 | NNN-SCOPE | `OPEN_DECISION` | Row 137 is current verified NNN path; Passport/VISA/GPLD outside that path must not be guessed. | Accounting/MP xác nhận row/account cho any requirement outside row 137. |
 | GUI-FREEZE | `IMPLEMENTED_PENDING_ACCEPTANCE` | Current code uses a UI queue and runs the heavy pipeline in `subprocess.Popen`, but no later frozen-state capture or successful manual Windows session closes the 2026-07-10 report. | Reproduce once on Windows current `main`; capture stack only if `Responding=False`, otherwise record a successful GUI run. |
 | MOD-OUTPUT-AUDIT | `OPEN_AUDIT` | Several modules are implemented but latest acceptance verified only written-block spacing, not full source-derived amount completeness against canonical 10.07. | Run one canonical 10.07 output audit by module/CC after required real inputs are available. |
@@ -50,6 +50,9 @@ Canonical requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPne
 | REQ-04-06 | `SUPERSEDED` | Workbook 04.06 was replaced by 09.06 and then by user-confirmed canonical 10.07. |
 | REQ-09-06 | `HISTORICAL` | Audits based on 09.06 remain evidence for their run but cannot override canonical 10.07. |
 | FIXED-ASSET-OLD-NEXT | `SUPERSEDED` | Legacy mapping/extraction phases and the 15 July “ask Accounting first” workflow are replaced by `FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md`; workbook evidence must be exhausted before business escalation. |
+| REGRESSION-HARDENING | `CLOSED` | Verified on current code: targeted hardening `52 passed, 3 subtests passed`; full `tests/test_headcount_and_export.py` `102 passed, 3 subtests passed`; mocked pipeline contracts `23 passed`. No production guard was weakened for test compatibility. |
+| SINGLE-CC-PUBLICATION | `CLOSED` | Real export verification: CC `1412000006` was exported, then CC `1412000004`; both `OUTPUT_FY2027/MP_CC_1412000006.xlsx` and `OUTPUT_FY2027/MP_CC_1412000004.xlsx` remain. Single-target export uses merge publication; batch/no-target remains replacement snapshot. |
+| CUP-BUSINESS-IDENTITY | `CLOSED` | CC04 workbook contains two distinct account `5004086291` mechanisms: new-worker cup and periodic cup. Missing periodic counts are an input/action item, not a calculation defect; visible zero/formula is not replaced by invented expense. |
 
 ## Closure rule
 

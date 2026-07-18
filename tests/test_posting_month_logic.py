@@ -42,7 +42,7 @@ def _insert_rule(conn, posting_month, driver_type, unit_price=100, rid_label="TE
     return cur.lastrowid
 
 
-def _seed_hc(conn, cc_code, values, source="manual", driver_kind="all"):
+def _seed_hc(conn, cc_code, values, source="department_plan", driver_kind="all"):
     fy_months = get_fy_months(2027)
     for i, val in enumerate(values):
         period = fy_months[i]
@@ -259,9 +259,9 @@ class TestPostingMonthLogic(unittest.TestCase):
                 """
                 INSERT INTO fact_monthly_headcount
                 (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
-                VALUES (?, ?, ?, ?, 0, 'manual', 'mixed event fixed month')
+                VALUES (?, ?, ?, ?, 0, ?, 'mixed event fixed month')
                 """,
-                (period, cc, value, value),
+                (period, cc, value, value, "manual" if period == "202603" else "department_plan"),
             )
         rid = _insert_rule(
             conn,
@@ -340,7 +340,7 @@ class TestPostingMonthLogic(unittest.TestCase):
         self.assertEqual(_missing_areas(conn, cc), {})
         conn.close()
 
-    def test_mooncake_uses_september_headcount_without_manual_distribution_input(self):
+    def test_mooncake_requires_explicit_distribution_count(self):
         conn = _mk_conn()
         cc = _seed_cc(conn)
         _seed_hc(conn, cc, [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
@@ -358,19 +358,11 @@ class TestPostingMonthLogic(unittest.TestCase):
 
         AllocationEngine(conn)._process_allocation_rules()
 
-        self.assertEqual(_alloc_periods(conn, rid), {"202609": 15 * 56000.0})
-        row = conn.execute(
-            "SELECT description FROM fact_input_data WHERE source=?",
-            (f"alloc_{rid}",),
-        ).fetchone()
-        self.assertIn("source_month=202609", row["description"])
-        self.assertIn("driver_value=15", row["description"])
-        self.assertIn("formula_expr=15*56000", row["description"])
-        self.assertNotIn("missing_separate_count=1", row["description"])
-        self.assertEqual(_missing_areas(conn, cc), {})
+        self.assertEqual(_alloc_periods(conn, rid), {})
+        self.assertEqual(_missing_areas(conn, cc), {"manual_distribution_driver": 1})
         conn.close()
 
-    def test_company_founding_thanks_event_uses_october_headcount_without_manual_input(self):
+    def test_company_founding_thanks_event_requires_explicit_participant_count(self):
         conn = _mk_conn()
         cc = _seed_cc(conn)
         _seed_hc(conn, cc, [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
@@ -385,16 +377,8 @@ class TestPostingMonthLogic(unittest.TestCase):
 
         AllocationEngine(conn)._process_allocation_rules()
 
-        self.assertEqual(_alloc_periods(conn, rid), {"202610": 16 * 1000.0})
-        row = conn.execute(
-            "SELECT description FROM fact_input_data WHERE source=?",
-            (f"alloc_{rid}",),
-        ).fetchone()
-        self.assertIn("source_month=202610", row["description"])
-        self.assertIn("driver_value=16", row["description"])
-        self.assertIn("formula_expr=16*1000", row["description"])
-        self.assertNotIn("missing_separate_count=1", row["description"])
-        self.assertEqual(_missing_areas(conn, cc), {})
+        self.assertEqual(_alloc_periods(conn, rid), {})
+        self.assertEqual(_missing_areas(conn, cc), {"manual_distribution_driver": 1})
         conn.close()
 
     def test_lucky_money_uses_february_headcount_without_manual_input(self):
@@ -424,7 +408,7 @@ class TestPostingMonthLogic(unittest.TestCase):
         self.assertEqual(_missing_areas(conn, cc), {})
         conn.close()
 
-    def test_company_trip_uses_may_headcount_without_manual_distribution_input(self):
+    def test_company_trip_requires_explicit_participant_count(self):
         conn = _mk_conn()
         cc = _seed_cc(conn)
         _seed_hc(conn, cc, [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
@@ -442,27 +426,37 @@ class TestPostingMonthLogic(unittest.TestCase):
 
         AllocationEngine(conn)._process_allocation_rules()
 
-        self.assertEqual(_alloc_periods(conn, rid), {"202605": 11 * 2061000.0})
-        row = conn.execute(
-            "SELECT description FROM fact_input_data WHERE source=?",
-            (f"alloc_{rid}",),
-        ).fetchone()
-        self.assertIn("source_month=202605", row["description"])
-        self.assertIn("driver_value=11", row["description"])
-        self.assertIn("formula_expr=11*2061000", row["description"])
-        self.assertNotIn("missing_separate_count=1", row["description"])
-        self.assertEqual(_missing_areas(conn, cc), {})
+        self.assertEqual(_alloc_periods(conn, rid), {})
+        self.assertEqual(_missing_areas(conn, cc), {"manual_distribution_driver": 1})
         conn.close()
 
-    def test_new_hire_medical_requires_manual_or_explicit_source_price(self):
+    def test_new_hire_medical_uses_canonical_delta_with_explicit_source_price(self):
         conn = _mk_conn()
         cc = _seed_cc(conn)
+        conn.execute(
+            """
+            INSERT INTO fact_monthly_headcount
+            (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
+            VALUES ('202603', ?, 10, 10, 0, 'manual', 'event delta baseline')
+            """,
+            (cc,),
+        )
+        conn.commit()
         _seed_hc(conn, cc, [10, 12, 12, 15, 15, 15, 15, 15, 15, 15, 15, 15])
         rid = _insert_rule(conn, "入社月の翌月", "headcount_all", unit_price=1, rid_label="採用時健診")
 
         AllocationEngine(conn)._process_allocation_rules()
 
-        self.assertEqual(_alloc_periods(conn, rid), {})
+        periods = _alloc_periods(conn, rid)
+        self.assertEqual(periods["202606"], 2.0)
+        self.assertEqual(periods["202608"], 3.0)
+        row = conn.execute(
+            "SELECT description FROM fact_input_data WHERE source=? AND period='202606'",
+            (f"alloc_{rid}",),
+        ).fetchone()
+        self.assertIn("source_month=202605", row["description"])
+        self.assertIn("formula_expr=(2+0)*1", row["description"])
+        self.assertEqual(_missing_areas(conn, cc), {"headcount_event_delta": 2})
         conn.close()
 
     def test_working_days_driver_uses_sys_params(self):

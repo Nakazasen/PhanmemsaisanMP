@@ -321,24 +321,13 @@ class AllocationEngine:
         return ga_acc if self._is_valid_account_code(ga_acc) else None
 
     def _get_monthly_hc(self, cc_code: object, period: str, driver_type: str) -> float:
-        cc_key = str(cc_code).strip()
-        row = self.hc_cache.get((cc_key, period))
-        if row:
-            value = row.get(driver_type)
-            if value is None:
-                value = row.get("headcount_all", 0.0)
-            return float(value or 0.0)
-
-        cc = next((x for x in self.cost_centers if str(x["code"]).strip() == cc_key), None)
-        if not cc:
-            return 0.0
-        if driver_type == "headcount_staff":
-            return float(cc["staff_count"] or 0)
-        if driver_type == "headcount_worker":
-            return float(cc["worker_count"] or 0)
-        if driver_type in ("headcount_male", "headcount_female"):
-            return 0.0
-        return float((cc["staff_count"] or 0) + (cc["worker_count"] or 0))
+        value = self._get_canonical_monthly_hc(cc_code, period, driver_type)
+        if value is None:
+            cc_key = str(cc_code).strip()
+            raise HeadcountSourceError(
+                f"CC {cc_key}, kỳ {period}: thiếu monthly headcount canonical cho driver {driver_type}."
+            )
+        return value
 
     def _get_canonical_monthly_hc(self, cc_code: object, period: str, driver_type: str) -> float | None:
         cc_key = str(cc_code).strip()
@@ -501,6 +490,39 @@ class AllocationEngine:
             VALUES ('action', ?, ?, 'headcount_event_delta', ?, ?, 'allocator', ?)
             """,
             (cc_key, period, message, action, rule_id),
+        )
+
+    def _record_monthly_headcount_missing(
+        self,
+        cc_code: object,
+        period: str,
+        driver_type: str,
+        rule,
+        error: Exception,
+    ) -> None:
+        cc_key = str(cc_code).strip()
+        rule_id = int(rule["id"]) if rule is not None and rule["id"] is not None else None
+        key = (cc_key, str(period), f"monthly:{driver_type}", str(rule_id or ""))
+        if key in self._missing_input_keys:
+            return
+        self._missing_input_keys.add(key)
+        item_name = str(rule["item_name"] or "").replace("\n", " ").strip() if rule is not None else ""
+        message = (
+            "Missing canonical monthly headcount driver for allocation: "
+            f"cc={cc_key}, period={period}, category={driver_type}, "
+            f"rule_id={rule_id}, item={item_name}, reason={error}"
+        )
+        action = (
+            "Provide the selected fiscal year's canonical monthly headcount for this cost center and period. "
+            "Static staff/worker counts in the cost-center master are not used as a monthly fallback."
+        )
+        self.conn.execute(
+            """
+            INSERT INTO fact_missing_inputs
+            (severity, cc_code, period, area, message, action, source, rule_id)
+            VALUES ('action', ?, ?, 'headcount_monthly_driver', ?, ?, 'allocator', ?)
+            """,
+            (cc_key, str(period), message, action, rule_id),
         )
 
     def _bus_rule_kind(self, rule) -> str | None:
@@ -1176,13 +1198,18 @@ class AllocationEngine:
         # computed from monthly headcount deltas plus fixed-month headcount.
         if self._is_mixed_event_and_fixed_month_rule(rule["posting_month"]):
             return False
-        if self._is_fixed_headcount_override_rule(rule):
-            return False
         driver_raw = str(rule["driver_raw"] or "")
         normalized_driver = self._normalize_text(driver_raw)
-        return any(token in driver_raw for token in MANUAL_DISTRIBUTION_DRIVER_TOKENS) or any(
+        requires_actual_count = any(
+            token in driver_raw for token in MANUAL_DISTRIBUTION_DRIVER_TOKENS
+        ) or any(
             self._normalize_text(token) in normalized_driver for token in ACTUAL_COUNT_DRIVER_TOKENS
         )
+        if requires_actual_count:
+            return True
+        if self._is_fixed_headcount_override_rule(rule):
+            return False
+        return False
 
     def run_allocation(self) -> dict:
         print("Bắt đầu tính phân bổ...")
@@ -1359,30 +1386,37 @@ class AllocationEngine:
                 target_periods = self.fy_months
             for period in target_periods:
                 for cc in self.cost_centers:
-                    if driver_type == "working_days":
-                        driver_val = self._get_working_days(period)
-                    elif mixed_event_fixed_month:
-                        driver_val = 0.0
-                        if self._is_event_month_rule(posting_month):
-                            driver_val += self._get_event_delta(cc["code"], period, driver_type, rule=rule)
-                        elif self._is_next_event_month_rule(posting_month):
-                            prev_period = self._get_prev_period(period)
-                            if prev_period:
-                                driver_val += self._get_event_delta(cc["code"], prev_period, driver_type, rule=rule)
-                        if int(str(period)[-2:]) in fixed_month_numbers:
-                            driver_val += self._get_monthly_hc(cc["code"], period, driver_type)
-                    else:
-                        if self._is_next_event_month_rule(posting_month):
-                            prev_period = self._get_prev_period(period)
-                            if not prev_period:
-                                continue
-                            driver_val = self._get_event_delta(cc["code"], prev_period, driver_type, rule=rule)
-                        elif self._is_event_month_rule(posting_month) or new_hire_driven:
-                            driver_val = self._get_event_delta(cc["code"], period, driver_type, rule=rule)
-                        elif fixed_month_override and source_period:
-                            driver_val = self._get_monthly_hc(cc["code"], source_period, driver_type)
+                    try:
+                        if driver_type == "working_days":
+                            driver_val = self._get_working_days(period)
+                        elif mixed_event_fixed_month:
+                            driver_val = 0.0
+                            if self._is_event_month_rule(posting_month):
+                                driver_val += self._get_event_delta(cc["code"], period, driver_type, rule=rule)
+                            elif self._is_next_event_month_rule(posting_month):
+                                prev_period = self._get_prev_period(period)
+                                if prev_period:
+                                    driver_val += self._get_event_delta(cc["code"], prev_period, driver_type, rule=rule)
+                            if int(str(period)[-2:]) in fixed_month_numbers:
+                                driver_val += self._get_monthly_hc(cc["code"], period, driver_type)
                         else:
-                            driver_val = self._get_monthly_hc(cc["code"], period, driver_type)
+                            if self._is_next_event_month_rule(posting_month):
+                                prev_period = self._get_prev_period(period)
+                                if not prev_period:
+                                    continue
+                                driver_val = self._get_event_delta(cc["code"], prev_period, driver_type, rule=rule)
+                            elif self._is_event_month_rule(posting_month) or new_hire_driven:
+                                driver_val = self._get_event_delta(cc["code"], period, driver_type, rule=rule)
+                            elif fixed_month_override and source_period:
+                                driver_val = self._get_monthly_hc(cc["code"], source_period, driver_type)
+                            else:
+                                driver_val = self._get_monthly_hc(cc["code"], period, driver_type)
+                    except HeadcountSourceError as exc:
+                        missing_period = source_period if fixed_month_override and source_period else period
+                        self._record_monthly_headcount_missing(
+                            cc["code"], missing_period, driver_type, rule, exc
+                        )
+                        continue
 
                     if driver_val <= 0:
                         continue

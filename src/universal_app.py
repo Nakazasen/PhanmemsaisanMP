@@ -11,6 +11,7 @@ import sqlite3
 import subprocess
 import sys
 import threading
+import time
 import tkinter as tk
 from datetime import datetime
 from tkinter import filedialog, messagebox, scrolledtext, ttk
@@ -88,12 +89,13 @@ from src.services.manual_staffing_overrides import (
     save_manual_time_overrides,
 )
 from src.services.fiscal_run import annual_default_paths, create_fiscal_run_context, preflight_fiscal_run
+from src.services.preflight_cache import cached_preflight_fiscal_run, get_cached_preflight
 from src.services.project_config import (
     ProjectConfig,
     discover_or_create_project,
     remember_last_project,
 )
-from src.services.run_history import list_runs
+from src.services.run_history import filter_runs
 from src.parsers.manual_event_drivers import TEMPLATE_COLUMNS, ensure_manual_event_drivers_template
 from src.parsers.manual_headcount import (
     BUS_DRIVER_COLUMNS,
@@ -112,10 +114,10 @@ from src.utils.excel_helpers import (
 )
 from src.utils.fiscal_periods import fiscal_month_labels
 from src.utils.source_manifest import (
+    CATEGORY_DISPLAY_NAMES,
     DEFAULT_DESCRIPTIONS,
     MANIFEST_COLUMNS,
-    ensure_source_manifest,
-    read_source_manifest,
+    read_source_manifest_inventory_fast,
     write_source_manifest_xlsx,
 )
 
@@ -420,6 +422,28 @@ def _pipeline_failure_summary(output_lines: list[str], return_code: int) -> str:
         if text and "chi tiết kỹ thuật đã được ẩn" not in text.lower():
             return text
     return f"Pipeline exited with code {return_code}"
+
+
+def _failed_run_database_from_output(
+    output_lines: list[str], history_root: str, fiscal_year: int
+) -> str | None:
+    """Resolve the exact immutable run DB named by the subprocess traceback."""
+    marker = "Chi tiết lỗi đã lưu:"
+    expected_root = os.path.realpath(os.path.join(history_root, f"FY{int(fiscal_year)}"))
+    for line in reversed(output_lines):
+        if marker not in line:
+            continue
+        trace_path = line.split(marker, 1)[1].strip()
+        candidate = os.path.realpath(
+            os.path.join(os.path.dirname(os.path.dirname(trace_path)), "run.db")
+        )
+        try:
+            inside_expected_root = os.path.commonpath([expected_root, candidate]) == expected_root
+        except ValueError:
+            inside_expected_root = False
+        if inside_expected_root and os.path.isfile(candidate):
+            return candidate
+    return None
 
 
 def _friendly_error_message(error) -> str:
@@ -911,12 +935,14 @@ class MPManagerApp:
         self.headcount_source_dir.trace_add("write", self._on_source_selection_changed)
         self.setup_styles()
         self.setup_ui()
+        self.preflight_status.trace_add("write", self._on_workflow_state_changed)
         self._refresh_fiscal_year_labels()
         self.set_icon()
         self.root.after(0, lambda: self.log(
             (f"Đã tạo project tương thích: {self.project.config_path}" if project_created
              else f"Đang dùng project: {self.project.config_path}")
         ))
+        self.root.after(0, self._update_workflow_guide)
         self.root.after(50, self._drain_ui_queue)
         self.root.after(300, self.load_cc_list)
         self.root.after(500, self._mark_preflight_stale)
@@ -943,7 +969,7 @@ class MPManagerApp:
     def _on_source_selection_changed(self, *_args):
         self._mark_preflight_stale()
 
-    def _mark_preflight_stale(self):
+    def _mark_preflight_stale(self, force_refresh: bool = False):
         """Disable calculation immediately when the selected source changes."""
         if not hasattr(self, "start_btn"):
             return
@@ -951,12 +977,17 @@ class MPManagerApp:
         self._approved_preflight_signature = None
         self._approved_preflight_report = None
         self._approved_uniform_policy_path = None
+        self._accepted_missing_categories = ()
         token = self._preflight_token
         self.start_btn.configure(state=tk.DISABLED)
-        self.preflight_status.set("Đang kiểm tra nguồn của năm đã chọn...")
-        self.root.after(350, lambda: self._start_preflight_check(token))
+        self.preflight_status.set(
+            "Đang kiểm tra lại toàn bộ nguồn..."
+            if force_refresh else
+            "Đang đối chiếu nguồn đã chọn..."
+        )
+        self.root.after(350, lambda: self._start_preflight_check(token, force_refresh=force_refresh))
 
-    def _start_preflight_check(self, token: int):
+    def _start_preflight_check(self, token: int, *, force_refresh: bool = False):
         if token != self._preflight_token:
             return
         try:
@@ -966,11 +997,20 @@ class MPManagerApp:
             headcount = self.headcount_source_dir.get().strip()
             exchange_rate = validate_exchange_rate(self.exchange_rate.get())
         except Exception as exc:
-            self.preflight_status.set(f"Nguồn chưa đạt: {exc}")
+            self.preflight_status.set(f"Chưa thể kiểm tra: {_friendly_error_message(exc)}")
             return
 
         def worker():
+            started_at = time.perf_counter()
             try:
+                self._run_on_ui_thread(
+                    self.preflight_status.set,
+                    (
+                        "Đang quét kỹ FORM và toàn bộ nguồn..."
+                        if force_refresh else
+                        "Đang kiểm tra metadata thay đổi..."
+                    ),
+                )
                 paths = self._project_paths(fiscal_year)
                 context = create_fiscal_run_context(
                     fiscal_year,
@@ -983,12 +1023,53 @@ class MPManagerApp:
                     exchange_rate_source="FORM!B2 / người dùng xác nhận trên giao diện",
                     history_root=paths.history_root,
                     manual_input_store=paths.manual_input_store,
-                    base_dir=BASE_DIR,
+                    base_dir=self.project.root_dir,
                 )
-                report = preflight_fiscal_run(context)
-                summary = "Đạt" if report.ok else "; ".join(
-                    f"{issue.category}: {issue.reason}" for issue in report.issues[:2]
-                )
+                if force_refresh:
+                    report, cache_hit = cached_preflight_fiscal_run(
+                        context,
+                        force_refresh=True,
+                        extra_paths=(self.project.config_path,),
+                        checker=lambda active_context: preflight_fiscal_run(
+                            active_context,
+                            progress=lambda message: self._run_on_ui_thread(
+                                self._update_preflight_progress,
+                                token,
+                                message,
+                            ),
+                        ),
+                    )
+                else:
+                    report = get_cached_preflight(
+                        context,
+                        extra_paths=(self.project.config_path,),
+                    )
+                    cache_hit = report is not None
+                    if report is None:
+                        self._run_on_ui_thread(
+                            self._finish_preflight_check,
+                            token,
+                            False,
+                            (
+                                "Nguồn đã thay đổi hoặc chưa có kết quả quét nội dung. "
+                                "Bấm ‘Quét kỹ lại nội dung’ để xác nhận nguồn"
+                            ),
+                            None,
+                            None,
+                            context,
+                            False,
+                            time.perf_counter() - started_at,
+                        )
+                        return
+                if report.ok:
+                    summary = "Đủ nguồn và đúng năm"
+                elif report.can_continue_incomplete:
+                    missing = ", ".join(report.accepted_missing_categories())
+                    summary = f"Thiếu nguồn chi phí có thể chấp nhận: {missing}"
+                else:
+                    summary = "; ".join(
+                        f"{issue.reason}. {issue.action}" for issue in report.blocking_issues[:2]
+                    )
                 signature = (
                     fiscal_year,
                     os.path.abspath(template),
@@ -1004,27 +1085,59 @@ class MPManagerApp:
                     signature,
                     report,
                     context,
+                    cache_hit,
+                    time.perf_counter() - started_at,
                 )
             except Exception as exc:
                 self._run_on_ui_thread(
-                    self._finish_preflight_check, token, False, str(exc), None, None, None
+                    self._finish_preflight_check,
+                    token,
+                    False,
+                    _friendly_error_message(exc),
+                    None,
+                    None,
+                    None,
+                    False,
+                    time.perf_counter() - started_at,
                 )
 
         threading.Thread(target=worker, daemon=True).start()
 
+    def _update_preflight_progress(self, token: int, message: str) -> None:
+        if token == self._preflight_token:
+            self.preflight_status.set(message)
+
     def _finish_preflight_check(
-        self, token: int, ok: bool, summary: str, signature=None, report=None, context=None
+        self,
+        token: int,
+        ok: bool,
+        summary: str,
+        signature=None,
+        report=None,
+        context=None,
+        cache_hit: bool = False,
+        elapsed_seconds: float = 0.0,
     ):
         if token != self._preflight_token:
             return
-        if ok:
+        reusable = bool(ok or getattr(report, "can_continue_incomplete", False))
+        if reusable:
             self._approved_preflight_signature = signature
             self._approved_preflight_report = report
             self._approved_uniform_policy_path = getattr(context, "uniform_policy_path", None)
-            self.preflight_status.set("Đúng năm và đủ nguồn: có thể chạy tính toán")
+            if ok:
+                prefix = "Đúng năm và đủ nguồn: có thể chạy tính toán"
+            else:
+                prefix = "Cảnh báo: " + summary + ". Có thể chạy sau khi xác nhận."
+            mode = "cache hợp lệ" if cache_hit else "quét nội dung mới"
+            self.preflight_status.set(
+                f"{prefix} — {mode}, hoàn tất trong {elapsed_seconds:.1f} giây"
+            )
             self.start_btn.configure(state=tk.NORMAL)
         else:
-            self.preflight_status.set("Nguồn chưa đạt: " + summary)
+            self.preflight_status.set(
+                f"Chưa thể chạy: {summary} — hoàn tất kiểm tra trong {elapsed_seconds:.1f} giây"
+            )
             self.start_btn.configure(state=tk.DISABLED)
 
     def _project_paths(self, fiscal_year: int | None = None):
@@ -1239,17 +1352,75 @@ class MPManagerApp:
                 print(f"Lỗi khi nạp icon: {e}")
 
 
+    def _on_workflow_state_changed(self, *_args):
+        if hasattr(self, "workflow_cards"):
+            self._update_workflow_guide()
+
+    def _update_workflow_guide(self):
+        if not hasattr(self, "workflow_cards"):
+            return
+
+        try:
+            fiscal_year_ready = int(self.fiscal_year.get()) >= 2000
+        except (TypeError, ValueError):
+            fiscal_year_ready = False
+        source_ready = all(
+            (
+                os.path.isfile(self.template_path.get()),
+                os.path.isdir(self.source_dir.get()),
+                os.path.isdir(self.headcount_source_dir.get()),
+            )
+        )
+        report = self._approved_preflight_report
+        preflight_ready = bool(report and getattr(report, "ok", False))
+        preflight_warning = bool(report and getattr(report, "can_continue_incomplete", False))
+
+        states = [
+            "done" if fiscal_year_ready else "active",
+            "done" if source_ready else ("active" if fiscal_year_ready else "pending"),
+            "done" if preflight_ready else ("warning" if preflight_warning else ("active" if source_ready else "pending")),
+            "optional" if (preflight_ready or preflight_warning) else "pending",
+            "active" if (preflight_ready or preflight_warning) else "pending",
+        ]
+        palette = {
+            "done": ("#dff4ea", "#176b4d", "✓"),
+            "active": ("#e6efff", "#2457a6", "→"),
+            "warning": ("#fff1cf", "#855b00", "!"),
+            "optional": ("#eee9fb", "#5c3b8c", "○"),
+            "pending": ("#f0f2f5", "#66707a", "·"),
+        }
+        for state, widgets in zip(states, self.workflow_cards):
+            background, foreground, marker = palette[state]
+            card, badge, title, detail = widgets
+            card.configure(bg=background, highlightbackground=foreground)
+            for widget in (badge, title, detail):
+                widget.configure(bg=background, fg=foreground)
+            badge.configure(text=marker)
+
+        if not fiscal_year_ready:
+            next_action = "Việc cần làm tiếp theo: nhập đúng năm tài chính."
+        elif not source_ready:
+            next_action = "Việc cần làm tiếp theo: chọn đủ FORM, nguồn chi phí và nguồn nhân sự cùng năm."
+        elif preflight_warning:
+            next_action = "Việc cần làm tiếp theo: đọc cảnh báo màu vàng; có thể bổ sung dữ liệu hoặc xác nhận chạy kết quả chưa đầy đủ."
+        elif not preflight_ready:
+            next_action = "Việc cần làm tiếp theo: chờ kiểm tra nguồn; nếu có lỗi đỏ, sửa nguồn rồi bấm “Kiểm tra lại từ đầu”."
+        else:
+            next_action = "Việc cần làm tiếp theo: bổ sung dữ liệu nhập tay nếu có, sau đó bấm “CHẠY TÍNH TOÁN”."
+        self.workflow_next_action.configure(text=next_action)
+
     def setup_styles(self):
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("Header.TLabel", font=("Segoe UI", 15, "bold"))
+        style.configure("WorkflowTitle.TLabel", font=("Segoe UI", 11, "bold"), foreground="#1f344d")
         style.configure("Primary.TButton", font=("Segoe UI", 10, "bold"), padding=10)
 
     def setup_ui(self):
         container = ttk.Frame(self.root, padding=20)
         container.pack(fill=tk.BOTH, expand=True)
         container.columnconfigure(1, weight=1)
-        container.rowconfigure(12, weight=1)
+        container.rowconfigure(14, weight=1)
 
         self.main_heading = ttk.Label(container, text="", style="Header.TLabel")
         self.main_heading.grid(row=0, column=0, sticky="w", pady=(0, 16))
@@ -1313,45 +1484,79 @@ class MPManagerApp:
             font=("Segoe UI", 9, "italic"),
         ).grid(row=7, column=1, columnspan=2, sticky="w", pady=(0, 8))
 
+        guide_panel = ttk.Frame(container, padding=(0, 6))
+        guide_panel.grid(row=8, column=0, columnspan=3, sticky="ew", pady=(4, 8))
+        ttk.Label(guide_panel, text="Làm theo 5 bước", style="WorkflowTitle.TLabel").pack(anchor="w", pady=(0, 6))
+        workflow_row = ttk.Frame(guide_panel)
+        workflow_row.pack(fill="x")
+        workflow_steps = (
+            ("1", "Chọn năm", "Đúng năm tài chính"),
+            ("2", "Chọn nguồn", "FORM · chi phí · nhân sự"),
+            ("3", "Kiểm tra", "Xanh / vàng / đỏ"),
+            ("4", "Bổ sung", "Chỉ khi nghiệp vụ có"),
+            ("5", "Chạy", "Thử 1 phòng trước"),
+        )
+        self.workflow_cards = []
+        for column, (number, title_text, detail_text) in enumerate(workflow_steps):
+            workflow_row.columnconfigure(column, weight=1, uniform="workflow")
+            card = tk.Frame(workflow_row, bg="#f0f2f5", highlightthickness=1, highlightbackground="#66707a")
+            card.grid(row=0, column=column, sticky="nsew", padx=(0 if column == 0 else 4, 0), ipadx=6, ipady=4)
+            badge = tk.Label(card, text=number, font=("Segoe UI", 11, "bold"), bg="#f0f2f5", fg="#66707a")
+            badge.pack(anchor="w")
+            title = tk.Label(card, text=f"{number}. {title_text}", font=("Segoe UI", 9, "bold"), bg="#f0f2f5", fg="#66707a")
+            title.pack(anchor="w")
+            detail = tk.Label(card, text=detail_text, font=("Segoe UI", 8), bg="#f0f2f5", fg="#66707a")
+            detail.pack(anchor="w")
+            self.workflow_cards.append((card, badge, title, detail))
+        self.workflow_next_action = ttk.Label(guide_panel, text="", wraplength=900, font=("Segoe UI", 9, "bold"))
+        self.workflow_next_action.pack(anchor="w", pady=(7, 0))
+
         actions = ttk.Frame(container)
-        actions.grid(row=8, column=0, columnspan=3, sticky="w", pady=(4, 0))
+        actions.grid(row=9, column=0, columnspan=3, sticky="w", pady=(4, 0))
         for text, command in (
             ("Nhập nhân sự thủ công", self.open_headcount_editor_v2),
             ("Nhập sự kiện thiếu dữ liệu", self.open_event_driver_editor),
             ("Thứ tự file nguồn", self.open_source_order_editor),
             ("Lịch sử lần chạy", self.open_run_history),
-            ("Hướng dẫn sử dụng chi tiết", self.open_user_guide),
+            ("Hướng dẫn trực quan", self.open_user_guide),
         ):
             ttk.Button(actions, text=text, command=command).pack(side="left", padx=(0, 8))
 
         ttk.Separator(container, orient=tk.HORIZONTAL).grid(
-            row=9, column=0, columnspan=3, sticky="ew", pady=16
+            row=10, column=0, columnspan=3, sticky="ew", pady=12
         )
 
+        check_actions = ttk.Frame(container)
+        check_actions.grid(row=11, column=0, sticky="w")
         ttk.Button(
-            container,
-            text="Kiểm tra nguồn",
-            command=self._mark_preflight_stale,
-        ).grid(row=10, column=0, sticky="w")
+            check_actions,
+            text="Kiểm tra thay đổi nhanh",
+            command=lambda: self._mark_preflight_stale(force_refresh=False),
+        ).pack(side="left", padx=(0, 6))
+        ttk.Button(
+            check_actions,
+            text="Quét kỹ lại nội dung",
+            command=lambda: self._mark_preflight_stale(force_refresh=True),
+        ).pack(side="left")
         ttk.Label(
             container,
             textvariable=self.preflight_status,
             font=("Segoe UI", 9, "italic"),
             wraplength=700,
-        ).grid(row=10, column=1, columnspan=2, sticky="w", padx=(8, 0))
+        ).grid(row=11, column=1, columnspan=2, sticky="w", padx=(8, 0))
         self.start_btn = ttk.Button(
             container,
             text="CHẠY TÍNH TOÁN",
             style="Primary.TButton",
             command=self.start_pipeline,
         )
-        self.start_btn.grid(row=11, column=0, columnspan=3, sticky="w", pady=(8, 0))
+        self.start_btn.grid(row=12, column=0, columnspan=3, sticky="w", pady=(8, 0))
 
-        ttk.Label(container, text="Nhật ký xử lý").grid(row=12, column=0, columnspan=3, sticky="w", pady=(16, 4))
+        ttk.Label(container, text="Nhật ký xử lý").grid(row=13, column=0, columnspan=3, sticky="w", pady=(12, 4))
         self.log_widget = scrolledtext.ScrolledText(
-            container, height=16, state=tk.DISABLED, font=("Consolas", 9)
+            container, height=12, state=tk.DISABLED, font=("Consolas", 9)
         )
-        self.log_widget.grid(row=13, column=0, columnspan=3, sticky="nsew")
+        self.log_widget.grid(row=14, column=0, columnspan=3, sticky="nsew")
 
 
     def _run_on_ui_thread(self, callback, *args, **kwargs):
@@ -1638,11 +1843,8 @@ class MPManagerApp:
 
     def open_source_order_editor(self):
         source_dir = self.source_dir.get() or BASE_DIR
-        os.makedirs(source_dir, exist_ok=True)
-        try:
-            manifest_path = ensure_source_manifest(source_dir)
-        except Exception as exc:
-            messagebox.showerror("Lỗi", f"Không tạo được tệp thứ tự nguồn:\n{exc}")
+        if not os.path.isdir(source_dir):
+            messagebox.showerror("Lỗi", f"Không tìm thấy thư mục nguồn:\n{source_dir}")
             return
 
         editor = tk.Toplevel(self.root)
@@ -1657,38 +1859,90 @@ class MPManagerApp:
         ttk.Label(
             frame,
             text=(
-                "Người dùng có thể đổi thứ tự, chọn lại file hoặc tắt dòng không dùng. "
-                "Tệp cấu hình Excel: source_file_order.xlsx"
+                "Mọi tệp Excel được phát hiện đều hiển thị tại đây. Hãy xác nhận loại cho dòng cần xem xét "
+                "hoặc bấm Bỏ qua có chủ đích; tệp đã bỏ qua sẽ không được dùng làm nguồn chi phí."
             ),
             wraplength=900,
-        ).grid(row=0, column=0, columnspan=6, sticky="w", pady=(0, 10))
+        ).grid(row=0, column=0, columnspan=6, sticky="w", pady=(0, 4))
+        summary_var = tk.StringVar()
+        ttk.Label(frame, textvariable=summary_var).grid(row=1, column=0, columnspan=6, sticky="w", pady=(0, 8))
 
-        columns = ("order", "category", "filename", "enabled", "description")
-        tree = ttk.Treeview(frame, columns=columns, show="headings", height=14)
-        tree.heading("order", text="Thứ tự")
-        tree.heading("category", text="Loại nguồn")
-        tree.heading("filename", text="Tên file")
-        tree.heading("enabled", text="Dùng")
-        tree.heading("description", text="Ghi chú")
-        tree.column("order", width=60, anchor="center")
-        tree.column("category", width=130)
-        tree.column("filename", width=430)
-        tree.column("enabled", width=60, anchor="center")
-        tree.column("description", width=250)
-        tree.grid(row=1, column=0, columnspan=6, sticky="nsew")
+        category_labels = {
+            code: CATEGORY_DISPLAY_NAMES.get(code, code)
+            for code in DEFAULT_DESCRIPTIONS
+        }
+        category_codes = {label: code for code, label in category_labels.items()}
+        status_labels = {
+            "recognized": "Đã nhận diện",
+            "needs_review": "Cần xác nhận",
+            "ignored": "Đã bỏ qua",
+        }
+        status_codes = {label: code for code, label in status_labels.items()}
+        detection_labels = {
+            "manifest": "Theo cấu hình đã lưu",
+            "structure": "Theo cấu trúc tệp Excel",
+            "system_structure": "Theo cấu trúc hệ thống",
+            "manual": "Người dùng xác nhận",
+            "inventory": "Kiểm kê tên tệp",
+        }
+        detection_codes = {label: code for code, label in detection_labels.items()}
 
-        scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
-        scrollbar.grid(row=1, column=6, sticky="ns")
-        tree.configure(yscrollcommand=scrollbar.set)
+        def display_manifest_value(column: str, value: object) -> str:
+            text = str(value or "")
+            if column == "category":
+                return category_labels.get(text, text)
+            if column == "status":
+                return status_labels.get(text, text)
+            if column == "detection_method":
+                return detection_labels.get(text, text)
+            return text
+
+        def internal_manifest_value(column: str, value: object) -> str:
+            text = str(value or "")
+            if column == "category":
+                return category_codes.get(text, text)
+            if column == "status":
+                return status_codes.get(text, text)
+            if column == "detection_method":
+                return detection_codes.get(text, text)
+            return text
+
+        columns = MANIFEST_COLUMNS
+        tree_frame = ttk.Frame(frame)
+        tree_frame.grid(row=2, column=0, columnspan=6, sticky="nsew")
+        tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=13)
+        headings = {
+            "order": "Thứ tự", "category": "Loại nguồn", "filename": "Tên file",
+            "enabled": "Dùng", "description": "Ghi chú", "status": "Trạng thái",
+            "detection_method": "Cách nhận diện", "signature": "Dấu vết", "reason": "Lý do / bằng chứng",
+        }
+        widths = {"order": 55, "category": 145, "filename": 330, "enabled": 50,
+                  "description": 180, "status": 105, "detection_method": 165,
+                  "signature": 90, "reason": 340}
+        for column in columns:
+            tree.heading(column, text=headings[column])
+            tree.column(column, width=widths[column], anchor="center" if column in {"order", "enabled", "status"} else "w")
+        tree.grid(row=0, column=0, sticky="nsew")
+
+        vertical_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
+        vertical_scrollbar.grid(row=0, column=1, sticky="ns")
+        horizontal_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=tree.xview)
+        horizontal_scrollbar.grid(row=1, column=0, sticky="ew")
+        tree.configure(
+            yscrollcommand=vertical_scrollbar.set,
+            xscrollcommand=horizontal_scrollbar.set,
+        )
+        tree_frame.rowconfigure(0, weight=1)
+        tree_frame.columnconfigure(0, weight=1)
 
         form = ttk.Frame(frame)
-        form.grid(row=2, column=0, columnspan=6, sticky="ew", pady=(10, 0))
+        form.grid(row=3, column=0, columnspan=6, sticky="ew", pady=(10, 0))
         ttk.Label(form, text="Loại nguồn").grid(row=0, column=0, sticky="w")
         category_var = tk.StringVar()
         category_combo = ttk.Combobox(
             form,
             textvariable=category_var,
-            values=list(DEFAULT_DESCRIPTIONS.keys()),
+            values=[""] + list(category_labels.values()),
             width=22,
             state="readonly",
         )
@@ -1716,15 +1970,12 @@ class MPManagerApp:
             rows: list[dict[str, str]] = []
             for index, item_id in enumerate(tree.get_children(), start=1):
                 values = tree.item(item_id, "values")
-                rows.append(
-                    {
-                        "order": str(index),
-                        "category": str(values[1]),
-                        "filename": str(values[2]),
-                        "enabled": str(values[3]),
-                        "description": str(values[4]),
-                    }
-                )
+                rows.append({
+                    column: internal_manifest_value(column, values[column_index])
+                    for column_index, column in enumerate(columns)
+                    if column_index < len(values)
+                })
+                rows[-1]["order"] = str(index)
             return rows
 
         def refresh_order_numbers() -> None:
@@ -1733,22 +1984,32 @@ class MPManagerApp:
                 values[0] = str(index)
                 tree.item(item_id, values=values)
 
+        def update_summary() -> None:
+            counts = {status: 0 for status in ("recognized", "needs_review", "ignored")}
+            for item_id in tree.get_children():
+                displayed_status = str(tree.item(item_id, "values")[5]).strip()
+                status = internal_manifest_value("status", displayed_status).lower()
+                if status in counts:
+                    counts[status] += 1
+            summary_var.set(
+                f"Tổng {sum(counts.values())} file | Đã nhận diện: {counts['recognized']} | "
+                f"Cần xác nhận: {counts['needs_review']} | Đã bỏ qua: {counts['ignored']}"
+            )
+
         def load_rows() -> None:
             for item_id in tree.get_children():
                 tree.delete(item_id)
-            for row in read_source_manifest(source_dir, include_missing=True):
+            for row in read_source_manifest_inventory_fast(source_dir):
                 tree.insert(
                     "",
                     tk.END,
-                    values=(
-                        row.get("order", ""),
-                        row.get("category", ""),
-                        row.get("filename", ""),
-                        row.get("enabled", "1"),
-                        row.get("description", ""),
+                    values=tuple(
+                        display_manifest_value(column, row.get(column, ""))
+                        for column in columns
                     ),
                 )
             refresh_order_numbers()
+            update_summary()
 
         def selected_item() -> str | None:
             selection = tree.selection()
@@ -1767,7 +2028,7 @@ class MPManagerApp:
         def browse_manifest_file() -> None:
             path = filedialog.askopenfilename(
                 initialdir=source_dir,
-                filetypes=[("Excel files", "*.xlsx *.xls"), ("All files", "*.*")],
+                filetypes=[("Tệp Excel", "*.xlsx *.xls"), ("Tất cả tệp", "*.*")],
             )
             if not path:
                 return
@@ -1777,26 +2038,56 @@ class MPManagerApp:
                 filename_var.set(os.path.basename(path))
 
         def add_or_update() -> None:
-            category = category_var.get().strip()
+            category_label = category_var.get().strip()
+            category = category_codes.get(category_label, category_label)
             filename = filename_var.get().strip()
             if not category or not filename:
-                messagebox.showwarning("Thiếu dữ liệu", "Hãy chọn loại nguồn và tên file.")
+                messagebox.showwarning("Thiếu dữ liệu", "Hãy chọn loại nguồn và tên file. Muốn bỏ qua hãy bấm nút Bỏ qua.")
                 return
             description = description_var.get().strip() or DEFAULT_DESCRIPTIONS.get(category, "")
             enabled = "1" if enabled_var.get() else "0"
+            displayed_category = category_labels.get(category, category)
             item_id = selected_item()
             if item_id:
-                order = tree.item(item_id, "values")[0]
-                tree.item(item_id, values=(order, category, filename, enabled, description))
+                values = list(tree.item(item_id, "values"))
+                values[1:5] = [displayed_category, filename, enabled, description]
+                values[5] = status_labels["recognized"]
+                values[6] = detection_labels["manual"]
+                values[8] = "Người dùng đã xác nhận loại nguồn này."
+                tree.item(item_id, values=values)
             else:
-                tree.insert("", tk.END, values=("", category, filename, enabled, description))
+                tree.insert(
+                    "",
+                    tk.END,
+                    values=(
+                        "", displayed_category, filename, enabled, description,
+                        status_labels["recognized"], detection_labels["manual"], "",
+                        "Người dùng đã xác nhận loại nguồn này.",
+                    ),
+                )
             refresh_order_numbers()
+            update_summary()
+
+        def ignore_selected() -> None:
+            item_id = selected_item()
+            if not item_id:
+                messagebox.showwarning("Chưa chọn file", "Chọn một dòng cần bỏ qua trước.")
+                return
+            values = list(tree.item(item_id, "values"))
+            values[1] = ""
+            values[3] = "0"
+            values[5] = status_labels["ignored"]
+            values[6] = detection_labels["manual"]
+            values[8] = "Người dùng đã chủ động bỏ qua; file vẫn được lưu trong danh sách để truy vết."
+            tree.item(item_id, values=values)
+            update_summary()
 
         def remove_selected() -> None:
             item_id = selected_item()
             if item_id:
                 tree.delete(item_id)
                 refresh_order_numbers()
+                update_summary()
 
         def move_selected(delta: int) -> None:
             item_id = selected_item()
@@ -1816,6 +2107,7 @@ class MPManagerApp:
                 saved_path = write_source_manifest_xlsx(source_dir, rows_from_tree())
                 self.log(f"Đã lưu thứ tự file nguồn: {saved_path}")
                 messagebox.showinfo("Đã lưu", f"Đã lưu cấu hình:\n{saved_path}")
+                self._mark_preflight_stale(force_refresh=True)
             except Exception as exc:
                 messagebox.showerror("Lỗi", f"Không lưu được thứ tự file nguồn:\n{exc}")
 
@@ -1825,13 +2117,15 @@ class MPManagerApp:
         buttons = ttk.Frame(frame)
         buttons.grid(row=4, column=0, columnspan=6, sticky="w", pady=(10, 0))
         ttk.Button(buttons, text="Thêm/Cập nhật", command=add_or_update).grid(row=0, column=0, padx=(0, 6))
-        ttk.Button(buttons, text="Xóa dòng", command=remove_selected).grid(row=0, column=1, padx=(0, 6))
-        ttk.Button(buttons, text="Lên", command=lambda: move_selected(-1)).grid(row=0, column=2, padx=(0, 6))
-        ttk.Button(buttons, text="Xuống", command=lambda: move_selected(1)).grid(row=0, column=3, padx=(0, 6))
-        ttk.Button(buttons, text="Lưu", command=save_manifest).grid(row=0, column=4, padx=(0, 6))
-        ttk.Button(buttons, text="Đóng", command=editor.destroy).grid(row=0, column=5, padx=(0, 6))
+        ttk.Button(buttons, text="Xác nhận loại", command=add_or_update).grid(row=0, column=1, padx=(0, 6))
+        ttk.Button(buttons, text="Bỏ qua file", command=ignore_selected).grid(row=0, column=2, padx=(0, 6))
+        ttk.Button(buttons, text="Xóa dòng", command=remove_selected).grid(row=0, column=3, padx=(0, 6))
+        ttk.Button(buttons, text="Lên", command=lambda: move_selected(-1)).grid(row=0, column=4, padx=(0, 6))
+        ttk.Button(buttons, text="Xuống", command=lambda: move_selected(1)).grid(row=0, column=5, padx=(0, 6))
+        ttk.Button(buttons, text="Lưu", command=save_manifest).grid(row=0, column=6, padx=(0, 6))
+        ttk.Button(buttons, text="Đóng", command=editor.destroy).grid(row=0, column=7, padx=(0, 6))
 
-        frame.rowconfigure(1, weight=1)
+        frame.rowconfigure(2, weight=1)
         frame.columnconfigure(2, weight=1)
 
     def load_cc_list(self):
@@ -1873,7 +2167,7 @@ class MPManagerApp:
                 return
 
             template = self.template_path.get().strip()
-            template_error = _validate_selected_template(template, fiscal_year)
+            template_error = _validate_selected_template(template, self._current_fiscal_year())
             if template_error:
                 raise ValueError(template_error)
 
@@ -1985,34 +2279,79 @@ class MPManagerApp:
 
     def open_user_guide(self):
         guide = tk.Toplevel(self.root)
-        guide.title("Hướng dẫn sử dụng chi tiết")
-        guide.geometry("860x640")
+        guide.title("Hướng dẫn trực quan")
+        guide.geometry("920x700")
+        guide.minsize(760, 560)
 
-        frame = ttk.Frame(guide, padding=12)
+        frame = ttk.Frame(guide, padding=14)
         frame.pack(fill=tk.BOTH, expand=True)
-
+        ttk.Label(frame, text="Hướng dẫn trực quan", style="Header.TLabel").pack(anchor="w")
         ttk.Label(
             frame,
-            text="Hướng dẫn sử dụng chi tiết",
-            style="Header.TLabel",
-        ).pack(anchor="w", pady=(0, 8))
+            text="Bắt đầu bằng sơ đồ 5 bước; mở thẻ Tra cứu chi tiết khi cần tìm một nghiệp vụ cụ thể.",
+        ).pack(anchor="w", pady=(2, 10))
 
-        ttk.Label(
-            frame,
-            text="Tài liệu này hướng dẫn từng bước thao tác trên giao diện hiện tại.",
-        ).pack(anchor="w", pady=(0, 8))
+        notebook = ttk.Notebook(frame)
+        notebook.pack(fill=tk.BOTH, expand=True)
+        quick = ttk.Frame(notebook, padding=14)
+        details = ttk.Frame(notebook, padding=8)
+        notebook.add(quick, text="Bắt đầu nhanh 1 → 5")
+        notebook.add(details, text="Tra cứu chi tiết")
 
-        guide_text = scrolledtext.ScrolledText(
-            frame,
-            wrap=tk.WORD,
-            font=("Segoe UI", 10),
-            height=28,
+        diagram = tk.Canvas(quick, height=210, bg="#f7f9fc", highlightthickness=1, highlightbackground="#d7deea")
+        diagram.pack(fill="x")
+        steps = (
+            ("1", "CHỌN NĂM", "Ví dụ: FY2028"),
+            ("2", "CHỌN NGUỒN", "FORM + 2 thư mục"),
+            ("3", "KIỂM TRA", "Đọc màu trạng thái"),
+            ("4", "BỔ SUNG", "Nếu nghiệp vụ có"),
+            ("5", "CHẠY", "Thử 1 phòng trước"),
         )
+
+        def draw_diagram(_event=None):
+            diagram.delete("all")
+            width = max(diagram.winfo_width(), 760)
+            margin = 70
+            gap = (width - margin * 2) / 4
+            centers = [margin + gap * index for index in range(5)]
+            for index in range(4):
+                diagram.create_line(centers[index] + 28, 70, centers[index + 1] - 28, 70, fill="#6b82a6", width=3, arrow=tk.LAST)
+            colors = ("#2457a6", "#2457a6", "#176b4d", "#5c3b8c", "#b56a00")
+            for center, color, (number, title, subtitle) in zip(centers, colors, steps):
+                diagram.create_oval(center - 28, 42, center + 28, 98, fill=color, outline="")
+                diagram.create_text(center, 70, text=number, fill="white", font=("Segoe UI", 16, "bold"))
+                diagram.create_text(center, 125, text=title, fill="#1f344d", font=("Segoe UI", 9, "bold"))
+                diagram.create_text(center, 148, text=subtitle, fill="#556273", font=("Segoe UI", 8))
+            diagram.create_text(width / 2, 185, text="Không cần nhớ mọi thứ: làm từ trái sang phải và đọc dòng “Việc cần làm tiếp theo” trên màn hình chính.", fill="#33455d", font=("Segoe UI", 9, "italic"))
+
+        diagram.bind("<Configure>", draw_diagram)
+
+        ttk.Label(quick, text="Hiểu màu trước khi bấm chạy", style="WorkflowTitle.TLabel").pack(anchor="w", pady=(14, 8))
+        legend = ttk.Frame(quick)
+        legend.pack(fill="x")
+        legend_items = (
+            ("#dff4ea", "#176b4d", "XANH — Có thể chạy", "Nguồn đã đủ và đúng năm."),
+            ("#fff1cf", "#855b00", "VÀNG — Có thể cân nhắc chạy", "Thiếu nguồn độc lập; kết quả sẽ được đánh dấu CHƯA ĐẦY ĐỦ."),
+            ("#fde4e1", "#9b2c24", "ĐỎ — Chưa được chạy", "Sai năm, sai FORM, lỗi nguồn bắt buộc hoặc dữ liệu không đọc được."),
+        )
+        for column, (background, foreground, title, body) in enumerate(legend_items):
+            legend.columnconfigure(column, weight=1, uniform="legend")
+            card = tk.Frame(legend, bg=background, highlightthickness=1, highlightbackground=foreground)
+            card.grid(row=0, column=column, sticky="nsew", padx=(0 if column == 0 else 6, 0), ipadx=8, ipady=8)
+            tk.Label(card, text=title, bg=background, fg=foreground, font=("Segoe UI", 9, "bold"), wraplength=230, justify="left").pack(anchor="w")
+            tk.Label(card, text=body, bg=background, fg=foreground, font=("Segoe UI", 8), wraplength=230, justify="left").pack(anchor="w", pady=(4, 0))
+
+        tip = tk.Frame(quick, bg="#e8f1ff", highlightthickness=1, highlightbackground="#6b82a6")
+        tip.pack(fill="x", pady=(14, 0), ipady=8)
+        tk.Label(tip, text="MẸO AN TOÀN", bg="#e8f1ff", fg="#2457a6", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=10)
+        tk.Label(tip, text="Chạy thử một Trung tâm chi phí, mở tệp kết quả để đối chiếu, sau đó mới chạy toàn bộ.", bg="#e8f1ff", fg="#2457a6", font=("Segoe UI", 9)).pack(anchor="w", padx=10, pady=(2, 0))
+
+        guide_text = scrolledtext.ScrolledText(details, wrap=tk.WORD, font=("Segoe UI", 10))
         guide_text.pack(fill=tk.BOTH, expand=True)
         guide_text.insert("1.0", USER_GUIDE_TEXT_LATEST)
         guide_text.configure(state=tk.DISABLED)
 
-        ttk.Button(frame, text="Đóng", command=guide.destroy).pack(anchor="e", pady=(10, 0))
+        ttk.Button(frame, text="Đã hiểu — Đóng", command=guide.destroy).pack(anchor="e", pady=(10, 0))
 
     def open_run_history(self):
         history_root = self._project_paths().history_root
@@ -2022,7 +2361,17 @@ class MPManagerApp:
         frame = ttk.Frame(dialog, padding=12)
         frame.pack(fill=tk.BOTH, expand=True)
         fiscal_var = tk.StringVar(value=str(self._current_fiscal_year()))
-        status_var = tk.StringVar()
+        status_labels = {
+            "": "Tất cả",
+            "PRECHECK_FAILED": "Chưa chạy — nguồn chưa đạt",
+            "RUNNING": "Đang chạy",
+            "SUCCEEDED": "Hoàn tất",
+            "SUCCEEDED_INCOMPLETE": "Hoàn tất — chưa đầy đủ",
+            "FAILED": "Không hoàn tất",
+            "LEGACY_FY2027": "Dữ liệu lịch sử FY2027",
+        }
+        status_values = {label: code for code, label in status_labels.items()}
+        status_var = tk.StringVar(value="Tất cả")
         cc_var = tk.StringVar()
         item_var = tk.StringVar()
         date_var = tk.StringVar()
@@ -2037,58 +2386,86 @@ class MPManagerApp:
         )):
             ttk.Label(filters, text=label).grid(row=0, column=index * 2, sticky="w", padx=(0 if index == 0 else 8, 3))
             if label == "Trạng thái":
-                widget = ttk.Combobox(filters, textvariable=variable, width=width, state="readonly", values=("", "PRECHECK_FAILED", "RUNNING", "SUCCEEDED", "FAILED", "LEGACY_FY2027"))
+                widget = ttk.Combobox(
+                    filters,
+                    textvariable=variable,
+                    width=width,
+                    state="readonly",
+                    values=tuple(status_values),
+                )
             else:
                 widget = ttk.Entry(filters, textvariable=variable, width=width)
             widget.grid(row=0, column=index * 2 + 1, sticky="w")
         columns = ("run_id", "status", "started_at", "finished_at", "selected_cost_center", "output_path", "error_summary")
         table = ttk.Treeview(frame, columns=columns, show="headings")
-        widths = {"run_id": 170, "status": 120, "started_at": 150, "finished_at": 150, "selected_cost_center": 120, "output_path": 210, "error_summary": 260}
-        labels = {"run_id": "Mã lần chạy", "status": "Trạng thái", "started_at": "Bắt đầu", "finished_at": "Kết thúc", "selected_cost_center": "Mã phòng", "output_path": "Kết quả", "error_summary": "Lỗi"}
+        widths = {"run_id": 170, "status": 170, "started_at": 150, "finished_at": 150, "selected_cost_center": 120, "output_path": 210, "error_summary": 260}
+        labels = {"run_id": "Mã lần chạy", "status": "Trạng thái", "started_at": "Bắt đầu", "finished_at": "Kết thúc", "selected_cost_center": "Mã phòng", "output_path": "Kết quả", "error_summary": "Ghi chú"}
         for column in columns:
             table.heading(column, text=labels[column])
             table.column(column, width=widths[column], stretch=True)
         table.pack(fill=tk.BOTH, expand=True)
         selected_rows: dict[str, dict[str, object]] = {}
 
-        def contains_item(row: dict[str, object], item: str) -> bool:
-            if not item:
-                return True
-            database_path = str(row.get("database_path") or "")
-            if not os.path.isfile(database_path):
-                return False
-            try:
-                conn = sqlite3.connect(database_path)
-                try:
-                    return conn.execute(
-                        "SELECT 1 FROM fact_input_data WHERE source LIKE ? OR description LIKE ? LIMIT 1",
-                        (f"%{item}%", f"%{item}%"),
-                    ).fetchone() is not None
-                finally:
-                    conn.close()
-            except sqlite3.Error:
-                return False
-
-        def refresh():
+        def render_rows(rows: list[dict[str, object]]) -> None:
+            if not dialog.winfo_exists():
+                return
             for node in table.get_children():
                 table.delete(node)
             selected_rows.clear()
+            for row in rows:
+                values = [
+                    status_labels.get(str(row.get(column) or ""), str(row.get(column) or ""))
+                    if column == "status" else str(row.get(column) or "")
+                    for column in columns
+                ]
+                node = table.insert("", tk.END, values=values)
+                selected_rows[node] = row
+
+        filter_button = None
+        filter_token = {"value": 0}
+
+        def finish_refresh(token: int, rows=None, error: Exception | None = None) -> None:
+            if not dialog.winfo_exists() or token != filter_token["value"]:
+                return
+            if error is None:
+                render_rows(rows or [])
+            else:
+                messagebox.showerror(
+                    "Không đọc được lịch sử",
+                    str(error),
+                    parent=dialog,
+                )
+            if filter_button is not None:
+                filter_button.configure(state=tk.NORMAL, text="Lọc")
+
+        def refresh():
+            nonlocal filter_button
             try:
                 fiscal_year = int(fiscal_var.get()) if fiscal_var.get().strip() else None
             except ValueError:
                 messagebox.showerror("Bộ lọc không hợp lệ", "Năm tài chính phải là số.", parent=dialog)
                 return
-            for row in list_runs(history_root, fiscal_year):
-                if status_var.get() and row.get("status") != status_var.get():
-                    continue
-                if cc_var.get().strip() and cc_var.get().strip() not in str(row.get("selected_cost_center") or ""):
-                    continue
-                if date_var.get().strip() and date_var.get().strip() not in str(row.get("started_at") or ""):
-                    continue
-                if not contains_item(row, item_var.get().strip()):
-                    continue
-                node = table.insert("", tk.END, values=[str(row.get(column) or "") for column in columns])
-                selected_rows[node] = row
+
+            filter_token["value"] += 1
+            token = filter_token["value"]
+            criteria = {
+                "status": status_values.get(status_var.get(), ""),
+                "cost_center": cc_var.get().strip(),
+                "item": item_var.get().strip(),
+                "run_date": date_var.get().strip(),
+            }
+            if filter_button is not None:
+                filter_button.configure(state=tk.DISABLED, text="Đang lọc…")
+
+            def worker() -> None:
+                try:
+                    rows = filter_runs(history_root, fiscal_year, **criteria)
+                except Exception as exc:
+                    self._run_on_ui_thread(finish_refresh, token, None, exc)
+                else:
+                    self._run_on_ui_thread(finish_refresh, token, rows, None)
+
+            threading.Thread(target=worker, daemon=True).start()
 
         def selected() -> dict[str, object] | None:
             nodes = table.selection()
@@ -2113,7 +2490,8 @@ class MPManagerApp:
             workspace = os.path.dirname(database_path) if database_path else ""
             open_path(os.path.join(workspace, relative))
 
-        ttk.Button(filters, text="Lọc", command=refresh).grid(row=0, column=10, padx=(12, 0))
+        filter_button = ttk.Button(filters, text="Lọc", command=refresh)
+        filter_button.grid(row=0, column=10, padx=(12, 0))
         actions = ttk.Frame(frame)
         actions.pack(fill=tk.X, pady=(8, 0))
         ttk.Button(actions, text="Mở kết quả", command=open_output).pack(side=tk.LEFT)
@@ -2941,17 +3319,39 @@ class MPManagerApp:
                 os.path.abspath(headcount_source),
                 float(exchange_rate),
             )
+            approved_report = self._approved_preflight_report
             if (
                 signature != self._approved_preflight_signature
-                or not getattr(self._approved_preflight_report, "ok", False)
+                or not (
+                    getattr(approved_report, "ok", False)
+                    or getattr(approved_report, "can_continue_incomplete", False)
+                )
             ):
                 messagebox.showerror(
                     "Nguồn chưa được xác nhận",
-                    "Bộ nguồn hiện tại chưa có kết quả kiểm tra đạt còn hiệu lực. "
-                    "Hãy bấm “Kiểm tra nguồn”, chờ trạng thái đạt rồi chạy lại.",
+                    "Bộ nguồn hiện tại chưa có kết quả kiểm tra còn hiệu lực. "
+                    "Hãy chờ đối chiếu xong hoặc bấm “Kiểm tra lại từ đầu”.",
                 )
                 self._mark_preflight_stale()
                 return
+
+            accepted_missing_categories = ()
+            if getattr(approved_report, "can_continue_incomplete", False):
+                accepted_missing_categories = approved_report.accepted_missing_categories()
+                warning_lines = "\n".join(
+                    f"• {CATEGORY_DISPLAY_NAMES.get(issue.category, 'Nguồn dữ liệu')}: {issue.impact}"
+                    for issue in approved_report.continuable_issues
+                )
+                proceed_incomplete = messagebox.askyesno(
+                    "Xác nhận chạy với nguồn chưa đầy đủ",
+                    "Một số nguồn chi phí độc lập đang thiếu:\n\n"
+                    + warning_lines
+                    + "\n\nKết quả sẽ được đánh dấu CHƯA ĐẦY ĐỦ và không lấy lại dữ liệu cũ "
+                    "cho các phần bị ảnh hưởng. Bạn có muốn tiếp tục không?",
+                )
+                if not proceed_incomplete:
+                    return
+            self._accepted_missing_categories = accepted_missing_categories
 
             if target_cc is None:
                 proceed = messagebox.askokcancel(
@@ -3005,6 +3405,15 @@ class MPManagerApp:
                     self.log(text)
             return_code = process.wait()
             success = return_code == 0
+            self._last_failed_run_database = (
+                None
+                if success
+                else _failed_run_database_from_output(
+                    output_lines,
+                    self._project_paths(fiscal_year).history_root,
+                    fiscal_year,
+                )
+            )
             result = (
                 self._project_paths(fiscal_year).output_dir
                 if success
@@ -3012,6 +3421,7 @@ class MPManagerApp:
             )
         except Exception as exc:
             success = False
+            self._last_failed_run_database = None
             result = exc
 
         self._run_on_ui_thread(self._finish_pipeline, success, result)
@@ -3057,32 +3467,45 @@ class MPManagerApp:
             cmd.extend(["--uniform-policy", str(approved_uniform)])
         if target_cc:
             cmd.extend(["--target-cc", str(target_cc)])
+        for category in getattr(self, "_accepted_missing_categories", ()):
+            cmd.extend(["--accept-missing-source", str(category)])
         return cmd
 
     def _missing_baseline_context(self, result):
         if not _is_missing_baseline_error(result):
             return None
         args=getattr(self,"_last_pipeline_args",None)
-        if not args:return None
+        run_database=getattr(self,"_last_failed_run_database",None)
+        if not args or not run_database:return None
         fiscal_year,_,_,_,_,target_cc=args
         conn=get_connection(self._manual_input_store(fiscal_year)); create_schema(conn)
         try: missing=find_missing_baseline_ccs(conn,fiscal_year,target_cc=target_cc)
         finally: conn.close()
-        return (fiscal_year,target_cc,missing) if missing else None
+        return (fiscal_year,target_cc,missing,run_database) if missing else None
 
-    def _open_baseline_recovery_dialog(self, fiscal_year, target_cc, missing_ccs):
+    def _open_baseline_recovery_dialog(self, fiscal_year, target_cc, missing_ccs, run_database):
         dialog=tk.Toplevel(self.root); dialog.title("Thiếu baseline T3"); dialog.geometry("680x300"); dialog.transient(self.root); dialog.grab_set()
         ttk.Label(dialog,text="Thiếu dữ liệu baseline T3",font=("Segoe UI",15,"bold")).pack(anchor="w",padx=18,pady=(18,6))
         preview=", ".join(missing_ccs[:12])+("…" if len(missing_ccs)>12 else "")
         ttk.Label(dialog,text=f"CC cần xử lý: {preview}\n\nChọn một hành động. Chương trình sẽ không tiếp tục tính toán nếu bạn đóng hộp thoại.",wraplength=640,justify="left").pack(anchor="w",padx=18)
         def use_april():
             conn=get_connection(self._manual_input_store(fiscal_year)); create_schema(conn)
+            source_conn=None
             try:
-                with conn: copied=copy_missing_baselines_from_april(conn,fiscal_year,target_cc=target_cc)
-            finally: conn.close()
+                source_uri="file:"+os.path.realpath(run_database).replace("\\","/")+"?mode=ro"
+                source_conn=sqlite3.connect(source_uri,uri=True)
+                with conn:
+                    copied=copy_missing_baselines_from_april(
+                        conn,fiscal_year,target_cc=target_cc,source_conn=source_conn
+                    )
+            except Exception as exc:
+                messagebox.showerror("Không thể dùng T4",_friendly_error_message(exc),parent=dialog); return
+            finally:
+                if source_conn is not None:source_conn.close()
+                conn.close()
             unresolved=[cc for cc in missing_ccs if cc not in copied]
             if unresolved:
-                messagebox.showerror("Không thể dùng T4",f"Không có dữ liệu T4 để điền baseline cho: {', '.join(unresolved)}",parent=dialog); return
+                messagebox.showerror("Không thể dùng T4",f"Không có dữ liệu T4 hợp lệ để điền baseline cho: {', '.join(unresolved)}",parent=dialog); return
             dialog.destroy(); self.log(f"Người dùng chấp thuận dùng T4 làm baseline T3 cho: {', '.join(copied)}"); self.start_pipeline()
         def manual():
             dialog.destroy()
@@ -3117,6 +3540,13 @@ class MPManagerApp:
 
 
 if __name__ == "__main__":
+    if "--reference-staffing-render-worker" in sys.argv[1:]:
+        from src.services.reference_staffing_render_worker import main as _render_worker_main
+
+        worker_args = [
+            arg for arg in sys.argv[1:] if arg != "--reference-staffing-render-worker"
+        ]
+        raise SystemExit(_render_worker_main(worker_args))
     # Support headless export from packaged exe: child CLI invocations delegate
     # to the pipeline instead of opening a second GUI window.
     if len(sys.argv) > 1 and any(arg.startswith("--") for arg in sys.argv[1:]):

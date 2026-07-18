@@ -45,6 +45,72 @@ def find_hub_sheet_name(workbook: openpyxl.Workbook) -> str:
         if '内訳' in sheet_name and '4' in sheet_name and '3' in sheet_name: return sheet_name
     raise ValueError('Hub sheet 内訳ﾘｽﾄ(4～3月) not found in FORM.xlsx')
 
+
+FORM_TEMPLATE_INPUT_ROWS = (8, 9, 16, 17, 24, 25)
+FORM_TEMPLATE_MONTH_COLUMNS = tuple(range(6, 18))  # F:Q
+FORM_TEMPLATE_PAYLOAD_COLUMNS = (2, 19, 20)  # B, S, T
+FORM_TEMPLATE_PAYLOAD_START_ROW = 30
+
+
+def is_form_template_payload_value(cell: Any) -> bool:
+    """Return whether a cell contains a concrete value rather than a formula."""
+    value = cell.value
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return False
+    return getattr(cell, "data_type", None) != "f" and not (
+        isinstance(value, str) and value.lstrip().startswith("=")
+    )
+
+
+def find_form_template_hygiene_issues(
+    workbook: openpyxl.Workbook,
+    *,
+    limit: int = 12,
+) -> tuple[str, ...]:
+    """List concrete department data that must not ship in a reusable FORM.
+
+    Structural labels in rows 1–29, formulas, styles and master sheets are not
+    considered contamination. The bounded result is suitable for user-facing
+    preflight messages without dumping workbook contents.
+    """
+    worksheet = workbook[find_hub_sheet_name(workbook)]
+    issue_cells: list[str] = []
+
+    def record(cell: Any) -> bool:
+        if is_form_template_payload_value(cell):
+            issue_cells.append(cell.coordinate)
+        return len(issue_cells) >= max(int(limit), 1)
+
+    if record(worksheet["B5"]):
+        return tuple(issue_cells)
+
+    for row_index in FORM_TEMPLATE_INPUT_ROWS:
+        for column_index in FORM_TEMPLATE_MONTH_COLUMNS:
+            if record(worksheet.cell(row=row_index, column=column_index)):
+                return tuple(issue_cells)
+
+    # In read-only mode, repeated worksheet.cell() calls can seek through the
+    # worksheet XML for every coordinate. Read the bounded B:S range once and
+    # inspect only the non-contiguous payload columns B, S and T in memory.
+    payload_start = FORM_TEMPLATE_PAYLOAD_START_ROW
+    payload_end = max(payload_start - 1, worksheet.max_row)
+    payload_column_offsets = {
+        column_index: column_index - 2
+        for column_index in FORM_TEMPLATE_PAYLOAD_COLUMNS
+    }
+    for row in worksheet.iter_rows(
+        min_row=payload_start,
+        max_row=payload_end,
+        min_col=2,
+        max_col=max(FORM_TEMPLATE_PAYLOAD_COLUMNS),
+        values_only=False,
+    ):
+        for column_index, offset in payload_column_offsets.items():
+            if record(row[offset]):
+                return tuple(issue_cells)
+    return tuple(issue_cells)
+
+
 def validate_exchange_rate(value: Any) -> float:
     """Return a safe USD/VND rate or raise instead of silently substituting one."""
     if isinstance(value, str):

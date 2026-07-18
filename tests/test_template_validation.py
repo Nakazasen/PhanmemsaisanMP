@@ -2,6 +2,10 @@ from pathlib import Path
 
 import openpyxl
 
+from src.services.fiscal_run import (
+    create_fiscal_run_context,
+    preflight_fiscal_run,
+)
 from src.universal_app import (
     MPManagerApp,
     _friendly_error_message,
@@ -9,6 +13,7 @@ from src.universal_app import (
     _pipeline_failure_summary,
     _validate_selected_template,
 )
+from src.utils import excel_helpers
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -144,6 +149,7 @@ def test_refresh_cost_centers_seeds_empty_database_from_selected_form(tmp_path, 
         lambda title, message: notices.append((title, message)),
     )
     app = object.__new__(MPManagerApp)
+    app.project = type("Project", (), {"operational_database": str(tmp_path / "mp2027.db")})()
     app.template_path = Variable()
     app.cc_combo = Widget()
     app.refresh_btn = Widget()
@@ -206,6 +212,7 @@ def test_refresh_cost_centers_uses_existing_database_without_reloading_form(tmp_
     monkeypatch.setattr(universal_app, "load_cost_centers", fail_if_reloaded)
     monkeypatch.setattr(universal_app.messagebox, "showinfo", fail_if_reloaded)
     app = object.__new__(MPManagerApp)
+    app.project = type("Project", (), {"operational_database": str(tmp_path / "mp2027.db")})()
     app.template_path = Variable()
     app.cc_combo = Widget()
     app.refresh_btn = Widget()
@@ -217,3 +224,54 @@ def test_refresh_cost_centers_uses_existing_database_without_reloading_form(tmp_
     assert app.cc_combo.values == ["1412000004 - 機器製造1課"]
     assert app.refresh_btn.states == [universal_app.tk.DISABLED, universal_app.tk.NORMAL]
     assert any("Đã làm mới danh sách 1" in message for message in app.messages)
+
+
+def _write_hygiene_test_form(path: Path) -> None:
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = "内訳ﾘｽﾄ(4～3月)"
+    worksheet["B2"] = 26273
+    worksheet["S4"] = "structural label"
+    worksheet["F8"] = "=SUM(1, 1)"
+    worksheet["S30"] = "=IFERROR(VLOOKUP(B30,A:H,2,0),\"\")"
+    worksheet["BC30"] = "preserve workbook dimensions"
+    workbook.save(path)
+    workbook.close()
+
+
+def test_form_hygiene_ignores_structure_and_formulas_but_detects_payload(tmp_path):
+    path = tmp_path / "FORM.xlsx"
+    _write_hygiene_test_form(path)
+    workbook = openpyxl.load_workbook(path, data_only=False)
+    worksheet = workbook["内訳ﾘｽﾄ(4～3月)"]
+    try:
+        assert excel_helpers.find_form_template_hygiene_issues(workbook) == ()
+        worksheet["B5"] = 1412000006
+        worksheet["G9"] = 42
+        worksheet["T31"] = "WBS-OLD"
+        assert excel_helpers.find_form_template_hygiene_issues(workbook) == (
+            "B5",
+            "G9",
+            "T31",
+        )
+    finally:
+        workbook.close()
+
+
+def test_fiscal_preflight_blocks_form_with_old_department_payload(tmp_path):
+    template_path = tmp_path / "docs" / "MP2027" / "FORM.xlsx"
+    template_path.parent.mkdir(parents=True)
+    _write_hygiene_test_form(template_path)
+    workbook = openpyxl.load_workbook(template_path)
+    workbook["内訳ﾘｽﾄ(4～3月)"]["B5"] = 1412000006
+    workbook.save(template_path)
+    workbook.close()
+
+    context = create_fiscal_run_context(2027, template_path=template_path, base_dir=tmp_path)
+    report = preflight_fiscal_run(context)
+    template_issues = [issue for issue in report.issues if issue.category == "template"]
+
+    assert len(template_issues) == 1
+    assert template_issues[0].code == "FORM_TEMPLATE_NOT_CLEAN"
+    assert "B5" in template_issues[0].reason
+    assert "FORM sạch" in template_issues[0].action

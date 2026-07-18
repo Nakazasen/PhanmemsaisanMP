@@ -164,7 +164,7 @@ class TestNoHardcodeKDTVN:
 # ------------------------------------------------------------------
 class TestSectionExists:
     def test_section_22_header(self, req_text):
-        assert "## 22. Yêu cầu layout output từ file gốc 09.06.2026" in req_text
+        assert "## 22. Historical layout output evidence from the 09.06.2026 file" in req_text
 
     def test_section_22_subsections_count(self, req_text):
         count = req_text.count("### 22.")

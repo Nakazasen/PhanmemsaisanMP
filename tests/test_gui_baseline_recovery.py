@@ -1,6 +1,7 @@
 import pytest
 
 from scripts.run_e2e import _staffing_preflight
+from src.universal_app import _failed_run_database_from_output
 from src.db.schema import create_schema, get_connection
 from src.services.manual_staffing_overrides import (
     apply_manual_baseline_overrides,
@@ -110,3 +111,91 @@ def test_user_approved_t4_copy_is_persistent_and_does_not_overwrite_t3(tmp_path)
         assert restored[0] == "USER_APPROVED_BASELINE_T3_FROM_T4"
     finally:
         conn.close()
+
+
+def test_user_approved_t4_copy_reads_separate_run_snapshot(tmp_path):
+    annual = make_conn(tmp_path / "annual")
+    run = make_conn(tmp_path / "run")
+    try:
+        insert_plan_series(run, cc="1412000005")
+        copied = copy_missing_baselines_from_april(
+            annual,
+            2027,
+            target_cc="1412000005",
+            source_conn=run,
+        )
+        annual.commit()
+
+        assert copied == ["1412000005"]
+        baseline = fiscal_baseline_period(2027)
+        saved = annual.execute(
+            """SELECT headcount_all,headcount_expat,headcount_staff,headcount_worker,
+                      description,source_file,source_sheet
+               FROM fact_manual_headcount_baseline_override
+               WHERE period=? AND cc_code='1412000005'""",
+            (baseline,),
+        ).fetchone()
+        assert tuple(saved[:4]) == (15, 1, 10, 4)
+        assert saved[4] == "USER_APPROVED_BASELINE_T3_FROM_T4"
+        applied = annual.execute(
+            """SELECT headcount_all,source,description FROM fact_monthly_headcount
+               WHERE period=? AND cc_code='1412000005'""",
+            (baseline,),
+        ).fetchone()
+        assert tuple(applied) == (15, "manual", "USER_APPROVED_BASELINE_T3_FROM_T4")
+        assert run.execute(
+            "SELECT 1 FROM fact_monthly_headcount WHERE period=? AND cc_code='1412000005'",
+            (baseline,),
+        ).fetchone() is None
+    finally:
+        annual.close()
+        run.close()
+
+
+def test_failed_run_database_resolver_accepts_only_expected_fy_history(tmp_path):
+    history = tmp_path / "RUN_HISTORY"
+    expected = history / "FY2027" / "run-005"
+    reports = expected / "reports"
+    reports.mkdir(parents=True)
+    run_db = expected / "run.db"
+    run_db.touch()
+    trace = reports / "failure_traceback.txt"
+    trace.touch()
+    lines = [f"Chi tiết lỗi đã lưu: {trace}"]
+
+    assert _failed_run_database_from_output(lines, str(history), 2027) == str(run_db.resolve())
+    assert _failed_run_database_from_output(lines, str(history), 2028) is None
+
+    outside = tmp_path / "outside" / "reports"
+    outside.mkdir(parents=True)
+    outside_trace = outside / "failure_traceback.txt"
+    outside_trace.touch()
+    (outside.parent / "run.db").touch()
+    assert _failed_run_database_from_output(
+        [f"Chi tiết lỗi đã lưu: {outside_trace}"], str(history), 2027
+    ) is None
+
+
+def test_t4_copy_rejects_missing_required_staffing_components(tmp_path):
+    annual = make_conn(tmp_path / "annual")
+    run = make_conn(tmp_path / "run")
+    try:
+        run.execute(
+            """INSERT INTO fact_monthly_headcount
+               (period,cc_code,headcount_all,headcount_expat,headcount_staff,
+                headcount_worker,headcount_local_total,source,split_status)
+               VALUES('202604','1412000005',NULL,0,103,1373,1476,'department_plan','READY')"""
+        )
+        with pytest.raises(ValueError, match="thiếu thành phần nhân sự bắt buộc"):
+            copy_missing_baselines_from_april(
+                annual,
+                2027,
+                target_cc="1412000005",
+                source_conn=run,
+            )
+        assert annual.execute(
+            "SELECT 1 FROM fact_manual_headcount_baseline_override"
+        ).fetchone() is None
+    finally:
+        annual.close()
+        run.close()

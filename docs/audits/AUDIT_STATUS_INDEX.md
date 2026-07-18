@@ -1,6 +1,6 @@
 # MP2027 — Audit Lifecycle Index
 
-As of: `2026-07-16`
+As of: `2026-07-18`
 
 > [!NOTE]
 > This index changes the **lifecycle of old conclusions**, not the evidence recorded inside each audit. The authoritative active backlog is `docs/handover/CURRENT_OPEN_ITEMS.md`.
@@ -17,6 +17,8 @@ As of: `2026-07-16`
 | `FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md` | `OPEN_AUDIT` | Active successor: evidence-first asset ledger/decision matrix across canonical, company sources, FY2026/FY2027 references and code; implementation remains open. |
 | `fixed_assets_gap_and_implementation_plan_2026-07-15.md` | `HISTORICAL` | Finding provenance only; its ask-Accounting-first workflow and `Chưa chốt` table are superseded by the deep-audit handover. |
 | `phase42n3y_final_user_claims_acceptance_audit.md` | `OPEN_AUDIT` | Current successor evidence for old defects, but partial: real monthly headcount for `1412000040` and full canonical-10.07 acceptance remain open. |
+| `tests/test_headcount_and_export.py` and mocked pipeline contracts | `CLOSED` | Current-code verification on 2026-07-18: targeted hardening `52 passed, 3 subtests passed`; full headcount/export module `102 passed, 3 subtests passed`; mocked pipeline contracts `23 passed`. |
+| `OUTPUT_FY2027/BAO_CAO_KIEM_TRA/` and single-CC workbooks | `CLOSED` | Current artifacts exist: `BAO_CAO_LAN_CHAY.xlsx`, `DU_LIEU_CON_THIEU.xlsx`, `KIEM_TRA_TY_GIA.xlsx`, plus both `MP_CC_1412000004.xlsx` and `MP_CC_1412000006.xlsx` after sequential exports. |
 | `reports/fy2027_audit_report_2026-07-13.md` | `HISTORICAL` | Mixed evidence: fixed-assets comparison remains useful; the old gas identity blocker is superseded by current fail-closed resolver/writer code, with output acceptance still open. |
 | `docs/handover/ui_not_responding_clean_form_handover.md` | `IMPLEMENTED_PENDING_ACCEPTANCE` | One current Windows GUI acceptance/reproduction with stack capture if still frozen. |
 
@@ -53,6 +55,9 @@ The following phase reports remain useful provenance, but their “recommended n
 | Fixed assets | `OPEN_AUDIT`; governed by `docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md`. The 15 July GAP plan remains provenance, not the active decision workflow. |
 | GUI not responding | `IMPLEMENTED_PENDING_ACCEPTANCE`; no current manual evidence closes it. |
 | 04.06 / 09.06 requirement conclusions | `HISTORICAL`; neither overrides canonical 10.07. |
+| Hardening regression | `CLOSED`; targeted, full headcount/export, and mocked pipeline suites are green on current code. |
+| Single-CC publication | `CLOSED`; sequential CC06 then CC04 export preserves both workbooks under merge publication. |
+| Cup business identity | `CLOSED`; new-worker and periodic cup rows are separate mechanisms; missing periodic count remains input-dependent. |
 
 ## Maintenance rule
 

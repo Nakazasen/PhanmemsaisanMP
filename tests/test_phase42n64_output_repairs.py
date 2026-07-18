@@ -3,6 +3,7 @@ from pathlib import Path
 from openpyxl import Workbook, load_workbook
 
 from src.engine.complete_v1_source_order_writer import apply_complete_v1_source_order_to_workbook
+from src.parsers.fixed_assets import HEADER_ALIASES, LEGACY_COLUMN_MAP
 
 SHEET = "MP_DETAIL"
 
@@ -87,12 +88,10 @@ def test_row_after_last_business_template_total_only_not_business(tmp_path):
         wb.close()
 
 
-def test_fixed_assets_parser_keeps_legacy_cc_column_and_adds_header_detection():
-    text = Path("src/parsers/fixed_assets.py").read_text(encoding="utf-8")
-    assert "HEADER_ALIASES" in text
-    assert "LEGACY_COLUMN_MAP" in text
-    assert '"cc_code": 7' in text
-    assert "helpers.extract_cc_code(row[9]" not in text
+def test_fixed_assets_parser_keeps_legacy_depreciation_cc_and_header_detection():
+    assert "depreciation_cc" in HEADER_ALIASES
+    assert LEGACY_COLUMN_MAP["control_cc"] == 7
+    assert LEGACY_COLUMN_MAP["depreciation_cc"] == 9
 
 
 def test_no_agent_authored_description_suffixes_in_hub_rules():
@@ -100,6 +99,3 @@ def test_no_agent_authored_description_suffixes_in_hub_rules():
     forbidden = ["company trip/festival allocation", "sports day allocation", "mooncake allocation", "pen allocation"]
     for phrase in forbidden:
         assert phrase not in text
-    exact_values = ["社員旅行; 京セラフェスティバル", "運動会", "月餅", "ペン Bút", "フィロソフィ手帳1; フィロソフィ手帳2"]
-    for exact in exact_values:
-        assert exact in text

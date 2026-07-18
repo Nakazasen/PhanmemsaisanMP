@@ -92,10 +92,12 @@ from src.services.fiscal_run import (
     preflight_fiscal_run,
 )
 from src.services.run_history import (
+    PipelineStageEvidence,
     RUN_STATUS_FAILED,
     RUN_STATUS_PRECHECK_FAILED,
     RUN_STATUS_RUNNING,
     RUN_STATUS_SUCCEEDED,
+    RUN_STATUS_SUCCEEDED_INCOMPLETE,
     create_run_workspace,
     publish_run_output,
     register_legacy_fy2027_database,
@@ -575,7 +577,36 @@ def _exclude_incomplete_staffing_ccs_for_audit(conn, fiscal_year: int) -> list[s
     return excluded
 
 
-def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str, 
+def _close_pipeline_connection(
+    conn,
+    *,
+    rollback: bool,
+    log_callback=None,
+    suppress_errors: bool = False,
+) -> None:
+    if conn is None:
+        return
+
+    cleanup_errors: list[Exception] = []
+    if rollback:
+        try:
+            conn.rollback()
+        except Exception as exc:
+            cleanup_errors.append(exc)
+    try:
+        conn.close()
+    except Exception as exc:
+        cleanup_errors.append(exc)
+
+    if cleanup_errors:
+        details = "; ".join(str(error) for error in cleanup_errors)
+        if log_callback is not None:
+            log_callback(f"CẢNH BÁO: không thể dọn dẹp hoàn toàn kết nối database: {details}")
+        if not suppress_errors:
+            raise RuntimeError(f"Không thể đóng kết nối database an toàn: {details}") from cleanup_errors[0]
+
+
+def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str,
                            exchange_rate: float = 25450.0,
                            exchange_rate_source: str = "explicit pipeline input",
                            target_cc: int = None,
@@ -599,7 +630,6 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            fixed_assets_reference_skeleton_export: bool = False,
                            fixed_assets_skeleton_csv: str | None = None,
                            fixed_assets_skeleton_start_row: int | None = None,
-                           mp_saisan_complete_v1: bool = True,
                            db_path: str | None = None,
                            operational_db_path: str | None = None,
                            manual_input_store: str | None = None,
@@ -609,7 +639,9 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            uniform_policy_path: str | None = None,
                            run_history_root: str | None = None,
                            reference_policy: str | None = None,
-                           preserve_run_history: bool = True):
+                           preserve_run_history: bool = True,
+                           accepted_missing_categories: tuple[str, ...] = (),
+                           mp_saisan_complete_v1: bool = True):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports every CC represented by generated facts.
@@ -664,7 +696,10 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
     requested_output_dir = os.path.abspath(output_dir or os.path.join(os.getcwd(), f"OUTPUT_FY{fiscal_year}"))
     effective_history_root = run_history_root or os.environ.get("MP_MANAGER_TEST_HISTORY_ROOT")
     run_context = None
+    conn = None
     preflight_failed = False
+    stage_evidence = None
+    pipeline_started = time.perf_counter()
     if simulate_baseline_t3_from_t4 or audit_exclude_incomplete_staffing:
         if (requested_db_path is None and not preserve_run_history) or (
             requested_db_path is not None and os.path.normcase(requested_db_path) == os.path.normcase(production_db_path)
@@ -701,7 +736,11 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             reference_policy=effective_reference_policy,
             base_dir=BASE_DIR,
         )
+        preflight_started = time.perf_counter()
         preflight = preflight_fiscal_run(run_context)
+        accepted_missing = tuple(sorted({str(value) for value in accepted_missing_categories}))
+        unaccepted_preflight_issues = preflight.unaccepted_issues(accepted_missing)
+        incomplete_run = bool(preflight.continuable_issues) and not unaccepted_preflight_issues
         run_context = run_context.with_resolution(preflight.resolved_sources)
         # Keep the legacy FY2027 shared DB discoverable without modifying it.
         if preserve_run_history and requested_db_path is None:
@@ -709,27 +748,59 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         # The history workspace is safe to create before calculation: it holds
         # only evidence and reports, never shared calculation data.
         if preserve_run_history and requested_db_path is None:
-            initial_status = RUN_STATUS_RUNNING if preflight.ok else RUN_STATUS_PRECHECK_FAILED
+            initial_status = RUN_STATUS_RUNNING if not unaccepted_preflight_issues else RUN_STATUS_PRECHECK_FAILED
             run_context = create_run_workspace(
                 run_context,
                 target_cc=target_cc,
                 initial_status=initial_status,
                 initial_error_summary=(
-                    "\n".join(issue.as_text() for issue in preflight.issues)
-                    if not preflight.ok else None
+                    "\n".join(issue.as_text() for issue in unaccepted_preflight_issues)
+                    if unaccepted_preflight_issues else None
                 ),
             )
+            stage_evidence = PipelineStageEvidence(
+                str(run_context.workspace_dir),
+                run_context.run_id,
+                started_perf=pipeline_started,
+            )
+            stage_evidence.start("preflight", started_perf=preflight_started)
             write_run_manifest(run_context)
+            report_payload = preflight.as_dict()
+            report_payload["accepted_missing_categories"] = list(accepted_missing)
+            report_payload["incomplete_run"] = incomplete_run
             report_path = os.path.join(str(run_context.workspace_dir), "reports", "preflight_report.json")
             with open(report_path, "w", encoding="utf-8") as handle:
-                json.dump(preflight.as_dict(), handle, ensure_ascii=False, indent=2)
+                json.dump(report_payload, handle, ensure_ascii=False, indent=2)
             readable_report_path = os.path.join(str(run_context.workspace_dir), "reports", "preflight_report.md")
             with open(readable_report_path, "w", encoding="utf-8") as handle:
                 handle.write(preflight.as_markdown())
+                if incomplete_run:
+                    handle.write(
+                        "\n> KẾT QUẢ CHƯA ĐẦY ĐỦ: người dùng đã chấp nhận thiếu các nhóm nguồn: "
+                        + ", ".join(accepted_missing)
+                        + ".\n"
+                    )
             log_callback(f"Báo cáo kiểm tra nguồn: {report_path}")
-        if not preflight.ok:
+        if unaccepted_preflight_issues:
             preflight_failed = True
-            preflight.raise_if_invalid()
+            preflight_error = "\n".join(issue.as_text() for issue in unaccepted_preflight_issues)
+            if stage_evidence is not None:
+                stage_evidence.finalize(
+                    RUN_STATUS_PRECHECK_FAILED,
+                    error_summary=preflight_error,
+                )
+            preflight.raise_if_invalid(accepted_missing)
+        if incomplete_run:
+            log_callback(
+                "CẢNH BÁO — KẾT QUẢ CHƯA ĐẦY ĐỦ: thiếu nguồn "
+                + ", ".join(accepted_missing)
+                + ". Các phần bị ảnh hưởng không dùng dữ liệu từ lần chạy cũ."
+            )
+        if stage_evidence is not None:
+            stage_evidence.complete(details={
+                "status": "INCOMPLETE_ACCEPTED" if incomplete_run else "PASS",
+                "accepted_missing_categories": list(accepted_missing),
+            })
 
         # Production runs are immutable. Explicit db_path is retained for
         # isolated tests and diagnostic runs that deliberately manage storage.
@@ -742,6 +813,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         os.makedirs(output_dir, exist_ok=True)
         
         # 2. Database & Loading
+        if stage_evidence is not None:
+            stage_evidence.start("initialize_database")
         conn = get_connection(db_path)
         create_schema(conn)
         init_sys_params(
@@ -757,13 +830,16 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 )
                 if sum(migrated.values()):
                     log_callback("Đã chuyển dữ liệu nhập tay FY2027 từ kho cũ sang kho theo năm (không sửa mp2027.db).")
-        
+
         # Clear old transaction data
         cursor = conn.cursor()
         cursor.execute("DELETE FROM fact_input_data")
         cursor.execute("DELETE FROM fact_allocation_log")
         cursor.execute("DELETE FROM fact_missing_inputs")
         conn.commit()
+        if stage_evidence is not None:
+            stage_evidence.complete()
+            stage_evidence.start("import_sources")
         
         log_callback("Đang nạp dữ liệu gốc...")
         load_all(
@@ -882,6 +958,10 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             )
         )
 
+        if stage_evidence is not None:
+            stage_evidence.complete(details={"parser_count": len(parser_results)})
+            stage_evidence.start("validate_staffing")
+
         # 4. Kiểm tra nguồn sự thật trước khi tính phân bổ
         audit_excluded_ccs: list[str] = []
         if audit_exclude_incomplete_staffing:
@@ -934,10 +1014,17 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             "không thay số nhân viên, công nhân hoặc tổng người."
         )
 
+        if stage_evidence is not None:
+            stage_evidence.complete(details={"supplemental_rows": int(supplemental_rows)})
+            stage_evidence.start("allocation")
+
         # 5. Allocation Engine
         log_callback("Đang tính phân bổ...")
         engine = _create_allocation_engine(conn, target_cc=target_cc)
         _timed_call(log_callback, "xác định tài khoản và tính phân bổ", engine.run_allocation)
+        if stage_evidence is not None:
+            stage_evidence.complete()
+            stage_evidence.start("export_workbooks")
         
         # 5. Export Logic
         source_file_by_category = {
@@ -1178,8 +1265,22 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             
             log_callback(f"Đã xuất thành công {count} tệp vào: {output_dir}")
 
+        if stage_evidence is not None:
+            stage_evidence.complete(details={"target_cc": str(target_cc) if target_cc is not None else None})
+            stage_evidence.start("audit_reports")
         report_dir = os.path.join(output_dir, "BAO_CAO_KIEM_TRA")
         os.makedirs(report_dir, exist_ok=True)
+        if incomplete_run:
+            marker_path = os.path.join(report_dir, "KET_QUA_CHUA_DAY_DU.txt")
+            with open(marker_path, "w", encoding="utf-8") as marker:
+                marker.write(
+                    "KẾT QUẢ CHƯA ĐẦY ĐỦ\n\n"
+                    "Lần chạy này được người dùng xác nhận tiếp tục dù thiếu nguồn độc lập: "
+                    + ", ".join(accepted_missing)
+                    + ".\n"
+                    "Các phần bị ảnh hưởng không dùng dữ liệu từ lần chạy cũ.\n"
+                )
+            log_callback(f"Đã ghi nhãn kết quả chưa đầy đủ: {marker_path}")
         output_workbooks = [
             os.path.join(output_dir, name)
             for name in os.listdir(output_dir)
@@ -1209,6 +1310,10 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         )
         log_callback(f"Báo cáo tóm tắt lần chạy: {audit_result['report_path']}")
         log_callback(f"Báo cáo dữ liệu cần bổ sung: {audit_result['missing_csv_path']}")
+        if stage_evidence is not None:
+            stage_evidence.complete(
+                details={"report_path": str(audit_result["report_path"])}
+            )
 
         if facility_file_order_preview:
             if not facility_source_path:
@@ -1231,35 +1336,82 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             )
             log_callback(f"Tệp xem trước Cơ sở vật chất theo thứ tự nguồn: {preview_path}")
         
-        conn.close()
+        if stage_evidence is not None:
+            stage_evidence.start("publication")
+        if conn is not None:
+            conn.commit()
+            _close_pipeline_connection(conn, rollback=False, log_callback=log_callback)
+            conn = None
+
         published_output = output_dir
         if run_context is not None and run_context.workspace_dir:
-            published_output = publish_run_output(run_context, output_dir)
-            register_run(run_context, RUN_STATUS_SUCCEEDED, target_cc=target_cc, output_path=published_output)
+            publication_mode = "merge" if target_cc is not None else "replace"
+            published_output = publish_run_output(
+                run_context,
+                output_dir,
+                mode=publication_mode,
+                target_cc=target_cc,
+            )
+            if stage_evidence is not None:
+                stage_evidence.complete(
+                    details={"mode": publication_mode, "output_path": str(published_output)}
+                )
+                stage_evidence.finalize(
+                    RUN_STATUS_SUCCEEDED_INCOMPLETE if incomplete_run else RUN_STATUS_SUCCEEDED
+                )
+            register_run(
+                run_context,
+                RUN_STATUS_SUCCEEDED_INCOMPLETE if incomplete_run else RUN_STATUS_SUCCEEDED,
+                target_cc=target_cc,
+                output_path=published_output,
+                error_summary=(
+                    "KẾT QUẢ CHƯA ĐẦY ĐỦ — đã chấp nhận thiếu nguồn: "
+                    + ", ".join(accepted_missing)
+                    if incomplete_run else None
+                ),
+            )
         return True, published_output
 
 
     except (FileNotFoundError, BadZipFile) as e:
+        _close_pipeline_connection(
+            conn, rollback=True, log_callback=log_callback, suppress_errors=True
+        )
+        conn = None
         message = _friendly_pipeline_error_message(e)
         log_callback(f"LỖI: {message}")
         trace_path = _write_failure_traceback(run_context, e)
         if trace_path:
             log_callback(f"Chi tiết lỗi đã lưu: {trace_path}")
         _log_debug_traceback(log_callback)
+        if stage_evidence is not None:
+            stage_evidence.finalize(RUN_STATUS_FAILED, error_summary=message)
         if run_context is not None and run_context.workspace_dir and not preflight_failed:
             register_run(run_context, RUN_STATUS_FAILED, target_cc=target_cc, error_summary=message)
         return False, message
 
     except Exception as e:
+        _close_pipeline_connection(
+            conn, rollback=True, log_callback=log_callback, suppress_errors=True
+        )
+        conn = None
         message = _friendly_pipeline_error_message(e)
         log_callback(f"LỖI: {message}")
         trace_path = _write_failure_traceback(run_context, e)
         if trace_path:
             log_callback(f"Chi tiết lỗi đã lưu: {trace_path}")
         _log_debug_traceback(log_callback)
+        if stage_evidence is not None:
+            stage_evidence.finalize(RUN_STATUS_FAILED, error_summary=message)
         if run_context is not None and run_context.workspace_dir and not preflight_failed:
             register_run(run_context, RUN_STATUS_FAILED, target_cc=target_cc, error_summary=message)
         return False, message
+
+    finally:
+        _close_pipeline_connection(
+            conn, rollback=True, log_callback=log_callback, suppress_errors=True
+        )
+        conn = None
 
 def main(argv=None):
     import argparse
@@ -1282,6 +1434,12 @@ def main(argv=None):
     parser.add_argument('--exchange-rate', type=float, default=25450.0)
     parser.add_argument('--exchange-rate-source', type=str, default="explicit pipeline input")
     parser.add_argument('--target-cc', type=int, default=None)
+    parser.add_argument(
+        '--accept-missing-source',
+        action='append',
+        default=[],
+        help='Chỉ dùng sau xác nhận: chấp nhận một nhóm nguồn chi phí độc lập đang thiếu.',
+    )
     parser.add_argument(
         '--facility-file-order-preview',
         action='store_true',
@@ -1376,6 +1534,7 @@ def main(argv=None):
         output_dir=args.output_dir,
         run_history_root=args.run_history_root,
         preserve_run_history=not args.no_run_history,
+        accepted_missing_categories=tuple(args.accept_missing_source),
         facility_file_order_preview=args.facility_file_order_preview,
         facility_preview_output=args.facility_preview_output,
         facility_preview_start_row=args.facility_preview_start_row,

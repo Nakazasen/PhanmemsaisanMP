@@ -63,19 +63,34 @@ def _seed_cc(conn, code=1412000004, cost_type="一般"):
     return code
 
 
-def _seed_complete_staffing_time(conn, cc_code, fiscal_year=2027):
+def _seed_complete_staffing_time(
+    conn,
+    cc_code,
+    fiscal_year=2027,
+    *,
+    staff_values=None,
+    worker_values=None,
+    expat_values=None,
+):
+    staff_values = staff_values or {}
+    worker_values = worker_values or {}
+    expat_values = expat_values or {}
     for period in get_fy_months(fiscal_year):
+        staff = float(staff_values.get(period, 0.0))
+        worker = float(worker_values.get(period, 0.0))
+        expat = float(expat_values.get(period, 0.0))
         conn.execute(
             """
-            INSERT INTO fact_monthly_headcount
-            (period, cc_code, headcount_expat, headcount_staff, headcount_worker, source)
-            VALUES (?, ?, 0, 0, 0, 'department_plan')
+            INSERT OR REPLACE INTO fact_monthly_headcount
+            (period, cc_code, headcount_all, headcount_expat, headcount_staff,
+             headcount_worker, headcount_local_total, source, description)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'department_plan', 'test canonical FY staffing')
             """,
-            (period, cc_code),
+            (period, cc_code, expat + staff + worker, expat, staff, worker, staff + worker),
         )
         conn.execute(
             """
-            INSERT INTO fact_headcount_time_source
+            INSERT OR REPLACE INTO fact_headcount_time_source
             (period, cc_code, fixed_hours_expat, fixed_hours_local,
              overtime_hours_expat, overtime_hours_local, source_file)
             VALUES (?, ?, 0, 0, 0, 0, 'test_fixture.xls')
@@ -83,6 +98,54 @@ def _seed_complete_staffing_time(conn, cc_code, fiscal_year=2027):
             (period, cc_code),
         )
     conn.commit()
+
+
+def _seed_export_ready_cc(conn, code=1412000004, *, cost_type="一般", fiscal_year=2027):
+    """Seed a cost center plus canonical staffing/time required by successful exports."""
+    cc_code = _seed_cc(conn, code=code, cost_type=cost_type)
+    _seed_complete_staffing_time(conn, cc_code, fiscal_year=fiscal_year)
+    baseline = f"{fiscal_year - 1}03"
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO fact_monthly_headcount
+        (period, cc_code, headcount_all, headcount_staff, headcount_worker,
+         headcount_local_total, source, description)
+        VALUES (?, ?, 0, 0, 0, 0, 'manual', 'test canonical baseline')
+        """,
+        (baseline, cc_code),
+    )
+    conn.commit()
+    return cc_code
+
+
+def _seed_canonical_staffing_series(conn, cc_code, *, staff_values, worker_values, fiscal_year=2027):
+    """Seed manual baseline plus department-plan FY staffing and export time rows."""
+    baseline = f"{fiscal_year - 1}03"
+    baseline_staff = float(staff_values.get(baseline, 0.0))
+    baseline_worker = float(worker_values.get(baseline, 0.0))
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO fact_monthly_headcount
+        (period, cc_code, headcount_all, headcount_staff, headcount_worker,
+         headcount_local_total, source, description)
+        VALUES (?, ?, ?, ?, ?, ?, 'manual', 'test canonical baseline')
+        """,
+        (
+            baseline,
+            cc_code,
+            baseline_staff + baseline_worker,
+            baseline_staff,
+            baseline_worker,
+            baseline_staff + baseline_worker,
+        ),
+    )
+    _seed_complete_staffing_time(
+        conn,
+        cc_code,
+        fiscal_year,
+        staff_values=staff_values,
+        worker_values=worker_values,
+    )
 
 
 
@@ -248,6 +311,7 @@ class TestExportIntegrityGuard(unittest.TestCase):
             )
             conn.commit()
 
+            _seed_complete_staffing_time(conn, cc_code)
             template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
             output_path = tmpdir / "MP_CC_good.xlsx"
             ok = HubBuilder(conn, fiscal_year=2027).export_to_template(
@@ -1064,11 +1128,24 @@ class TestHeadcountMissingMatrix(unittest.TestCase):
                 target_cc=cc_code,
                 parser_results={},
             )
-            rows = []
-            with open(result["missing_csv_path"], "r", encoding="utf-8-sig", newline="") as f:
-                for row in csv.DictReader(f):
-                    if row["area"] == "headcount_series":
-                        rows.append(row)
+            workbook = openpyxl.load_workbook(result["missing_report_path"], data_only=True)
+            try:
+                sheet = workbook["Dữ liệu còn thiếu"]
+                rows = []
+                for values in sheet.iter_rows(min_row=7, values_only=True):
+                    severity, row_cc, period, content, action = values
+                    text = str(content or "")
+                    if "Missing canonical monthly headcount category:" not in text:
+                        continue
+                    rows.append(
+                        {
+                            "cc_code": str(row_cc or ""),
+                            "period": str(period or ""),
+                            "message": text,
+                        }
+                    )
+            finally:
+                workbook.close()
 
             expected = [
                 (period, category)
@@ -1102,7 +1179,16 @@ class TestHealthCheckAllocation(unittest.TestCase):
                 period, cc_code, headcount_all, headcount_staff, headcount_worker,
                 headcount_male, headcount_female, source, description
             )
-            VALUES (?, ?, 20, 5, 15, 6, 9, 'manual', 'december split')
+            VALUES (?, ?, 20, 5, 15, 6, 9, 'manual', 'december gender supplement')
+            """,
+            (periods[8], cc_code),
+        )
+        conn.execute(
+            """
+            INSERT INTO fact_monthly_headcount
+            (period, cc_code, headcount_all, headcount_staff, headcount_worker,
+             headcount_local_total, source, description)
+            VALUES (?, ?, 20, 5, 15, 20, 'department_plan', 'december canonical staffing')
             """,
             (periods[8], cc_code),
         )
@@ -1143,9 +1229,9 @@ class TestHealthCheckAllocation(unittest.TestCase):
             INSERT INTO fact_monthly_headcount
             (
                 period, cc_code, headcount_all, headcount_staff, headcount_worker,
-                headcount_male, headcount_female, source, description
+                headcount_local_total, headcount_male, headcount_female, source, description
             )
-            VALUES (?, ?, 3, 3, 0, 0, 0, 'manual', 'october headcount')
+            VALUES (?, ?, 3, 3, 0, 3, 0, 0, 'department_plan', 'october canonical staffing')
             """,
             (period, cc_code),
         )
@@ -1194,13 +1280,13 @@ class TestPostingMonthOverride(unittest.TestCase):
             INSERT INTO fact_monthly_headcount
             (
                 period, cc_code, headcount_all, headcount_staff, headcount_worker,
-                headcount_male, headcount_female, source, description
+                headcount_local_total, headcount_male, headcount_female, source, description
             )
             VALUES
-            (?, ?, 2, 0, 2, 0, 0, 'manual', 'april worker'),
-            (?, ?, 3, 0, 3, 0, 0, 'manual', 'may worker'),
-            (?, ?, 5, 0, 5, 0, 0, 'manual', 'january worker'),
-            (?, ?, 4, 0, 4, 0, 0, 'manual', 'feb worker')
+            (?, ?, 2, 0, 2, 2, 0, 0, 'department_plan', 'april worker'),
+            (?, ?, 3, 0, 3, 3, 0, 0, 'department_plan', 'may worker'),
+            (?, ?, 5, 0, 5, 5, 0, 0, 'department_plan', 'january worker'),
+            (?, ?, 4, 0, 4, 4, 0, 0, 'department_plan', 'feb worker')
             """,
             (periods[0], cc_code, periods[1], cc_code, periods[9], cc_code, periods[10], cc_code),
         )
@@ -1247,9 +1333,9 @@ class TestPostingMonthOverride(unittest.TestCase):
             INSERT INTO fact_monthly_headcount
             (
                 period, cc_code, headcount_all, headcount_staff, headcount_worker,
-                headcount_male, headcount_female, source, description
+                headcount_local_total, headcount_male, headcount_female, source, description
             )
-            VALUES (?, ?, 3, 3, 0, 0, 0, 'manual', 'section27 staff-only')
+            VALUES (?, ?, 3, 3, 0, 3, 0, 0, 'department_plan', 'section27 staff-only')
             """,
             [(period, cc_code) for period in periods],
         )
@@ -1302,24 +1388,10 @@ class TestPostingMonthOverride(unittest.TestCase):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
         periods = get_fy_months(2027)
-        conn.executemany(
-            """
-            INSERT INTO fact_monthly_headcount
-            (
-                period, cc_code, headcount_all, headcount_staff, headcount_worker,
-                headcount_male, headcount_female, source, description
-            )
-            VALUES (?, ?, 0, 0, 0, 0, 0, 'manual', 'pocket calendar baseline')
-            """,
-            [(period, cc_code) for period in periods],
-        )
-        conn.execute(
-            """
-            UPDATE fact_monthly_headcount
-            SET headcount_all = 5, headcount_staff = 5
-            WHERE cc_code = ? AND period = ?
-            """,
-            (cc_code, periods[7]),
+        _seed_complete_staffing_time(
+            conn,
+            cc_code,
+            staff_values={periods[7]: 5},
         )
         conn.execute(
             """
@@ -1400,9 +1472,18 @@ class TestEventDeltaHeadcountFailClosed(unittest.TestCase):
             """
             INSERT INTO fact_monthly_headcount
             (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
-            VALUES (?, ?, ?, ?, 0, 'manual', 'event delta test')
+            VALUES (?, ?, ?, ?, 0, ?, 'event delta test')
             """,
-            [(period, cc_code, value, value) for period, value in period_values],
+            [
+                (
+                    period,
+                    cc_code,
+                    value,
+                    value,
+                    "manual" if period == "202603" else "department_plan",
+                )
+                for period, value in period_values
+            ],
         )
         conn.commit()
 
@@ -1500,7 +1581,7 @@ class TestEventDeltaHeadcountFailClosed(unittest.TestCase):
         self.assertTrue(any("Missing complete monthly headcount driver" in msg for msg in missing_messages))
         conn.close()
 
-    def test_non_event_headcount_allocation_still_uses_master_fallback(self):
+    def test_non_event_headcount_allocation_does_not_use_master_fallback(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
         conn.execute(
@@ -1518,9 +1599,33 @@ class TestEventDeltaHeadcountFailClosed(unittest.TestCase):
 
         AllocationEngine(conn)._process_allocation_rules()
 
-        rows = self._alloc_rows(conn, rule_id)
-        self.assertEqual(len(rows), 12)
-        self.assertEqual([(row["period"], float(row["amount_vnd"])) for row in rows], [(period, 500.0) for period in periods])
+        self.assertEqual(self._alloc_rows(conn, rule_id), [])
+        missing_rows = self._missing_rows(conn)
+        self.assertEqual([row["period"] for row in missing_rows], periods)
+        self.assertTrue(all("Missing canonical monthly headcount driver" in row["message"] for row in missing_rows))
+        self.assertTrue(all("category=headcount_all" in row["message"] for row in missing_rows))
+        conn.close()
+
+    def test_non_event_explicit_zero_monthly_headcount_is_not_missing(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        conn.execute(
+            "UPDATE dim_cost_centers SET staff_count = 2, worker_count = 3 WHERE code = ?",
+            (str(cc_code),),
+        )
+        conn.commit()
+        periods = get_fy_months(2027)
+        self._insert_headcount(conn, cc_code, [(period, 0) for period in periods])
+        rule_id = self._insert_rule(
+            conn,
+            posting_month="every month",
+            item_name="recurring non-event allocation",
+            unit_price=100,
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        self.assertEqual(self._alloc_rows(conn, rule_id), [])
         self.assertEqual(self._missing_rows(conn), [])
         conn.close()
 
@@ -1611,6 +1716,7 @@ class TestBusHeadcountAllocation(unittest.TestCase):
         self.assertTrue(all("driver_type=bus_expat_count" in row["description"] for row in expat_rows))
         self.assertTrue(all("driver_type=bus_vietnamese_count" in row["description"] for row in vn_rows))
 
+        _seed_complete_staffing_time(conn, cc_code)
         template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
         tmpdir = _mk_tmpdir()
         try:
@@ -1683,6 +1789,7 @@ class TestBusHeadcountAllocation(unittest.TestCase):
             0,
         )
 
+        _seed_complete_staffing_time(conn, cc_code)
         template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
         tmpdir = _mk_tmpdir()
         try:
@@ -1786,20 +1893,12 @@ class TestNewHireAllocationIdentityDedupe(unittest.TestCase):
         return cursor.lastrowid
 
     def _insert_full_headcount_series(self, conn, cc_code, *, staff_values, worker_values):
-        rows = []
-        for period in ["202603", *get_fy_months(2027)]:
-            staff = float(staff_values.get(period, 0.0))
-            worker = float(worker_values.get(period, 0.0))
-            rows.append((period, cc_code, staff + worker, staff, worker))
-        conn.executemany(
-            """
-            INSERT INTO fact_monthly_headcount
-            (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
-            VALUES (?, ?, ?, ?, ?, 'manual', 'new hire identity test')
-            """,
-            rows,
+        _seed_canonical_staffing_series(
+            conn,
+            cc_code,
+            staff_values=staff_values,
+            worker_values=worker_values,
         )
-        conn.commit()
 
     def _export(self, conn, cc_code, output_name):
         tmpdir = _mk_tmpdir()
@@ -2000,6 +2099,29 @@ class TestNewHireAllocationIdentityDedupe(unittest.TestCase):
         workbook.close()
         conn.close()
 
+    def test_template_business_cleanup_preserves_formulas(self):
+        conn = _mk_conn()
+        builder = HubBuilder(conn, fiscal_year=2027)
+        workbook = openpyxl.Workbook()
+        ws = workbook.active
+        ws["B30"] = 5000000000
+        ws["S30"] = "old description"
+        ws["T30"] = "old WBS"
+        ws["B31"] = "=A31"
+        ws["S31"] = '=IFERROR(VLOOKUP(B31,A:H,2,0),"")'
+        ws["T31"] = "=A31"
+
+        builder._clear_template_business_payload(ws)
+
+        self.assertIsNone(ws["B30"].value)
+        self.assertIsNone(ws["S30"].value)
+        self.assertIsNone(ws["T30"].value)
+        self.assertEqual(ws["B31"].value, "=A31")
+        self.assertEqual(ws["S31"].value, '=IFERROR(VLOOKUP(B31,A:H,2,0),"")')
+        self.assertEqual(ws["T31"].value, "=A31")
+        workbook.close()
+        conn.close()
+
     def test_recruitment_health_does_not_replace_unrelated_row_58(self):
         conn = _mk_conn()
         builder = HubBuilder(conn, fiscal_year=2027)
@@ -2056,6 +2178,7 @@ class TestNewHireAllocationIdentityDedupe(unittest.TestCase):
         )
         conn.commit()
 
+        _seed_complete_staffing_time(conn, cc_code)
         tmpdir, output_path = self._export(conn, cc_code, "out_duplicate_source_identity.xlsx")
         try:
             workbook = openpyxl.load_workbook(output_path, data_only=False)
@@ -2130,7 +2253,7 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
             source_path = tmpdir / "FY2027_allocation.xlsx"
             workbook = openpyxl.Workbook()
             ws = workbook.active
-            ws.title = "allocation"
+            ws.title = "FY2027配賦額一覧"
             ws.append(["dept", "item", "account", "mfg", "ga", "sales", "posting", "unit_price", "unit", "driver"])
             ws.append(
                 [
@@ -2167,7 +2290,7 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
             source_path = tmpdir / "FY2027配賦額一覧 (2025.12.29).xlsx"
             workbook = openpyxl.Workbook()
             ws = workbook.active
-            ws.title = "配賦額一覧"
+            ws.title = "FY2027配賦額一覧"
             ws.append(["配布元", "内容", "科目名称", "製造コード", "間接コード", "販売コード", "計上月", "単価", "単位", "計上基準"])
             ws.append(
                 [
@@ -2218,14 +2341,15 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
             conn.executemany(
                 """
                 INSERT INTO fact_monthly_headcount
-                (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
-                VALUES (?, ?, ?, ?, ?, 'manual', 'new hire delta test')
+                (period, cc_code, headcount_all, headcount_staff, headcount_worker,
+                 headcount_local_total, source, description)
+                VALUES (?, ?, ?, ?, ?, ?, 'department_plan', 'new hire delta test')
                 """,
                 [
-                    (periods[0], cc_code, 22, 22, 0),
-                    (periods[1], cc_code, 22, 22, 0),
-                    (periods[2], cc_code, 29, 26, 3),
-                    (periods[3], cc_code, 30, 27, 3),
+                    (periods[0], cc_code, 22, 22, 0, 22),
+                    (periods[1], cc_code, 22, 22, 0, 22),
+                    (periods[2], cc_code, 29, 26, 3, 29),
+                    (periods[3], cc_code, 30, 27, 3, 30),
                 ],
             )
             conn.commit()
@@ -2332,7 +2456,7 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
 class TestManualSpecialCosts(unittest.TestCase):
     def test_manual_event_driver_parser_exports_formula_to_explicit_row(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         conn.execute(
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
         )
@@ -2395,7 +2519,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_manual_event_driver_zero_count_exports_red_formula_cell(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         conn.execute(
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
         )
@@ -2460,7 +2584,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_manual_travel_event_driver_posts_may_to_row_66(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn, code=1412000089)
+        cc_code = _seed_export_ready_cc(conn, code=1412000089)
         conn.execute(
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
         )
@@ -2539,7 +2663,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_manual_staff_notebook_event_driver_posts_to_row_97(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn, code=1412000089, cost_type="製造")
+        cc_code = _seed_export_ready_cc(conn, code=1412000089, cost_type="製造")
         conn.execute(
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5005246288, '事務用消耗品費', 'Office supplies')"
         )
@@ -2619,7 +2743,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_manual_worker_notebook_event_driver_posts_to_row_98(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn, code=1412000089, cost_type="製造")
+        cc_code = _seed_export_ready_cc(conn, code=1412000089, cost_type="製造")
         conn.execute(
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5005246288, '事務用消耗品費', 'Office supplies')"
         )
@@ -2699,7 +2823,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_manual_recruitment_health_event_driver_source_month_posts_next_month_to_row_58(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn, code=1412000089, cost_type="製造")
+        cc_code = _seed_export_ready_cc(conn, code=1412000089, cost_type="製造")
         conn.execute(
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
         )
@@ -2784,7 +2908,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_manual_recruitment_health_source_month_outside_fy_fails_closed(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn, code=1412000089, cost_type="製造")
+        cc_code = _seed_export_ready_cc(conn, code=1412000089, cost_type="製造")
         conn.execute(
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
         )
@@ -2856,6 +2980,7 @@ class TestManualSpecialCosts(unittest.TestCase):
             """
         )
         conn.commit()
+        _seed_complete_staffing_time(conn, cc_code)
 
         tmpdir = _mk_tmpdir()
         try:
@@ -2989,7 +3114,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_manual_event_driver_requires_account_code_or_account_jp_name(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn, code=1412000089)
+        cc_code = _seed_export_ready_cc(conn, code=1412000089)
         conn.commit()
 
         tmpdir = _mk_tmpdir()
@@ -3023,7 +3148,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_manual_event_driver_rejects_unknown_account_jp_name(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn, code=1412000089)
+        cc_code = _seed_export_ready_cc(conn, code=1412000089)
         conn.commit()
 
         tmpdir = _mk_tmpdir()
@@ -3098,6 +3223,7 @@ class TestManualSpecialCosts(unittest.TestCase):
         conn = _mk_conn()
         cc_code = self._seed_travel_resolver_master(conn)
         self._seed_travel_unit_price_lookup(conn)
+        _seed_complete_staffing_time(conn, cc_code)
         conn.commit()
 
         tmpdir = _mk_tmpdir()
@@ -3241,6 +3367,7 @@ class TestManualSpecialCosts(unittest.TestCase):
     def test_manual_bus_jp_event_driver_all_months_posts_to_row_53(self):
         conn = _mk_conn()
         cc_code = self._seed_travel_resolver_master(conn)
+        _seed_complete_staffing_time(conn, cc_code)
         periods = get_fy_months(2027)
         tmpdir = _mk_tmpdir()
         try:
@@ -3316,6 +3443,7 @@ class TestManualSpecialCosts(unittest.TestCase):
     def test_manual_bus_vn_event_driver_all_months_posts_to_row_54(self):
         conn = _mk_conn()
         cc_code = self._seed_travel_resolver_master(conn)
+        _seed_complete_staffing_time(conn, cc_code)
         periods = get_fy_months(2027)
         tmpdir = _mk_tmpdir()
         try:
@@ -3500,7 +3628,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_manual_event_driver_without_form_row_appends_with_formula(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         conn.execute(
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
         )
@@ -3607,7 +3735,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_manual_event_driver_accepts_new_alias_columns(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         conn.execute(
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
         )
@@ -3669,7 +3797,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_manual_event_driver_rejects_conflicting_alias_values(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         conn.execute(
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
         )
@@ -3731,7 +3859,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_manual_event_driver_validates_event_type(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         conn.execute(
             "INSERT INTO dim_accounts (code, name_jp, name_vn) VALUES (5004086291, '福利厚生費', 'Welfare')"
         )
@@ -3784,7 +3912,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_nnn_paperwork_workbook_parser_exports_to_row_137(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
 
         tmpdir = _mk_tmpdir()
         try:
@@ -3828,7 +3956,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_birthday_workbook_parser_exports_to_row_59(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         _seed_complete_staffing_time(conn, cc_code)
         conn.execute(
             """
@@ -3885,7 +4013,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_manual_special_cost_parser_and_export_to_explicit_form_row(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         periods = get_fy_months(2027)
 
         tmpdir = _mk_tmpdir()
@@ -3931,7 +4059,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 
     def test_recurring_admin_rows_use_configured_previous_month_headcount_formulas(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         periods = get_fy_months(2027)
         conn.execute(
             """
@@ -3961,14 +4089,22 @@ class TestManualSpecialCosts(unittest.TestCase):
         )
         conn.executemany(
             """
-            INSERT INTO fact_monthly_headcount
+            INSERT OR REPLACE INTO fact_monthly_headcount
             (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
             VALUES (?, ?, ?, ?, 0, ?, ?)
             """,
             [
+                (
+                    "202603",
+                    cc_code,
+                    22,
+                    22,
+                    "manual",
+                    "configured March baseline",
+                ),
                 (periods[0], cc_code, 99, 99, "ga", "lower-priority template-like value must lose"),
-                (periods[0], cc_code, 22, 22, "manual", "configured April headcount"),
-                (periods[1], cc_code, 23, 23, "manual", "configured May headcount"),
+                (periods[0], cc_code, 22, 22, "department_plan", "configured April headcount"),
+                (periods[1], cc_code, 23, 23, "department_plan", "configured May headcount"),
             ],
         )
         conn.commit()
@@ -3983,7 +4119,7 @@ class TestManualSpecialCosts(unittest.TestCase):
             workbook = openpyxl.load_workbook(output_path, data_only=False)
             try:
                 ws = workbook[find_hub_sheet_name(workbook)]
-                # Gas: April uses April headcount; May uses April, not May; June uses May.
+                # Gas: April uses March baseline; May uses April; June uses May.
                 self.assertEqual(ws["F46"].value, "=22*100")
                 self.assertEqual(ws["G46"].value, "=22*110")
                 self.assertNotIn("$24", ws["G46"].value)
@@ -3995,8 +4131,8 @@ class TestManualSpecialCosts(unittest.TestCase):
                 self.assertEqual(ws["G49"].value, "=22*300")
                 self.assertEqual(ws["H51"].value, "=23*400")
 
-                # Missing configured headcount must not fall back to workbook/template rows.
-                self.assertIsNone(ws["I46"].value)
+                # Canonical department-plan zero is a configured value, not a missing-source fallback.
+                self.assertEqual(ws["I46"].value, "=0*130")
             finally:
                 workbook.close()
         finally:
@@ -4007,7 +4143,7 @@ class TestManualSpecialCosts(unittest.TestCase):
 class TestHubBuilderExport(unittest.TestCase):
     def test_export_preserves_form_layout_and_appends_unmapped_rows(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         periods = get_fy_months(2027)
         conn.execute(
             """
@@ -4057,7 +4193,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_export_routes_fixed_items_to_form_rows_and_clears_sample_rows(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         periods = get_fy_months(2027)
         conn.executemany(
             """
@@ -4121,7 +4257,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_fixed_rows_follow_mp2027_form_layout(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         periods = get_fy_months(2027)
         period = periods[0]
         conn.executemany(
@@ -4154,11 +4290,11 @@ class TestHubBuilderExport(unittest.TestCase):
         )
         conn.execute(
             """
-            INSERT INTO fact_monthly_headcount
+            INSERT OR REPLACE INTO fact_monthly_headcount
             (period, cc_code, headcount_all, headcount_staff, headcount_worker, source, description)
             VALUES (?, ?, 7, 7, 0, 'manual', 'configured fixed-row headcount')
             """,
-            (period, cc_code),
+            ("202603", cc_code),
         )
         conn.commit()
 
@@ -4253,8 +4389,8 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_manual_event_reference_items_export_to_expected_rows_and_months(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
-        other_cc = _seed_cc(conn, code=1412999999)
+        cc_code = _seed_export_ready_cc(conn)
+        other_cc = _seed_export_ready_cc(conn, code=1412999999)
         conn.execute(
             """
             INSERT INTO dim_accounts
@@ -4307,7 +4443,7 @@ class TestHubBuilderExport(unittest.TestCase):
             with csv_path.open("w", encoding="utf-8-sig", newline="") as handle:
                 writer = csv.DictWriter(handle, fieldnames=fieldnames)
                 writer.writeheader()
-                for event_name, count, unit_price, _cell, _formula in cases:
+                for event_name, count, unit_price, cell, _formula in cases:
                     writer.writerow(
                         {
                             "cc_code": cc_code,
@@ -4315,6 +4451,7 @@ class TestHubBuilderExport(unittest.TestCase):
                             "count": count,
                             "unit_price": unit_price,
                             "account_code": 5004086291,
+                            "form_row": int(cell[1:]),
                         }
                     )
                 writer.writerow(
@@ -4458,8 +4595,8 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_ga_admin_allocation_native_parser_exports_requirement_rows(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
-        other_cc = _seed_cc(conn, code=1412999999)
+        cc_code = _seed_export_ready_cc(conn)
+        other_cc = _seed_export_ready_cc(conn, code=1412999999)
 
         tmpdir = _mk_tmpdir()
         try:
@@ -4522,13 +4659,13 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_fixed_asset_append_rows_include_complete_formula_schema(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         try:
             conn.execute(
                 """
                 INSERT INTO fact_input_data
                 (source, period, amount_vnd, amount_usd, cc_code, account_code, description)
-                VALUES ('fixed_assets', '202604', 0, 10, ?, 5006016242,
+                VALUES ('fixed_assets', '202604', 262730, 10, ?, 5006016242,
                         'fixed_assets_depr|machinery_equipment|asset-test')
                 """,
                 (cc_code,),
@@ -4538,17 +4675,59 @@ class TestHubBuilderExport(unittest.TestCase):
             rows = HubBuilder(conn, fiscal_year=2027)._load_append_rows(cc_code)
 
             self.assertEqual(len(rows), 1)
-            self.assertTrue(rows[0]["terms"])
+            self.assertEqual(rows[0]["terms"], {})
             self.assertEqual(rows[0]["months"], {})
-            self.assertEqual(rows[0]["numeric_months"], {})
+            self.assertEqual(rows[0]["numeric_months"], {"202604": 262730})
             self.assertEqual(rows[0]["highlight_periods"], set())
+            self.assertEqual(rows[0]["provenance"], "fixed_assets_accounting|depreciation|machinery_equipment")
+        finally:
+            conn.close()
+
+    def test_cup_append_rows_keep_business_mechanisms_separate_with_clear_labels(self):
+        conn = _mk_conn()
+        cc_code = _seed_export_ready_cc(conn)
+        try:
+            conn.executemany(
+                """
+                INSERT INTO fact_input_data
+                (source, period, amount_vnd, cc_code, account_code, description)
+                VALUES ('alloc_uniform_1', ?, ?, ?, 5004086291, ?)
+                """,
+                [
+                    (
+                        "202607",
+                        111 * 8500,
+                        cc_code,
+                        "Alloc: 折りたたみコップ Cốc xếp|business_identity=new_worker_cup|formula_expr=111*8500*1",
+                    ),
+                    (
+                        "202608",
+                        0,
+                        cc_code,
+                        "Alloc: 折りたたみコップ Cốc xếp|business_identity=periodic_cup|formula_expr=0*8500*1|missing_separate_count=1",
+                    ),
+                ],
+            )
+            conn.commit()
+
+            rows = HubBuilder(conn, fiscal_year=2027)._load_append_rows(cc_code)
+
+            self.assertEqual(len(rows), 2)
+            by_description = {row["description"]: row for row in rows}
+            new_worker_label = "Alloc: 折りたたみコップ Cốc xếp - công nhân mới"
+            periodic_label = "Alloc: 折りたたみコップ Cốc xếp định kỳ - chưa nhập số lượng"
+            self.assertEqual(set(by_description), {new_worker_label, periodic_label})
+            self.assertEqual(by_description[new_worker_label]["terms"]["202607"], ["111*8500*1"])
+            self.assertEqual(by_description[periodic_label]["terms"]["202608"], ["0*8500*1"])
+            self.assertEqual(by_description[new_worker_label]["highlight_periods"], set())
+            self.assertEqual(by_description[periodic_label]["highlight_periods"], {"202608"})
         finally:
             conn.close()
 
     def test_fixed_assets_source_driven_rows_38_42_handle_last_depreciation_months(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
-        other_cc = _seed_cc(conn, code=1412999999)
+        cc_code = _seed_export_ready_cc(conn)
+        other_cc = _seed_export_ready_cc(conn, code=1412999999)
 
         tmpdir = _mk_tmpdir()
         try:
@@ -4561,6 +4740,7 @@ class TestHubBuilderExport(unittest.TestCase):
                 ws.cell(row=row_index, column=3, value=f"A{row_index}")
                 ws.cell(row=row_index, column=4, value=f"Asset {row_index}")
                 ws.cell(row=row_index, column=8, value=cc)
+                ws.cell(row=row_index, column=10, value=cc)
                 ws.cell(row=row_index, column=12, value=monthly_depr)
                 ws.cell(row=row_index, column=16, value=last_month)
                 ws.cell(row=row_index, column=17, value=last_month_depr)
@@ -4614,7 +4794,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_it_system_row_discovery_does_not_hardcode_row_75(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn, cost_type="製造")
+        cc_code = _seed_export_ready_cc(conn, cost_type="製造")
         periods = get_fy_months(2027)
         conn.execute(
             """
@@ -4650,12 +4830,12 @@ class TestHubBuilderExport(unittest.TestCase):
             try:
                 ws = workbook[find_hub_sheet_name(workbook)]
                 system_rows = _find_system_cost_rows(ws)
-                self.assertEqual(system_rows, [179])
-                self.assertEqual(ws["B179"].value, 5005246282)
+                self.assertEqual(system_rows, [76])
+                self.assertEqual(ws["B76"].value, 5005246282)
                 self.assertIsNone(ws["F75"].value)
-                self.assertIsNone(ws["F76"].value)
-                self.assertEqual(ws["F179"].value, "=ROUND((10*3.19)*$B$2,0)")
-                self.assertEqual(ws["R179"].value, "=SUM(F179:Q179)")
+                self.assertEqual(ws["F76"].value, "=ROUND((10*3.19)*$B$2,0)")
+                self.assertEqual(ws["R76"].value, "=SUM(F76:Q76)")
+                self.assertIsNone(ws["B179"].value)
             finally:
                 workbook.close()
         finally:
@@ -4664,7 +4844,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_export_clears_unused_template_accounts_below_row_30(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn, code=1412000006, cost_type="陬ｽ騾")
+        cc_code = _seed_export_ready_cc(conn, code=1412000006, cost_type="陬ｽ騾")
         period = get_fy_months(2027)[0]
         conn.executemany(
             """
@@ -4705,7 +4885,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_health_check_export_deduplicates_periodic_and_hiring_business_items(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         period = get_fy_months(2027)[8]
         conn.executemany(
             """
@@ -4765,7 +4945,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_ga_admin_allocation_default_account_resolves_by_cc_cost_type(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         conn.execute(
             """
             INSERT INTO dim_accounts
@@ -4813,7 +4993,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_export_rebuilds_accounts_when_template_column_b_is_blank_from_row_30(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn, code=1412000006, cost_type="陬ｽ騾")
+        cc_code = _seed_export_ready_cc(conn, code=1412000006, cost_type="陬ｽ騾")
         period = get_fy_months(2027)[0]
         conn.executemany(
             """
@@ -4871,7 +5051,7 @@ class TestHubBuilderExport(unittest.TestCase):
         for cc_code, cost_type, expected_account in cases:
             with self.subTest(cost_type=cost_type):
                 conn = _mk_conn()
-                _seed_cc(conn, code=cc_code, cost_type=cost_type)
+                _seed_export_ready_cc(conn, code=cc_code, cost_type=cost_type)
                 period = get_fy_months(2027)[0]
                 conn.execute(
                     """
@@ -4905,7 +5085,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_it_system_account_prefers_valid_fact_kdc_account(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn, cost_type="製造")
+        cc_code = _seed_export_ready_cc(conn, cost_type="製造")
         period = get_fy_months(2027)[0]
         conn.execute(
             """
@@ -4939,6 +5119,7 @@ class TestHubBuilderExport(unittest.TestCase):
     def test_it_system_account_missing_cost_center_fails_closed(self):
         conn = _mk_conn()
         cc_code = 1412000999
+        _seed_complete_staffing_time(conn, cc_code)
         period = get_fy_months(2027)[0]
         conn.execute(
             """
@@ -4962,7 +5143,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_it_system_row_prefers_detail_formula_terms(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         periods = get_fy_months(2027)
         conn.execute(
             """
@@ -5006,7 +5187,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_it_system_summary_fallback_accepts_metadata_description(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         period = get_fy_months(2027)[0]
         conn.execute(
             """
@@ -5041,7 +5222,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_it_system_component_fallback_accepts_metadata_description(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         period = get_fy_months(2027)[0]
         conn.execute(
             """
@@ -5076,7 +5257,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_nnn_paperwork_exports_to_row_137_f_to_q(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         periods = get_fy_months(2027)
         conn.execute(
             """
@@ -5117,7 +5298,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_nnn_paperwork_sums_multiple_records_on_row_137(self):
         conn = _mk_conn()
-        cc_code = _seed_cc(conn)
+        cc_code = _seed_export_ready_cc(conn)
         periods = get_fy_months(2027)
         conn.execute(
             """
@@ -5151,8 +5332,8 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_nnn_paperwork_does_not_export_unknown_cost_center(self):
         conn = _mk_conn()
-        cc_code_target = _seed_cc(conn, code=1412000004)
-        cc_code_other = _seed_cc(conn, code=1412000018)
+        cc_code_target = _seed_export_ready_cc(conn, code=1412000004)
+        cc_code_other = _seed_export_ready_cc(conn, code=1412000018)
         periods = get_fy_months(2027)
         conn.execute(
             """
