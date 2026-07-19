@@ -96,6 +96,12 @@ from src.services.app_updates import (
     application_install_root,
     install_runtime_application_update,
 )
+from src.services.update_delivery import (
+    current_release_version,
+    discover_available_update,
+    fetch_update_candidate,
+    load_update_config,
+)
 from src.services.content_packs import (
     ContentPackError,
     install_runtime_content_pack,
@@ -999,9 +1005,11 @@ class MPManagerApp:
              else f"Đang dùng project: {self.project.config_path}")
         ))
         self.root.after(0, self._update_workflow_guide)
+        self._startup_update_prompted = False
         self.root.after(50, self._drain_ui_queue)
         self.root.after(300, self.load_cc_list)
         self.root.after(500, self._mark_preflight_stale)
+        self.root.after(1200, self._start_update_discovery)
 
     def _on_staffing_selection_changed(self, *_args):
         self._refresh_fiscal_year_labels()
@@ -1684,6 +1692,74 @@ class MPManagerApp:
             "Đã cài gói quy tắc",
             f"Gói quy tắc FY{fiscal_year} đã được xác minh và kích hoạt.",
         )
+
+    def _start_update_discovery(self):
+        """Check configured sources after UI startup without blocking Tkinter."""
+        if self._startup_update_prompted or getattr(self, "_application_update_running", False):
+            return
+        try:
+            config = load_update_config(BASE_DIR)
+            if not config["startup_check"] or not config["sources"]:
+                return
+            app_root = application_install_root(APP_DIR)
+            current_version = current_release_version()
+        except Exception as exc:
+            self.log(f"Bỏ qua kiểm tra cập nhật khi khởi động: {_friendly_error_message(exc)}")
+            return
+
+        def worker():
+            try:
+                candidate = discover_available_update(
+                    config["sources"],
+                    current_version=current_version,
+                    current_database_schema=CURRENT_SCHEMA_VERSION,
+                )
+                self._run_on_ui_thread(
+                    self._offer_discovered_update, candidate, app_root, current_version
+                )
+            except Exception as exc:
+                self._run_on_ui_thread(
+                    self.log,
+                    f"Không kiểm tra được nguồn cập nhật: {_friendly_error_message(exc)}",
+                )
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _offer_discovered_update(self, candidate, app_root, current_version):
+        if candidate is None or self._startup_update_prompted or getattr(self, "_application_update_running", False):
+            return
+        self._startup_update_prompted = True
+        message = (
+            f"Đã có MP2027 phiên bản {candidate.version} (hiện tại: {current_version}).\n\n"
+        )
+        if candidate.notes:
+            message += f"Ghi chú: {candidate.notes}\n\n"
+        message += "Bạn có muốn tải và cài đặt ngay không?"
+        if messagebox.askyesno("Có bản cập nhật MP2027", message):
+            self._install_discovered_update(candidate, app_root)
+        else:
+            self.log(f"Đã hoãn cập nhật MP2027 {candidate.version}")
+
+    def _install_discovered_update(self, candidate, app_root):
+        if getattr(self, "_application_update_running", False):
+            return
+        self._application_update_running = True
+        self.log(f"Đang tải bản cập nhật MP2027 {candidate.version}...")
+
+        def worker():
+            try:
+                package_path = fetch_update_candidate(candidate, BASE_DIR)
+                state = install_runtime_application_update(
+                    package_path,
+                    app_root,
+                    BASE_DIR,
+                    current_database_schema=CURRENT_SCHEMA_VERSION,
+                )
+                self._run_on_ui_thread(self._finish_application_update, state, None)
+            except Exception as exc:
+                self._run_on_ui_thread(self._finish_application_update, None, exc)
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def install_application_update(self):
         if getattr(self, "_application_update_running", False):

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mp2027.local/schemas/update-catalog.schema.json",
+  "title": "MP2027 update catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "channel",
+    "version",
+    "package",
+    "sha256",
+    "size",
+    "notes"
+  ],
+  "properties": {
+    "schema": { "const": 1 },
+    "channel": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "package": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*\\.mpupdate$",
+      "maxLength": 255
+    },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "size": { "type": "integer", "minimum": 1, "maximum": 536870912 },
+    "notes": { "type": "string", "maxLength": 2000 }
+  }
+}

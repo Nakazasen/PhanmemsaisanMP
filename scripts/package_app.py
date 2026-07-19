@@ -38,6 +38,7 @@ def _validate_dist(dist_root: str | os.PathLike[str]) -> None:
         root / "_internal" / "assets" / "app_icon.ico",
         root / "_internal" / "docs" / "MP2027" / "FORM.xlsx",
         root / "_internal" / "release.json",
+        root / "_internal" / "update_sources.default.json",
     ]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
@@ -234,6 +235,58 @@ def build_signed_update(
     return output
 
 
+def publish_update(
+    package_path: str | os.PathLike[str],
+    publish_dir: str | os.PathLike[str],
+    *,
+    channel: str,
+    version: str,
+    notes: str = "",
+) -> tuple[Path, Path]:
+    """Publish package first and latest.json last so clients never see a partial release."""
+    package = Path(package_path).resolve()
+    target_dir = Path(publish_dir).expanduser().resolve()
+    if not package.is_file() or package.suffix.casefold() != ".mpupdate":
+        raise ValueError("Không tìm thấy gói .mpupdate hợp lệ để phát hành.")
+    if not _SEMVER.fullmatch(str(version)):
+        raise ValueError("Phiên bản phát hành phải có dạng x.y.z.")
+    if not isinstance(channel, str) or not channel.strip() or len(channel) > 64:
+        raise ValueError("Kênh phát hành không hợp lệ.")
+    if not isinstance(notes, str) or len(notes) > 2000:
+        raise ValueError("Ghi chú phát hành không hợp lệ hoặc quá dài.")
+    target_dir.mkdir(parents=True, exist_ok=True)
+    published_package = target_dir / package.name
+    package_part = target_dir / f"{package.name}.part"
+    catalog = target_dir / "latest.json"
+    catalog_part = target_dir / "latest.json.part"
+    package_part.unlink(missing_ok=True)
+    catalog_part.unlink(missing_ok=True)
+    try:
+        shutil.copyfile(package, package_part)
+        if _sha256(package_part) != _sha256(package):
+            raise RuntimeError("SHA-256 của gói sau khi copy không khớp.")
+        os.replace(package_part, published_package)
+        payload = {
+            "schema": 1,
+            "channel": channel.strip(),
+            "version": str(version),
+            "package": published_package.name,
+            "sha256": _sha256(published_package),
+            "size": published_package.stat().st_size,
+            "notes": notes,
+        }
+        catalog_part.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(catalog_part, catalog)
+    except Exception:
+        package_part.unlink(missing_ok=True)
+        catalog_part.unlink(missing_ok=True)
+        raise
+    return published_package, catalog
+
+
 def assemble_install_bundle(
     app_dist: Path = DIST_ROOT,
     launcher_dist: Path = LAUNCHER_DIST_ROOT,
@@ -309,6 +362,8 @@ def _parse_args(argv=None):
     parser.add_argument("--key-id", help="Mã khóa công khai mà bản phát hành sử dụng.")
     parser.add_argument("--min-app-version", help="Phiên bản cũ nhất được phép cập nhật.")
     parser.add_argument("--update-output", help="Đường dẫn .mpupdate đầu ra.")
+    parser.add_argument("--publish-dir", help="Thư mục LAN/web-root nhận package và latest.json.")
+    parser.add_argument("--release-notes", default="", help="Ghi chú ngắn đưa vào latest.json.")
     return parser.parse_args(argv)
 
 
@@ -338,6 +393,16 @@ def main(argv=None) -> int:
         min_app_version=args.min_app_version,
     )
     print(f"Đã tạo bản cập nhật đã ký: {artifact}")
+    if args.publish_dir:
+        published, catalog = publish_update(
+            artifact,
+            args.publish_dir,
+            channel=str(release["channel"]),
+            version=str(release["version"]),
+            notes=args.release_notes,
+        )
+        print(f"Đã phát hành gói nguyên tử: {published}")
+        print(f"Đã cập nhật catalog sau cùng: {catalog}")
     return 0
 
 

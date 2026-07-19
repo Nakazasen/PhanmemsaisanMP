@@ -14,7 +14,7 @@ Bộ cài hoạt động theo từng người dùng và đặt ứng dụng dư�
 
 Artifact được hỗ trợ là một gói `.mpupdate` có chữ ký. Không gửi riêng từng tệp `.py`, `.dll` hoặc tệp thực thi thay thế. Trong ứng dụng đã cài, người dùng chọn **Cài bản cập nhật...** và chọn gói. Ứng dụng âm thầm xác định khóa của gói từ `release.json` bất biến đi kèm, xác minh chữ ký và khả năng tương thích, chuẩn bị phiên bản onedir mới, chạy kiểm tra sức khỏe bản đóng gói, sao lưu cơ sở dữ liệu runtime và cập nhật `current.json` theo cách nguyên tử. Sau đó người dùng đóng rồi mở lại MP2027 từ lối tắt thông thường. Phiên bản cũ vẫn được giữ để rollback.
 
-Người dùng thông thường không bao giờ nhập, chọn, phê duyệt hoặc quản lý khóa ký. Gói bị can thiệp, không tương thích hoặc không đáng tin cậy sẽ bị từ chối an toàn và chỉ tạo một lỗi ngắn gọn. Luồng kiểm tra/tải online chưa được triển khai; thao tác chọn gói offline đã có.
+Người dùng thông thường không bao giờ nhập, chọn, phê duyệt hoặc quản lý khóa ký. Gói bị can thiệp, không tương thích hoặc không đáng tin cậy sẽ bị từ chối an toàn và chỉ tạo một lỗi ngắn gọn. Ứng dụng có thể dò nền khi khởi động từ thư mục LAN/UNC hoặc HTTPS đã cấu hình, sau đó chỉ hỏi **Cập nhật ngay / Để sau**; không tự cài đặt im lặng. File `.mpupdate` tải/copy về vẫn phải qua toàn bộ xác minh chữ ký, manifest, hash, schema và health-check như luồng chọn file offline.
 
 > [!IMPORTANT]
 > Không công bố khả năng tự cập nhật production cho đến khi khóa công khai phát hành thật được provision trong `release.json`, bộ cài mới build được xác minh và diễn tập kích hoạt/rollback từ N-1 lên N thành công trên profile Windows sạch.
@@ -181,3 +181,111 @@ Loại driver mới hoặc hành vi thực thi là bản cập nhật code ứng
 2. Ký Authenticode cho Setup và timestamp bằng certificate phát hành.
 3. Hoàn thành nghiệm thu Windows sạch thật/không Python và kích hoạt/rollback N-1 → N bằng gói có chữ ký production.
 4. Xác định endpoint phát hành, chính sách channel và hành vi tải xuống trước khi thêm luồng online tùy chọn.
+
+## Handover: bật tự phát hiện update LAN/WAN tại công ty
+
+> [!IMPORTANT]
+> Bản code hiện tại mang `update_sources.default.json` rỗng để không suy đoán
+> đường dẫn mạng ở máy nhà. Điền nguồn thật **trước khi build Setup** để mọi máy
+> cài mới nhận cùng một cấu hình. Cấu hình được bundle vào `_internal` của app.
+
+### 1. Chọn một nguồn phát hành
+
+**Ưu tiên LAN/Domain** khi các máy cùng công ty:
+
+```json
+{
+  "schema": 1,
+  "startup_check": true,
+  "sources": [
+    {
+      "type": "folder",
+      "location": "\\\\FILESERVER\\Software\\MP2027\\Updates",
+      "enabled": true
+    }
+  ]
+}
+```
+
+Hoặc dùng **HTTPS/WAN** (URL gốc chứa `latest.json` và package):
+
+```json
+{
+  "schema": 1,
+  "startup_check": true,
+  "sources": [
+    {
+      "type": "https",
+      "location": "https://updates.congty.example/mp2027",
+      "enabled": true
+    }
+  ]
+}
+```
+
+Chỉ `https://` được chấp nhận cho WAN. Không đưa username/password vào URL.
+Không dùng ví dụ `FILESERVER` hoặc domain mẫu ở trên cho bản phát hành thật.
+
+Có thể dùng `%PROGRAMDATA%\MPManager\update_sources.json` làm policy cao nhất
+cho một máy/nhóm máy đã cài. Policy thay thế toàn bộ config mặc định và user
+config; nó chỉ quyết định **nơi dò**, không thể thay thế yêu cầu ký Ed25519.
+
+### 2. Tạo trust bootstrap trước khi phát hành `.mpupdate`
+
+`release.json` của 0.1.0 đang không có trusted signing key, nên chưa thể nhận
+update production. Chỉ chạy một lần tại máy phát hành an toàn; private key phải
+nằm ngoài repository, OneDrive đồng bộ công khai, `dist`, Setup và máy client:
+
+```powershell
+py scripts/provision_update_key.py `
+  --private-key-output "D:\MP2027-Secrets\mp2027-prod-2026.key" `
+  --key-id "mp2027-prod-2026"
+```
+
+Lệnh thêm **public key** vào `release.json`; hãy review diff, backup private key
+theo quy định công ty, rồi build một Setup bootstrap mới. Nếu 0.1.0 đã được phát
+rộng rãi, client phải cài bootstrap Setup này một lần trước khi có thể tin
+`.mpupdate` đã ký bằng key mới.
+
+### 3. Build Setup mang nguồn mặc định và public key
+
+```powershell
+py -m pytest tests\test_update_delivery.py tests\test_app_updates.py tests\test_packaging_entrypoint.py -q
+py scripts/package_app.py
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" installer\MP2027_Manager.iss
+```
+
+Xác nhận `dist\MP2027_Portable\_internal\update_sources.default.json` đúng
+đường dẫn công ty và `release.json` chứa public key production trước khi phân
+phối Setup.
+
+### 4. Tạo và publish update
+
+Tăng `release.json.version`, build onedir mới, rồi tạo/publish bằng một lệnh:
+
+```powershell
+py scripts/package_app.py --build-update `
+  --private-key-file "D:\MP2027-Secrets\mp2027-prod-2026.key" `
+  --key-id "mp2027-prod-2026" `
+  --min-app-version "0.1.0" `
+  --publish-dir "\\FILESERVER\Software\MP2027\Updates" `
+  --release-notes "Mô tả ngắn thay đổi đã duyệt"
+```
+
+Publisher copy package sang tên `.part`, kiểm tra hash, rename package nguyên tử,
+rồi mới thay `latest.json`. Vì vậy client chỉ nhìn thấy update đã hoàn chỉnh.
+LAN chỉ cần `.mpupdate`; HTTPS dùng thêm `latest.json` theo
+`schemas/update-catalog.schema.json`.
+
+### 5. Diễn tập bắt buộc
+
+1. Cài bootstrap Setup vào một client pilot không có Python.
+2. Chạy app; UI phải hiện bình thường ngay cả khi share/HTTPS tạm mất kết nối.
+3. Publish một bản N mới hơn vào nguồn đã chọn.
+4. Mở lại app, xác nhận hiện prompt phiên bản N; chọn **Cập nhật ngay**.
+5. Chờ health-check xong, đóng app, mở qua launcher và xác nhận N hoạt động.
+6. Xác nhận dữ liệu `%LOCALAPPDATA%\MPManager\Projects\MP2027` còn nguyên.
+7. Thử rollback N → N-1 theo thủ tục release và lưu evidence/hash.
+
+Không công bố auto-update production trước khi cả diễn tập N-1 → N → rollback,
+smoke Windows sạch và Authenticode Setup được hoàn tất.

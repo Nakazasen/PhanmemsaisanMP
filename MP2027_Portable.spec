@@ -58,6 +58,7 @@ def required_raw_csvs():
 datas = [
     ('assets', 'assets'),
     ('release.json', '.'),
+    ('update_sources.default.json', '.'),
     *data_tree_without_runtime_state('docs\\MP2027', 'docs\\MP2027'),
     *required_raw_csvs(),
     *data_tree_without_runtime_state('raw', 'raw'),

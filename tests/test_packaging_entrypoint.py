@@ -1,3 +1,4 @@
+import json
 import importlib
 import importlib.util
 import sys
@@ -196,3 +197,25 @@ def test_inno_installer_uses_complete_vietnamese_messages():
         "ConfirmUninstall",
         "UninstalledAll",
     } <= assignments
+
+
+def test_publish_update_writes_package_then_catalog(tmp_path):
+    package = tmp_path / "MP2027_Manager-0.2.0.mpupdate"
+    package.write_bytes(b"signed-update")
+    target = tmp_path / "published"
+
+    published, catalog = package_app.publish_update(
+        package,
+        target,
+        channel="pilot",
+        version="0.2.0",
+        notes="Sửa lỗi cập nhật.",
+    )
+
+    payload = json.loads(catalog.read_text(encoding="utf-8"))
+    assert published.read_bytes() == package.read_bytes()
+    assert payload["package"] == package.name
+    assert payload["version"] == "0.2.0"
+    assert payload["size"] == len(b"signed-update")
+    assert payload["sha256"] == package_app._sha256(published)
+    assert not list(target.glob("*.part"))
