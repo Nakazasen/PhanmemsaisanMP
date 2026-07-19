@@ -35,13 +35,21 @@ def _ensure_text_streams() -> None:
         sys.stdout = _NullTextIO()
     if sys.stderr is None:
         sys.stderr = _NullTextIO()
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (OSError, ValueError):
+                pass
 
 
 _ensure_text_streams()
 
-# Add root project to path
+# Add root project to path. The GUI bootstrap exports a writable runtime root
+# before delegating packaged CLI invocations to this module.
 if getattr(sys, 'frozen', False):
-    BASE_DIR = os.path.dirname(sys.executable)
+    BASE_DIR = os.environ.get("MP_MANAGER_RUNTIME_ROOT", os.path.dirname(sys.executable))
 else:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -76,6 +84,8 @@ from src.engine.mp_saisan_complete_export import apply_mp_saisan_complete_v1
 from src.utils.excel_helpers import get_fy_months
 from src.utils.fiscal_periods import fiscal_baseline_period
 from src.utils.source_manifest import describe_manifest
+from src.utils.cli import VietnameseArgumentParser
+from src.services.content_packs import load_runtime_content_rules
 from src.services.headcount_source_importer import import_headcount_time_sources
 from src.services.manual_staffing_overrides import (
     apply_manual_baseline_overrides,
@@ -501,7 +511,7 @@ def _simulate_missing_baseline_from_april(
     fiscal_year: int,
     target_cc: object | None = None,
 ) -> int:
-    """Create an explicitly marked manual T3 baseline from April for audit-only runs."""
+    """Tạo baseline T3 thủ công được đánh dấu rõ từ tháng 4, chỉ dùng cho lượt chạy kiểm toán."""
     baseline_period = f"{fiscal_year - 1}03"
     april_period = f"{fiscal_year - 1}04"
     target_clause = "AND CAST(april.cc_code AS TEXT) = ?" if target_cc is not None else ""
@@ -825,6 +835,10 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 "usable_categories": sorted(usable_sources),
             })
 
+        content_rules = load_runtime_content_rules(BASE_DIR, fiscal_year=fiscal_year)
+        if content_rules:
+            log_callback(f"Đã xác minh {len(content_rules)} quy tắc từ gói nội dung đang hoạt động.")
+
         # Production runs are immutable. Explicit db_path is retained for
         # isolated tests and diagnostic runs that deliberately manage storage.
         if preserve_run_history and requested_db_path is None:
@@ -875,8 +889,9 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             exchange_rate=exchange_rate,
             search_dir=source_dir,
             uniform_eligibility_path=uniform_paths[0] if uniform_paths else None,
-            include_allocation_rules=bool(allocation_paths),
+            include_allocation_rules=bool(allocation_paths or content_rules),
             include_uniform_entitlements=bool(uniform_paths),
+            content_rules=content_rules,
         )
 
         staffing_dir = os.path.abspath(run_context.headcount_source_dir)
@@ -1500,7 +1515,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
 def main(argv=None):
     import argparse
 
-    parser = argparse.ArgumentParser()
+    parser = VietnameseArgumentParser()
     parser.add_argument('--fy', type=int, default=2027)
     parser.add_argument('--template', type=str, default=None)
     parser.add_argument('--source', type=str, default=None)
@@ -1514,12 +1529,12 @@ def main(argv=None):
         '--project-config',
         type=str,
         default=None,
-        help='Project config tracked by the metadata-fingerprinted preflight cache.',
+        help='Cấu hình project được theo dõi bằng bộ nhớ đệm kiểm tra trước khi chạy có fingerprint metadata.',
     )
     parser.add_argument(
         '--no-run-history',
         action='store_true',
-        help='Diagnostic only: do not create the immutable run-history workspace.',
+        help='Chỉ dùng để chẩn đoán: không tạo không gian lịch sử lượt chạy bất biến.',
     )
     parser.add_argument('--exchange-rate', type=float, default=25450.0)
     parser.add_argument('--exchange-rate-source', type=str, default="explicit pipeline input")
@@ -1533,54 +1548,54 @@ def main(argv=None):
     parser.add_argument(
         '--facility-file-order-preview',
         action='store_true',
-        help='Explicit opt-in: create Facility file-order preview workbook after the normal pipeline.',
+        help='Chỉ bật khi có chủ đích: tạo tệp Excel xem trước thứ tự dòng chi phí cơ sở vật chất sau pipeline thông thường.',
     )
     parser.add_argument(
         '--facility-preview-output',
         type=str,
         default=None,
-        help='Output path for Facility preview workbook. Defaults to dist/preview/facility_file_order_preview.xlsx when preview is enabled.',
+        help='Đường dẫn tệp xem trước chi phí cơ sở vật chất. Mặc định là dist/preview/facility_file_order_preview.xlsx khi bật xem trước.',
     )
     parser.add_argument('--facility-preview-start-row', type=int, default=200)
     parser.add_argument(
         '--facility-file-order-export',
         action='store_true',
-        help='Explicit opt-in: apply Facility file-order rows to generated output workbook(s).',
+        help='Chỉ bật khi có chủ đích: áp dụng các dòng chi phí cơ sở vật chất vào tệp kết quả.',
     )
     parser.add_argument('--facility-file-order-start-row', type=int, default=200)
     parser.add_argument(
         '--admin-consumables-export',
         action='store_true',
-        help='Explicit opt-in: apply Admin consumables file-order rows to generated output workbook(s).',
+        help='Chỉ bật khi có chủ đích: áp dụng các dòng vật tư tiêu hao hành chính vào tệp kết quả.',
     )
     parser.add_argument('--admin-consumables-start-row', type=int, default=207)
     parser.add_argument(
         '--system-cost-export',
         action='store_true',
-        help='Explicit opt-in: apply System Cost file-order single row to generated output workbook(s).',
+        help='Chỉ bật khi có chủ đích: áp dụng một dòng chi phí hệ thống vào tệp kết quả.',
     )
     parser.add_argument('--system-cost-start-row', type=int, default=211)
     parser.add_argument(
         '--file-order-export-v1',
         action='store_true',
-        help='Explicit opt-in: apply Facility, Admin consumables, and System Cost file-order rows with v1 row placement.',
+        help='Chỉ bật khi có chủ đích: áp dụng các dòng cơ sở vật chất, vật tư tiêu hao hành chính và chi phí hệ thống theo vị trí dòng v1.',
     )
     parser.add_argument(
         '--primary-reference-fill',
         action='store_true',
-        help='Explicit opt-in: append primary reference-assisted rows with provenance labels after normal export.',
+        help='Chỉ bật khi có chủ đích: nối thêm các dòng được hỗ trợ từ tệp tham khảo chính, kèm nhãn nguồn gốc sau khi xuất thông thường.',
     )
     parser.add_argument('--primary-reference-fill-start-row', type=int, default=213)
     parser.add_argument(
         '--file-order-export-v2',
         action='store_true',
-        help='Explicit opt-in: v1 file-order export plus primary reference-assisted fill starting at row 213.',
+        help='Chỉ bật khi có chủ đích: xuất file-order v1 và điền dữ liệu hỗ trợ từ tệp tham khảo chính, bắt đầu tại dòng 213.',
     )
     parser.add_argument(
         '--primary-reference-path',
         type=str,
         default=None,
-        help='Primary reference workbook for reference-assisted fill. Required unless the target CC is mapped.',
+        help='Tệp Excel tham khảo chính dùng để hỗ trợ điền dữ liệu. Bắt buộc nếu CC mục tiêu chưa được ánh xạ.',
     )
     parser.add_argument('--reference-map-path', type=str, default=_default_reference_map_path())
     parser.add_argument(
@@ -1592,13 +1607,13 @@ def main(argv=None):
     parser.add_argument(
         '--fixed-assets-reference-skeleton-export',
         action='store_true',
-        help='Explicit opt-in: append fixed-assets secondary skeleton rows with not-source-derived provenance.',
+        help='Chỉ bật khi có chủ đích: nối thêm các dòng khung tài sản cố định thứ cấp với nguồn gốc không được suy ra từ dữ liệu nguồn.',
     )
     parser.add_argument(
         '--fixed-assets-skeleton-csv',
         type=str,
         default=_default_fixed_assets_skeleton_csv_path(),
-        help='42N2E fixed-assets secondary skeleton candidate CSV.',
+        help='Tệp CSV ứng viên chứa khung tài sản cố định thứ cấp 42N2E.',
     )
     parser.add_argument('--fixed-assets-skeleton-start-row', type=int, default=None)
     parser.add_argument(
@@ -1606,7 +1621,17 @@ def main(argv=None):
         action='store_true',
         help=argparse.SUPPRESS,
     )
+    parser.add_argument(
+        '--health-check',
+        action='store_true',
+        help='Chạy chẩn đoán không phá hủy cho bản đóng gói/runtime và in kết quả JSON.',
+    )
     args = parser.parse_args(argv)
+    if args.health_check:
+        from src.services.runtime_health import print_health_report
+
+        return print_health_report(BASE_DIR)
+
     template_path = args.template or os.path.join(BASE_DIR, "docs", f"MP{args.fy}", "FORM.xlsx")
     source_dir = args.source or _default_source_dir(args.fy)
 

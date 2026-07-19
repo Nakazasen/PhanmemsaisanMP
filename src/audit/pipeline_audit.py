@@ -82,7 +82,10 @@ def _missing_headcount_series_rows(
     for period in get_required_headcount_periods(fiscal_year):
         if period in existing_periods:
             continue
-        for category in ("headcount_staff", "headcount_worker"):
+        for category, category_label in (
+            ("headcount_staff", "nhân viên"),
+            ("headcount_worker", "công nhân"),
+        ):
             missing_rows.append(
                 {
                     "severity": "action",
@@ -90,12 +93,12 @@ def _missing_headcount_series_rows(
                     "period": period,
                     "area": "headcount_series",
                     "message": (
-                        "Missing canonical monthly headcount category: "
-                        f"cc={cc_code}, period={period}, category={category}"
+                        "Thiếu dữ liệu số người chuẩn theo tháng: "
+                        f"trung tâm chi phí={cc_code}, kỳ={period}, nhóm={category_label}"
                     ),
                     "action": (
-                        "Provide baseline 202603 and FY monthly headcount for both "
-                        "headcount_staff and headcount_worker in headcount_manual.csv or the GUI."
+                        "Hãy nhập số liệu gốc tháng 03/2026 và số người từng tháng của năm tài chính "
+                        "cho cả nhân viên và công nhân trong headcount_manual.csv hoặc trên giao diện."
                     ),
                 }
             )
@@ -184,8 +187,8 @@ def write_pipeline_audit_report(
                     "cc_code": cc_code,
                     "period": "",
                     "area": "headcount",
-                    "message": "Chưa có manual headcount cho CC này; pipeline sẽ dùng master headcount/fallback nếu có.",
-                    "action": "Nếu CC này cần tính theo số người thực tế từng tháng, nhập vào headcount_manual.csv.",
+                    "message": "Chưa có số người nhập bổ sung cho trung tâm chi phí này; chương trình sẽ dùng dữ liệu số người chính hoặc dữ liệu thay thế nếu có.",
+                    "action": "Nếu trung tâm chi phí này cần tính theo số người thực tế từng tháng, hãy nhập vào headcount_manual.csv.",
                 }
             )
 
@@ -196,8 +199,8 @@ def write_pipeline_audit_report(
                     "cc_code": cc_code,
                     "period": f"{fiscal_year - 1}12",
                     "area": "health_check_gender_split",
-                    "message": "Chưa có dữ liệu Nam/Nữ tháng 12 cho health-check row 57.",
-                    "action": "Nếu CC này cần tính khám sức khỏe theo Nam/Nữ, nhập headcount_male/headcount_female tháng 12 trong headcount_manual.csv.",
+                    "message": "Chưa có dữ liệu nam/nữ tháng 12 cho dòng 57 của phần kiểm tra sức khỏe.",
+                    "action": "Nếu trung tâm chi phí này cần tính khám sức khỏe theo nam/nữ, hãy nhập số nam và số nữ tháng 12 trong headcount_manual.csv.",
                 }
             )
 
@@ -205,13 +208,14 @@ def write_pipeline_audit_report(
         missing_rows.append(
             {
                 "severity": "action",
-                "cc_code": str(target_cc or "ALL"),
+                "cc_code": str(target_cc or "Tất cả"),
                 "period": ",".join(fy_months),
                 "area": "manual_event_driver",
-                "message": "Chưa có dòng sự kiện thủ công nào cho các số liệu không thể suy luận.",
+                "message": "Chưa có dòng sự kiện nhập bổ sung nào cho các số liệu không thể suy luận.",
                 "action": (
-                    "Nếu có JP/VN bus, quà không đi du lịch, kỷ niệm 10 năm, company anniversary, "
-                    "VISA/Passport row khác 137..., hãy nhập vào event_drivers_manual.csv."
+                    "Nếu có xe đưa đón người Nhật/người Việt, quà cho người không đi du lịch, "
+                    "kỷ niệm 10 năm, lễ kỷ niệm thành lập công ty hoặc dòng thị thực/hộ chiếu "
+                    "khác dòng 137, hãy nhập vào event_drivers_manual.csv."
                 ),
             }
         )
@@ -262,7 +266,10 @@ def write_pipeline_audit_report(
     missing_sheet.append([])
     missing_sheet.append(["Mức độ", "Trung tâm chi phí", "Kỳ liên quan", "Nội dung", "Việc cần làm"])
     for row in concise_rows:
-        area_label = area_names.get(row["area"], row["area"] or "Dữ liệu chưa đầy đủ")
+        area_label = area_names.get(
+            row["area"],
+            str(row["area"] or "Dữ liệu chưa đầy đủ").replace("_", " "),
+        )
         detail = str(row["message"] or "").strip()
         content = f"{area_label}: {detail}" if detail else area_label
         missing_sheet.append([

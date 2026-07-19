@@ -32,6 +32,7 @@ from src.audit.real_pipeline_validator import (  # noqa: E402
 from src.services.manual_staffing_overrides import (  # noqa: E402
     copy_missing_baselines_from_april,
 )
+from src.utils.cli import VietnameseArgumentParser  # noqa: E402
 
 DEFAULT_TARGET_CC = "1412000005"
 DEFAULT_FISCAL_YEAR = 2027
@@ -71,6 +72,26 @@ def _path_fingerprint(path: Path) -> dict[str, Any]:
             "sha256": _sha256_file(candidate),
         })
     return {"path": str(path), "kind": "directory", "files": files}
+
+
+def _capture_path_fingerprints(
+    paths: dict[str, Path],
+) -> tuple[dict[str, Any], dict[str, str]]:
+    """Chụp từng đường dẫn độc lập để một lỗi I/O không làm mất bằng chứng."""
+    fingerprints: dict[str, Any] = {}
+    errors: dict[str, str] = {}
+    for name, path in paths.items():
+        try:
+            fingerprints[name] = _path_fingerprint(path)
+        except Exception as exc:
+            message = f"{type(exc).__name__}: {exc}"
+            fingerprints[name] = {
+                "path": str(path),
+                "kind": "unreadable",
+                "error": message,
+            }
+            errors[name] = message
+    return fingerprints, errors
 
 
 def _readonly_connection(path: Path) -> sqlite3.Connection:
@@ -189,7 +210,7 @@ def _catalog_candidates(
 def _seed_public_output(source: Path, destination: Path, target_cc: str) -> dict[str, str]:
     """Seed merge publication and return hashes of workbooks that must survive."""
     if not source.is_dir():
-        raise FileNotFoundError(f"Production output seed is absent: {source}")
+        raise FileNotFoundError(f"Không có thư mục kết quả vận hành dùng để tạo dữ liệu ban đầu: {source}")
     shutil.copytree(source, destination)
     target_name = f"MP_CC_{target_cc}.xlsx"
     preserved = {
@@ -198,13 +219,13 @@ def _seed_public_output(source: Path, destination: Path, target_cc: str) -> dict
         if workbook.name != target_name
     }
     if not preserved:
-        raise RuntimeError("No non-target public workbook is available to verify merge publication")
+        raise RuntimeError("Không có tệp kết quả công khai ngoài mục tiêu để kiểm tra cơ chế công bố hợp nhất")
     return preserved
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Run isolated real-pipeline acceptance for one fiscal cost center."
+    parser = VietnameseArgumentParser(
+        description="Chạy acceptance pipeline thực tế trong môi trường cách ly cho một mã bộ phận của năm tài chính."
     )
     parser.add_argument("--fy", type=int, default=DEFAULT_FISCAL_YEAR)
     parser.add_argument("--target-cc", default=DEFAULT_TARGET_CC)
@@ -234,9 +255,9 @@ def run_acceptance(args: argparse.Namespace) -> tuple[bool, Path]:
     fiscal_year = int(args.fy)
     target_cc = str(args.target_cc).strip()
     if not target_cc:
-        raise ValueError("Target cost center is required")
+        raise ValueError("Bắt buộc phải có mã bộ phận mục tiêu")
     if fiscal_year != 2027:
-        raise ValueError("This recovery-backed acceptance scenario is intentionally limited to FY2027")
+        raise ValueError("Kịch bản acceptance dùng dữ liệu khôi phục này được giới hạn có chủ đích cho FY2027")
 
     attempt_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid4().hex[:8]
     workspace_root = Path(args.workspace_root).resolve()
@@ -310,12 +331,17 @@ def run_acceptance(args: argparse.Namespace) -> tuple[bool, Path]:
         ]
         missing = [str(path) for path in required if not path.exists()]
         if missing:
-            raise FileNotFoundError("Required real acceptance inputs are absent: " + ", ".join(missing))
+            raise FileNotFoundError("Đang thiếu đầu vào bắt buộc cho acceptance thực tế: " + ", ".join(missing))
 
-        production_before = {
-            name: _path_fingerprint(path) for name, path in protected_paths.items()
-        }
+        production_before, fingerprint_errors_before = _capture_path_fingerprints(
+            protected_paths
+        )
         evidence["production_state_before"] = production_before
+        if fingerprint_errors_before:
+            evidence["production_fingerprint_errors_before"] = fingerprint_errors_before
+            raise RuntimeError(
+                "Không thể chụp đầy đủ trạng thái vận hành trước acceptance"
+            )
 
         sandbox_manual = attempt / "inputs" / "manual_inputs.db"
         sandbox_operational = attempt / "inputs" / "operational.db"
@@ -391,7 +417,7 @@ def run_acceptance(args: argparse.Namespace) -> tuple[bool, Path]:
         evidence["catalog_candidates"] = candidates
         if len(candidates) != 1:
             raise RuntimeError(
-                f"Expected exactly one new FY{fiscal_year}/CC{target_cc} run; found {len(candidates)}"
+                f"Cần đúng một lượt chạy mới cho FY{fiscal_year}/CC{target_cc}; tìm thấy {len(candidates)}"
             )
         run_id = str(candidates[0]["run_id"])
         evidence["run_id"] = run_id
@@ -411,26 +437,38 @@ def run_acceptance(args: argparse.Namespace) -> tuple[bool, Path]:
 
         if completed.returncode != 0:
             evidence["issues"].append(
-                f"Real pipeline subprocess exited with code {completed.returncode}"
+                f"Tiến trình pipeline thực tế kết thúc với mã {completed.returncode}"
             )
         if hidden_traceback:
-            evidence["issues"].append("Pipeline logs contain a Python traceback")
+            evidence["issues"].append("Nhật ký pipeline có chứa dấu vết lỗi Python")
         if not validator.passed:
             evidence["issues"].extend(
                 f"{issue.check}: {issue.message}" for issue in validator.issues
             )
-    except Exception as exc:
-        evidence["issues"].append(f"{type(exc).__name__}: {exc}")
+    except Exception:
+        evidence["issues"].append(
+            "Không thể hoàn tất acceptance do lỗi ngoài dự kiến; hãy kiểm tra đầu vào và nhật ký kỹ thuật của lượt chạy."
+        )
     finally:
-        production_after = {
-            name: _path_fingerprint(path) for name, path in protected_paths.items()
-        }
+        production_after, fingerprint_errors_after = _capture_path_fingerprints(
+            protected_paths
+        )
         evidence["production_state_after"] = production_after
-        production_unchanged = bool(production_before) and production_after == production_before
+        if fingerprint_errors_after:
+            evidence["production_fingerprint_errors_after"] = fingerprint_errors_after
+            evidence["issues"].append(
+                "Không thể chụp đầy đủ trạng thái vận hành sau acceptance: "
+                + ", ".join(sorted(fingerprint_errors_after))
+            )
+        production_unchanged = (
+            bool(production_before)
+            and not fingerprint_errors_after
+            and production_after == production_before
+        )
         evidence["production_unchanged"] = production_unchanged
         if not production_unchanged:
             evidence["issues"].append(
-                "Protected production state changed during acceptance or could not be compared"
+                "Trạng thái vận hành được bảo vệ đã thay đổi trong lúc acceptance hoặc không thể đối chiếu"
             )
         evidence["finished_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
         evidence["status"] = "PASS" if not evidence["issues"] else "FAIL"
@@ -445,11 +483,11 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     try:
         passed, evidence_path = run_acceptance(args)
-    except Exception as exc:
-        print(f"Acceptance runner failed before evidence creation: {type(exc).__name__}: {exc}", file=sys.stderr)
+    except Exception:
+        print("Trình chạy acceptance gặp lỗi trước khi tạo bằng chứng.", file=sys.stderr)
         return 2
-    print(f"Real pipeline acceptance: {'PASS' if passed else 'FAIL'}")
-    print(f"Evidence: {evidence_path}")
+    print(f"Kết quả acceptance pipeline thực tế: {'PASS' if passed else 'FAIL'}")
+    print(f"Tệp bằng chứng: {evidence_path}")
     return 0 if passed else 1
 
 

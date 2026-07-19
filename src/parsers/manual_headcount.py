@@ -145,7 +145,7 @@ def _parse_blank_zero_headcount_int(
             field,
             raw_value,
             "REQUIRED_INTEGER_GTE_0",
-            f"{reason_label.capitalize()} must be an explicit integer >= 0",
+            f"{reason_label.capitalize()} phải được nhập rõ ràng bằng số nguyên lớn hơn hoặc bằng 0",
         )
     parsed = _parse_non_negative_int(raw_value)
     if parsed is None:
@@ -156,7 +156,7 @@ def _parse_blank_zero_headcount_int(
             field,
             raw_value,
             "INTEGER_GTE_0",
-            f"{reason_label.capitalize()} must be an integer >= 0",
+            f"{reason_label.capitalize()} phải là số nguyên lớn hơn hoặc bằng 0",
         )
     return parsed, None
 
@@ -179,7 +179,7 @@ def _parse_optional_headcount_int(
             field,
             raw_value,
             "INTEGER_GTE_0",
-            f"{reason_label.capitalize()} must be an integer >= 0",
+            f"{reason_label.capitalize()} phải là số nguyên lớn hơn hoặc bằng 0",
         )
     return parsed, None
 
@@ -229,7 +229,15 @@ def validate_manual_headcount_rows(
         cc_code = normalize_cc_code(raw_cc)
         if not cc_code:
             error_details.append(
-                _make_validation_error(row_number, raw_cc, raw_period, "cc_code", raw_cc, "VALID_CC", "Cost center is blank or invalid")
+                _make_validation_error(
+                    row_number,
+                    raw_cc,
+                    raw_period,
+                    "cc_code",
+                    raw_cc,
+                    "VALID_CC",
+                    "Mã trung tâm chi phí bị trống hoặc không hợp lệ",
+                )
             )
             continue
         if cc_code not in valid_cc_codes:
@@ -241,7 +249,7 @@ def validate_manual_headcount_rows(
                     "cc_code",
                     raw_cc,
                     "VALID_CC",
-                    "Cost center is not in dim_cost_centers",
+                    "Mã trung tâm chi phí không có trong danh mục trung tâm chi phí",
                 )
             )
             continue
@@ -256,7 +264,7 @@ def validate_manual_headcount_rows(
                     "period",
                     raw_period,
                     "VALID_PERIOD",
-                    "Period is not in required fiscal-year period set",
+                    "Kỳ không thuộc danh sách kỳ bắt buộc của năm tài chính",
                 )
             )
             continue
@@ -270,7 +278,7 @@ def validate_manual_headcount_rows(
                     "cc_code/period",
                     f"{raw_cc}/{raw_period}",
                     "UNIQUE_CC_PERIOD",
-                    "Duplicate manual headcount cost center and period",
+                    "Mã trung tâm chi phí và kỳ nhập nhân sự thủ công bị trùng",
                 )
             )
             continue
@@ -280,18 +288,18 @@ def validate_manual_headcount_rows(
             row_number,
             row,
             "headcount_staff",
-            "staff",
+            "số nhân viên",
             blank_as_zero=blank_categories_as_zero,
         )
         worker, worker_error = _parse_blank_zero_headcount_int(
             row_number,
             row,
             "headcount_worker",
-            "worker",
+            "số công nhân",
             blank_as_zero=blank_categories_as_zero,
         )
-        male, male_error = _parse_optional_headcount_int(row_number, row, "headcount_male", "male")
-        female, female_error = _parse_optional_headcount_int(row_number, row, "headcount_female", "female")
+        male, male_error = _parse_optional_headcount_int(row_number, row, "headcount_male", "số nam")
+        female, female_error = _parse_optional_headcount_int(row_number, row, "headcount_female", "số nữ")
         row_errors = [error for error in (staff_error, worker_error, male_error, female_error) if error]
         if row_errors:
             error_details.extend(row_errors)
@@ -309,7 +317,7 @@ def validate_manual_headcount_rows(
                     "headcount_male/headcount_female",
                     f"{raw_male}/{raw_female}",
                     "SUM_LE_TOTAL",
-                    "Male + female exceeds staff + worker",
+                    "Tổng số nam và nữ vượt quá tổng số nhân viên và công nhân",
                 )
             )
             continue
@@ -367,7 +375,7 @@ def validate_manual_bus_headcount_rows(
                     "cc_code",
                     row.get("cc_code"),
                     "VALID_CC",
-                    "Bus driver cost center is invalid or not in dim_cost_centers",
+                    "Mã trung tâm chi phí của xe đưa đón không hợp lệ hoặc không có trong danh mục",
                 )
             )
             errors += 1
@@ -381,7 +389,7 @@ def validate_manual_bus_headcount_rows(
                     "cc_code",
                     row.get("cc_code"),
                     "UNIQUE_CC",
-                    "Duplicate bus driver cost center",
+                    "Mã trung tâm chi phí của xe đưa đón bị trùng",
                 )
             )
             errors += 1
@@ -398,7 +406,7 @@ def validate_manual_bus_headcount_rows(
                     "bus_expat_count",
                     row.get("bus_expat_count"),
                     "INTEGER_GTE_0",
-                    "Bus expat count must be an integer >= 0",
+                    "Số người nước ngoài đi xe đưa đón phải là số nguyên lớn hơn hoặc bằng 0",
                 )
             )
             errors += 1
@@ -412,7 +420,7 @@ def validate_manual_bus_headcount_rows(
                     "bus_vietnamese_count",
                     row.get("bus_vietnamese_count"),
                     "INTEGER_GTE_0",
-                    "Bus Vietnamese count must be an integer >= 0",
+                    "Số người Việt Nam đi xe đưa đón phải là số nguyên lớn hơn hoặc bằng 0",
                 )
             )
             errors += 1
@@ -495,9 +503,9 @@ def quarantine_manual_headcount_rows(
     period_keys = {str(period).strip() for period in periods if str(period).strip()}
     cc_key = normalize_cc_code(cc_code)
     if not cc_key:
-        raise ValueError("cc_code is required")
+        raise ValueError("Phải cung cấp mã trung tâm chi phí")
     if not period_keys:
-        raise ValueError("periods is required")
+        raise ValueError("Phải cung cấp ít nhất một kỳ")
     if not csv_path.exists():
         raise FileNotFoundError(csv_path)
 
@@ -620,18 +628,22 @@ def parse_manual_headcount(
                 "errors": 1,
                 "template_path": template_path,
                 "error_details": [
-                    _make_validation_error(None, "", "", "header", "", "REQUIRED_COLUMNS", "Missing manual headcount header")
+                    _make_validation_error(
+                        None, "", "", "header", "", "REQUIRED_COLUMNS",
+                        "Thiếu dòng tiêu đề của tệp nhân sự thủ công",
+                    )
                 ],
             }
 
         missing_cols = [c for c in REQUIRED_COLUMNS if c not in reader.fieldnames]
         if missing_cols:
+            message = f"Thiếu các cột bắt buộc: {', '.join(missing_cols)}"
             return {
                 "inserted": 0,
                 "skipped": 0,
                 "errors": 1,
                 "template_path": template_path,
-                "error_message": f"Missing required columns: {', '.join(missing_cols)}",
+                "error_message": message,
                 "error_details": [
                     _make_validation_error(
                         None,
@@ -640,7 +652,7 @@ def parse_manual_headcount(
                         "header",
                         ", ".join(missing_cols),
                         "REQUIRED_COLUMNS",
-                        f"Missing required columns: {', '.join(missing_cols)}",
+                        message,
                     )
                 ],
             }
@@ -659,7 +671,10 @@ def parse_manual_headcount(
                 "errors": 1,
                 "template_path": template_path,
                 "error_details": [
-                    _make_validation_error(None, "", "", "header", "", "REQUIRED_COLUMNS", "Missing bus driver header")
+                    _make_validation_error(
+                        None, "", "", "header", "", "REQUIRED_COLUMNS",
+                        "Thiếu dòng tiêu đề của tệp nhân sự xe đưa đón",
+                    )
                 ],
                 "bus_inserted": 0,
                 "bus_errors": 1,
@@ -667,12 +682,13 @@ def parse_manual_headcount(
             }
         missing_bus_cols = [c for c in BUS_DRIVER_COLUMNS if c not in bus_reader.fieldnames]
         if missing_bus_cols:
+            message = f"Thiếu các cột bắt buộc: {', '.join(missing_bus_cols)}"
             return {
                 "inserted": 0,
                 "skipped": 0,
                 "errors": 1,
                 "template_path": template_path,
-                "error_message": f"Missing required columns: {', '.join(missing_bus_cols)}",
+                "error_message": message,
                 "error_details": [
                     _make_validation_error(
                         None,
@@ -681,7 +697,7 @@ def parse_manual_headcount(
                         "header",
                         ", ".join(missing_bus_cols),
                         "REQUIRED_COLUMNS",
-                        f"Missing required columns: {', '.join(missing_bus_cols)}",
+                        message,
                     )
                 ],
                 "bus_inserted": 0,

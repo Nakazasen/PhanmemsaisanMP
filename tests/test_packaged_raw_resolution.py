@@ -115,6 +115,69 @@ class TestSpecBundlesRawCSVs:
             "MP2027_Portable.spec must bundle raw/bus_headcount_manual.csv"
         )
 
+    def test_portable_spec_filters_runtime_databases(self):
+        spec = Path("MP2027_Portable.spec").read_text(encoding="utf-8")
+        assert "'.db'" in spec
+        assert "data_tree_without_runtime_state('raw', 'raw')" in spec
+
+
+class TestPackagedRuntimeBootstrap:
+    @staticmethod
+    def _import_app():
+        import importlib
+
+        return importlib.import_module("src.universal_app")
+
+    def test_bootstrap_uses_stable_local_app_data_without_overwriting_user_files(self, tmp_path, monkeypatch):
+        app = self._import_app()
+        exe_dir = tmp_path / "apps" / "1.0.0"
+        bundle = exe_dir / "_internal"
+        local_data = tmp_path / "local-app-data"
+        stable_root = local_data / "MPManager" / "Projects" / "MP2027"
+        (bundle / "docs" / "MP2027").mkdir(parents=True)
+        (bundle / "raw").mkdir(parents=True)
+        (bundle / "docs" / "MP2027" / "FORM.xlsx").write_text("bundled-form", encoding="utf-8")
+        (bundle / "raw" / "headcount_manual.csv").write_text("bundled-csv", encoding="utf-8")
+        (stable_root / "raw").mkdir(parents=True)
+        user_csv = stable_root / "raw" / "headcount_manual.csv"
+        user_csv.write_text("user-data", encoding="utf-8")
+
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(bundle), raising=False)
+        monkeypatch.setattr(app, "APP_DIR", str(exe_dir))
+        monkeypatch.setattr(app, "BASE_DIR", str(exe_dir))
+        monkeypatch.delenv("MP_MANAGER_PORTABLE_MODE", raising=False)
+
+        selected = app._ensure_external_runtime_data(local_app_data=str(local_data))
+
+        assert Path(selected) == stable_root
+        assert os.environ["MP_MANAGER_RUNTIME_ROOT"] == str(stable_root)
+        assert (stable_root / "docs" / "MP2027" / "FORM.xlsx").read_text(encoding="utf-8") == "bundled-form"
+        assert user_csv.read_text(encoding="utf-8") == "user-data"
+        monkeypatch.delenv("MP_MANAGER_RUNTIME_ROOT", raising=False)
+
+    def test_explicit_portable_mode_uses_executable_directory(self, tmp_path, monkeypatch):
+        app = self._import_app()
+        exe_dir = tmp_path / "usb" / "MP2027"
+        exe_dir.mkdir(parents=True)
+        monkeypatch.setenv("MP_MANAGER_PORTABLE_MODE", "1")
+
+        selected = app._packaged_project_root(
+            str(exe_dir),
+            local_app_data=str(tmp_path / "local-app-data"),
+        )
+
+        assert Path(selected) == exe_dir
+
+    def test_explicit_portable_mode_rejects_unwritable_executable_directory(self, tmp_path, monkeypatch):
+        app = self._import_app()
+        exe_dir = tmp_path / "read-only-app"
+        monkeypatch.setenv("MP_MANAGER_PORTABLE_MODE", "true")
+        monkeypatch.setattr(app, "_directory_is_writable", lambda _path: False)
+
+        with pytest.raises(PermissionError, match="portable"):
+            app._packaged_project_root(str(exe_dir))
+
 
 class TestRunE2EPassesBaseDir:
     """Guard: run_e2e.py must pass base_dir to parse_manual_headcount."""

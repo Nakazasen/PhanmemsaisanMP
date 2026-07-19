@@ -8,14 +8,18 @@ __pycache__/
 .venv/
 venv/
 
-# Database/runtime state
+# SQLite/local runtime data
 data/
-*.db
 *.sqlite
 *.sqlite3
-*.db-shm
-*.db-wal
-mp2027.db
+*.db
+*.db-*
+*.sqlite-*
+*.sqlite3-*
+*.db-journal
+*.sqlite-journal
+*.sqlite3-journal
+.mp-health-*
 audit_outputs/
 
 # Secrets/local environment
@@ -61,13 +65,23 @@ Thumbs.db
 *.tmp
 *.bak
 
-# Generated output scratch/audit artifacts
-OUTPUT_FY2027/*
-!OUTPUT_FY2027/.gitkeep
+# Generated business outputs/history/transaction backups (runtime only)
+OUTPUT_FY*/
+RUN_HISTORY/
+.OUTPUT_FY*.backup/
+
+# Runtime migration receipt; canonical input files under raw/ stay trackable.
+raw/FY2027/manual_inputs_migration_fy2027.json
 
 # PyInstaller & Build
 build/
 dist/
+
+# Packaged release output
+release_artifacts/
+installers/
+*.mpupdate
+*.mpcontent
 *.spec
 !MP2027_Portable.spec
 !MP2027_Manager.spec
@@ -90,3 +104,8 @@ drafts/*.tmp
 # Per-project runtime configuration (machine/data-root specific)
 project.json
 launcher.json
+
+# Generated knowledge-graph artifacts; keep .understandignore reviewable.
+.understand-anything/knowledge-graph.json
+.understand-anything/cache/
+.understand-anything/output/

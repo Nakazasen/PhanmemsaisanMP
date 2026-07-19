@@ -6,7 +6,11 @@ import sys
 
 import pytest
 
-from scripts.run_real_pipeline_acceptance import _snapshot_sqlite
+from scripts import run_real_pipeline_acceptance as acceptance_runner
+from scripts.run_real_pipeline_acceptance import (
+    _capture_path_fingerprints,
+    _snapshot_sqlite,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -48,6 +52,35 @@ def test_immutable_sqlite_snapshot_rejects_uncheckpointed_wal(tmp_path):
 
     with pytest.raises(RuntimeError, match="uncheckpointed WAL"):
         _snapshot_sqlite(source, tmp_path / "snapshot.db")
+
+
+def test_protected_state_capture_records_one_path_error_without_losing_other_evidence(
+    tmp_path, monkeypatch
+):
+    readable = tmp_path / "readable.txt"
+    unreadable = tmp_path / "unreadable.txt"
+    readable.write_text("ổn định", encoding="utf-8")
+    unreadable.write_text("tạm khóa", encoding="utf-8")
+    original = acceptance_runner._path_fingerprint
+
+    def fingerprint_with_one_error(path):
+        if path == unreadable:
+            raise PermissionError("đang được tiến trình khác sử dụng")
+        return original(path)
+
+    monkeypatch.setattr(
+        acceptance_runner, "_path_fingerprint", fingerprint_with_one_error
+    )
+
+    fingerprints, errors = _capture_path_fingerprints(
+        {"readable": readable, "unreadable": unreadable}
+    )
+
+    assert fingerprints["readable"]["kind"] == "file"
+    assert fingerprints["unreadable"]["kind"] == "unreadable"
+    assert errors == {
+        "unreadable": "PermissionError: đang được tiến trình khác sử dụng"
+    }
 
 
 @pytest.mark.real_pipeline_acceptance

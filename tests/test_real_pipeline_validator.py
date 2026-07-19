@@ -108,7 +108,7 @@ def test_staffing_validator_rejects_duplicate_department_plan_period(tmp_path):
     connection.commit()
     connection.close()
 
-    with pytest.raises(ValueError, match="coverage invalid"):
+    with pytest.raises(ValueError, match="Phạm vi dữ liệu nhân sự phòng ban không hợp lệ"):
         _validate_staffing(
             database,
             fiscal_year=2027,

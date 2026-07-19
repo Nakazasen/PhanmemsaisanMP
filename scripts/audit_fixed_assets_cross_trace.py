@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
+import sys
 from typing import Any, Iterable
 
 import openpyxl
@@ -24,6 +25,11 @@ import xlrd
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.utils.cli import VietnameseArgumentParser
+
 AUDIT_DATE = "2026-07-16"
 INTEREST_ACCOUNT = 9114120007
 CATEGORY_SPECS = {
@@ -695,23 +701,23 @@ def report_markdown(
             max((abs(value) for value in true_deltas), default=0),
         )
     lines = [
-        "# Fixed-assets cross-trace audit — FY2026/FY2027",
+        "# Kiểm toán đối chiếu chéo tài sản cố định — FY2026/FY2027",
         "",
-        f"**Audit date:** `{AUDIT_DATE}`  ",
-        "**Mode:** read-only source/reference audit; no production accounting code changed  ",
-        "**Classification:** `NOT_ACCEPTED_FIXED_ASSETS_CALCULATION`; lifecycle remains `OPEN_AUDIT`",
+        f"**Ngày kiểm toán:** `{AUDIT_DATE}`  ",
+        "**Chế độ:** chỉ đọc dữ liệu nguồn/tham khảo; không thay đổi code kế toán vận hành  ",
+        "**Phân loại:** `NOT_ACCEPTED_FIXED_ASSETS_CALCULATION`; vòng đời vẫn là `OPEN_AUDIT`",
         "",
-        "## Scope and authority",
+        "## Phạm vi và căn cứ",
         "",
-        "1. Canonical requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`, sheet `Chi phí tài sản cố định`.",
-        "2. Company calculation sources: the two `固定資産情報_Fixed_Assets_Information_*.xlsx` workbooks in `docs/MP2026` and `docs/MP2027`.",
-        "3. Department truth folders: `raw/FY2026`, `raw/FY2027`.",
-        "4. Submitted reference outputs: top-level `.xlsx` workbooks in `reference_outputs/secondary/FY2026` and `FY2027`.",
-        "5. Current code is compared as implementation evidence, not business authority.",
+        "1. Yêu cầu chuẩn: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`, sheet `Chi phí tài sản cố định`.",
+        "2. Nguồn tính toán của công ty: hai tệp `固定資産情報_Fixed_Assets_Information_*.xlsx` trong `docs/MP2026` và `docs/MP2027`.",
+        "3. Thư mục dữ liệu đúng do phòng ban nộp: `raw/FY2026`, `raw/FY2027`.",
+        "4. Tệp kết quả tham khảo đã nộp: các tệp `.xlsx` cấp cao nhất trong `reference_outputs/secondary/FY2026` và `FY2027`.",
+        "5. Code hiện tại chỉ được dùng làm bằng chứng triển khai, không phải căn cứ nghiệp vụ.",
         "",
-        "## Corpus summary",
+        "## Tóm tắt tập dữ liệu",
         "",
-        "| FY | Source rows | Supported source rows | Reference workbooks | Reference CCs | FX rates | Raw truth workbooks | Raw fixed-asset account cells |",
+        "| FY | Dòng nguồn | Dòng nguồn được hỗ trợ | Tệp tham khảo | Số CC tham khảo | Tỷ giá | Tệp dữ liệu đúng | Ô tài khoản tài sản cố định |",
         "|---|---:|---:|---:|---:|---|---:|---:|",
     ]
     for fy in ("FY2026", "FY2027"):
@@ -725,20 +731,20 @@ def report_markdown(
     lines.extend(
         [
             "",
-            "`raw/FY2026` and `raw/FY2027` are headcount/time-plan submissions in the current corpus. FY2026 scanned cleanly with no fixed-assets account-code cell. FY2027 had the same result for readable files, but one legacy `.xls` failed `xlrd` parsing, so the claim is limited to 63/64 FY2027 workbooks. Fixed-assets amount truth is carried by the company calculation workbooks and submitted final reference outputs, not by the readable raw headcount files.",
+            "`raw/FY2026` và `raw/FY2027` là dữ liệu kế hoạch nhân sự/thời gian trong tập dữ liệu hiện tại. FY2026 được quét sạch và không có ô mã tài khoản tài sản cố định. FY2027 có cùng kết quả ở các tệp đọc được, nhưng một tệp `.xls` cũ không đọc được bằng `xlrd`, nên kết luận chỉ áp dụng cho 63/64 tệp FY2027. Số tiền đúng của tài sản cố định nằm trong các tệp tính toán của công ty và tệp kết quả tham khảo cuối đã nộp, không nằm trong các tệp nhân sự thô đọc được.",
             "",
-            "## Reference-layer separation",
+            "## Tách biệt các lớp tham khảo",
             "",
-            "Reference workbooks frequently contain source-derived rows beside manual carry-over, cumulative, facility, and future-asset rows sharing the same account. The comparator selects, per FY/CC/account, the subset of rows with the lowest 12-month absolute difference to the source-derived target. Excluded rows remain in the reference-row ledger and are never silently discarded.",
+            "Tệp tham khảo thường chứa dòng suy ra từ nguồn cùng với dòng chuyển tiếp nhập tay, dòng lũy kế, cơ sở vật chất và tài sản tương lai có chung tài khoản. Với mỗi FY/CC/tài khoản, bộ đối chiếu chọn nhóm dòng có tổng chênh lệch tuyệt đối 12 tháng nhỏ nhất so với mục tiêu suy ra từ nguồn. Các dòng bị loại vẫn nằm trong sổ dòng tham khảo và không bao giờ bị bỏ qua âm thầm.",
             "",
-            "| FY | Selected source-derived candidates | Excluded manual/other layers | Critical L/P/Q/V/W cache gaps | Negative critical inputs | Terminal-within-FY missing Q |",
+            "| FY | Ứng viên suy ra từ nguồn được chọn | Lớp nhập tay/khác bị loại | Thiếu cache L/P/Q/V/W trọng yếu | Đầu vào trọng yếu âm | Kết thúc trong FY nhưng thiếu Q |",
             "|---|---:|---:|---:|---:|---:|",
             f"| FY2026 | {selected_rows['FY2026']} | {excluded_rows['FY2026']} | {critical_cache_gaps['FY2026']} | {negative_rows['FY2026']} | {missing_q_rows['FY2026']} |",
             f"| FY2027 | {selected_rows['FY2027']} | {excluded_rows['FY2027']} | {critical_cache_gaps['FY2027']} | {negative_rows['FY2027']} | {missing_q_rows['FY2027']} |",
             "",
-            "## Monthly comparison result",
+            "## Kết quả đối chiếu theo tháng",
             "",
-            "| Classification | FY2026 | FY2027 | Total |",
+            "| Phân loại | FY2026 | FY2027 | Tổng |",
             "|---|---:|---:|---:|",
         ]
     )
@@ -750,49 +756,49 @@ def report_markdown(
     lines.extend(
         [
             "",
-            f"Compared monthly CC/account cells: **{len(comparisons)}**. Non-exact cells: **{len(mismatches)}**. True amount mismatches after separating rounding/terminal-policy cases: **{len(true_mismatches)}**.",
+            f"Số ô tháng CC/tài khoản đã đối chiếu: **{len(comparisons)}**. Số ô không khớp hoàn toàn: **{len(mismatches)}**. Số ô chênh lệch số tiền thực sau khi tách trường hợp làm tròn/chính sách kết thúc: **{len(true_mismatches)}**.",
             "",
-            "## Decision",
+            "## Quyết định",
             "",
-            "The fixed-assets calculation is **not accepted as correct**. Exact matches exist, but the current implementation violates the per-asset rounding contract, and hundreds of source/reference monthly cells remain materially different after separating manual layers.",
+            "Phép tính tài sản cố định **chưa được chấp nhận là chính xác**. Có các ô khớp hoàn toàn, nhưng cách triển khai hiện tại vi phạm quy tắc làm tròn theo từng tài sản và hàng trăm ô tháng giữa nguồn/tham khảo vẫn chênh lệch đáng kể sau khi tách lớp nhập tay.",
             "",
-            "| FY | Rounding-order cells | Net VND delta vs per-asset | Absolute VND delta | True mismatch cells | True mismatches > 1m VND | Largest true mismatch |",
+            "| FY | Ô sai thứ tự làm tròn | Chênh lệch VND ròng so với làm tròn theo tài sản | Chênh lệch VND tuyệt đối | Ô chênh lệch thực | Chênh lệch thực > 1 triệu VND | Chênh lệch thực lớn nhất |",
             "|---|---:|---:|---:|---:|---:|---:|",
             f"| FY2026 | {rounding_stats['FY2026'][0]} | {rounding_stats['FY2026'][1]} | {rounding_stats['FY2026'][2]} | {true_stats['FY2026'][0]} | {true_stats['FY2026'][1]} | {true_stats['FY2026'][2]} |",
             f"| FY2027 | {rounding_stats['FY2027'][0]} | {rounding_stats['FY2027'][1]} | {rounding_stats['FY2027'][2]} | {true_stats['FY2027'][0]} | {true_stats['FY2027'][1]} | {true_stats['FY2027'][2]} |",
             "",
-            "## Proven rules and findings",
+            "## Quy tắc và phát hiện đã được chứng minh",
             "",
-            "- Reference output uses the workbook FX rate in `B2`; the observed FY-specific rates are evidence, not production constants.",
-            "- `ROUNDING_ORDER` cells are cases where submitted output equals the current writer's category-first rounding but differs from the required per-asset rounding. The monetary deltas are small, but the calculation order is still wrong.",
-            "- Terminal within FY has a direct failure example: source `docs/MP2026/固定資産情報_Fixed_Assets_Information_2024.12 - December.xlsx`, `2024.12!L42/P42/Q42`, ends in `202601`; reference `24.KDTVN 品質保証課_MP FY2026_各予定(Ver01).xlsx`, detail row 123, continues the same monthly depreciation through `202602` and `202603`.",
-            "- Terminal before FY is determined at amount level as no FY cost: source FY2027 `2025.11!L1257/P1257/Q1257` ends in `202512`; reference CC `1412000081`, account `5006016247`, row 45 is zero for all FY2027 months. New output must represent post-terminal as blank, not zero, per canonical wording.",
-            "- `TRUE_AMOUNT_MISMATCH` remains unexplained after both policy calculations and requires row/formula-level review in the evidence CSVs.",
-            "- Several large true mismatches are identifiable as source-snapshot/manual future-asset differences rather than arithmetic alone; they cannot be accepted or overwritten without row-level provenance.",
+            "- Tệp kết quả tham khảo dùng tỷ giá của tệp Excel tại `B2`; các tỷ giá quan sát theo FY là bằng chứng, không phải hằng số vận hành.",
+            "- Các ô `ROUNDING_ORDER` là trường hợp kết quả đã nộp khớp với cách làm tròn theo nhóm của bộ ghi hiện tại nhưng khác cách làm tròn theo từng tài sản bắt buộc. Chênh lệch tiền nhỏ nhưng thứ tự tính vẫn sai.",
+            "- Trường hợp kết thúc trong FY có ví dụ lỗi trực tiếp: nguồn `docs/MP2026/固定資産情報_Fixed_Assets_Information_2024.12 - December.xlsx`, `2024.12!L42/P42/Q42`, kết thúc tại `202601`; tệp tham khảo `24.KDTVN 品質保証課_MP FY2026_各予定(Ver01).xlsx`, dòng chi tiết 123, vẫn tiếp tục cùng mức khấu hao tháng đến `202602` và `202603`.",
+            "- Trường hợp kết thúc trước FY được xác định ở cấp số tiền là không có chi phí trong FY: nguồn FY2027 `2025.11!L1257/P1257/Q1257` kết thúc tại `202512`; tệp tham khảo CC `1412000081`, tài khoản `5006016247`, dòng 45 bằng 0 cho mọi tháng FY2027. Theo yêu cầu chuẩn, kết quả mới phải biểu diễn giai đoạn sau kết thúc bằng ô trống, không phải số 0.",
+            "- `TRUE_AMOUNT_MISMATCH` vẫn chưa được giải thích sau cả hai phép tính theo chính sách và cần rà soát cấp dòng/công thức trong các tệp CSV bằng chứng.",
+            "- Có thể xác định một số chênh lệch thực lớn là khác biệt giữa ảnh chụp nguồn và tài sản tương lai nhập tay, không chỉ là số học; không được chấp nhận hoặc ghi đè nếu chưa có nguồn gốc cấp dòng.",
             "",
-            "## Current-code assessment",
+            "## Đánh giá code hiện tại",
             "",
-            "- `src/parsers/fixed_assets.py` still has fallback FY/FX values, hard-coded category/account mapping, positive-only filtering, Q-to-L fallback, and deletes all fixed-assets history on import.",
-            "- `src/engine/hub_builder.py::_load_fixed_asset_source_order_rows()` sums asset USD by category and then emits one `ROUND(sum*$B$2,0)`. This is not the canonical per-asset rounding contract and the monthly evidence file quantifies the affected rows.",
-            "- The source-order writer correctly relocates dynamic fixed-assets rows when provided, but it cannot repair upstream calculation/provenance loss.",
+            "- `src/parsers/fixed_assets.py` vẫn có giá trị FY/tỷ giá dự phòng, ánh xạ nhóm/tài khoản gắn cứng, lọc chỉ lấy số dương, dự phòng Q sang L và xóa toàn bộ lịch sử tài sản cố định khi nhập.",
+            "- `src/engine/hub_builder.py::_load_fixed_asset_source_order_rows()` cộng USD tài sản theo nhóm rồi xuất một công thức `ROUND(sum*$B$2,0)`. Cách này không tuân thủ quy tắc làm tròn theo từng tài sản; tệp bằng chứng theo tháng đã định lượng các dòng bị ảnh hưởng.",
+            "- Bộ ghi theo thứ tự nguồn đặt lại đúng vị trí các dòng tài sản cố định động khi được cung cấp, nhưng không thể sửa việc mất dữ liệu hoặc nguồn gốc ở thượng nguồn.",
             "",
-            "## Evidence artifacts",
+            "## Các tệp bằng chứng",
             "",
             f"- `docs/audits/fixed_assets_asset_ledger_{AUDIT_DATE}.csv`",
             f"- `docs/audits/fixed_assets_reference_rows_{AUDIT_DATE}.csv`",
             f"- `docs/audits/fixed_assets_monthly_comparison_{AUDIT_DATE}.csv`",
             f"- `docs/audits/fixed_assets_cross_trace_summary_{AUDIT_DATE}.json`",
             "",
-            "## Status",
+            "## Trạng thái",
             "",
-            "Keep `FA-OPEN` as `OPEN_AUDIT`. Fixing rounding order is evidence-backed; resolving the remaining source-snapshot/manual rows requires a decision matrix and provenance classification before changing accounting logic.",
+            "Giữ `FA-OPEN` ở trạng thái `OPEN_AUDIT`. Việc sửa thứ tự làm tròn đã có bằng chứng; xử lý các dòng ảnh chụp nguồn/nhập tay còn lại cần ma trận quyết định và phân loại nguồn gốc trước khi thay đổi logic kế toán.",
         ]
     )
     return "\n".join(lines) + "\n"
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
+    parser = VietnameseArgumentParser()
     parser.add_argument("--output-dir", type=Path, default=ROOT / "docs" / "audits")
     args = parser.parse_args()
     output_dir = args.output_dir.resolve()
@@ -802,11 +808,11 @@ def main() -> int:
     all_comparisons: list[dict[str, Any]] = []
     summary: dict[str, Any] = {}
     for config in CONFIGS:
-        print(f"Loading {config.name} source ledger", flush=True)
+        print(f"Đang nạp sổ nguồn {config.name}", flush=True)
         ledger, source_summary = load_asset_ledger(config)
-        print(f"Scanning {config.name} reference outputs", flush=True)
+        print(f"Đang quét tệp kết quả tham khảo {config.name}", flush=True)
         reference_rows, reference_summary = load_reference_rows(config)
-        print(f"Scanning {config.name} raw truth folder", flush=True)
+        print(f"Đang quét thư mục dữ liệu đúng {config.name}", flush=True)
         raw_summary = scan_raw_truth(config)
         expected, current_writer, alternative = build_expected(config, ledger, reference_rows)
         classify_reference_rows(config, reference_rows, expected)
@@ -848,7 +854,7 @@ def main() -> int:
     report_path = output_dir / f"fixed_assets_cross_trace_audit_{AUDIT_DATE}.md"
     report_path.write_text(report_markdown(summary, all_comparisons, all_reference_rows, all_ledger), encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
-    print(f"WROTE {report_path}")
+    print(f"ĐÃ GHI {report_path}")
     return 0
 
 

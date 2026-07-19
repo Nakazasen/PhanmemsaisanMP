@@ -61,7 +61,7 @@ def _evaluate_simple_formula(expr: str) -> float | None:
             return _FORMULA_OPERATORS[type(inner.op)](_eval(inner.operand))
         if isinstance(inner, ast.BinOp) and type(inner.op) in _FORMULA_OPERATORS:
             return _FORMULA_OPERATORS[type(inner.op)](_eval(inner.left), _eval(inner.right))
-        raise ValueError("unsupported formula")
+        raise ValueError("công thức không được hỗ trợ")
 
     try:
         return float(_eval(node))

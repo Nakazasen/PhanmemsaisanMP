@@ -7,15 +7,37 @@ REQUIRED_RAW_CSVS = (
     'headcount_manual.csv',
     'bus_headcount_manual.csv',
 )
+EXCLUDED_DIRECTORY_NAMES = {
+    '__pycache__',
+    '.pytest_cache',
+    'RUN_HISTORY',
+}
+EXCLUDED_SUFFIXES = {
+    '.db',
+    '.sqlite',
+    '.sqlite3',
+    '.db-shm',
+    '.db-wal',
+    '.log',
+    '.tmp',
+    '.bak',
+}
 
 
-def data_tree_without_excel_locks(source, target):
+def _is_seed_data(path, source_path):
+    relative = path.relative_to(source_path)
+    if any(part in EXCLUDED_DIRECTORY_NAMES or part.startswith('OUTPUT_FY') for part in relative.parts):
+        return False
+    if path.name.startswith('~$') or path.suffix.casefold() in EXCLUDED_SUFFIXES:
+        return False
+    return True
+
+
+def data_tree_without_runtime_state(source, target):
     rows = []
     source_path = Path(source)
     for path in source_path.rglob("*"):
-        if not path.is_file():
-            continue
-        if path.name.startswith("~$"):
+        if not path.is_file() or not _is_seed_data(path, source_path):
             continue
         if source_path.name == 'raw' and path.name in REQUIRED_RAW_CSVS:
             continue
@@ -35,14 +57,15 @@ def required_raw_csvs():
 
 datas = [
     ('assets', 'assets'),
-    ('docs\\MP2027', 'docs\\MP2027'),
+    ('release.json', '.'),
+    *data_tree_without_runtime_state('docs\\MP2027', 'docs\\MP2027'),
     *required_raw_csvs(),
-    *data_tree_without_excel_locks('raw', 'raw'),
+    *data_tree_without_runtime_state('raw', 'raw'),
 ]
 
 
 a = Analysis(
-    ['src\\universal_app.py'],
+    ['packaging\\mp2027_portable_entry.py'],
     pathex=[],
     binaries=[],
     datas=datas,
@@ -51,12 +74,23 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
+        'PyQt5',
+        'PyQt6',
+        'PySide2',
+        'PySide6',
+        'aiohttp',
+        'boto3',
+        'botocore',
         'cv2',
         'llvmlite',
+        'matplotlib',
         'numba',
         'onnxruntime',
         'pyarrow',
         'scipy',
+        'shiboken2',
+        'shiboken6',
+        'sqlalchemy',
         'tokenizers',
         'torch',
         'torchvision',
@@ -76,7 +110,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
@@ -91,7 +125,7 @@ coll = COLLECT(
     a.binaries,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     name='MP2027_Portable',
 )

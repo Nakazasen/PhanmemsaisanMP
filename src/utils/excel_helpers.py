@@ -43,7 +43,7 @@ def find_hub_sheet_name(workbook: openpyxl.Workbook) -> str:
         if candidate in workbook.sheetnames: return candidate
     for sheet_name in workbook.sheetnames:
         if '内訳' in sheet_name and '4' in sheet_name and '3' in sheet_name: return sheet_name
-    raise ValueError('Hub sheet 内訳ﾘｽﾄ(4～3月) not found in FORM.xlsx')
+    raise ValueError('Không tìm thấy sheet chi tiết 内訳ﾘｽﾄ(4～3月) trong FORM.xlsx')
 
 
 FORM_TEMPLATE_INPUT_ROWS = (8, 9, 16, 17, 24, 25)
@@ -127,7 +127,7 @@ def validate_exchange_rate(value: Any) -> float:
 def read_exchange_rate_from_form(form_path: str) -> float:
     """Read the USD/VND rate from the selected FORM hub-sheet B2 cell."""
     path = Path(form_path)
-    if not path.exists(): raise FileNotFoundError(f'FORM.xlsx not found at {path}')
+    if not path.exists(): raise FileNotFoundError(f'Không tìm thấy FORM.xlsx tại {path}')
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     try:
         sheet_name = find_hub_sheet_name(wb)
@@ -140,7 +140,7 @@ def write_exchange_rate_to_form(form_path: str, exchange_rate: Any) -> float:
     rate = validate_exchange_rate(exchange_rate)
     path = Path(form_path)
     if not path.exists():
-        raise FileNotFoundError(f'FORM.xlsx not found at {path}')
+        raise FileNotFoundError(f'Không tìm thấy FORM.xlsx tại {path}')
     wb = openpyxl.load_workbook(path)
     try:
         sheet_name = find_hub_sheet_name(wb)

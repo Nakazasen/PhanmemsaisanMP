@@ -109,13 +109,13 @@ def test_writer_requires_explicit_output_path(tmp_path):
     try:
         write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, "", cost_center=CC)
     except ValueError as exc:
-        assert "output_path is required" in str(exc)
+        assert "Bắt buộc phải có đường dẫn tệp kết quả" in str(exc)
     else:
-        raise AssertionError("Expected output_path validation failure")
+        raise AssertionError("Phải từ chối khi thiếu đường dẫn tệp kết quả")
 
     try:
         write_facility_file_order_preview_workbook(TEMPLATE, FACILITY_SOURCE, TEMPLATE, cost_center=CC)
     except ValueError as exc:
-        assert "must not overwrite the template" in str(exc)
+        assert "không được ghi đè lên tệp mẫu" in str(exc)
     else:
-        raise AssertionError("Expected template overwrite validation failure")
+        raise AssertionError("Phải từ chối ghi đè lên tệp mẫu")

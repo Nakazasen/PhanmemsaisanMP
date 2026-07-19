@@ -1,45 +1,115 @@
-﻿"""Compare generated MP2027 output against the primary trusted reference."""
+"""So sánh kết quả MP2027 đã tạo với tệp tham chiếu chính đáng tin cậy."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import re
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
 from openpyxl import Workbook, load_workbook
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.utils.cli import VietnameseArgumentParser
+
 DETAIL_SHEET = "内訳ﾘｽﾄ(4～3月)"
+SUMMARY_LABELS = {
+    "generated_path": "Đường dẫn tệp kết quả",
+    "reference_path": "Đường dẫn tệp tham chiếu",
+    "compare_mode": "Chế độ so sánh",
+    "total_cells_compared": "Tổng số ô đã so sánh",
+    "exact_matches": "Số ô khớp chính xác",
+    "diff_total": "Tổng số khác biệt",
+    "differences": "Số khác biệt",
+    "diff_by_row": "Số khác biệt theo dòng",
+    "missing_sheets": "Sheet bị thiếu",
+    "missing_rows_or_cells": "Dòng hoặc ô bị thiếu",
+    "fixed_rows_compared": "Số dòng cố định đã so sánh",
+    "fixed_row_differences": "Khác biệt ở dòng cố định",
+    "identity_rows_checked": "Số dòng nhận dạng đã kiểm tra",
+    "identity_rows_matched": "Số dòng nhận dạng đã khớp",
+    "identity_rows_ambiguous": "Số dòng nhận dạng còn mơ hồ",
+    "identity_rows_not_found": "Số dòng nhận dạng không tìm thấy",
+    "identity_differences": "Khác biệt ở dòng nhận dạng",
+    "strict_diff_total": "Tổng khác biệt khi so sánh chính xác",
+    "strict_identity_diff_total": "Khác biệt nhận dạng khi so sánh chính xác",
+    "layout_fixed_rows": "Danh sách dòng bố cục cố định",
+    "layout_fixed_rows_total": "Tổng số dòng bố cục cố định",
+    "new_identity_rows_from_42N1G": "Dòng nhận dạng mới từ 42N1G",
+    "new_identity_rows_total": "Tổng số dòng nhận dạng mới",
+    "new_identity_rows_matched": "Số dòng nhận dạng mới đã khớp",
+    "new_identity_rows_ambiguous": "Số dòng nhận dạng mới còn mơ hồ",
+    "new_identity_rows_not_found": "Số dòng nhận dạng mới không tìm thấy",
+    "existing_identity_rows": "Danh sách dòng nhận dạng hiện có",
+    "existing_identity_rows_total": "Tổng số dòng nhận dạng hiện có",
+    "existing_identity_rows_matched": "Số dòng nhận dạng hiện có đã khớp",
+    "existing_identity_rows_ambiguous": "Số dòng nhận dạng hiện có còn mơ hồ",
+    "existing_identity_rows_not_found": "Số dòng nhận dạng hiện có không tìm thấy",
+    "false_fixed_row_diffs_removed": "Khác biệt dòng cố định giả đã loại bỏ",
+    "real_identity_strict_diffs_remaining": "Khác biệt nhận dạng thực còn lại",
+}
+DISPLAY_VALUES = {
+    "strict_exact": "so sánh chính xác",
+    "fixed_row": "dòng cố định",
+    "identity": "nhận dạng",
+    "DIFF": "KHÁC",
+    "High": "Cao",
+    "Medium": "Trung bình",
+    "Low": "Thấp",
+}
+
+
+def _display_value(value: Any) -> Any:
+    """Đổi mã nội bộ sang nhãn tiếng Việt mà không thay contract JSON."""
+    if isinstance(value, dict):
+        return {key: _display_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_display_value(item) for item in value]
+    return DISPLAY_VALUES.get(value, value)
+
+
+def _display_summary(summary: dict[str, Any]) -> dict[str, Any]:
+    """Tạo bản tóm tắt tiếng Việt dành riêng cho terminal và Excel."""
+    return {
+        SUMMARY_LABELS.get(key, key): _display_value(value)
+        for key, value in summary.items()
+    }
+
+
 FIXED_ROW_RULES = {
 }
 LAYOUT_FIXED_ROWS = (3, 5, 9, 17, 25)
 NEW_IDENTITY_ROWS_FROM_42N1G = (38, 40, 42, 51, 59)
 EXISTING_IDENTITY_ROWS = (53, 54, 58, 66, 75, 97, 98, 137)
 REQUIREMENT_LOCK_NOTES = {
-    38: "42R0-G1: Fixed asset depreciation target F38:Q38; NEED_FORM_TEMPLATE_CHECK; compare to primary must be identity-aware.",
-    40: "42R0-F1/F2: Facility has six separate items; do not collapse or fixed-row compare by primary row number.",
-    42: "42R0-G2: Fixed asset interest target F42:Q42; NEED_FORM_TEMPLATE_CHECK; compare to primary must be identity-aware.",
-    51: "42R0-H1/H2: Administrative allocation is high priority; classify by business item/account, not same-row primary.",
-    59: "42R0-D1: Birthday accepted target F59:Q59 but row 63 conflict remains MD_INTERPRETATION_RISK.",
-    75: "42R0-E1/E2: System Cost is one formula row, not dead numbers.",
-    137: "42R0-C1/C2: NNN paperwork target F137:Q137, filter by Cost Center.",
+    38: "42R0-G1: Mục tiêu khấu hao tài sản cố định F38:Q38; NEED_FORM_TEMPLATE_CHECK; khi so với tệp chính phải căn chỉnh theo nhận dạng.",
+    40: "42R0-F1/F2: Facility có sáu hạng mục riêng; không gộp hoặc so theo cùng số dòng của tệp chính.",
+    42: "42R0-G2: Mục tiêu lãi tài sản cố định F42:Q42; NEED_FORM_TEMPLATE_CHECK; khi so với tệp chính phải căn chỉnh theo nhận dạng.",
+    51: "42R0-H1/H2: Phân bổ hành chính có mức ưu tiên cao; phân loại theo hạng mục nghiệp vụ/tài khoản, không theo cùng dòng của tệp chính.",
+    59: "42R0-D1: Mục tiêu sinh nhật F59:Q59 đã được chấp nhận nhưng xung đột dòng 63 vẫn là MD_INTERPRETATION_RISK.",
+    75: "42R0-E1/E2: Chi phí hệ thống là một dòng công thức, không phải số cố định.",
+    137: "42R0-C1/C2: Mục tiêu giấy tờ NNN F137:Q137, lọc theo mã bộ phận.",
 }
 IDENTITY_ROW_CANDIDATES = {row: label for row, label in {
-    38: "Fixed Assets depreciation",
-    40: "Building/facility/land interest",
-    42: "Fixed Assets interest",
-    51: "Cleaning fee / admin allocation",
-    59: "Birthday",
-    53: "Bus JP / Expat transport",
-    54: "Bus VN / Local transport",
-    58: "Recruitment health",
-    66: "Company trip",
-    75: "System Cost",
-    97: "Staff notebook",
-    98: "Worker notebook",
-    137: "NNN paperwork",
+    38: "Khấu hao tài sản cố định",
+    40: "Lãi nhà xưởng/cơ sở/đất",
+    42: "Lãi tài sản cố định",
+    51: "Phí vệ sinh / phân bổ hành chính",
+    59: "Sinh nhật",
+    53: "Xe buýt JP / đi lại người biệt phái",
+    54: "Xe buýt VN / đi lại nhân sự địa phương",
+    58: "Khám sức khỏe tuyển dụng",
+    66: "Du lịch công ty",
+    75: "Chi phí hệ thống",
+    97: "Sổ tay nhân viên",
+    98: "Sổ tay công nhân",
+    137: "Giấy tờ NNN",
 }.items()}
 COMPARE_COLUMNS = ("B", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S")
 STRICT_COMPARE_COLUMNS = ("F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R")
@@ -113,19 +183,19 @@ def _severity(column: str, generated, reference, match: bool, mode: str = "fixed
         return "None", ""
     if mode == "identity":
         if column in MEDIUM_COLUMNS:
-            return "Medium", "Aligned identity row F:Q formula/value differs"
-        return "Medium", "Aligned identity row differs"
+            return "Medium", "Công thức/giá trị F:Q của dòng nhận dạng đã căn chỉnh khác nhau"
+        return "Medium", "Dòng nhận dạng đã căn chỉnh khác nhau"
     if column == "B":
-        return "High", "B account differs"
+        return "High", "Tài khoản tại cột B khác nhau"
     if column == "R":
-        return "High", "R total formula/value differs or is missing"
+        return "High", "Công thức/giá trị tổng tại cột R khác nhau hoặc bị thiếu"
     if column == "S":
         if generated in (None, ""):
-            return "High", "S description is unexpectedly blank"
-        return "High", "S description differs"
+            return "High", "Mô tả tại cột S bị trống ngoài dự kiến"
+        return "High", "Mô tả tại cột S khác nhau"
     if column in MEDIUM_COLUMNS:
-        return "Medium", "F:Q formula/value differs"
-    return "Low", "Formatting is not compared in this first tool"
+        return "Medium", "Công thức/giá trị F:Q khác nhau"
+    return "Low", "Công cụ này chưa so sánh định dạng"
 
 
 def _token_hits(text: Any) -> set[str]:
@@ -223,15 +293,15 @@ def _find_identity_match(gen_ws, ref_ws, generated_row: int) -> IdentityAlignmen
         preferred_identity = transport_preferred or notebook_preferred or bool(desired_tokens & ref_tokens)
         if same_account and normalize_text(gen_desc) == normalize_text(ref_desc):
             score = 5
-            note = "same account and description"
+            note = "cùng tài khoản và mô tả"
             candidate = (score, row, ref_account, ref_desc, "same_account", "High", True, note, "account,description")
         elif same_account:
             score = 4 if preferred_identity else 3
-            note = "same account with preferred identity token" if preferred_identity else "same account"
+            note = "cùng tài khoản và có token nhận dạng ưu tiên" if preferred_identity else "cùng tài khoản"
             candidate = (score, row, ref_account, ref_desc, "same_account", "High", True, note, "account,tokens" )
         elif token_overlap:
             score = 2.5 if preferred_identity else 2
-            note = "strong description token overlap with preferred identity token" if preferred_identity else "strong description token overlap"
+            note = "token mô tả trùng mạnh và có token nhận dạng ưu tiên" if preferred_identity else "token mô tả trùng mạnh"
             candidate = (score, row, ref_account, ref_desc, "token_overlap", "Medium", True, note, "tokens")
         else:
             continue
@@ -250,15 +320,15 @@ def _find_identity_match(gen_ws, ref_ws, generated_row: int) -> IdentityAlignmen
         if second_best is not None and best[0] - second_best[0] < 0.5:
             disambiguated = _disambiguate_close_candidates(gen_tokens, [best, second_best])
             if disambiguated is None:
-                return IdentityAlignment(generated_row, gen_account, gen_desc, None, None, None, "ambiguous", "Low", False, "multiple close identity candidates; no forced match", best[0], "", candidate_rows, row_group, req_note, "ambiguous_identity")
+                return IdentityAlignment(generated_row, gen_account, gen_desc, None, None, None, "ambiguous", "Low", False, "có nhiều ứng viên nhận dạng gần nhau; không ép ghép", best[0], "", candidate_rows, row_group, req_note, "ambiguous_identity")
             best = disambiguated
             evidence_field = "building_land_tokens" if gen_tokens & {"building", "facility"} else "tool_jig_tokens"
-            evidence_note = "disambiguated by building/land token evidence" if evidence_field == "building_land_tokens" else "disambiguated by tool/jig token evidence"
+            evidence_note = "phân biệt dựa trên token nhà xưởng/đất" if evidence_field == "building_land_tokens" else "phân biệt dựa trên token công cụ/đồ gá"
             score, row, ref_account, ref_desc, method, confidence, same, _note, matched_fields = best
             return IdentityAlignment(generated_row, gen_account, gen_desc, row, ref_account, ref_desc, method, "High", same, evidence_note, score + 0.25, f"{matched_fields},{evidence_field}", candidate_rows, row_group, req_note, "")
         score, row, ref_account, ref_desc, method, confidence, same, note, matched_fields = best
         return IdentityAlignment(generated_row, gen_account, gen_desc, row, ref_account, ref_desc, method, confidence, same, note, score, matched_fields, candidate_rows, row_group, req_note, "")
-    return IdentityAlignment(generated_row, gen_account, gen_desc, None, None, None, "not_found", "Low", False, "no same account or strong token overlap found", 0.0, "", "", row_group, req_note, "identity_not_found")
+    return IdentityAlignment(generated_row, gen_account, gen_desc, None, None, None, "not_found", "Low", False, "không tìm thấy tài khoản giống nhau hoặc token trùng đủ mạnh", 0.0, "", "", row_group, req_note, "identity_not_found")
 
 
 def _compare_row(gen_ws, ref_ws, generated_row: int, reference_row: int, mode: str) -> tuple[list[CellDiff], dict[str, Any]]:
@@ -286,15 +356,15 @@ def _compare_row(gen_ws, ref_ws, generated_row: int, reference_row: int, mode: s
 
 def _compare_workbooks_strict_exact(generated_path: Path, reference_path: Path, out_dir: Path) -> dict[str, Any]:
     if not generated_path.is_file():
-        raise FileNotFoundError(f"Generated workbook not found: {generated_path}")
+        raise FileNotFoundError(f"Không tìm thấy workbook kết quả: {generated_path}")
     if not reference_path.is_file():
-        raise FileNotFoundError(f"Reference workbook not found: {reference_path}")
+        raise FileNotFoundError(f"Không tìm thấy workbook tham chiếu: {reference_path}")
     out_dir.mkdir(parents=True, exist_ok=True)
     gen_wb = load_workbook(generated_path, data_only=False)
     ref_wb = load_workbook(reference_path, data_only=False)
     try:
         if DETAIL_SHEET not in gen_wb.sheetnames or DETAIL_SHEET not in ref_wb.sheetnames:
-            raise ValueError(f"Required sheet missing: {DETAIL_SHEET}")
+            raise ValueError(f"Thiếu sheet bắt buộc: {DETAIL_SHEET}")
         gen_ws = gen_wb[DETAIL_SHEET]
         ref_ws = ref_wb[DETAIL_SHEET]
         diffs: list[CellDiff] = []
@@ -394,7 +464,7 @@ def _compare_workbooks_strict_exact(generated_path: Path, reference_path: Path, 
             "existing_identity_rows_matched": sum(1 for a in existing_alignments if a.reference_matched_row is not None),
             "existing_identity_rows_ambiguous": sum(1 for a in existing_alignments if a.match_method == "ambiguous"),
             "existing_identity_rows_not_found": sum(1 for a in existing_alignments if a.match_method == "not_found"),
-            "false_fixed_row_diffs_removed": "identity rows are excluded from same-row strict comparison; count is baseline-dependent",
+            "false_fixed_row_diffs_removed": "các dòng nhận dạng được loại khỏi phép so sánh nghiêm ngặt cùng dòng; số lượng phụ thuộc đường cơ sở",
             "real_identity_strict_diffs_remaining": identity_differences,
         }
         xlsx_path = out_dir / "MP2027_primary_reference_compare.xlsx"
@@ -418,20 +488,20 @@ def compare_workbooks(generated_path: Path, reference_path: Path, out_dir: Path,
     if strict_exact:
         return _compare_workbooks_strict_exact(generated_path, reference_path, out_dir)
     if not generated_path.is_file():
-        raise FileNotFoundError(f"Generated workbook not found: {generated_path}")
+        raise FileNotFoundError(f"Không tìm thấy workbook kết quả: {generated_path}")
     if not reference_path.is_file():
-        raise FileNotFoundError(f"Reference workbook not found: {reference_path}")
+        raise FileNotFoundError(f"Không tìm thấy workbook tham chiếu: {reference_path}")
     out_dir.mkdir(parents=True, exist_ok=True)
     gen_wb = load_workbook(generated_path, data_only=False)
     ref_wb = load_workbook(reference_path, data_only=False)
     try:
         missing_sheets = []
         if DETAIL_SHEET not in gen_wb.sheetnames:
-            missing_sheets.append(f"generated:{DETAIL_SHEET}")
+            missing_sheets.append(f"kết_quả:{DETAIL_SHEET}")
         if DETAIL_SHEET not in ref_wb.sheetnames:
-            missing_sheets.append(f"reference:{DETAIL_SHEET}")
+            missing_sheets.append(f"tham_chiếu:{DETAIL_SHEET}")
         if missing_sheets:
-            raise ValueError("Required sheet missing: " + ", ".join(missing_sheets))
+            raise ValueError("Thiếu sheet bắt buộc: " + ", ".join(missing_sheets))
         gen_ws = gen_wb[DETAIL_SHEET]
         ref_ws = ref_wb[DETAIL_SHEET]
         diffs: list[CellDiff] = []
@@ -501,44 +571,52 @@ def compare_workbooks(generated_path: Path, reference_path: Path, out_dir: Path,
 def _write_excel_report(path: Path, summary: dict[str, Any], diffs: list[CellDiff], row_summary: list[dict[str, Any]], alignments: list[IdentityAlignment]) -> None:
     wb = Workbook()
     ws = wb.active
-    ws.title = "Summary"
-    for key, value in summary.items():
+    ws.title = "Tóm_tắt"
+    for key, value in _display_summary(summary).items():
         ws.append([key, json.dumps(value, ensure_ascii=False) if isinstance(value, (list, dict)) else value])
-    ws = wb.create_sheet("Important_Row_Diff")
-    ws.append(["Row", "Reference row", "Mode", "Column", "Generated value/formula", "Reference value/formula", "Match?", "Severity", "Note"])
+    ws = wb.create_sheet("Khác_biệt_quan_trọng")
+    ws.append(["Dòng", "Dòng tham chiếu", "Chế độ", "Cột", "Giá trị/công thức kết quả", "Giá trị/công thức tham chiếu", "Khớp?", "Mức độ", "Ghi chú"])
     for diff in diffs:
-        ws.append([diff.row, diff.reference_row, diff.compare_mode, diff.column, diff.generated, diff.reference, diff.match, diff.severity, diff.note])
-    ws = wb.create_sheet("Row_Summary")
-    ws.append(["Row", "Reference row", "Mode", "Description generated", "Description reference", "Differences count", "Status"])
+        ws.append([diff.row, diff.reference_row, _display_value(diff.compare_mode), diff.column, diff.generated, diff.reference, diff.match, _display_value(diff.severity), diff.note])
+    ws = wb.create_sheet("Tóm_tắt_theo_dòng")
+    ws.append(["Dòng", "Dòng tham chiếu", "Chế độ", "Mô tả kết quả", "Mô tả tham chiếu", "Số khác biệt", "Trạng thái"])
     for row in row_summary:
-        ws.append([row["row"], row["reference_row"], row["compare_mode"], row["description_generated"], row["description_reference"], row["differences_count"], row["status"]])
-    ws = wb.create_sheet("Identity_Row_Alignment")
-    ws.append(["Generated row", "Row group", "Generated account", "Generated description", "Reference matched row", "Reference account", "Reference description", "Match method", "Match score", "Matched fields", "Confidence", "Same business item?", "Classification", "Candidate rows", "Requirement note", "Note"])
+        ws.append([row["row"], row["reference_row"], _display_value(row["compare_mode"]), row["description_generated"], row["description_reference"], row["differences_count"], _display_value(row["status"])])
+    ws = wb.create_sheet("Căn_chỉnh_nhận_dạng")
+    ws.append(["Dòng kết quả", "Nhóm dòng", "Tài khoản kết quả", "Mô tả kết quả", "Dòng tham chiếu khớp", "Tài khoản tham chiếu", "Mô tả tham chiếu", "Phương pháp khớp", "Điểm khớp", "Trường đã khớp", "Độ tin cậy", "Cùng hạng mục nghiệp vụ?", "Phân loại", "Các dòng ứng viên", "Ghi chú yêu cầu", "Ghi chú"])
     for alignment in alignments:
-        ws.append([alignment.generated_row, alignment.row_group, alignment.generated_account, alignment.generated_description, alignment.reference_matched_row, alignment.reference_account, alignment.reference_description, alignment.match_method, alignment.match_score, alignment.matched_fields, alignment.confidence, alignment.same_business_item, alignment.classification, alignment.candidate_rows, alignment.requirement_note, alignment.note])
-    ws = wb.create_sheet("Guidance")
+        ws.append([alignment.generated_row, alignment.row_group, alignment.generated_account, alignment.generated_description, alignment.reference_matched_row, alignment.reference_account, alignment.reference_description, _display_value(alignment.match_method), alignment.match_score, alignment.matched_fields, _display_value(alignment.confidence), alignment.same_business_item, _display_value(alignment.classification), alignment.candidate_rows, alignment.requirement_note, alignment.note])
+    ws = wb.create_sheet("Hướng_dẫn")
     for item in [
-        "Primary reference is expected output baseline.",
-        "Fixed-row differences apply only to rows locked by requirement/user/FORM.",
-        "Identity rows are aligned by account or strong description tokens before value comparison.",
-        "Differences are not automatically bugs; user must confirm business meaning.",
-        "Secondary references are edge-case only.",
+        "Tệp tham chiếu chính là đường cơ sở kết quả mong đợi.",
+        "Khác biệt theo dòng cố định chỉ áp dụng cho các dòng đã được khóa bởi yêu cầu/người dùng/FORM.",
+        "Các dòng nhận dạng được căn chỉnh theo tài khoản hoặc token mô tả đủ mạnh trước khi so sánh giá trị.",
+        "Khác biệt không tự động được coi là lỗi; người dùng phải xác nhận ý nghĩa nghiệp vụ.",
+        "Tệp tham chiếu phụ chỉ dùng cho trường hợp biên.",
     ]:
         ws.append([item])
     wb.save(path)
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Compare MP2027 generated output with primary trusted reference.")
-    parser.add_argument("--generated", required=True, type=Path)
-    parser.add_argument("--reference", required=True, type=Path)
-    parser.add_argument("--out-dir", required=True, type=Path)
-    parser.add_argument("--strict-exact", action="store_true", help="Compare exact formulas/values without identity alignment or accepted caveats.")
+    parser = VietnameseArgumentParser(description="So sánh kết quả MP2027 đã tạo với tệp tham chiếu chính đáng tin cậy.")
+    parser.add_argument("--generated", required=True, type=Path, help="Đường dẫn workbook kết quả đã tạo")
+    parser.add_argument("--reference", required=True, type=Path, help="Đường dẫn workbook tham chiếu")
+    parser.add_argument("--out-dir", required=True, type=Path, help="Thư mục ghi báo cáo")
+    parser.add_argument(
+        "--strict-exact",
+        action="store_true",
+        help="So sánh chính xác công thức/giá trị, không áp dụng căn chỉnh nhận dạng hoặc ngoại lệ đã chấp nhận.",
+    )
     args = parser.parse_args(argv)
-    result = compare_workbooks(args.generated, args.reference, args.out_dir, strict_exact=args.strict_exact)
-    print(json.dumps(result["summary"], ensure_ascii=False, indent=2))
-    print(f"Excel report: {result['xlsx_path']}")
-    print(f"JSON report: {result['json_path']}")
+    try:
+        result = compare_workbooks(args.generated, args.reference, args.out_dir, strict_exact=args.strict_exact)
+    except Exception:  # pragma: no cover - ranh giới CLI
+        print("Lỗi: Không thể tạo báo cáo so sánh với tệp tham chiếu chính.", file=sys.stderr)
+        return 1
+    print(json.dumps(_display_summary(result["summary"]), ensure_ascii=False, indent=2))
+    print(f"Báo cáo Excel: {result['xlsx_path']}")
+    print(f"Báo cáo JSON: {result['json_path']}")
     return 0
 
 

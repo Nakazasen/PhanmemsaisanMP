@@ -150,7 +150,7 @@ def resolve_reference_path(
     if primary_reference_path:
         path = Path(primary_reference_path)
         if not path.exists():
-            raise FileNotFoundError(f"Primary reference workbook not found: {path}")
+            raise FileNotFoundError(f"Không tìm thấy tệp Excel tham khảo chính: {path}")
         return path
     target_text = norm(target_cc)
     map_path = Path(reference_map_path)
@@ -170,9 +170,9 @@ def resolve_reference_path(
                             else Path.cwd() / candidate
                         )
                     if not candidate.exists():
-                        raise FileNotFoundError(f"Mapped primary reference workbook not found: {candidate}")
+                        raise FileNotFoundError(f"Không tìm thấy tệp Excel tham khảo chính trong ánh xạ: {candidate}")
                     return candidate
-    raise ValueError("MP Saisan complete v1 requires a primary reference path/map for reference-assisted fill.")
+    raise ValueError("Chế độ xuất MP Saisan complete v1 cần đường dẫn hoặc ánh xạ đến tệp tham khảo chính để hỗ trợ điền dữ liệu.")
 
 
 def _append_secondary_skeleton_deduped(

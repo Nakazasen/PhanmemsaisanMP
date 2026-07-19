@@ -81,7 +81,7 @@ def parse_manual_special_costs(conn: sqlite3.Connection, source_dir: str | None 
                 "skipped": 0,
                 "errors": 1,
                 "template_path": template_path,
-                "error_message": f"Missing required columns: {', '.join(missing_cols)}",
+                "error_message": f"Thiếu các cột bắt buộc: {', '.join(missing_cols)}",
             }
 
         for row in reader:

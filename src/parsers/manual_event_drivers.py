@@ -219,20 +219,20 @@ def _target_periods_from_rule(
 ) -> tuple[list[str], bool, str, str | None]:
     posting_rule, posting_rule_ok = _merged_value(row, "posting_rule", "target_month_rule")
     if not posting_rule_ok:
-        return [], False, "", "Conflicting posting_rule/target_month_rule values"
+        return [], False, "", "Giá trị posting_rule và target_month_rule bị mâu thuẫn"
     if not _is_next_month_rule(posting_rule):
         period_text, period_ok = _merged_value(row, "period", "target_month")
         if not period_ok:
-            return [], False, "", "Conflicting period/target_month values"
+            return [], False, "", "Giá trị period và target_month bị mâu thuẫn"
         target_periods, repeat_all_months = _target_periods(period_text, fy_months, valid_periods)
         return target_periods, repeat_all_months, "", None
 
     source_text = str(row.get("source_month") or "").strip()
     shifted_period = _next_calendar_month(source_text)
     if shifted_period is None:
-        return [], False, "", "posting_rule next_month requires a valid source_month"
+        return [], False, "", "Quy tắc chuyển sang tháng kế tiếp yêu cầu source_month hợp lệ"
     if shifted_period not in valid_periods:
-        return [], False, "", f"next month from source_month {source_text} is outside FY months"
+        return [], False, "", f"Tháng kế tiếp của source_month {source_text} nằm ngoài các kỳ của năm tài chính"
     source_period = _normalize_period(source_text, valid_periods)
     if source_period is None:
         source_period = source_text
@@ -414,7 +414,7 @@ def parse_manual_event_drivers(conn: sqlite3.Connection, source_dir: str | None 
                 "skipped": 0,
                 "errors": 1,
                 "template_path": template_path,
-                "error_message": f"Missing required columns: {', '.join(missing_cols)}",
+                "error_message": f"Thiếu các cột bắt buộc: {', '.join(missing_cols)}",
             }
 
         for row in reader:

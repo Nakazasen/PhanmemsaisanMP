@@ -34,7 +34,7 @@ def test_facility_is_file_order_group_with_six_costs():
 
     assert spec.output_mode == OutputMode.FILE_ORDER_GROUP
     assert spec.order_index == 1
-    assert "6 chi phí" in spec.cost_items
+    assert "6 chi phí cơ sở vật chất" in spec.cost_items
     assert spec.costs_expected == 7
     assert requires_blank_row_after_group(spec)
     assert is_file_order_mode(spec)
@@ -45,7 +45,7 @@ def test_system_cost_is_file_order_single_row():
     spec = get_group_spec("system_cost")
 
     assert spec.output_mode == OutputMode.FILE_ORDER_SINGLE_ROW
-    assert spec.cost_items == ("one combined row",)
+    assert spec.cost_items == ("Một dòng chi phí tổng hợp",)
     assert spec.costs_expected == 1
     assert is_file_order_mode(spec)
 
@@ -54,33 +54,33 @@ def test_fixed_assets_is_source_order_group_without_fixed_rows():
     spec = get_group_spec("fixed_assets")
 
     assert spec.output_mode == OutputMode.FILE_ORDER_GROUP
-    assert spec.cost_items == ("fixed_asset_depreciation", "fixed_asset_interest")
+    assert spec.cost_items == ("Khấu hao tài sản cố định", "Lãi vay tài sản cố định")
     assert spec.fixed_rows == ()
     assert not is_fixed_row_compatible(spec)
     assert is_file_order_mode(spec)
-    assert "legacy FORM rows 38/42" in spec.notes
+    assert "các dòng FORM cũ 38/42" in spec.notes
 
 
 def test_birthday_is_source_order_row_without_fixed_rows():
     spec = get_group_spec("birthday")
 
     assert spec.output_mode == OutputMode.FILE_ORDER_SINGLE_ROW
-    assert spec.cost_items == ("birthday",)
+    assert spec.cost_items == ("Chi phí sinh nhật",)
     assert spec.fixed_rows == ()
     assert not is_fixed_row_compatible(spec)
     assert is_file_order_mode(spec)
-    assert "legacy FORM rows 59/63" in spec.notes
+    assert "các dòng FORM cũ 59/63" in spec.notes
 
 
 def test_nnn_is_source_order_row_without_fixed_rows():
     spec = get_group_spec("nnn_paperwork")
 
     assert spec.output_mode == OutputMode.FILE_ORDER_SINGLE_ROW
-    assert spec.cost_items == ("nnn_paperwork",)
+    assert spec.cost_items == ("Hồ sơ NNN",)
     assert spec.fixed_rows == ()
     assert not is_fixed_row_compatible(spec)
     assert is_file_order_mode(spec)
-    assert "legacy FORM row 137" in spec.notes
+    assert "dòng FORM cũ 137" in spec.notes
 
 
 def test_all_default_groups_have_blank_row_after_group():

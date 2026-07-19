@@ -16,9 +16,9 @@ def _validate_fiscal_year(fiscal_year: int) -> int:
     try:
         year = int(fiscal_year)
     except (TypeError, ValueError) as exc:
-        raise ValueError("fiscal_year must be an integer") from exc
+        raise ValueError("Năm tài chính phải là số nguyên") from exc
     if year < 1900:
-        raise ValueError("fiscal_year must be >= 1900")
+        raise ValueError("Năm tài chính phải lớn hơn hoặc bằng 1900")
     return year
 
 
@@ -35,9 +35,9 @@ def fiscal_period_for_month(fiscal_year: int, month: int) -> str:
     try:
         calendar_month = int(month)
     except (TypeError, ValueError) as exc:
-        raise ValueError("month must be an integer") from exc
+        raise ValueError("Tháng phải là số nguyên") from exc
     if calendar_month < 1 or calendar_month > 12:
-        raise ValueError("month must be in 1..12")
+        raise ValueError("Tháng phải nằm trong khoảng từ 1 đến 12")
     calendar_year = year - 1 if calendar_month >= start else year
     return f"{calendar_year}{calendar_month:02d}"
 

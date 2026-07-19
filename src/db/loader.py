@@ -458,13 +458,65 @@ def _select_allocation_rules_sheet(sheet_names: list[str], fiscal_year: int) -> 
     return sheet_names[0]
 
 
+def _merge_verified_content_rules(
+    conn: sqlite3.Connection,
+    content_rules: list[dict] | None,
+) -> int:
+    """Insert verified data-only rules without overriding workbook identities."""
+    if not content_rules:
+        return 0
+    from src.services.content_packs import CONTENT_SCHEMA, validate_rules
+
+    rules = validate_rules({"schema": CONTENT_SCHEMA, "rules": content_rules})
+    existing = {
+        (str(row[0]).strip().casefold(), str(row[1]).strip().casefold())
+        for row in conn.execute("SELECT source_dept, item_name FROM map_allocation_rules")
+    }
+    conflicts = [
+        f"{rule['source_dept']}/{rule['item_name']}"
+        for rule in rules
+        if (str(rule["source_dept"]).strip().casefold(), str(rule["item_name"]).strip().casefold()) in existing
+    ]
+    if conflicts:
+        raise ValueError(
+            "Quy tắc content pack trùng với workbook; không quy tắc nào được ghi: "
+            + ", ".join(conflicts)
+        )
+    conn.executemany(
+        """
+        INSERT INTO map_allocation_rules
+        (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
+         posting_month, unit_price, unit, driver_type, driver_raw)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (
+                str(rule["source_dept"]).strip(),
+                str(rule["item_name"]).strip(),
+                rule.get("account_name"),
+                rule.get("mfg_account"),
+                rule.get("ga_account"),
+                rule.get("sales_account"),
+                rule.get("posting_month"),
+                float(rule["unit_price"]),
+                rule.get("unit"),
+                rule["driver_type"],
+                rule.get("driver_raw"),
+            )
+            for rule in rules
+        ],
+    )
+    return len(rules)
+
+
 def load_allocation_rules(
     conn: sqlite3.Connection,
     alloc_path: str = None,
     search_dir: str | None = None,
     fiscal_year: int = 2027,
+    content_rules: list[dict] | None = None,
 ) -> int:
-    """Load allocation rules from FY2027配賦額一覧."""
+    """Load workbook rules and append already verified content-pack rules."""
     path = alloc_path or ALLOC_PATH
     if fiscal_year != 2027 and not alloc_path:
         path = os.path.join(search_dir or BASE_DIR, f"FY{fiscal_year}配賦額一覧.xlsx")
@@ -472,23 +524,25 @@ def load_allocation_rules(
         discovered = find_allocation_rules_file(search_dir=search_dir, fiscal_year=fiscal_year)
         if discovered:
             path = discovered
-    if not os.path.exists(path):
-        print(f"Cảnh báo: không tìm thấy tệp quy tắc phân bổ tại {path}")
-        return 0
-
-    print(f"Đang đọc quy tắc phân bổ từ: {os.path.basename(path)}")
-    xl = pd.ExcelFile(path, engine='openpyxl')
-    target_sheet = _select_allocation_rules_sheet(xl.sheet_names, fiscal_year)
-    if f"FY{fiscal_year}" not in target_sheet.upper():
-        raise ValueError(
-            f"File quy tắc {path} không có sheet FY{fiscal_year}; không được dùng sheet của năm khác."
-        )
-    print(f"Đang đọc quy tắc phân bổ từ trang tính: {target_sheet}")
-    df = pd.read_excel(path, sheet_name=target_sheet, engine='openpyxl')
+    if not path or not os.path.exists(path):
+        if not content_rules:
+            print(f"Cảnh báo: không tìm thấy tệp quy tắc phân bổ tại {path}")
+            return 0
+        print("Không có workbook quy tắc; đang nạp content pack đã xác thực.")
+        df = pd.DataFrame()
+    else:
+        print(f"Đang đọc quy tắc phân bổ từ: {os.path.basename(path)}")
+        xl = pd.ExcelFile(path, engine='openpyxl')
+        target_sheet = _select_allocation_rules_sheet(xl.sheet_names, fiscal_year)
+        if f"FY{fiscal_year}" not in target_sheet.upper():
+            raise ValueError(
+                f"File quy tắc {path} không có sheet FY{fiscal_year}; không được dùng sheet của năm khác."
+            )
+        print(f"Đang đọc quy tắc phân bổ từ trang tính: {target_sheet}")
+        df = pd.read_excel(path, sheet_name=target_sheet, engine='openpyxl')
 
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM map_allocation_rules")
-    count = 0
+    workbook_rows: list[tuple] = []
     current_dept = None
     current_item = None
     current_account_name = None
@@ -584,16 +638,58 @@ def load_allocation_rules(
         if any(token in normalized_item for token in recurring_total_tokens):
             driver_type = "headcount_all"
 
-        cursor.execute("""
+        workbook_rows.append(
+            (
+                current_dept,
+                item_str.strip(),
+                account_name,
+                mfg_acc,
+                ga_acc,
+                sales_acc,
+                posting_month,
+                unit_price,
+                unit,
+                driver_type,
+                driver_raw,
+            )
+        )
+
+    savepoint = "allocation_rules_rebuild"
+    cursor.execute(f"SAVEPOINT {savepoint}")
+    savepoint_active = True
+    try:
+        cursor.execute("DELETE FROM map_allocation_rules")
+        cursor.executemany(
+            """
             INSERT INTO map_allocation_rules
             (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
              posting_month, unit_price, unit, driver_type, driver_raw)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (current_dept, item_str.strip(), account_name, mfg_acc, ga_acc, sales_acc,
-              posting_month, unit_price, unit, driver_type, driver_raw))
-        count += 1
-
-    conn.commit()
+            """,
+            workbook_rows,
+        )
+        count = len(workbook_rows) + _merge_verified_content_rules(conn, content_rules)
+        cursor.execute(f"RELEASE SAVEPOINT {savepoint}")
+        savepoint_active = False
+        conn.commit()
+    except Exception:
+        if savepoint_active:
+            # Cleanup must never replace the original validation/database error.
+            try:
+                cursor.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+            except Exception:
+                pass
+            try:
+                cursor.execute(f"RELEASE SAVEPOINT {savepoint}")
+            except Exception:
+                pass
+        else:
+            # RELEASE succeeded, so a later commit failure has no savepoint to use.
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        raise
     print(f"Đã nạp {count} quy tắc phân bổ.")
     return count
 
@@ -604,7 +700,8 @@ def load_all(db_path: str = None, template_path: str = None,
              exchange_rate_source: str = "explicit pipeline input",
              uniform_eligibility_path: str | None = None,
              include_allocation_rules: bool = True,
-             include_uniform_entitlements: bool = True) -> dict:
+             include_uniform_entitlements: bool = True,
+             content_rules: list[dict] | None = None) -> dict:
     """Load shared master data and only the explicitly enabled optional sources."""
     # Future FY must name its own FORM; no implicit FY2027 fallback is allowed.
     if template_path:
@@ -656,8 +753,9 @@ def load_all(db_path: str = None, template_path: str = None,
                 r_path,
                 search_dir=discovery_dir,
                 fiscal_year=fiscal_year,
+                content_rules=content_rules,
             )
-            if include_allocation_rules else 0
+            if include_allocation_rules or content_rules else 0
         ),
     }
     results['uniform_entitlements'] = (

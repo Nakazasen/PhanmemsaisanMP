@@ -55,14 +55,14 @@ def run_worker(request_path: Path, response_path: Path, status_path: Path) -> in
     try:
         request = json.loads(request_path.read_text(encoding="utf-8"))
         if request.get("protocol_version") != PROTOCOL_VERSION:
-            raise ValueError("Unsupported worker protocol")
+            raise ValueError("Giao thức worker không được hỗ trợ")
 
         template_path = Path(request["template_path"]).resolve()
         stage_dir = Path(request["stage_dir"]).resolve()
         fiscal_year = int(request["fiscal_year"])
         items = [ExtractedDepartment(**payload) for payload in request["items"]]
         if not items:
-            raise ValueError("Worker request contains no departments")
+            raise ValueError("Yêu cầu worker không chứa bộ phận nào")
 
         _write_status(status_path, state="starting")
         with _CompanyFormRenderer() as renderer:

@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-"""Timeout-safe Excel workbook inventory tool.
+"""Công cụ kiểm kê workbook Excel an toàn với giới hạn thời gian.
 
-Runs each workbook inspection in a subprocess so a slow/corrupt workbook cannot
-hang the whole batch.
+Mỗi workbook được mở trong một tiến trình con để tệp chậm hoặc hỏng không làm treo toàn bộ lô.
 """
 from __future__ import annotations
 
@@ -12,6 +11,12 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.utils.cli import VietnameseArgumentParser
 
 SHEET_NAME = "内訳ﾘｽﾄ(4～3月)"
 EXCLUDED_ROWS = {1, 2, 3, 4, 5, 9, 17, 25}
@@ -72,8 +77,8 @@ def child_main() -> int:
     try:
         print(json.dumps(_scan_one(path), ensure_ascii=False))
         return 0
-    except Exception as exc:  # pragma: no cover - child safety path
-        print(json.dumps({"path": str(path.resolve()), "file_name": path.name, "read_status": f"READ_ERROR:{str(exc)[:160]}"}, ensure_ascii=False))
+    except Exception:  # pragma: no cover - child safety path
+        print(json.dumps({"path": str(path.resolve()), "file_name": path.name, "read_status": "READ_ERROR:WORKBOOK_UNREADABLE"}, ensure_ascii=False))
         return 0
 
 
@@ -86,17 +91,17 @@ def discover(path: Path) -> list[Path]:
 def main() -> int:
     if len(sys.argv) > 1 and sys.argv[1] == "--child-scan":
         return child_main()
-    parser = argparse.ArgumentParser(description="Timeout-safe workbook inventory")
-    parser.add_argument("path", nargs="?", help="Workbook path or folder path")
-    parser.add_argument("--input", dest="input_path", help="Workbook path or folder path")
-    parser.add_argument("--output", required=True, help="CSV output path")
-    parser.add_argument("--timeout", "--timeout-seconds", dest="timeout", type=float, default=20.0, help="Timeout per workbook in seconds")
-    parser.add_argument("--limit", type=int, default=0, help="Optional max workbooks to scan")
+    parser = VietnameseArgumentParser(description="Kiểm kê workbook an toàn với giới hạn thời gian")
+    parser.add_argument("path", nargs="?", help="Đường dẫn workbook hoặc thư mục")
+    parser.add_argument("--input", dest="input_path", help="Đường dẫn workbook hoặc thư mục")
+    parser.add_argument("--output", required=True, help="Đường dẫn tệp CSV kết quả")
+    parser.add_argument("--timeout", "--timeout-seconds", dest="timeout", type=float, default=20.0, help="Giới hạn thời gian cho mỗi workbook, tính bằng giây")
+    parser.add_argument("--limit", type=int, default=0, help="Số workbook tối đa cần quét; 0 là không giới hạn")
     args = parser.parse_args()
 
     input_path = args.input_path or args.path
     if not input_path:
-        parser.error("path or --input is required")
+        parser.error("bắt buộc phải có path hoặc --input")
     files = discover(Path(input_path))
     if args.limit:
         files = files[: args.limit]

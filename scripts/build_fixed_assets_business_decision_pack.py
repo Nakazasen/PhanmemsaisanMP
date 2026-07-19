@@ -109,29 +109,29 @@ def main() -> None:
     markdown_path.write_text(
         "\n".join(
             [
-                "# Fixed assets — business decision requests",
+                "# Tài sản cố định — yêu cầu quyết định nghiệp vụ",
                 "",
-                f"This pack condenses **{sum(classes.values())}** cells into **{len(requests)}** decisions. "
-                "It excludes rows already proven by source policy and rows already classified as manual/other layers.",
+                f"Gói này cô đọng **{sum(classes.values())}** ô thành **{len(requests)}** quyết định. "
+                "Gói không gồm các dòng đã được chứng minh theo chính sách nguồn và các dòng đã được phân loại là nhập tay/lớp khác.",
                 "",
-                "| Classification | Cells requiring review |",
+                "| Phân loại | Số ô cần rà soát |",
                 "| --- | ---: |",
                 *[f"| `{classification}` | {count} |" for classification, count in sorted(classes.items())],
                 "",
-                "## Reviewer instruction",
+                "## Hướng dẫn người rà soát",
                 "",
-                "For each `request_id` in the CSV, choose exactly one permitted response or attach the stated evidence. "
-                "Do not use this pack to overwrite a departmental output before approval.",
+                "Với mỗi `request_id` trong CSV, hãy chọn đúng một phản hồi được phép hoặc đính kèm bằng chứng đã nêu. "
+                "Không dùng gói này để ghi đè kết quả của bộ phận trước khi được phê duyệt.",
                 "",
-                f"- Detail source: `fixed_assets_true_mismatch_decision_matrix_{AUDIT_DATE}.csv`.",
-                f"- Decision requests: `fixed_assets_business_decision_requests_{AUDIT_DATE}.csv`.",
+                f"- Nguồn chi tiết: `fixed_assets_true_mismatch_decision_matrix_{AUDIT_DATE}.csv`.",
+                f"- Yêu cầu quyết định: `fixed_assets_business_decision_requests_{AUDIT_DATE}.csv`.",
                 "",
             ]
         ),
         encoding="utf-8",
     )
-    print(f"WROTE {csv_path}")
-    print(f"WROTE {markdown_path}")
+    print(f"ĐÃ GHI {csv_path}")
+    print(f"ĐÃ GHI {markdown_path}")
     print({"requests": len(requests), "cells": sum(classes.values()), "by_class": dict(classes)})
 
 

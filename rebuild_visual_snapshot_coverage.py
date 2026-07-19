@@ -7,6 +7,7 @@ import sys
 import csv
 import zipfile
 import xml.etree.ElementTree as ET
+from pathlib import Path
 from PIL import Image, ImageStat
 import numpy as np
 import openpyxl
@@ -460,11 +461,14 @@ def get_sheet_drawings(z, ws_path, rid_to_path):
     return results
 
 def rebuild_all_coverage():
-    canonical_path = r"D:\Sandbox\MP2027\raw\Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx"
-    target_path = r"D:\Sandbox\MP2027\raw\Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx"
-    temp_dir = r"D:\Sandbox\MP2027\OUTPUT_FY2027\tmp_requirement_0906_visual_coverage\new_media"
-    csv_drawing_path = r"D:\Sandbox\MP2027\OUTPUT_FY2027\tmp_requirement_0906_visual_coverage\source_drawing_inventory.csv"
-    csv_matrix_path = r"D:\Sandbox\MP2027\OUTPUT_FY2027\tmp_requirement_0906_visual_coverage\capture_coverage_matrix.csv"
+    project_root = Path(__file__).resolve().parent
+    source_root = project_root / "raw"
+    output_root = project_root / "OUTPUT_FY2027" / "tmp_requirement_0906_visual_coverage"
+    canonical_path = str(source_root / "Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx")
+    target_path = str(source_root / "Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx")
+    temp_dir = str(output_root / "new_media")
+    csv_drawing_path = str(output_root / "source_drawing_inventory.csv")
+    csv_matrix_path = str(output_root / "capture_coverage_matrix.csv")
 
     os.makedirs(temp_dir, exist_ok=True)
 
@@ -502,7 +506,7 @@ def rebuild_all_coverage():
 
     # Backup old file if it exists
     if os.path.exists(target_path):
-        backup_path = r"D:\Sandbox\MP2027\OUTPUT_FY2027\tmp_requirement_0906_visual_coverage\backup_bad_snapshot.xlsx"
+        backup_path = str(output_root / "backup_bad_snapshot.xlsx")
         print_flush(f"Moving old snapshot to {backup_path}")
         if os.path.exists(backup_path):
             os.remove(backup_path)
@@ -890,7 +894,7 @@ def rebuild_all_coverage():
     print_flush("Visual support workbook saved successfully.")
 
     # Audit CSV validation
-    csv_validation_path = r"D:\Sandbox\MP2027\OUTPUT_FY2027\tmp_requirement_0906_visual_coverage\new_snapshot_pixel_audit.csv"
+    csv_validation_path = str(output_root / "new_snapshot_pixel_audit.csv")
     with open(csv_validation_path, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=['filename', 'sheet', 'view', 'width', 'height', 'ratio', 'stddev', 'classification'])
         writer.writeheader()

@@ -33,49 +33,74 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-if getattr(sys, 'frozen', False):
-    BASE_DIR = os.path.dirname(sys.executable)
+if getattr(sys, "frozen", False):
+    APP_DIR = os.path.dirname(sys.executable)
 else:
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-if BASE_DIR not in sys.path:
-    sys.path.append(BASE_DIR)
+# Runtime business paths are rooted here. In source mode this is the repository;
+# packaged startup may switch it to a writable per-user project directory.
+BASE_DIR = APP_DIR
+
+if APP_DIR not in sys.path:
+    sys.path.append(APP_DIR)
 
 
 def _copy_missing_tree(source_dir: str, target_dir: str) -> None:
-    if not os.path.isdir(source_dir):
-        return
-    os.makedirs(target_dir, exist_ok=True)
-    for root, _dirs, files in os.walk(source_dir):
-        relative_dir = os.path.relpath(root, source_dir)
-        target_root = target_dir if relative_dir == "." else os.path.join(target_dir, relative_dir)
-        os.makedirs(target_root, exist_ok=True)
-        for filename in files:
-            if filename.startswith("~$"):
-                continue
-            source_file = os.path.join(root, filename)
-            target_file = os.path.join(target_root, filename)
-            if not os.path.exists(target_file):
-                shutil.copy2(source_file, target_file)
+    from src.services.runtime_health import copy_missing_tree
+
+    copy_missing_tree(source_dir, target_dir)
 
 
-def _ensure_external_runtime_data() -> None:
-    """Make bundled data editable next to the exe; _internal is fallback only."""
-    if not getattr(sys, "frozen", False):
-        return
-    packaged_docs = resource_path(os.path.join("docs", "MP2027"))
-    packaged_raw = resource_path("raw")
-    external_docs = os.path.join(BASE_DIR, "docs", "MP2027")
-    external_raw = os.path.join(BASE_DIR, "raw")
-    _copy_missing_tree(packaged_docs, external_docs)
-    _copy_missing_tree(packaged_raw, external_raw)
+def _directory_is_writable(path: str) -> bool:
+    """Return whether *path* can host mutable portable project data."""
+    from src.services.runtime_health import directory_is_writable
+
+    return directory_is_writable(path)
 
 
-# Bundled data remains read-only package material. Business data is loaded only
-# through the selected project.json; never copy it beside the executable at startup.
+def _packaged_project_root(app_dir: str, *, local_app_data: str | None = None) -> str:
+    """Choose stable data storage independently from versioned application files."""
+    from src.services.runtime_health import packaged_project_root
+
+    return packaged_project_root(
+        app_dir,
+        local_app_data=local_app_data,
+        writable_check=_directory_is_writable,
+    )
+
+
+def _ensure_external_runtime_data(*, local_app_data: str | None = None) -> str:
+    """Seed editable bundled data into a stable writable project directory."""
+    global BASE_DIR
+    from src.services.runtime_health import ensure_external_runtime_data
+
+    BASE_DIR = ensure_external_runtime_data(
+        APP_DIR,
+        resource_path("."),
+        frozen=bool(getattr(sys, "frozen", False)),
+        local_app_data=local_app_data,
+        writable_check=_directory_is_writable,
+    )
+    return BASE_DIR
+
+
+# Bundled data remains immutable seed material. Business data is resolved through
+# project.json in BASE_DIR and is never written inside PyInstaller's _internal.
 
 from src.db.loader import load_all, load_cost_centers
+from src.db.migrations import CURRENT_SCHEMA_VERSION
 from src.db.schema import create_schema, get_connection
+from src.services.app_updates import (
+    ApplicationUpdateError,
+    application_install_root,
+    install_runtime_application_update,
+)
+from src.services.content_packs import (
+    ContentPackError,
+    install_runtime_content_pack,
+    load_runtime_content_rules,
+)
 from src.services.headcount_source_importer import (
     cleanup_headcount_truth,
     count_headcount_truth_rows,
@@ -139,7 +164,7 @@ def _parse_blank_zero_save_int(period: str, field: str, raw_value: str, label: s
     if text == "":
         return "0", None
     if not text.isdecimal():
-        return None, _headcount_save_error(period, field, text, "INTEGER_GTE_0", f"{label.capitalize()} must be an integer >= 0")
+        return None, _headcount_save_error(period, field, text, "INTEGER_GTE_0", f"{label.capitalize()} phải là số nguyên lớn hơn hoặc bằng 0")
     return str(int(text)), None
 
 
@@ -148,7 +173,13 @@ def _parse_optional_save_int(period: str, field: str, raw_value: str, label: str
     if text == "":
         return "", None
     if not text.isdecimal():
-        return "", _headcount_save_error(period, field, text, "INTEGER_GTE_0", f"{label.capitalize()} must be an integer >= 0")
+        return "", _headcount_save_error(
+            period,
+            field,
+            text,
+            "INTEGER_GTE_0",
+            f"{label.capitalize()} phải là số nguyên lớn hơn hoặc bằng 0",
+        )
     return str(int(text)), None
 
 
@@ -166,13 +197,13 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
             period,
             "headcount_staff",
             values.get("staff", ""),
-            f"staff at {label}",
+            "số nhân viên tại " + str(label),
         )
         worker, worker_error = _parse_blank_zero_save_int(
             period,
             "headcount_worker",
             values.get("worker", ""),
-            f"worker at {label}",
+            "số công nhân tại " + str(label),
         )
         if staff_error:
             errors.append(staff_error)
@@ -186,13 +217,13 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
                 period,
                 "headcount_male",
                 values.get("male", ""),
-                f"male headcount at {label}",
+                "số nam tại " + str(label),
             )
             female, female_error = _parse_optional_save_int(
                 period,
                 "headcount_female",
                 values.get("female", ""),
-                f"female headcount at {label}",
+                "số nữ tại " + str(label),
             )
             if male_error:
                 errors.append(male_error)
@@ -213,7 +244,7 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
                     "headcount_male/headcount_female",
                     f"{values.get('male', '')}/{values.get('female', '')}",
                     "SUM_LE_TOTAL",
-                    f"Male + female exceeds staff + worker at {label}",
+                    f"Tổng số nam và nữ vượt quá tổng số nhân viên và công nhân tại {label}",
                 )
             )
             continue
@@ -232,16 +263,38 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
 
 
 def format_headcount_save_errors(errors) -> str:
+    field_labels = {
+        "headcount_staff": "số nhân viên",
+        "headcount_worker": "số công nhân",
+        "headcount_male": "số nam",
+        "headcount_female": "số nữ",
+        "headcount_male/headcount_female": "số nam/số nữ",
+        "cc_code": "mã trung tâm chi phí",
+        "bus_expat_count": "số người nước ngoài đi xe đưa đón",
+        "bus_vietnamese_count": "số người Việt Nam đi xe đưa đón",
+    }
+    rule_labels = {
+        "INTEGER_GTE_0": "số nguyên lớn hơn hoặc bằng 0",
+        "SUM_LE_TOTAL": "tổng nam và nữ không vượt quá tổng số người",
+        "VALID_CC": "mã trung tâm chi phí hợp lệ",
+        "UNIQUE_CC": "mã trung tâm chi phí không trùng lặp",
+    }
+    period_labels = {"bus": "xe đưa đón"}
     lines = []
     for error in errors:
-        period = str(error.get("period", "") or "-")
-        field = str(error.get("field", "") or "-")
+        raw_period = str(error.get("period", "") or "-")
+        period = period_labels.get(raw_period, raw_period)
+        field = field_labels.get(
+            str(error.get("field", "") or "-"),
+            str(error.get("field", "") or "-").replace("_", " "),
+        )
         raw_value = str(error.get("raw_value", ""))
         raw_display = "trống" if raw_value == "" else raw_value
-        rule = str(error.get("validation_rule", "") or "-")
+        raw_rule = str(error.get("validation_rule", "") or "-")
+        rule = rule_labels.get(raw_rule, raw_rule.replace("_", " "))
         reason = str(error.get("reason", "") or "-")
-        csv_written = error.get("csv_row_written", False)
-        db_inserted = error.get("db_row_inserted", False)
+        csv_written = "có" if error.get("csv_row_written", False) else "không"
+        db_inserted = "có" if error.get("db_row_inserted", False) else "không"
         lines.append(
             f"{period} | {field} | {raw_display} | {rule} | {reason} | đã ghi tệp dữ liệu={csv_written} | đã nạp vào dữ liệu={db_inserted}"
         )
@@ -259,12 +312,12 @@ def validate_bus_headcount_save_rows(rows, valid_cc_codes) -> list[dict]:
         if not any([cc_code, expat_count, vietnamese_count, description]):
             continue
         if not cc_code or cc_code not in valid_cc_codes:
-            error = _headcount_save_error("bus", "cc_code", cc_code, "VALID_CC", "Bus driver cost center is invalid")
+            error = _headcount_save_error("bus", "cc_code", cc_code, "VALID_CC", "Mã trung tâm chi phí của xe đưa đón không hợp lệ")
             error["csv_row"] = row_number
             errors.append(error)
             continue
         if cc_code in seen_cc:
-            error = _headcount_save_error("bus", "cc_code", cc_code, "UNIQUE_CC", "Duplicate bus driver cost center")
+            error = _headcount_save_error("bus", "cc_code", cc_code, "UNIQUE_CC", "Mã trung tâm chi phí của xe đưa đón bị trùng")
             error["csv_row"] = row_number
             errors.append(error)
             continue
@@ -274,7 +327,7 @@ def validate_bus_headcount_save_rows(rows, valid_cc_codes) -> list[dict]:
                 "bus_expat_count",
                 expat_count,
                 "INTEGER_GTE_0",
-                "Bus expat count must be an integer >= 0",
+                "Số người nước ngoài đi xe đưa đón phải là số nguyên lớn hơn hoặc bằng 0",
             )
             error["csv_row"] = row_number
             errors.append(error)
@@ -285,7 +338,7 @@ def validate_bus_headcount_save_rows(rows, valid_cc_codes) -> list[dict]:
                 "bus_vietnamese_count",
                 vietnamese_count,
                 "INTEGER_GTE_0",
-                "Bus Vietnamese count must be an integer >= 0",
+                "Số người Việt Nam đi xe đưa đón phải là số nguyên lớn hơn hoặc bằng 0",
             )
             error["csv_row"] = row_number
             errors.append(error)
@@ -421,7 +474,7 @@ def _pipeline_failure_summary(output_lines: list[str], return_code: int) -> str:
         text = line.strip()
         if text and "chi tiết kỹ thuật đã được ẩn" not in text.lower():
             return text
-    return f"Pipeline exited with code {return_code}"
+    return f"Tiến trình tính toán đã kết thúc với mã lỗi {return_code}"
 
 
 def _failed_run_database_from_output(
@@ -453,6 +506,9 @@ def _friendly_error_message(error) -> str:
     vietnamese_markers = (
         "không",
         "hãy",
+        "cần",
+        "phải",
+        "vui lòng",
         "tệp",
         "thư mục",
         "dữ liệu",
@@ -482,14 +538,14 @@ def _friendly_error_message(error) -> str:
 
     if "unable to locate system cost row" in lower_text or "không tìm thấy dòng system cost" in lower_text:
         return (
-            "Không tìm thấy dòng System Cost trong tệp FORM.\n\n"
+            "Không tìm thấy dòng Chi phí hệ thống trong tệp FORM.\n\n"
             "Nguyên nhân thường gặp: đang dùng FORM.xlsx cũ hoặc FORM không đúng phiên bản.\n"
             f"Cách xử lý: chọn lại tệp FORM mới nhất tại {external_template}."
         )
     if "unable to resolve kdc system cost account" in lower_text or "không xác định được tài khoản system cost" in lower_text:
         return (
-            "Không xác định được tài khoản System Cost cho một mã bộ phận.\n\n"
-            "Cách xử lý: kiểm tra mã bộ phận trong dữ liệu nguồn và kiểm tra loại chi phí của mã đó trong master CC."
+            "Không xác định được tài khoản Chi phí hệ thống cho một mã bộ phận.\n\n"
+            "Cách xử lý: kiểm tra mã bộ phận trong dữ liệu nguồn và kiểm tra loại chi phí của mã đó trong danh mục CC."
         )
     if "form template not found" in lower_text:
         return (
@@ -1227,7 +1283,7 @@ class MPManagerApp:
         try:
             self._activate_project(ProjectConfig.load(path))
         except Exception as exc:
-            messagebox.showerror("Không mở được project", str(exc))
+            messagebox.showerror("Không mở được project", _friendly_error_message(exc))
 
     def create_project(self) -> None:
         root_dir = filedialog.askdirectory(title="Chọn thư mục chứa dữ liệu project")
@@ -1244,7 +1300,7 @@ class MPManagerApp:
                 project.save()
             self._activate_project(project)
         except Exception as exc:
-            messagebox.showerror("Không tạo được project", str(exc))
+            messagebox.showerror("Không tạo được project", _friendly_error_message(exc))
 
     def configure_project_storage(self) -> None:
         """Edit shared and selected-FY storage paths without touching their data."""
@@ -1306,7 +1362,9 @@ class MPManagerApp:
                 self.log(f"Đã lưu cấu hình storage project FY{fiscal_year}")
                 dialog.destroy()
             except Exception as exc:
-                messagebox.showerror("Cấu hình không hợp lệ", str(exc), parent=dialog)
+                messagebox.showerror(
+                    "Cấu hình không hợp lệ", _friendly_error_message(exc), parent=dialog
+                )
 
         ttk.Button(button_bar, text="Lưu cấu hình", style="Primary.TButton", command=save_configuration).pack(
             side="right", padx=(0, 8)
@@ -1523,6 +1581,8 @@ class MPManagerApp:
             ("Nhập nhân sự thủ công", self.open_headcount_editor_v2),
             ("Nhập sự kiện thiếu dữ liệu", self.open_event_driver_editor),
             ("Thứ tự file nguồn", self.open_source_order_editor),
+            ("Cài gói quy tắc...", self.install_content_package),
+            ("Cài bản cập nhật...", self.install_application_update),
             ("Lịch sử lần chạy", self.open_run_history),
             ("Hướng dẫn trực quan", self.open_user_guide),
         ):
@@ -1588,6 +1648,91 @@ class MPManagerApp:
         self.log_widget.insert(tk.END, f"{datetime.now().strftime('[%H:%M:%S]')} {message}\n")
         self.log_widget.see(tk.END)
         self.log_widget.configure(state=tk.DISABLED)
+
+    def install_content_package(self):
+        try:
+            fiscal_year = int(self.fiscal_year.get())
+        except (TypeError, ValueError):
+            messagebox.showerror("Năm tài chính không hợp lệ", "Hãy nhập năm tài chính gồm 4 chữ số.")
+            return
+        package_path = filedialog.askopenfilename(
+            initialdir=BASE_DIR,
+            title="Chọn gói quy tắc MP2027",
+            filetypes=[("Gói quy tắc MP2027", "*.mpcontent")],
+        )
+        if not package_path:
+            return
+        try:
+            installed_path = install_runtime_content_pack(
+                package_path,
+                BASE_DIR,
+                fiscal_year=fiscal_year,
+            )
+        except ContentPackError as exc:
+            message = _friendly_error_message(exc)
+            self.log(f"Không cài được gói quy tắc: {message}")
+            messagebox.showerror("Gói quy tắc không hợp lệ", message)
+            return
+        except Exception as exc:
+            message = _friendly_error_message(exc)
+            self.log(f"Không cài được gói quy tắc: {message}")
+            messagebox.showerror("Không thể cài gói quy tắc", message)
+            return
+        self._mark_preflight_stale(force_refresh=True)
+        self.log(f"Đã xác minh và kích hoạt gói quy tắc FY{fiscal_year}: {installed_path}")
+        messagebox.showinfo(
+            "Đã cài gói quy tắc",
+            f"Gói quy tắc FY{fiscal_year} đã được xác minh và kích hoạt.",
+        )
+
+    def install_application_update(self):
+        if getattr(self, "_application_update_running", False):
+            return
+        try:
+            app_root = application_install_root(APP_DIR)
+        except ApplicationUpdateError as exc:
+            messagebox.showerror("Không thể tự cập nhật", _friendly_error_message(exc))
+            return
+        package_path = filedialog.askopenfilename(
+            initialdir=BASE_DIR,
+            title="Chọn bản cập nhật MP2027",
+            filetypes=[("Bản cập nhật MP2027", "*.mpupdate")],
+        )
+        if not package_path:
+            return
+        self._application_update_running = True
+        self.log("Đang xác minh và kiểm tra bản cập nhật...")
+
+        def worker():
+            try:
+                state = install_runtime_application_update(
+                    package_path,
+                    app_root,
+                    BASE_DIR,
+                    current_database_schema=CURRENT_SCHEMA_VERSION,
+                )
+            except Exception as exc:
+                self._run_on_ui_thread(self._finish_application_update, None, exc)
+                return
+            self._run_on_ui_thread(self._finish_application_update, state, None)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _finish_application_update(self, state, error):
+        self._application_update_running = False
+        if error is not None:
+            self.log(f"Cập nhật ứng dụng không thành công: {error}")
+            messagebox.showerror(
+                "Cập nhật không thành công",
+                "Tệp cập nhật không hợp lệ, bị thay đổi hoặc không dành cho phiên bản này.",
+            )
+            return
+        version = state.get("version", "mới") if isinstance(state, dict) else "mới"
+        self.log(f"Đã xác minh, kiểm tra và kích hoạt phiên bản {version}.")
+        messagebox.showinfo(
+            "Đã cài bản cập nhật",
+            f"Phiên bản {version} đã sẵn sàng. Hãy đóng ứng dụng và mở lại từ biểu tượng MP2027.",
+        )
 
     def browse_template(self):
         current = self.template_path.get().strip()
@@ -1805,8 +1950,9 @@ class MPManagerApp:
                 scan_results=review["results"],
             )
         except Exception as exc:
-            self.log(f"Cập nhật nguồn nhân sự thất bại: {exc}")
-            messagebox.showerror("Cập nhật thất bại", str(exc))
+            message = _friendly_error_message(exc)
+            self.log(f"Cập nhật nguồn nhân sự thất bại: {message}")
+            messagebox.showerror("Cập nhật thất bại", message)
             return
         finally:
             if conn is not None:
@@ -2217,7 +2363,14 @@ class MPManagerApp:
         def run_sync():
             try:
                 db_path = self._operational_database()
-                load_all(db_path=db_path, template_path=template)
+                fiscal_year = int(self.fiscal_year.get())
+                content_rules = load_runtime_content_rules(BASE_DIR, fiscal_year=fiscal_year)
+                load_all(
+                    db_path=db_path,
+                    template_path=template,
+                    fiscal_year=fiscal_year,
+                    content_rules=content_rules,
+                )
                 self.log("Tự động nạp dữ liệu gốc THÀNH CÔNG.")
                 self._run_on_ui_thread(lambda: self.root.after(100, self.load_cc_list))
             except Exception as e:
@@ -2855,7 +3008,7 @@ class MPManagerApp:
             cc=cc_code()
             if not cc:return
             try: be=nonneg(bus_exp.get(),"Bus JP"); bv=nonneg(bus_vn.get(),"Bus Việt Nam")
-            except ValueError as exc: messagebox.showerror("Dữ liệu không hợp lệ",str(exc)); return
+            except ValueError as exc: messagebox.showerror("Dữ liệu không hợp lệ", _friendly_error_message(exc)); return
             conn=get_connection(self._manual_input_store(fiscal_year)); create_schema(conn)
             try:
                 with conn:
@@ -2871,7 +3024,7 @@ class MPManagerApp:
                         if male or female or note:
                             conn.execute("INSERT INTO fact_monthly_headcount(period,cc_code,headcount_all,headcount_expat,headcount_staff,headcount_worker,headcount_male,headcount_female,source,description) VALUES(?,?,0,0,0,0,?,?,'manual',?)",(period,cc,male,female,note))
                     save_manual_time_overrides(conn,fiscal_year,cc,{p:{f:v[f].get() for f in time_fields} for p,v in time_vars.items()})
-            except ValueError as exc: conn.rollback(); messagebox.showerror("Dữ liệu không hợp lệ",str(exc)); return
+            except ValueError as exc: conn.rollback(); messagebox.showerror("Dữ liệu không hợp lệ", _friendly_error_message(exc)); return
             finally: conn.close()
             messagebox.showinfo("Đã lưu","Đã lưu baseline T3, dữ liệu bổ sung, xe buýt và 12 tháng thời gian (ô trống = 0).")
         buttons=ttk.Frame(frame); buttons.pack(fill="x",pady=(8,0)); ttk.Button(buttons,text="Tải dữ liệu CC",command=load_cc).pack(side="left"); ttk.Button(buttons,text="Lưu nhân sự & thời gian",style="Primary.TButton",command=save).pack(side="left",padx=6); ttk.Button(buttons,text="Đóng",command=editor.destroy).pack(side="left")
@@ -3142,7 +3295,7 @@ class MPManagerApp:
                 if not ((count and (unit_price or unit_price_key)) or amount_vnd):
                     raise ValueError("Cần nhập count + unit_price, hoặc count + unit_price_key, hoặc amount_vnd.")
             except Exception as exc:
-                messagebox.showerror("Lỗi dữ liệu", str(exc))
+                messagebox.showerror("Lỗi dữ liệu", _friendly_error_message(exc))
                 return
 
             row_data = {col: "" for col in columns}
@@ -3541,19 +3694,30 @@ class MPManagerApp:
         self._mark_preflight_stale()
 
 
-if __name__ == "__main__":
+def main() -> int:
+    _ensure_external_runtime_data()
+    if "--health-check" in sys.argv[1:]:
+        from src.services.runtime_health import print_health_report as _print_health_report
+
+        return _print_health_report(BASE_DIR)
     if "--reference-staffing-render-worker" in sys.argv[1:]:
         from src.services.reference_staffing_render_worker import main as _render_worker_main
 
         worker_args = [
             arg for arg in sys.argv[1:] if arg != "--reference-staffing-render-worker"
         ]
-        raise SystemExit(_render_worker_main(worker_args))
+        return _render_worker_main(worker_args)
     # Support headless export from packaged exe: child CLI invocations delegate
     # to the pipeline instead of opening a second GUI window.
     if len(sys.argv) > 1 and any(arg.startswith("--") for arg in sys.argv[1:]):
         from scripts.run_e2e import main as _cli_main
-        raise SystemExit(_cli_main())
+
+        return _cli_main()
     root = tk.Tk()
     app = MPManagerApp(root)
     root.mainloop()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

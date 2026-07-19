@@ -727,7 +727,7 @@ def _run_render_worker(
                 completed = status.get("completed_files", [])
                 while reported_completed < min(len(completed), len(expected_files)):
                     if completed[reported_completed] != expected_files[reported_completed]:
-                        failure_reason = "Worker progress does not match the requested file order"
+                        failure_reason = "Tiến độ worker không khớp với thứ tự tệp được yêu cầu"
                         _terminate_worker_tree(process)
                         break
                     reported_completed += 1
@@ -743,7 +743,7 @@ def _run_render_worker(
                 current_file = str(status.get("current_file") or "")
                 if current_file and current_file != last_processing:
                     if current_file not in expected_files:
-                        failure_reason = "Worker reported an unexpected output file"
+                        failure_reason = "Worker báo cáo một tệp kết quả không mong đợi"
                         _terminate_worker_tree(process)
                         break
                     last_processing = current_file
@@ -755,26 +755,26 @@ def _run_render_worker(
                             "processing",
                         )
                 if time.monotonic() - started > timeout_seconds:
-                    failure_reason = "Worker timed out"
+                    failure_reason = "Worker đã hết thời gian chờ"
                     _terminate_worker_tree(process)
                     break
                 time.sleep(0.1)
             return_code = process.wait()
 
         if not failure_reason and return_code != 0:
-            failure_reason = f"Worker exited with code {return_code}"
+            failure_reason = f"Worker đã kết thúc với mã lỗi {return_code}"
         try:
             response = json.loads(response_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             response = {}
             if not failure_reason:
-                failure_reason = "Worker did not return a valid response"
+                failure_reason = "Worker không trả về phản hồi hợp lệ"
         if response.get("protocol_version") != _RENDER_WORKER_PROTOCOL:
-            failure_reason = failure_reason or "Worker response protocol is invalid"
+            failure_reason = failure_reason or "Giao thức phản hồi của worker không hợp lệ"
         if response.get("success") is not True:
-            failure_reason = failure_reason or "Worker reported a rendering failure"
+            failure_reason = failure_reason or "Worker báo cáo không thể tạo tệp Excel"
         if response.get("rendered_files") != expected_files:
-            failure_reason = failure_reason or "Worker response is missing rendered files"
+            failure_reason = failure_reason or "Phản hồi của worker thiếu các tệp đã tạo"
         if failure_reason:
             raise ExtractionError("Không thể hoàn tất tạo file nhân sự trong Excel")
 

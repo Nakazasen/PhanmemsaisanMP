@@ -74,9 +74,9 @@ class PipelineStageEvidence:
 
     def start(self, name: str, *, started_perf: float | None = None) -> None:
         if self._terminal:
-            raise ValueError("Pipeline stage evidence is already terminal")
+            raise ValueError("Bằng chứng các bước pipeline đã ở trạng thái kết thúc")
         if self.payload["current_stage"] is not None:
-            raise ValueError(f"Pipeline stage is already running: {self.payload['current_stage']}")
+            raise ValueError(f"Một bước pipeline đang chạy: {self.payload['current_stage']}")
         self._stage_started_perf = (
             started_perf if started_perf is not None else time.perf_counter()
         )
@@ -86,7 +86,7 @@ class PipelineStageEvidence:
     def complete(self, *, details: dict[str, Any] | None = None) -> None:
         name = self.payload.get("current_stage")
         if not name or self._stage_started_perf is None:
-            raise ValueError("No pipeline stage is running")
+            raise ValueError("Không có bước pipeline nào đang chạy")
         elapsed = time.perf_counter() - self._stage_started_perf
         entry: dict[str, Any] = {
             "name": name,

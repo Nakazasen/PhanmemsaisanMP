@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MP2027 signed application update manifest",
+  "type": "object",
+  "required": [
+    "schema", "kind", "id", "version", "min_app_version", "key_id", "files",
+    "database_schema", "health_check", "entrypoint"
+  ],
+  "properties": {
+    "schema": {"const": 1},
+    "kind": {"const": "application"},
+    "id": {"const": "MP2027_Manager"},
+    "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "min_app_version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "key_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "size"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "size": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "database_schema": {"type": "integer", "minimum": 1},
+    "health_check": {"const": "--health-check"},
+    "entrypoint": {"const": "MP2027_Portable.exe"}
+  },
+  "additionalProperties": false
+}

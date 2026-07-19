@@ -8,14 +8,13 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from openpyxl import load_workbook
 
 from src.engine.hub_builder import IT_COMPONENT_ORDER, IT_SYSTEM_ACCOUNT_CODES
+from src.utils.cli import VietnameseArgumentParser
 from src.utils.excel_helpers import find_hub_sheet_name, get_fy_months
 
 DEFAULT_DB = ROOT / "mp2027.db"
@@ -130,9 +129,9 @@ def _formula_terms(formula: str) -> list[str]:
 
 def verify(cc_code: str, fiscal_year: int, db_path: Path, output_dir: Path) -> int:
     output_path = output_dir / f"MP_CC_{cc_code}.xlsx"
-    print(f"CC: {cc_code}")
-    print(f"DB: {db_path}")
-    print(f"Output: {output_path}")
+    print(f"Mã bộ phận: {cc_code}")
+    print(f"Cơ sở dữ liệu: {db_path}")
+    print(f"Tệp kết quả: {output_path}")
 
     if not db_path.exists():
         print("NG: Không tìm thấy database mp2027.db")
@@ -150,7 +149,7 @@ def verify(cc_code: str, fiscal_year: int, db_path: Path, output_dir: Path) -> i
             print("NG: Không tìm thấy dòng Chi phí hệ thống trong file output.")
             return 1
 
-        print(f"Dòng System Cost trong output: {row}")
+        print(f"Dòng Chi phí hệ thống trong tệp kết quả: {row}")
         ok = True
         fy_months = get_fy_months(fiscal_year)
         for offset, period in enumerate(fy_months):
@@ -167,19 +166,19 @@ def verify(cc_code: str, fiscal_year: int, db_path: Path, output_dir: Path) -> i
             status = "OK" if match else "NG"
             if not match:
                 ok = False
-            print(f"{status} {period}: output={actual!r} | expected={expected_display}")
+            print(f"{status} {period}: kết quả={actual!r} | mong đợi={expected_display}")
 
             if actual and str(actual).startswith("=ROUND"):
                 terms = _formula_terms(str(actual))
-                print(f"    terms trong công thức: {len(terms)} -> {', '.join(terms[:8])}{' ...' if len(terms) > 8 else ''}")
+                print(f"    số thành phần trong công thức: {len(terms)} -> {', '.join(terms[:8])}{' ...' if len(terms) > 8 else ''}")
 
         total_formula = ws.cell(row=row, column=TOTAL_COL).value
         expected_total = f"=SUM(F{row}:Q{row})"
         if total_formula == expected_total:
-            print(f"OK Total: {total_formula}")
+            print(f"OK Tổng cộng: {total_formula}")
         else:
             ok = False
-            print(f"NG Total: output={total_formula!r} | expected={expected_total}")
+            print(f"NG Tổng cộng: kết quả={total_formula!r} | mong đợi={expected_total}")
 
         print("\nKẾT LUẬN:")
         if ok:
@@ -192,12 +191,13 @@ def verify(cc_code: str, fiscal_year: int, db_path: Path, output_dir: Path) -> i
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Kiểm chứng Chi phí hệ thống trong file MP output theo CC.")
-    parser.add_argument("cc_code", help="Mã cost center, ví dụ 1412000006")
-    parser.add_argument("--fy", type=int, default=2027, help="Fiscal year, mặc định 2027")
+    parser = VietnameseArgumentParser(description="Kiểm chứng Chi phí hệ thống trong tệp kết quả MP theo mã bộ phận.")
+    parser.add_argument("cc_code", help="Mã bộ phận, ví dụ 1412000006")
+    parser.add_argument("--fy", type=int, default=2027, help="Năm tài chính, mặc định 2027")
     parser.add_argument("--db", type=Path, default=DEFAULT_DB, help="Đường dẫn mp2027.db")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR, help="Thư mục OUTPUT_FY2027")
-    return verify(str(parser.parse_args().cc_code), parser.parse_args().fy, parser.parse_args().db, parser.parse_args().output_dir)
+    args = parser.parse_args()
+    return verify(str(args.cc_code), args.fy, args.db, args.output_dir)
 
 
 if __name__ == "__main__":

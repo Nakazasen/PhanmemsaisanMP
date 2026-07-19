@@ -1,0 +1,6 @@
+﻿# Runtime dependencies supported for the MP2027 Windows release environment.
+openpyxl==3.1.5
+pandas==2.3.2
+xlrd==2.0.2
+Pillow==11.3.0
+cryptography==46.0.3

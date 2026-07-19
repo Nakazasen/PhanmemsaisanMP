@@ -1,9 +1,9 @@
-﻿import json
+import json
 from pathlib import Path
 
 import openpyxl
 
-from tools.compare_primary_reference import compare_workbooks
+from tools.compare_primary_reference import _display_summary, compare_workbooks
 
 
 def _make_workbook(path: Path, overrides=None):
@@ -27,6 +27,24 @@ def _make_workbook(path: Path, overrides=None):
 
 def _payload(result):
     return json.loads(Path(result["json_path"]).read_text(encoding="utf-8"))
+
+
+def test_display_summary_localizes_nested_values_without_mutating_json_contract():
+    summary = {
+        "compare_mode": "strict_exact",
+        "layout_fixed_rows": [3, 5, 9],
+        "nested": {"status": "DIFF", "levels": ("High", "Low")},
+    }
+
+    displayed = _display_summary(summary)
+
+    assert displayed["Chế độ so sánh"] == "so sánh chính xác"
+    assert displayed["Danh sách dòng bố cục cố định"] == [3, 5, 9]
+    assert displayed["nested"] == {
+        "status": "KHÁC",
+        "levels": ["Cao", "Thấp"],
+    }
+    assert summary["nested"]["status"] == "DIFF"
 
 
 def test_compare_primary_reference_identical_workbooks(tmp_path):
@@ -533,7 +551,7 @@ def test_building_land_interest_disambiguates_to_building_land_candidate(tmp_pat
     alignment = [row for row in _payload(result)["identity_row_alignment"] if row["generated_row"] == 40][0]
     assert alignment["reference_matched_row"] == 303
     assert "building_land_tokens" in alignment["matched_fields"]
-    assert alignment["note"] == "disambiguated by building/land token evidence"
+    assert alignment["note"] == "phân biệt dựa trên token nhà xưởng/đất"
 
 
 def test_tool_jig_interest_disambiguates_to_tool_jig_candidate(tmp_path):
@@ -556,7 +574,7 @@ def test_tool_jig_interest_disambiguates_to_tool_jig_candidate(tmp_path):
     alignment = [row for row in _payload(result)["identity_row_alignment"] if row["generated_row"] == 42][0]
     assert alignment["reference_matched_row"] == 302
     assert "tool_jig_tokens" in alignment["matched_fields"]
-    assert alignment["note"] == "disambiguated by tool/jig token evidence"
+    assert alignment["note"] == "phân biệt dựa trên token công cụ/đồ gá"
 
 
 def test_no_disambiguation_without_clear_token_evidence(tmp_path):

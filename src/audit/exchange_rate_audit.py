@@ -114,7 +114,7 @@ def assert_exchange_rate_formulas_safe(workbook_path: str | Path, exchange_rate:
         if not result["b2_matches_effective_rate"]:
             cells.insert(0, "B2")
         raise ValueError(
-            "Phát hiện công thức tỷ giá không đồng nhất trong output: " + ", ".join(cells)
+            "Phát hiện công thức tỷ giá không đồng nhất trong tệp kết quả: " + ", ".join(cells)
         )
     return result
 

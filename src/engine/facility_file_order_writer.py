@@ -77,11 +77,11 @@ def apply_facility_file_order_to_workbook(
 ) -> Path:
     """Apply Facility file-order rows to an explicit existing workbook path."""
     if not workbook_path:
-        raise ValueError("workbook_path is required for Facility file-order export")
+        raise ValueError("Bắt buộc phải có đường dẫn tệp Excel để xuất thứ tự dòng chi phí cơ sở vật chất")
     workbook_file = Path(workbook_path)
     facility_source = Path(facility_source_path)
     if workbook_file.resolve() == facility_source.resolve():
-        raise ValueError("workbook_path must not overwrite the Facility source workbook")
+        raise ValueError("Tệp kết quả không được ghi đè lên tệp nguồn chi phí cơ sở vật chất")
 
     workbook = load_workbook(workbook_file)
     try:
@@ -103,15 +103,15 @@ def write_facility_file_order_preview_workbook(
 ) -> Path:
     """Write an explicit Facility file-order preview workbook to ``output_path``."""
     if not output_path:
-        raise ValueError("output_path is required for Facility file-order preview writing")
+        raise ValueError("Bắt buộc phải có đường dẫn tệp kết quả để ghi bản xem trước thứ tự dòng chi phí cơ sở vật chất")
 
     template = Path(template_path)
     facility_source = Path(facility_source_path)
     output = Path(output_path)
     if template.resolve() == output.resolve():
-        raise ValueError("output_path must not overwrite the template workbook")
+        raise ValueError("Tệp kết quả không được ghi đè lên tệp mẫu")
     if facility_source.resolve() == output.resolve():
-        raise ValueError("output_path must not overwrite the Facility source workbook")
+        raise ValueError("Tệp kết quả không được ghi đè lên tệp nguồn chi phí cơ sở vật chất")
 
     output.parent.mkdir(parents=True, exist_ok=True)
     copy2(template, output)

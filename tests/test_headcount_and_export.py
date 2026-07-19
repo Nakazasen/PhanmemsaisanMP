@@ -1135,7 +1135,7 @@ class TestHeadcountMissingMatrix(unittest.TestCase):
                 for values in sheet.iter_rows(min_row=7, values_only=True):
                     severity, row_cc, period, content, action = values
                     text = str(content or "")
-                    if "Missing canonical monthly headcount category:" not in text:
+                    if "Thiếu dữ liệu số người chuẩn theo tháng:" not in text:
                         continue
                     rows.append(
                         {
@@ -1155,7 +1155,7 @@ class TestHeadcountMissingMatrix(unittest.TestCase):
             observed = [
                 (
                     row["period"],
-                    "headcount_staff" if "category=headcount_staff" in row["message"] else "headcount_worker",
+                    "headcount_staff" if "nhóm=nhân viên" in row["message"] else "headcount_worker",
                 )
                 for row in rows
             ]
@@ -2952,7 +2952,7 @@ class TestManualSpecialCosts(unittest.TestCase):
             result = parse_manual_event_drivers(conn, source_dir=str(tmpdir))
             self.assertEqual(result["inserted"], 0)
             self.assertEqual(result["errors"], 1)
-            self.assertIn("outside FY", str(result.get("error_message", "")))
+            self.assertIn("nằm ngoài các kỳ của năm tài chính", str(result.get("error_message", "")))
             count = conn.execute(
                 "SELECT COUNT(*) FROM fact_input_data WHERE source = 'manual_event_driver' AND form_row = 58"
             ).fetchone()[0]

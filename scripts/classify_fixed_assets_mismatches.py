@@ -40,6 +40,7 @@ except ModuleNotFoundError:  # pragma: no cover - exercised through package impo
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from src.db.schema import create_schema, get_connection
+from src.utils.cli import VietnameseArgumentParser
 
 
 AUDIT_DIR = ROOT / "docs" / "audits"
@@ -286,7 +287,7 @@ def classify_row(
             "REFERENCE_ASSET_NOT_IN_SOURCE_SNAPSHOT",
             "KHONG_THE_XAC_DINH_TU_DU_LIEU",
             "REQUEST_NEWER_ASSET_REGISTER_OR_BUSINESS_CONFIRMATION",
-            "Reference describes asset number(s) absent from the audited source snapshot; the evidence does not establish whether they are future purchases or an alternative register.",
+            "Tệp tham khảo mô tả mã tài sản không có trong ảnh chụp dữ liệu nguồn đã kiểm toán; bằng chứng chưa xác định được đây là tài sản mua trong tương lai hay thuộc một sổ tài sản khác.",
         )
     key = (row["fy"], row["cc"], account)
     if has_direct_terminal_transition(source_rows, account, period, rate, comparison_by_key_period, key):
@@ -294,14 +295,14 @@ def classify_row(
             "POST_TERMINAL_REFERENCE_CONTINUES",
             "XAC_DINH_TU_BANG_CHUNG",
             "POLICY_FIX_ALLOWED_DO_NOT_COPY_REFERENCE",
-            "The source total falls by the exact terminal-month Q amount, but the reference does not fall in the following month. This proves that the submitted reference continues a cost after P terminal month.",
+            "Tổng nguồn giảm đúng bằng số tiền Q của tháng kết thúc nhưng tệp tham khảo không giảm ở tháng kế tiếp. Điều này chứng minh tệp tham khảo đã tiếp tục ghi nhận chi phí sau tháng kết thúc P.",
         )
     if has_direct_post_terminal_continuation(source_rows, account, period, delta, rate):
         return (
             "POST_TERMINAL_REFERENCE_CONTINUES",
             "XAC_DINH_TU_BANG_CHUNG",
             "POLICY_FIX_ALLOWED_DO_NOT_COPY_REFERENCE",
-            "The positive difference exactly equals depreciation of source asset(s) whose P terminal period precedes this month. Q is the terminal-month amount; no cost may continue afterwards.",
+            "Chênh lệch dương đúng bằng khấu hao của các tài sản nguồn có kỳ kết thúc P trước tháng này. Q là số tiền của tháng kết thúc; không được tiếp tục ghi nhận chi phí sau đó.",
         )
     kind = formula_kind(reference_rows, period)
     if kind == "STATIC_VALUE":
@@ -309,34 +310,34 @@ def classify_row(
             "REFERENCE_STATIC_MANUAL_INPUT",
             "LA_NGOAI_LE_NHAP_TAY_HOAC_TANG_KHAC",
             "PRESERVE_AS_REFERENCE_EXCEPTION_DO_NOT_OVERWRITE",
-            "All selected reference components for this month are literal values, so the submitted amount is a manual/other-layer input rather than a formula linked to the audited source ledger.",
+            "Tất cả thành phần tham khảo được chọn của tháng này là giá trị nhập trực tiếp, vì vậy số tiền đã nộp là dữ liệu nhập tay hoặc thuộc lớp khác, không phải công thức liên kết với sổ nguồn đã kiểm toán.",
         )
     if kind == "EMBEDDED_USD_SNAPSHOT_FORMULA":
         return (
             "REFERENCE_EMBEDDED_USD_SNAPSHOT_FORMULA",
             "MAU_THUAN_CAN_NGHIEP_VU_DUYET",
             "REQUIRE_BUSINESS_DECISION_BEFORE_ACCOUNTING_CHANGE",
-            "Selected reference formula(s) use embedded USD terms times $B$2, not a source-ledger link. The source snapshot and reference snapshot disagree, but neither may be overwritten automatically.",
+            "Công thức tham khảo được chọn dùng các số tiền USD gắn cứng nhân với $B$2, không liên kết với sổ nguồn. Ảnh chụp dữ liệu nguồn và ảnh chụp tham khảo mâu thuẫn, nhưng không được tự động ghi đè bên nào.",
         )
     if has_mixed_static_and_formula_components(reference_rows, period):
         return (
             "REFERENCE_MIXED_STATIC_AND_FORMULA_INPUT",
             "LA_NGOAI_LE_NHAP_TAY_HOAC_TANG_KHAC",
             "PRESERVE_AS_REFERENCE_EXCEPTION_DO_NOT_OVERWRITE",
-            "The submitted total contains both a literal VND component and a formula component. The literal component has no source-ledger link, so this is a manual/other-layer reference exception rather than an unexplained source calculation defect.",
+            "Tổng đã nộp gồm cả thành phần VND nhập trực tiếp và thành phần công thức. Thành phần nhập trực tiếp không liên kết với sổ nguồn, nên đây là ngoại lệ tham khảo nhập tay hoặc thuộc lớp khác, không phải lỗi tính toán nguồn chưa giải thích.",
         )
     if len(deltas_in_group) == 1:
         return (
             "CONSISTENT_REFERENCE_ADJUSTMENT",
             "MAU_THUAN_CAN_NGHIEP_VU_DUYET",
             "REQUIRE_BUSINESS_DECISION_BEFORE_ACCOUNTING_CHANGE",
-            "The same non-rounding adjustment recurs in every mismatching month of this FY/CC/account group; its provenance is not present in the supplied source ledger.",
+            "Cùng một khoản điều chỉnh không phải do làm tròn lặp lại ở mọi tháng lệch của nhóm FY/CC/tài khoản này; dữ liệu nguồn được cung cấp không chứa nguồn gốc của khoản điều chỉnh.",
         )
     return (
         "UNEXPLAINED_FORMULA_OR_AGGREGATE_CONTRADICTION",
         "KHONG_THE_XAC_DINH_TU_DU_LIEU",
         "REQUIRE_ROW_LEVEL_BUSINESS_EVIDENCE",
-        "The amount differs after per-asset rounding and terminal-before-FY alternatives. Available source and reference rows do not prove a single cause.",
+        "Số tiền vẫn khác sau khi xét phương án làm tròn theo từng tài sản và kết thúc trước năm tài chính. Các dòng nguồn và tham khảo hiện có chưa chứng minh được một nguyên nhân duy nhất.",
     )
 
 
@@ -360,56 +361,56 @@ def write_report(path: Path, rows: list[dict[str, Any]]) -> None:
     decisions = Counter(row["decision_status"] for row in rows)
     groups = {(row["fy"], row["cc"], row["account"]) for row in rows}
     lines = [
-        "# Fixed assets: decision matrix for all true amount mismatches",
+        "# Tài sản cố định: ma trận quyết định cho toàn bộ chênh lệch số tiền thực",
         "",
-        f"- Generated from the reproducible 2026-07-16 cross-trace CSVs.",
-        f"- Coverage: **{len(rows)} of 638** `TRUE_AMOUNT_MISMATCH` monthly cells, across {len(groups)} FY/CC/account groups.",
-        "- This is an evidence classification, not permission to overwrite departmental submissions.",
+        "- Được tạo từ các tệp CSV đối chiếu chéo có thể tái lập ngày 2026-07-16.",
+        f"- Phạm vi: **{len(rows)} trên 638** ô tháng `TRUE_AMOUNT_MISMATCH`, thuộc {len(groups)} nhóm FY/CC/tài khoản.",
+        "- Đây là phân loại bằng chứng, không phải quyền ghi đè dữ liệu do phòng ban nộp.",
         "",
-        "## Evidence classification",
+        "## Phân loại bằng chứng",
         "",
-        "| Classification | Cells |",
+        "| Phân loại | Số ô |",
         "| --- | ---: |",
         *[f"| `{key}` | {value} |" for key, value in sorted(classifications.items())],
         "",
-        "## Decision status",
+        "## Trạng thái quyết định",
         "",
-        "| Status | Cells | Meaning |",
+        "| Trạng thái | Số ô | Ý nghĩa |",
         "| --- | ---: | --- |",
         *[
             f"| `{key}` | {value} | "
             + {
-                "XAC_DINH_TU_BANG_CHUNG": "Evidence proves the policy outcome; code may follow that policy, not the submitted reference.",
-                "LA_NGOAI_LE_NHAP_TAY_HOAC_TANG_KHAC": "Reference is manual/another layer; preserve it as an exception and do not overwrite it.",
-                "MAU_THUAN_CAN_NGHIEP_VU_DUYET": "Two source snapshots conflict; business must choose the governing snapshot/policy.",
-                "KHONG_THE_XAC_DINH_TU_DU_LIEU": "Supplied data lacks the asset register or row-level explanation needed to decide.",
+                "XAC_DINH_TU_BANG_CHUNG": "Bằng chứng xác định kết quả theo chính sách; code được phép tuân theo chính sách đó, không sao chép tệp tham khảo đã nộp.",
+                "LA_NGOAI_LE_NHAP_TAY_HOAC_TANG_KHAC": "Tệp tham khảo là dữ liệu nhập tay hoặc thuộc lớp khác; giữ lại như ngoại lệ và không ghi đè.",
+                "MAU_THUAN_CAN_NGHIEP_VU_DUYET": "Hai ảnh chụp dữ liệu nguồn mâu thuẫn; nghiệp vụ phải chọn ảnh chụp hoặc chính sách có hiệu lực.",
+                "KHONG_THE_XAC_DINH_TU_DU_LIEU": "Dữ liệu được cung cấp thiếu sổ tài sản hoặc giải thích cấp dòng cần thiết để ra quyết định.",
             }[key]
             + " |"
             for key, value in sorted(decisions.items())
         ],
         "",
-        "## Controls before accounting changes",
+        "## Kiểm soát trước khi thay đổi số liệu kế toán",
         "",
-        "1. The matrix proves every cell has source and reference provenance, but only `XAC_DINH_TU_BANG_CHUNG` is eligible for a policy fix without a business decision.",
-        "2. The 222 `ROUNDING_ORDER` cells are outside this matrix because their cause is already proven: round per asset before aggregation.",
-        "3. Do not encode a reference snapshot, static manual amount, cost center, account, period, FX rate, filename, sheet, or FORM row as a fallback.",
-        "4. Keep `FA-OPEN` open until the business decisions and a post-fix comparator are complete.",
+        "1. Ma trận chứng minh mỗi ô đều có nguồn gốc từ dữ liệu nguồn và tham khảo, nhưng chỉ `XAC_DINH_TU_BANG_CHUNG` đủ điều kiện sửa theo chính sách mà không cần quyết định nghiệp vụ.",
+        "2. 222 ô `ROUNDING_ORDER` nằm ngoài ma trận này vì nguyên nhân đã được chứng minh: làm tròn theo từng tài sản trước khi cộng tổng.",
+        "3. Không mã hóa ảnh chụp tham khảo, số tiền nhập tay, CC, tài khoản, kỳ, tỷ giá, tên file, sheet hoặc dòng FORM thành giá trị dự phòng.",
+        "4. Giữ `FA-OPEN` ở trạng thái mở cho đến khi hoàn tất quyết định nghiệp vụ và bộ đối chiếu sau sửa lỗi.",
         "",
-        "## Artifact",
+        "## Tệp bằng chứng",
         "",
-        f"- `docs/audits/fixed_assets_true_mismatch_decision_matrix_{AUDIT_DATE}.csv` contains every monthly cell, both values, delta, source L/P/Q/V/W, reference row/formula, classification, decision, and allowed action.",
+        f"- `docs/audits/fixed_assets_true_mismatch_decision_matrix_{AUDIT_DATE}.csv` chứa từng ô tháng, hai giá trị, chênh lệch, L/P/Q/V/W nguồn, dòng/công thức tham khảo, phân loại, quyết định và hành động được phép.",
         "",
     ]
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
 def history_payload(rows: list[dict[str, Any]]) -> str:
-    """Return a stable digest payload, independent of the execution timestamp."""
+    """Tạo dữ liệu băm ổn định, không phụ thuộc thời điểm thực thi."""
     return json.dumps(rows, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 def display_path(path: Path) -> str:
-    """Use repository-relative paths where possible, without restricting tests/users."""
+    """Ưu tiên đường dẫn tương đối theo kho mã nhưng không hạn chế test/người dùng."""
     try:
         return str(path.relative_to(ROOT))
     except ValueError:
@@ -417,10 +418,10 @@ def display_path(path: Path) -> str:
 
 
 def fiscal_year_number(value: Any) -> int:
-    """Normalize ledger labels such as ``FY2026`` before DB storage."""
+    """Chuẩn hóa nhãn sổ cái như ``FY2026`` trước khi lưu vào CSDL."""
     digits = re.sub(r"\D", "", str(value))
     if len(digits) != 4:
-        raise ValueError(f"Invalid fiscal year for audit history: {value!r}")
+        raise ValueError(f"Năm tài chính không hợp lệ cho lịch sử kiểm toán: {value!r}")
     return int(digits)
 
 
@@ -433,12 +434,12 @@ def archive_audit_history(
     history_dir: Path,
     history_db: Path,
 ) -> tuple[str, Path]:
-    """Persist an immutable, user-readable audit snapshot and queryable DB log.
+    """Lưu ảnh chụp kiểm toán bất biến, dễ đọc và có nhật ký CSDL truy vấn được.
 
-    The dated decision-matrix files remain useful as the current view, but are
-    overwritten when an audit is repeated on the same day.  This function is
-    deliberately append-only: every invocation receives its own run id and
-    preserves the exact rows, evidence and classification available then.
+    Các tệp ma trận quyết định theo ngày vẫn là chế độ xem hiện tại hữu ích nhưng sẽ
+    được ghi đè khi kiểm toán lại trong cùng ngày. Hàm này chỉ nối thêm: mỗi lần gọi
+    nhận một mã lượt chạy riêng và giữ nguyên các dòng, bằng chứng cùng phân loại tại
+    thời điểm thực hiện.
     """
     payload = history_payload(rows)
     digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -559,23 +560,23 @@ def archive_audit_history(
 def main() -> None:
     import argparse
 
-    parser = argparse.ArgumentParser()
+    parser = VietnameseArgumentParser()
     parser.add_argument(
         "--history-dir",
         type=Path,
         default=AUDIT_DIR / "history" / "fixed_assets",
-        help="Append-only folder for immutable audit snapshots.",
+        help="Thư mục chỉ ghi nối tiếp để lưu ảnh chụp kiểm toán bất biến.",
     )
     parser.add_argument(
         "--history-db",
         type=Path,
         default=ROOT / "mp2027.db",
-        help="SQLite database that stores queryable mismatch history.",
+        help="Cơ sở dữ liệu SQLite lưu lịch sử chênh lệch để truy vấn.",
     )
     parser.add_argument(
         "--skip-history",
         action="store_true",
-        help="Regenerate only the current matrix; do not create a history record.",
+        help="Chỉ tạo lại ma trận hiện tại; không tạo bản ghi lịch sử.",
     )
     args = parser.parse_args()
     ledger = read_csv(f"fixed_assets_asset_ledger_{AUDIT_DATE}.csv")
@@ -623,9 +624,9 @@ def main() -> None:
             }
         )
     if len(matrix) != 638:
-        raise RuntimeError(f"Expected 638 TRUE_AMOUNT_MISMATCH cells, found {len(matrix)}")
+        raise RuntimeError(f"Cần 638 ô TRUE_AMOUNT_MISMATCH, tìm thấy {len(matrix)}")
     if any(row["decision_status"] not in VALID_DECISIONS for row in matrix):
-        raise RuntimeError("Decision matrix contains an invalid decision status")
+        raise RuntimeError("Ma trận quyết định chứa trạng thái quyết định không hợp lệ")
     missing_provenance = [
         row
         for row in matrix
@@ -640,7 +641,7 @@ def main() -> None:
             }
             for row in missing_provenance[:10]
         ]
-        raise RuntimeError(f"Decision rows missing provenance: {sample}")
+        raise RuntimeError(f"Các dòng quyết định đang thiếu thông tin nguồn gốc: {sample}")
     fields = [
         "fy", "cc", "account", "period", "expected_per_asset_round_vnd", "reference_actual_vnd",
         "delta_reference_minus_expected_vnd", "reference_formula_kind", "source_asset_count_in_group",
@@ -660,9 +661,9 @@ def main() -> None:
             history_dir=args.history_dir.resolve(),
             history_db=args.history_db.resolve(),
         )
-        print(f"WROTE history run {run_id}: {snapshot_dir}")
-    print(f"WROTE {csv_path}")
-    print(f"WROTE {report_path}")
+        print(f"ĐÃ GHI lượt lịch sử {run_id}: {snapshot_dir}")
+    print(f"ĐÃ GHI {csv_path}")
+    print(f"ĐÃ GHI {report_path}")
     print(json.dumps({"cells": len(matrix), "classifications": Counter(row["evidence_classification"] for row in matrix), "decisions": Counter(row["decision_status"] for row in matrix)}, ensure_ascii=False, sort_keys=True))
 
 

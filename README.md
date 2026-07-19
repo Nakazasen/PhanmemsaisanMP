@@ -65,7 +65,7 @@ py -m venv .venv
 py -m pip install -U pip
 pip install -r requirements.txt
 py -m compileall src scripts packaging
-py -m pytest -m "not requires_raw_excel"
+py -m pytest -m "not requires_raw_excel and not real_pipeline_acceptance and not performance" -q
 ```
 
 Fresh clone phải có trực tiếp workbook canonical:
@@ -85,7 +85,37 @@ Nếu máy có lệnh `python` trỏ sai Microsoft Store, dùng `py` như các v
 run_MP2027.bat
 ```
 
-Batch này gọi `py src/universal_app.py`.
+Batch này gọi `py src/universal_app.py` khi phát triển từ source.
+
+### Bản đóng gói Windows cho người dùng
+
+Bản phát hành dùng PyInstaller **onedir**, không dùng one-file. Máy người dùng
+không cần cài Python hoặc compiler. Build và kiểm tra health xuyên suốt bằng:
+
+```powershell
+py scripts/package_app.py
+```
+
+Bundle được tạo trong `release_artifacts/install_bundle/`; người dùng luôn mở
+`MP2027_Launcher.exe`, không mở executable nằm trực tiếp trong `apps/<version>/`.
+Code immutable nằm trong `%LOCALAPPDATA%\MP2027 Manager`, còn DB/log/output và
+input chỉnh sửa được nằm trong `%LOCALAPPDATA%\MPManager\Projects\MP2027`.
+
+Biên dịch Setup sau khi build bundle:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" installer\MP2027_Manager.iss
+```
+
+Wizard cài/gỡ dùng duy nhất bản dịch tiếng Việt được ghim tại
+`installer/languages/Vietnamese.isl`; contract test kiểm tra đủ 296 message key.
+Bản build 0.1.0 đã đo: app onedir 164,97 MB, install bundle 180,33 MB và Setup
+70,40 MB. Đây là bằng chứng trên máy build; vẫn phải smoke trên Windows sạch thật
+không có Python/compiler trước khi tuyên bố tương thích mọi máy. Setup hiện chưa ký
+Authenticode nên máy lạ vẫn có thể hiển thị cảnh báo SmartScreen.
+
+Xem checklist phát hành và giới hạn clean-machine tại
+[release_update_playbook.md](docs/handover/release_update_playbook.md).
 
 ### Pipeline E2E cho developer
 
@@ -99,21 +129,26 @@ CLI E2E là developer smoke/integration path. Nó có thể cần `docs/MP2027/F
 
 ```powershell
 py -m compileall src scripts packaging
-py -m pytest -m "not requires_raw_excel"
-py -m pytest
+py -m pytest -m "not requires_raw_excel and not real_pipeline_acceptance and not performance" -q
+py -m pytest -m "not performance" -q
 ```
 
-GitHub Actions chỉ chạy nhóm test CI-safe không cần workbook Excel thật trong `raw/`:
+GitHub Actions chạy profile CI-safe không cần workbook Excel thật trong `raw/`:
 
 ```powershell
-py -m pytest -m "not requires_raw_excel"
+py -m pytest -m "not requires_raw_excel and not real_pipeline_acceptance and not performance" -q
 ```
 
-Local full validation trên máy có dữ liệu `raw/` thật vẫn chạy toàn bộ test suite:
+Local full validation trên máy có dữ liệu `raw/` thật chạy regression thông thường,
+nhưng benchmark vẫn là opt-in:
 
 ```powershell
-py -m pytest
+py -m pytest -m "not performance" -q
 ```
+
+Xem toàn bộ profile fast/CI/acceptance/performance/package tại
+[test_strategy_and_profiles.md](docs/handover/test_strategy_and_profiles.md).
+
 
 Các test được đánh dấu `requires_raw_excel` cần workbook thật trong `raw/` và không chạy trên GitHub CI. Nếu các workbook này tồn tại local, test phải chạy thật và không được skip âm thầm để che lỗi nghiệp vụ.
 
@@ -149,12 +184,23 @@ Remove-Item -Force mp2027.db, mp2027_before_optimization.db -ErrorAction Silentl
 
 Sau khi dọn, source code và input canonical trong Git không bị ảnh hưởng.
 
-## Tài liệu nghiệp vụ cần đọc trước
+## Tài liệu bàn giao cần đọc trước
 
-- [Quy trình nghiệp vụ MP2027](QUY_TRINH_NGHIEP_VU_MP2027.md)
-- [Cải tiến nhập dữ liệu chung](docs/requirements/cai_tien_nhap_du_lieu_chung.md)
-- [Knowledge base MP saisan](docs/knowledge/mp_saisan_business_knowledge_base_v2.md)
-- [Requirement mapping YAML](docs/requirements/requirement_mapping.yaml)
+1. [HANDOVER_FOR_NEXT_AGENT.md](docs/handover/HANDOVER_FOR_NEXT_AGENT.md) — trạng thái và thứ tự đọc.
+2. [system_architecture.md](docs/architecture/system_architecture.md) — kiến trúc và sơ đồ Mermaid.
+3. [feature_registry.md](docs/architecture/feature_registry.md) — các khối tính năng và owner code.
+4. [data_dictionary.md](docs/database/data_dictionary.md) — schema, ERD, migration và ownership dữ liệu.
+5. [test_strategy_and_profiles.md](docs/handover/test_strategy_and_profiles.md) — test/audit/performance gates.
+6. [release_update_playbook.md](docs/handover/release_update_playbook.md) — đóng gói, update và rollback.
+7. [Quy trình nghiệp vụ MP2027](QUY_TRINH_NGHIEP_VU_MP2027.md).
+8. [Cải tiến nhập dữ liệu chung](docs/requirements/cai_tien_nhap_du_lieu_chung.md).
+9. [Knowledge base MP saisan](docs/knowledge/mp_saisan_business_knowledge_base_v2.md).
+10. [Requirement mapping YAML](docs/requirements/requirement_mapping.yaml).
+
+Graph tương tác `.understand-anything/knowledge-graph.json` là artifact tùy chọn,
+được tạo bằng workflow `/understand` sau khi review `.understandignore`; không coi
+workspace state/generated graph là nguồn nghiệp vụ canonical.
+
 
 ## Troubleshooting
 

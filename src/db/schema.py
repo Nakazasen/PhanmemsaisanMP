@@ -1,17 +1,28 @@
 """
 MP2027 Manager - Database Schema (Refactored V4.5.0)
 """
-import sqlite3
 import os
-
+import sqlite3
 import sys
 
-if getattr(sys, 'frozen', False):
+from src.db.migrations import run_migrations
+
+if getattr(sys, "frozen", False):
     BASE_DIR = os.path.dirname(sys.executable)
 else:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-DB_PATH = os.path.join(BASE_DIR, 'mp2027.db')
+DB_PATH = os.path.join(BASE_DIR, "mp2027.db")
+
+
+def _default_database_path() -> str:
+    runtime_root = os.environ.get("MP_MANAGER_RUNTIME_ROOT")
+    if runtime_root:
+        return os.path.join(os.path.abspath(runtime_root), "mp2027.db")
+    if getattr(sys, "frozen", False):
+        user_root = os.environ.get("LOCALAPPDATA") or os.path.join(os.path.expanduser("~"), ".mp_manager")
+        return os.path.join(os.path.abspath(user_root), "MPManager", "Projects", "MP2027", "mp2027.db")
+    return DB_PATH
 
 
 def _column_exists(conn: sqlite3.Connection, table_name: str, column_name: str) -> bool:
@@ -26,8 +37,9 @@ def _column_type(conn: sqlite3.Connection, table_name: str, column_name: str) ->
             return str(row[2] or "").upper()
     return None
 
-def get_connection(db_path: str = None) -> sqlite3.Connection:
-    path = db_path or DB_PATH
+
+def get_connection(db_path: str | None = None) -> sqlite3.Connection:
+    path = os.path.abspath(db_path or _default_database_path())
     os.makedirs(os.path.dirname(path), exist_ok=True)
     conn = sqlite3.connect(path)
     conn.execute("PRAGMA journal_mode=WAL")
@@ -36,14 +48,13 @@ def get_connection(db_path: str = None) -> sqlite3.Connection:
     return conn
 
 def create_schema(conn: sqlite3.Connection) -> None:
+    # Keep the historical callable API, but make all compatibility changes
+    # versioned, backed up where needed, and transactional.
+    run_migrations(
+        conn,
+        application_version=os.environ.get("MP_MANAGER_VERSION", "unversioned"),
+    )
     cursor = conn.cursor()
-    cc_code_type = _column_type(conn, "dim_cost_centers", "code")
-    if cc_code_type and cc_code_type != "TEXT":
-        cursor.execute("PRAGMA foreign_keys=OFF")
-        cursor.execute("DROP TABLE IF EXISTS fact_allocation_log")
-        cursor.execute("DROP TABLE IF EXISTS dim_cost_centers")
-        cursor.execute("PRAGMA foreign_keys=ON")
-        conn.commit()
 
     # Basic Dimension Tables
     cursor.execute("""

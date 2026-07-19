@@ -1,0 +1,1690 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-19T16:20:30+00:00",
+  "scope": {
+    "roots": [
+      "src",
+      "scripts",
+      "packaging",
+      "tests"
+    ],
+    "private_runtime_data_scanned": false,
+    "business_pipeline_executed": false
+  },
+  "summary": {
+    "python_files": 145,
+    "python_lines": 45649,
+    "test_count": 638,
+    "test_collection_error": null,
+    "findings_by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 5,
+      "low": 0
+    }
+  },
+  "modules": [
+    {
+      "path": "packaging/mp2027_portable_entry.py",
+      "kind": "packaging",
+      "lines": 34,
+      "functions": 1,
+      "classes": 0,
+      "internal_imports": [
+        "src.services.runtime_health",
+        "src.universal_app"
+      ]
+    },
+    {
+      "path": "scripts/audit_fixed_assets_cross_trace.py",
+      "kind": "developer_tool",
+      "lines": 862,
+      "functions": 24,
+      "classes": 1,
+      "internal_imports": [
+        "src.utils.cli"
+      ]
+    },
+    {
+      "path": "scripts/build_fixed_assets_business_decision_pack.py",
+      "kind": "developer_tool",
+      "lines": 139,
+      "functions": 4,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "scripts/classify_fixed_assets_mismatches.py",
+      "kind": "developer_tool",
+      "lines": 671,
+      "functions": 23,
+      "classes": 0,
+      "internal_imports": [
+        "scripts.audit_fixed_assets_cross_trace",
+        "src.db.schema",
+        "src.utils.cli"
+      ]
+    },
+    {
+      "path": "scripts/convert_icon.py",
+      "kind": "developer_tool",
+      "lines": 39,
+      "functions": 1,
+      "classes": 0,
+      "internal_imports": [
+        "src.utils.cli"
+      ]
+    },
+    {
+      "path": "scripts/export_schema_documentation.py",
+      "kind": "developer_tool",
+      "lines": 88,
+      "functions": 3,
+      "classes": 0,
+      "internal_imports": [
+        "src.db.migrations",
+        "src.db.schema",
+        "src.utils.cli"
+      ]
+    },
+    {
+      "path": "scripts/extract_reference_staffing_sources.py",
+      "kind": "developer_tool",
+      "lines": 28,
+      "functions": 1,
+      "classes": 0,
+      "internal_imports": [
+        "src.services.reference_staffing_extractor",
+        "src.utils.cli"
+      ]
+    },
+    {
+      "path": "scripts/generate_quality_baseline.py",
+      "kind": "developer_tool",
+      "lines": 168,
+      "functions": 6,
+      "classes": 0,
+      "internal_imports": [
+        "src.utils.cli"
+      ]
+    },
+    {
+      "path": "scripts/package_app.py",
+      "kind": "developer_tool",
+      "lines": 345,
+      "functions": 13,
+      "classes": 0,
+      "internal_imports": [
+        "src.db.migrations",
+        "src.services.update_security",
+        "src.utils.cli"
+      ]
+    },
+    {
+      "path": "scripts/run_e2e.py",
+      "kind": "developer_tool",
+      "lines": 1679,
+      "functions": 30,
+      "classes": 2,
+      "internal_imports": [
+        "src.audit.exchange_rate_audit",
+        "src.audit.pipeline_audit",
+        "src.db.loader",
+        "src.db.schema",
+        "src.engine.admin_consumables_writer",
+        "src.engine.allocator",
+        "src.engine.complete_v1_source_order_writer",
+        "src.engine.facility_file_order_writer",
+        "src.engine.fixed_assets_reference_skeleton",
+        "src.engine.hub_builder",
+        "src.engine.mp_saisan_complete_export",
+        "src.engine.reference_assisted_fill",
+        "src.engine.system_cost_writer",
+        "src.parsers.birthday",
+        "src.parsers.facility",
+        "src.parsers.fixed_assets",
+        "src.parsers.ga",
+        "src.parsers.it_sim",
+        "src.parsers.manual_event_drivers",
+        "src.parsers.manual_headcount",
+        "src.parsers.manual_special_costs",
+        "src.parsers.nnn_paperwork",
+        "src.services.content_packs",
+        "src.services.fiscal_run",
+        "src.services.headcount_source_importer",
+        "src.services.manual_staffing_overrides",
+        "src.services.preflight_cache",
+        "src.services.run_history",
+        "src.services.runtime_health",
+        "src.utils.cli",
+        "src.utils.excel_helpers",
+        "src.utils.fiscal_periods",
+        "src.utils.source_manifest"
+      ]
+    },
+    {
+      "path": "scripts/run_real_pipeline_acceptance.py",
+      "kind": "developer_tool",
+      "lines": 495,
+      "functions": 12,
+      "classes": 0,
+      "internal_imports": [
+        "src.audit.real_pipeline_validator",
+        "src.services.manual_staffing_overrides",
+        "src.utils.cli"
+      ]
+    },
+    {
+      "path": "scripts/update_launcher.py",
+      "kind": "developer_tool",
+      "lines": 97,
+      "functions": 6,
+      "classes": 1,
+      "internal_imports": [
+        "src.utils.cli"
+      ]
+    },
+    {
+      "path": "scripts/verify_fixed_assets_handover.py",
+      "kind": "developer_tool",
+      "lines": 159,
+      "functions": 4,
+      "classes": 0,
+      "internal_imports": [
+        "src.utils.cli"
+      ]
+    },
+    {
+      "path": "scripts/verify_fixed_assets_policy_output.py",
+      "kind": "developer_tool",
+      "lines": 148,
+      "functions": 7,
+      "classes": 0,
+      "internal_imports": [
+        "src.db.schema",
+        "src.engine.hub_builder",
+        "src.parsers.fixed_assets"
+      ]
+    },
+    {
+      "path": "src/__init__.py",
+      "kind": "application",
+      "lines": 0,
+      "functions": 0,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "src/audit/exchange_rate_audit.py",
+      "kind": "audit",
+      "lines": 176,
+      "functions": 4,
+      "classes": 0,
+      "internal_imports": [
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "src/audit/fixed_assets_coverage.py",
+      "kind": "audit",
+      "lines": 69,
+      "functions": 2,
+      "classes": 0,
+      "internal_imports": [
+        "src.parsers.fixed_assets"
+      ]
+    },
+    {
+      "path": "src/audit/pipeline_audit.py",
+      "kind": "audit",
+      "lines": 325,
+      "functions": 10,
+      "classes": 0,
+      "internal_imports": [
+        "src.audit.fixed_assets_coverage",
+        "src.parsers.fixed_assets",
+        "src.parsers.manual_event_drivers",
+        "src.parsers.manual_headcount",
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "src/audit/real_pipeline_validator.py",
+      "kind": "audit",
+      "lines": 435,
+      "functions": 14,
+      "classes": 2,
+      "internal_imports": [
+        "src.audit.exchange_rate_audit",
+        "src.utils.excel_helpers",
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "src/config.py",
+      "kind": "application",
+      "lines": 5,
+      "functions": 0,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "src/db/__init__.py",
+      "kind": "database",
+      "lines": 0,
+      "functions": 0,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "src/db/fy2027_compat.py",
+      "kind": "database",
+      "lines": 25,
+      "functions": 2,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "src/db/loader.py",
+      "kind": "database",
+      "lines": 777,
+      "functions": 18,
+      "classes": 0,
+      "internal_imports": [
+        "src.db.schema",
+        "src.engine.uniform_cup_rules",
+        "src.services.content_packs",
+        "src.services.fiscal_run",
+        "src.utils.excel_helpers",
+        "src.utils.source_manifest"
+      ]
+    },
+    {
+      "path": "src/db/migrations.py",
+      "kind": "database",
+      "lines": 215,
+      "functions": 8,
+      "classes": 2,
+      "internal_imports": []
+    },
+    {
+      "path": "src/db/schema.py",
+      "kind": "database",
+      "lines": 356,
+      "functions": 6,
+      "classes": 0,
+      "internal_imports": [
+        "src.db.migrations"
+      ]
+    },
+    {
+      "path": "src/engine/__init__.py",
+      "kind": "business_engine",
+      "lines": 0,
+      "functions": 0,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "src/engine/account_resolver.py",
+      "kind": "business_engine",
+      "lines": 382,
+      "functions": 17,
+      "classes": 2,
+      "internal_imports": []
+    },
+    {
+      "path": "src/engine/admin_consumables_preview.py",
+      "kind": "business_engine",
+      "lines": 124,
+      "functions": 4,
+      "classes": 2,
+      "internal_imports": [
+        "src.engine.cost_center_context"
+      ]
+    },
+    {
+      "path": "src/engine/admin_consumables_writer.py",
+      "kind": "business_engine",
+      "lines": 94,
+      "functions": 4,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.admin_consumables_preview",
+        "src.engine.column_s_normalizer",
+        "src.utils"
+      ]
+    },
+    {
+      "path": "src/engine/allocator.py",
+      "kind": "business_engine",
+      "lines": 1541,
+      "functions": 60,
+      "classes": 1,
+      "internal_imports": [
+        "src.engine.account_resolver",
+        "src.engine.uniform_cup_rules",
+        "src.services.headcount_source_policy",
+        "src.utils"
+      ]
+    },
+    {
+      "path": "src/engine/column_s_normalizer.py",
+      "kind": "business_engine",
+      "lines": 155,
+      "functions": 9,
+      "classes": 0,
+      "internal_imports": [
+        "src.utils"
+      ]
+    },
+    {
+      "path": "src/engine/complete_v1_source_order_writer.py",
+      "kind": "business_engine",
+      "lines": 649,
+      "functions": 34,
+      "classes": 1,
+      "internal_imports": [
+        "src.engine.column_s_normalizer",
+        "src.engine.source_order_output",
+        "src.utils"
+      ]
+    },
+    {
+      "path": "src/engine/cost_center_context.py",
+      "kind": "business_engine",
+      "lines": 14,
+      "functions": 1,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "src/engine/facility_file_order_preview.py",
+      "kind": "business_engine",
+      "lines": 190,
+      "functions": 6,
+      "classes": 2,
+      "internal_imports": [
+        "src.engine.cost_center_context",
+        "src.engine.output_mode",
+        "src.engine.output_placement"
+      ]
+    },
+    {
+      "path": "src/engine/facility_file_order_writer.py",
+      "kind": "business_engine",
+      "lines": 118,
+      "functions": 6,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.column_s_normalizer",
+        "src.engine.facility_file_order_preview",
+        "src.utils"
+      ]
+    },
+    {
+      "path": "src/engine/fixed_assets_reference_skeleton.py",
+      "kind": "business_engine",
+      "lines": 151,
+      "functions": 9,
+      "classes": 0,
+      "internal_imports": [
+        "src.audit.exchange_rate_audit",
+        "src.engine.column_s_normalizer",
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "src/engine/fy2027_compat.py",
+      "kind": "business_engine",
+      "lines": 17,
+      "functions": 0,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "src/engine/hub_builder.py",
+      "kind": "business_engine",
+      "lines": 1770,
+      "functions": 64,
+      "classes": 2,
+      "internal_imports": [
+        "src.engine.account_resolver",
+        "src.engine.column_s_normalizer",
+        "src.engine.output_mode",
+        "src.parsers.fixed_assets",
+        "src.services.headcount_source_policy",
+        "src.utils",
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "src/engine/mp_saisan_complete_export.py",
+      "kind": "business_engine",
+      "lines": 305,
+      "functions": 15,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.column_s_normalizer",
+        "src.engine.fixed_assets_reference_skeleton",
+        "src.engine.reference_assisted_fill"
+      ]
+    },
+    {
+      "path": "src/engine/output_mode.py",
+      "kind": "business_engine",
+      "lines": 161,
+      "functions": 7,
+      "classes": 2,
+      "internal_imports": []
+    },
+    {
+      "path": "src/engine/output_placement.py",
+      "kind": "business_engine",
+      "lines": 104,
+      "functions": 4,
+      "classes": 1,
+      "internal_imports": [
+        "src.engine.output_mode"
+      ]
+    },
+    {
+      "path": "src/engine/reference_assisted_fill.py",
+      "kind": "business_engine",
+      "lines": 308,
+      "functions": 17,
+      "classes": 0,
+      "internal_imports": [
+        "src.audit.exchange_rate_audit",
+        "src.engine.column_s_normalizer",
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "src/engine/source_order_output.py",
+      "kind": "business_engine",
+      "lines": 92,
+      "functions": 4,
+      "classes": 2,
+      "internal_imports": [
+        "src.engine.fy2027_compat"
+      ]
+    },
+    {
+      "path": "src/engine/system_cost_preview.py",
+      "kind": "business_engine",
+      "lines": 87,
+      "functions": 3,
+      "classes": 2,
+      "internal_imports": [
+        "src.engine.cost_center_context",
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "src/engine/system_cost_writer.py",
+      "kind": "business_engine",
+      "lines": 82,
+      "functions": 3,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.column_s_normalizer",
+        "src.engine.system_cost_preview",
+        "src.utils"
+      ]
+    },
+    {
+      "path": "src/engine/uniform_cup_rules.py",
+      "kind": "business_engine",
+      "lines": 58,
+      "functions": 3,
+      "classes": 1,
+      "internal_imports": []
+    },
+    {
+      "path": "src/parsers/__init__.py",
+      "kind": "parser",
+      "lines": 0,
+      "functions": 0,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "src/parsers/birthday.py",
+      "kind": "parser",
+      "lines": 120,
+      "functions": 4,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.account_resolver",
+        "src.utils.excel_helpers",
+        "src.utils.source_manifest"
+      ]
+    },
+    {
+      "path": "src/parsers/extracted_headcount_time_plan.py",
+      "kind": "parser",
+      "lines": 196,
+      "functions": 5,
+      "classes": 1,
+      "internal_imports": [
+        "src.parsers.headcount_time_plan",
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "src/parsers/facility.py",
+      "kind": "parser",
+      "lines": 194,
+      "functions": 2,
+      "classes": 0,
+      "internal_imports": [
+        "src.utils.excel_helpers",
+        "src.utils.source_manifest"
+      ]
+    },
+    {
+      "path": "src/parsers/fixed_assets.py",
+      "kind": "parser",
+      "lines": 539,
+      "functions": 17,
+      "classes": 0,
+      "internal_imports": [
+        "src.utils",
+        "src.utils.source_manifest"
+      ]
+    },
+    {
+      "path": "src/parsers/ga.py",
+      "kind": "parser",
+      "lines": 648,
+      "functions": 19,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.account_resolver",
+        "src.utils.excel_helpers",
+        "src.utils.source_manifest"
+      ]
+    },
+    {
+      "path": "src/parsers/headcount_time_plan.py",
+      "kind": "parser",
+      "lines": 187,
+      "functions": 5,
+      "classes": 1,
+      "internal_imports": [
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "src/parsers/it_sim.py",
+      "kind": "parser",
+      "lines": 454,
+      "functions": 14,
+      "classes": 0,
+      "internal_imports": [
+        "src.utils.excel_helpers",
+        "src.utils.fiscal_periods",
+        "src.utils.source_manifest"
+      ]
+    },
+    {
+      "path": "src/parsers/manual_event_drivers.py",
+      "kind": "parser",
+      "lines": 611,
+      "functions": 20,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.account_resolver",
+        "src.utils.excel_helpers",
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "src/parsers/manual_headcount.py",
+      "kind": "parser",
+      "lines": 812,
+      "functions": 15,
+      "classes": 0,
+      "internal_imports": [
+        "src.utils.excel_helpers",
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "src/parsers/manual_special_costs.py",
+      "kind": "parser",
+      "lines": 136,
+      "functions": 3,
+      "classes": 0,
+      "internal_imports": [
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "src/parsers/nnn_paperwork.py",
+      "kind": "parser",
+      "lines": 263,
+      "functions": 8,
+      "classes": 0,
+      "internal_imports": [
+        "src.utils.excel_helpers",
+        "src.utils.source_manifest"
+      ]
+    },
+    {
+      "path": "src/services/__init__.py",
+      "kind": "service",
+      "lines": 0,
+      "functions": 0,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "src/services/app_updates.py",
+      "kind": "service",
+      "lines": 389,
+      "functions": 16,
+      "classes": 1,
+      "internal_imports": [
+        "src.services.update_security"
+      ]
+    },
+    {
+      "path": "src/services/content_packs.py",
+      "kind": "service",
+      "lines": 387,
+      "functions": 11,
+      "classes": 1,
+      "internal_imports": [
+        "src.services.update_security"
+      ]
+    },
+    {
+      "path": "src/services/fiscal_run.py",
+      "kind": "service",
+      "lines": 1214,
+      "functions": 58,
+      "classes": 5,
+      "internal_imports": [
+        "src.db.loader",
+        "src.db.schema",
+        "src.engine.uniform_cup_rules",
+        "src.services.headcount_source_importer",
+        "src.utils",
+        "src.utils.fiscal_periods",
+        "src.utils.source_manifest"
+      ]
+    },
+    {
+      "path": "src/services/headcount_source_importer.py",
+      "kind": "service",
+      "lines": 362,
+      "functions": 13,
+      "classes": 0,
+      "internal_imports": [
+        "src.parsers.extracted_headcount_time_plan",
+        "src.parsers.headcount_time_plan",
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "src/services/headcount_source_policy.py",
+      "kind": "service",
+      "lines": 101,
+      "functions": 3,
+      "classes": 2,
+      "internal_imports": [
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "src/services/manual_staffing_overrides.py",
+      "kind": "service",
+      "lines": 391,
+      "functions": 11,
+      "classes": 0,
+      "internal_imports": [
+        "src.db.schema",
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "src/services/preflight_cache.py",
+      "kind": "service",
+      "lines": 254,
+      "functions": 12,
+      "classes": 0,
+      "internal_imports": [
+        "src.services.fiscal_run",
+        "src.services.project_config"
+      ]
+    },
+    {
+      "path": "src/services/project_config.py",
+      "kind": "service",
+      "lines": 334,
+      "functions": 19,
+      "classes": 2,
+      "internal_imports": []
+    },
+    {
+      "path": "src/services/reference_staffing_extractor.py",
+      "kind": "service",
+      "lines": 872,
+      "functions": 30,
+      "classes": 3,
+      "internal_imports": [
+        "src.parsers.extracted_headcount_time_plan",
+        "src.parsers.headcount_time_plan",
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "src/services/reference_staffing_render_worker.py",
+      "kind": "service",
+      "lines": 130,
+      "functions": 4,
+      "classes": 0,
+      "internal_imports": [
+        "src.services.reference_staffing_extractor"
+      ]
+    },
+    {
+      "path": "src/services/run_history.py",
+      "kind": "service",
+      "lines": 484,
+      "functions": 17,
+      "classes": 1,
+      "internal_imports": [
+        "src.services.fiscal_run"
+      ]
+    },
+    {
+      "path": "src/services/runtime_health.py",
+      "kind": "service",
+      "lines": 215,
+      "functions": 11,
+      "classes": 1,
+      "internal_imports": [
+        "src.db.migrations",
+        "src.db.schema"
+      ]
+    },
+    {
+      "path": "src/services/update_security.py",
+      "kind": "service",
+      "lines": 250,
+      "functions": 13,
+      "classes": 1,
+      "internal_imports": []
+    },
+    {
+      "path": "src/universal_app.py",
+      "kind": "application",
+      "lines": 3723,
+      "functions": 152,
+      "classes": 1,
+      "internal_imports": [
+        "scripts.run_e2e",
+        "src.db.loader",
+        "src.db.migrations",
+        "src.db.schema",
+        "src.parsers.manual_event_drivers",
+        "src.parsers.manual_headcount",
+        "src.services.app_updates",
+        "src.services.content_packs",
+        "src.services.fiscal_run",
+        "src.services.headcount_source_importer",
+        "src.services.manual_staffing_overrides",
+        "src.services.preflight_cache",
+        "src.services.project_config",
+        "src.services.reference_staffing_render_worker",
+        "src.services.run_history",
+        "src.services.runtime_health",
+        "src.utils.excel_helpers",
+        "src.utils.fiscal_periods",
+        "src.utils.source_manifest"
+      ]
+    },
+    {
+      "path": "src/utils/__init__.py",
+      "kind": "application",
+      "lines": 0,
+      "functions": 0,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "src/utils/cli.py",
+      "kind": "application",
+      "lines": 102,
+      "functions": 10,
+      "classes": 2,
+      "internal_imports": []
+    },
+    {
+      "path": "src/utils/excel_helpers.py",
+      "kind": "application",
+      "lines": 208,
+      "functions": 16,
+      "classes": 0,
+      "internal_imports": [
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "src/utils/fiscal_periods.py",
+      "kind": "application",
+      "lines": 221,
+      "functions": 11,
+      "classes": 2,
+      "internal_imports": []
+    },
+    {
+      "path": "src/utils/source_manifest.py",
+      "kind": "application",
+      "lines": 820,
+      "functions": 33,
+      "classes": 0,
+      "internal_imports": [
+        "src.parsers.fixed_assets",
+        "src.parsers.ga"
+      ]
+    },
+    {
+      "path": "tests/__init__.py",
+      "kind": "test",
+      "lines": 1,
+      "functions": 0,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "tests/conftest.py",
+      "kind": "test",
+      "lines": 39,
+      "functions": 3,
+      "classes": 0,
+      "internal_imports": [
+        "src.db.schema",
+        "src.engine.source_order_output"
+      ]
+    },
+    {
+      "path": "tests/test_account_resolver.py",
+      "kind": "test",
+      "lines": 486,
+      "functions": 33,
+      "classes": 2,
+      "internal_imports": [
+        "src.db.schema",
+        "src.engine.account_resolver",
+        "src.engine.allocator",
+        "src.parsers"
+      ]
+    },
+    {
+      "path": "tests/test_admin_consumables_export_flag.py",
+      "kind": "test",
+      "lines": 45,
+      "functions": 5,
+      "classes": 0,
+      "internal_imports": [
+        "scripts.run_e2e"
+      ]
+    },
+    {
+      "path": "tests/test_admin_consumables_preview.py",
+      "kind": "test",
+      "lines": 25,
+      "functions": 2,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.admin_consumables_preview"
+      ]
+    },
+    {
+      "path": "tests/test_admin_consumables_writer.py",
+      "kind": "test",
+      "lines": 80,
+      "functions": 4,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.admin_consumables_writer",
+        "src.utils"
+      ]
+    },
+    {
+      "path": "tests/test_allocator_target_scope.py",
+      "kind": "test",
+      "lines": 44,
+      "functions": 4,
+      "classes": 0,
+      "internal_imports": [
+        "src.db.schema",
+        "src.engine.allocator"
+      ]
+    },
+    {
+      "path": "tests/test_app_updates.py",
+      "kind": "test",
+      "lines": 339,
+      "functions": 18,
+      "classes": 1,
+      "internal_imports": [
+        "src.services.app_updates",
+        "src.services.update_security",
+        "src.universal_app"
+      ]
+    },
+    {
+      "path": "tests/test_canonical_gui_export_path.py",
+      "kind": "test",
+      "lines": 357,
+      "functions": 35,
+      "classes": 6,
+      "internal_imports": [
+        "scripts.run_e2e",
+        "src.engine.hub_builder",
+        "src.services.fiscal_run"
+      ]
+    },
+    {
+      "path": "tests/test_column_s_normalizer.py",
+      "kind": "test",
+      "lines": 98,
+      "functions": 7,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.column_s_normalizer"
+      ]
+    },
+    {
+      "path": "tests/test_complete_v1_source_order_writer.py",
+      "kind": "test",
+      "lines": 926,
+      "functions": 25,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.complete_v1_source_order_writer",
+        "src.engine.source_order_output"
+      ]
+    },
+    {
+      "path": "tests/test_content_packs.py",
+      "kind": "test",
+      "lines": 641,
+      "functions": 41,
+      "classes": 3,
+      "internal_imports": [
+        "scripts.run_e2e",
+        "src.db.loader",
+        "src.db.schema",
+        "src.services.content_packs",
+        "src.services.fiscal_run",
+        "src.services.update_security",
+        "src.universal_app"
+      ]
+    },
+    {
+      "path": "tests/test_exchange_rate_consistency.py",
+      "kind": "test",
+      "lines": 58,
+      "functions": 4,
+      "classes": 0,
+      "internal_imports": [
+        "src.audit.exchange_rate_audit",
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "tests/test_extracted_headcount_time_plan.py",
+      "kind": "test",
+      "lines": 93,
+      "functions": 3,
+      "classes": 1,
+      "internal_imports": [
+        "src.db.schema",
+        "src.engine.allocator",
+        "src.parsers.extracted_headcount_time_plan",
+        "src.services.headcount_source_importer",
+        "src.services.headcount_source_policy",
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "tests/test_facility_file_order_cli.py",
+      "kind": "test",
+      "lines": 95,
+      "functions": 6,
+      "classes": 0,
+      "internal_imports": [
+        "src.utils"
+      ]
+    },
+    {
+      "path": "tests/test_facility_file_order_export_flag.py",
+      "kind": "test",
+      "lines": 103,
+      "functions": 8,
+      "classes": 0,
+      "internal_imports": [
+        "scripts.run_e2e",
+        "src.engine.facility_file_order_writer",
+        "src.utils"
+      ]
+    },
+    {
+      "path": "tests/test_facility_file_order_preview.py",
+      "kind": "test",
+      "lines": 89,
+      "functions": 6,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.facility_file_order_preview"
+      ]
+    },
+    {
+      "path": "tests/test_facility_file_order_writer.py",
+      "kind": "test",
+      "lines": 121,
+      "functions": 7,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.facility_file_order_writer",
+        "src.utils"
+      ]
+    },
+    {
+      "path": "tests/test_facility_preview_workflow_cli.py",
+      "kind": "test",
+      "lines": 168,
+      "functions": 19,
+      "classes": 3,
+      "internal_imports": [
+        "scripts.run_e2e",
+        "src.services.fiscal_run"
+      ]
+    },
+    {
+      "path": "tests/test_file_order_export_v1_flag.py",
+      "kind": "test",
+      "lines": 44,
+      "functions": 5,
+      "classes": 0,
+      "internal_imports": [
+        "scripts.run_e2e"
+      ]
+    },
+    {
+      "path": "tests/test_file_order_export_v2_flag.py",
+      "kind": "test",
+      "lines": 64,
+      "functions": 8,
+      "classes": 0,
+      "internal_imports": [
+        "scripts.run_e2e"
+      ]
+    },
+    {
+      "path": "tests/test_fiscal_run_context.py",
+      "kind": "test",
+      "lines": 629,
+      "functions": 40,
+      "classes": 0,
+      "internal_imports": [
+        "scripts.run_e2e",
+        "src.db.schema",
+        "src.engine.uniform_cup_rules",
+        "src.parsers.manual_event_drivers",
+        "src.parsers.nnn_paperwork",
+        "src.services.fiscal_run",
+        "src.services.preflight_cache",
+        "src.services.project_config",
+        "src.utils.fiscal_periods",
+        "src.utils.source_manifest"
+      ]
+    },
+    {
+      "path": "tests/test_fixed_assets_audit_history.py",
+      "kind": "test",
+      "lines": 64,
+      "functions": 2,
+      "classes": 0,
+      "internal_imports": [
+        "scripts.classify_fixed_assets_mismatches"
+      ]
+    },
+    {
+      "path": "tests/test_fixed_assets_output.py",
+      "kind": "test",
+      "lines": 109,
+      "functions": 5,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.hub_builder"
+      ]
+    },
+    {
+      "path": "tests/test_fixed_assets_parser_coverage.py",
+      "kind": "test",
+      "lines": 329,
+      "functions": 17,
+      "classes": 0,
+      "internal_imports": [
+        "src.audit.fixed_assets_coverage",
+        "src.db.schema",
+        "src.parsers.fixed_assets",
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "tests/test_fixed_assets_reference_skeleton.py",
+      "kind": "test",
+      "lines": 182,
+      "functions": 9,
+      "classes": 0,
+      "internal_imports": [
+        "scripts.run_e2e",
+        "src.engine.fixed_assets_reference_skeleton"
+      ]
+    },
+    {
+      "path": "tests/test_gui_baseline_recovery.py",
+      "kind": "test",
+      "lines": 201,
+      "functions": 9,
+      "classes": 0,
+      "internal_imports": [
+        "scripts.run_e2e",
+        "src.db.schema",
+        "src.services.manual_staffing_overrides",
+        "src.universal_app",
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "tests/test_gui_bus_passenger_inputs.py",
+      "kind": "test",
+      "lines": 163,
+      "functions": 12,
+      "classes": 0,
+      "internal_imports": [
+        "src.parsers.manual_event_drivers",
+        "src.parsers.manual_headcount",
+        "src.universal_app"
+      ]
+    },
+    {
+      "path": "tests/test_gui_exchange_rate_input_removed.py",
+      "kind": "test",
+      "lines": 16,
+      "functions": 2,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "tests/test_headcount_and_export.py",
+      "kind": "test",
+      "lines": 5422,
+      "functions": 127,
+      "classes": 12,
+      "internal_imports": [
+        "src.audit.pipeline_audit",
+        "src.db.fy2027_compat",
+        "src.db.loader",
+        "src.db.schema",
+        "src.engine.allocator",
+        "src.engine.complete_v1_source_order_writer",
+        "src.engine.hub_builder",
+        "src.parsers.birthday",
+        "src.parsers.fixed_assets",
+        "src.parsers.ga",
+        "src.parsers.manual_event_drivers",
+        "src.parsers.manual_headcount",
+        "src.parsers.manual_special_costs",
+        "src.parsers.nnn_paperwork",
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "tests/test_headcount_targeted_import.py",
+      "kind": "test",
+      "lines": 17,
+      "functions": 2,
+      "classes": 0,
+      "internal_imports": [
+        "src.services.headcount_source_importer"
+      ]
+    },
+    {
+      "path": "tests/test_headcount_time_source.py",
+      "kind": "test",
+      "lines": 329,
+      "functions": 10,
+      "classes": 1,
+      "internal_imports": [
+        "scripts.run_e2e",
+        "src.db.schema",
+        "src.parsers.headcount_time_plan",
+        "src.services.headcount_source_importer"
+      ]
+    },
+    {
+      "path": "tests/test_it_sim_parser.py",
+      "kind": "test",
+      "lines": 170,
+      "functions": 7,
+      "classes": 2,
+      "internal_imports": [
+        "src.db.schema",
+        "src.engine.hub_builder",
+        "src.parsers.it_sim"
+      ]
+    },
+    {
+      "path": "tests/test_manual_event_drivers.py",
+      "kind": "test",
+      "lines": 211,
+      "functions": 7,
+      "classes": 0,
+      "internal_imports": [
+        "src.db.schema",
+        "src.parsers.manual_event_drivers"
+      ]
+    },
+    {
+      "path": "tests/test_mp_saisan_complete_export.py",
+      "kind": "test",
+      "lines": 230,
+      "functions": 25,
+      "classes": 4,
+      "internal_imports": [
+        "scripts.run_e2e",
+        "src.engine.mp_saisan_complete_export",
+        "src.services.fiscal_run"
+      ]
+    },
+    {
+      "path": "tests/test_nnn_paperwork.py",
+      "kind": "test",
+      "lines": 372,
+      "functions": 14,
+      "classes": 1,
+      "internal_imports": [
+        "src.db.schema",
+        "src.parsers.nnn_paperwork",
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "tests/test_no_src_hardcodes.py",
+      "kind": "test",
+      "lines": 20,
+      "functions": 1,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "tests/test_output_mode.py",
+      "kind": "test",
+      "lines": 134,
+      "functions": 10,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.hub_builder",
+        "src.engine.output_mode"
+      ]
+    },
+    {
+      "path": "tests/test_output_placement.py",
+      "kind": "test",
+      "lines": 117,
+      "functions": 9,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.output_mode",
+        "src.engine.output_placement"
+      ]
+    },
+    {
+      "path": "tests/test_packaged_raw_resolution.py",
+      "kind": "test",
+      "lines": 259,
+      "functions": 18,
+      "classes": 7,
+      "internal_imports": [
+        "src.parsers.manual_headcount"
+      ]
+    },
+    {
+      "path": "tests/test_packaging_entrypoint.py",
+      "kind": "test",
+      "lines": 198,
+      "functions": 12,
+      "classes": 0,
+      "internal_imports": [
+        "src.services.app_updates"
+      ]
+    },
+    {
+      "path": "tests/test_phase42n64_output_repairs.py",
+      "kind": "test",
+      "lines": 101,
+      "functions": 8,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.complete_v1_source_order_writer",
+        "src.parsers.fixed_assets"
+      ]
+    },
+    {
+      "path": "tests/test_phase42n66_fiscal_periods.py",
+      "kind": "test",
+      "lines": 116,
+      "functions": 12,
+      "classes": 0,
+      "internal_imports": [
+        "src.parsers.fixed_assets",
+        "src.parsers.manual_headcount",
+        "src.utils.excel_helpers",
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "tests/test_phase42n66_runtime_save_load.py",
+      "kind": "test",
+      "lines": 102,
+      "functions": 8,
+      "classes": 0,
+      "internal_imports": [
+        "src.db.schema",
+        "src.parsers.manual_headcount",
+        "src.universal_app"
+      ]
+    },
+    {
+      "path": "tests/test_posting_month_logic.py",
+      "kind": "test",
+      "lines": 479,
+      "functions": 24,
+      "classes": 1,
+      "internal_imports": [
+        "src.db.schema",
+        "src.engine.allocator",
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "tests/test_primary_reference_compare.py",
+      "kind": "test",
+      "lines": 621,
+      "functions": 27,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "tests/test_quality_baseline.py",
+      "kind": "test",
+      "lines": 25,
+      "functions": 2,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "tests/test_real_pipeline_acceptance.py",
+      "kind": "test",
+      "lines": 133,
+      "functions": 5,
+      "classes": 0,
+      "internal_imports": [
+        "scripts.run_real_pipeline_acceptance"
+      ]
+    },
+    {
+      "path": "tests/test_real_pipeline_validator.py",
+      "kind": "test",
+      "lines": 117,
+      "functions": 4,
+      "classes": 0,
+      "internal_imports": [
+        "src.audit.real_pipeline_validator",
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "tests/test_reference_assisted_fill.py",
+      "kind": "test",
+      "lines": 107,
+      "functions": 6,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.reference_assisted_fill"
+      ]
+    },
+    {
+      "path": "tests/test_reference_staffing_extractor.py",
+      "kind": "test",
+      "lines": 177,
+      "functions": 10,
+      "classes": 3,
+      "internal_imports": [
+        "src.parsers.extracted_headcount_time_plan",
+        "src.services.reference_staffing_extractor"
+      ]
+    },
+    {
+      "path": "tests/test_release_contracts.py",
+      "kind": "test",
+      "lines": 59,
+      "functions": 2,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.source_order_output"
+      ]
+    },
+    {
+      "path": "tests/test_repo_handover_docs.py",
+      "kind": "test",
+      "lines": 32,
+      "functions": 2,
+      "classes": 0,
+      "internal_imports": []
+    },
+    {
+      "path": "tests/test_requirement_layout_output_rules.py",
+      "kind": "test",
+      "lines": 257,
+      "functions": 32,
+      "classes": 16,
+      "internal_imports": []
+    },
+    {
+      "path": "tests/test_run_history.py",
+      "kind": "test",
+      "lines": 467,
+      "functions": 27,
+      "classes": 2,
+      "internal_imports": [
+        "scripts.run_e2e",
+        "src.db.schema",
+        "src.services.fiscal_run",
+        "src.services.manual_staffing_overrides",
+        "src.services.run_history"
+      ]
+    },
+    {
+      "path": "tests/test_runtime_health.py",
+      "kind": "test",
+      "lines": 25,
+      "functions": 2,
+      "classes": 0,
+      "internal_imports": [
+        "src.services.runtime_health"
+      ]
+    },
+    {
+      "path": "tests/test_schema_documentation.py",
+      "kind": "test",
+      "lines": 17,
+      "functions": 2,
+      "classes": 0,
+      "internal_imports": [
+        "scripts.export_schema_documentation",
+        "src.db.migrations"
+      ]
+    },
+    {
+      "path": "tests/test_schema_migrations.py",
+      "kind": "test",
+      "lines": 115,
+      "functions": 5,
+      "classes": 0,
+      "internal_imports": [
+        "src.db.migrations",
+        "src.db.schema"
+      ]
+    },
+    {
+      "path": "tests/test_source_order_output.py",
+      "kind": "test",
+      "lines": 206,
+      "functions": 11,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.source_order_output",
+        "src.utils",
+        "src.utils.source_manifest"
+      ]
+    },
+    {
+      "path": "tests/test_src_v2_logic.py",
+      "kind": "test",
+      "lines": 61,
+      "functions": 7,
+      "classes": 1,
+      "internal_imports": [
+        "src.parsers",
+        "src.utils"
+      ]
+    },
+    {
+      "path": "tests/test_system_cost_export_flag.py",
+      "kind": "test",
+      "lines": 77,
+      "functions": 6,
+      "classes": 0,
+      "internal_imports": [
+        "scripts.run_e2e",
+        "src.engine.system_cost_writer",
+        "src.utils.fiscal_periods"
+      ]
+    },
+    {
+      "path": "tests/test_system_cost_preview.py",
+      "kind": "test",
+      "lines": 18,
+      "functions": 2,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.system_cost_preview"
+      ]
+    },
+    {
+      "path": "tests/test_system_cost_writer.py",
+      "kind": "test",
+      "lines": 36,
+      "functions": 3,
+      "classes": 0,
+      "internal_imports": [
+        "src.engine.system_cost_writer",
+        "src.utils"
+      ]
+    },
+    {
+      "path": "tests/test_template_validation.py",
+      "kind": "test",
+      "lines": 277,
+      "functions": 23,
+      "classes": 5,
+      "internal_imports": [
+        "src.db.schema",
+        "src.services.fiscal_run",
+        "src.universal_app",
+        "src.utils"
+      ]
+    },
+    {
+      "path": "tests/test_uniform_cup_allocation.py",
+      "kind": "test",
+      "lines": 251,
+      "functions": 9,
+      "classes": 0,
+      "internal_imports": [
+        "src.db.loader",
+        "src.db.schema",
+        "src.engine.allocator",
+        "src.parsers.manual_event_drivers",
+        "src.utils.excel_helpers"
+      ]
+    },
+    {
+      "path": "tests/test_update_security.py",
+      "kind": "test",
+      "lines": 121,
+      "functions": 9,
+      "classes": 0,
+      "internal_imports": [
+        "src.services.update_security"
+      ]
+    },
+    {
+      "path": "tests/test_vietnamese_cli_surfaces.py",
+      "kind": "test",
+      "lines": 210,
+      "functions": 10,
+      "classes": 1,
+      "internal_imports": [
+        "src.utils.cli"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "severity": "medium",
+      "rule": "large-module",
+      "path": "scripts/run_e2e.py",
+      "line": 1,
+      "message": "Có 1679 dòng; cần kiểm thử bảo vệ trước khi tách module theo từng giai đoạn."
+    },
+    {
+      "severity": "medium",
+      "rule": "large-module",
+      "path": "src/engine/allocator.py",
+      "line": 1,
+      "message": "Có 1541 dòng; cần kiểm thử bảo vệ trước khi tách module theo từng giai đoạn."
+    },
+    {
+      "severity": "medium",
+      "rule": "large-module",
+      "path": "src/engine/hub_builder.py",
+      "line": 1,
+      "message": "Có 1770 dòng; cần kiểm thử bảo vệ trước khi tách module theo từng giai đoạn."
+    },
+    {
+      "severity": "medium",
+      "rule": "large-module",
+      "path": "src/universal_app.py",
+      "line": 1,
+      "message": "Có 3723 dòng; cần kiểm thử bảo vệ trước khi tách module theo từng giai đoạn."
+    },
+    {
+      "severity": "medium",
+      "rule": "large-module",
+      "path": "tests/test_headcount_and_export.py",
+      "line": 1,
+      "message": "Có 5422 dòng; cần kiểm thử bảo vệ trước khi tách module theo từng giai đoạn."
+    }
+  ]
+}

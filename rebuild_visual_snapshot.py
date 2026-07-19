@@ -4,6 +4,7 @@ import time
 import hashlib
 import gc
 import sys
+from pathlib import Path
 from PIL import Image, ImageStat
 import numpy as np
 import openpyxl
@@ -108,11 +109,14 @@ def capture_range_com(excel, wb, sheet_name, rng_address, dest_path):
     return False
 
 def rebuild_all():
-    canonical_path = r"D:\Sandbox\MP2027\raw\Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx"
-    target_path = r"D:\Sandbox\MP2027\raw\Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx"
-    temp_dir = r"D:\Sandbox\MP2027\OUTPUT_FY2027\tmp_requirement_0906_visual_repair\new_media"
-    backup_dir = r"D:\Sandbox\MP2027\OUTPUT_FY2027\tmp_requirement_0906_visual_repair"
-    csv_path = r"D:\Sandbox\MP2027\OUTPUT_FY2027\tmp_requirement_0906_visual_repair\new_snapshot_pixel_audit.csv"
+    project_root = Path(__file__).resolve().parent
+    source_root = project_root / "raw"
+    output_root = project_root / "OUTPUT_FY2027" / "tmp_requirement_0906_visual_repair"
+    canonical_path = str(source_root / "Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026.xlsx")
+    target_path = str(source_root / "Cải tiến nhập dữ liệu chung vào file MPnew 09.06.2026_ảnh.xlsx")
+    temp_dir = str(output_root / "new_media")
+    backup_dir = str(output_root)
+    csv_path = str(output_root / "new_snapshot_pixel_audit.csv")
 
     os.makedirs(temp_dir, exist_ok=True)
 

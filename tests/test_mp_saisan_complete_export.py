@@ -85,7 +85,7 @@ def test_complete_mode_uses_reference_map_for_1412000040(tmp_path):
 
 
 def test_other_cc_without_reference_fails_clearly(tmp_path):
-    with pytest.raises(ValueError, match="requires a primary reference"):
+    with pytest.raises(ValueError, match="cần đường dẫn hoặc ánh xạ đến tệp tham khảo chính"):
         resolve_reference_path(999, reference_map_path=tmp_path / "missing.csv")
 
 

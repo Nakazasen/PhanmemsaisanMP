@@ -39,7 +39,7 @@ def modal_rate(reference_rows: list[dict[str, str]], fy: str) -> int:
         if row["fy"] == fy and row["fx_rate"] not in ("", "0")
     )
     if not rates:
-        raise RuntimeError(f"No observed reference FX rate for {fy}")
+        raise RuntimeError(f"Không có tỷ giá tham khảo quan sát được cho {fy}")
     return rates.most_common(1)[0][0]
 
 
@@ -59,7 +59,7 @@ def rendered_values(builder: HubBuilder, conn: sqlite3.Connection) -> dict[tuple
         for payload in builder._load_fixed_asset_source_order_rows(int(cc)):
             account = int(payload["account_code"])
             if payload["terms"]:
-                raise RuntimeError("Fixed-assets output must contain pre-rounded VND values, not long Excel ROUND formulas")
+                raise RuntimeError("Kết quả tài sản cố định phải chứa giá trị VND đã làm tròn trước, không dùng công thức Excel ROUND dài")
             for period, amount in dict(payload["numeric_months"]).items():
                 result[(cc, account, str(period))] += int(amount)
     return dict(result)
@@ -110,10 +110,10 @@ def verify_fy(fiscal_year: int, reference_rows: list[dict[str, str]], comparison
         }
         if mismatches:
             sample = list(sorted(mismatches.items()))[:10]
-            raise RuntimeError(f"{fy} production parser/writer policy mismatches: {sample}")
+            raise RuntimeError(f"Chính sách parser/bộ ghi vận hành của {fy} có chênh lệch: {sample}")
         post_terminal = terminal_posting_violations(conn)
         if post_terminal:
-            raise RuntimeError(f"{fy} has {post_terminal} fact rows after their P terminal month")
+            raise RuntimeError(f"{fy} có {post_terminal} dòng dữ liệu sau tháng kết thúc P tương ứng")
         audit_statuses = Counter(
             str(row[0])
             for row in conn.execute(
@@ -140,8 +140,8 @@ def main() -> None:
     results = {f"FY{year}": verify_fy(year, references, comparisons) for year in (2026, 2027)}
     output = AUDIT_DIR / f"fixed_assets_policy_output_verification_{AUDIT_DATE}.json"
     output.write_text(json.dumps(results, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
-    print(f"WROTE {output}")
-    print(results)
+    print(f"ĐÃ GHI {output}")
+    print(f"Kết quả kiểm tra: {results}")
 
 
 if __name__ == "__main__":
