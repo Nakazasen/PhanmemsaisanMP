@@ -47,13 +47,17 @@ def test_fixed_assets_rounds_each_asset_before_category_aggregation():
         rows = builder._load_fixed_asset_source_order_rows(1412000004)
         assert len(rows) == 2
         assert rows[0]["account_code"] == 5006016242
-        assert rows[0]["terms"] == {}
-        assert rows[0]["numeric_months"] == {"202604": 1275}
+        assert rows[0]["terms"] == {
+            "202604": ["ROUND(10.25*$B$2,0)", "ROUND(2.5*$B$2,0)"]
+        }
+        assert rows[0]["numeric_months"] == {}
         assert "fiscal_year=2027" in rows[0]["audit_trail"]
         assert "depreciation_cc=1412000004" in rows[0]["audit_trail"]
         assert rows[1]["account_code"] == 9114120007
-        assert rows[1]["terms"] == {}
-        assert rows[1]["numeric_months"] == {"202604": 150}
+        assert rows[1]["terms"] == {
+            "202604": ["ROUND(1*$B$2,0)", "ROUND(0.5*$B$2,0)"]
+        }
+        assert rows[1]["numeric_months"] == {}
         assert rows[0]["source_file"] == rows[1]["source_file"]
     finally:
         conn.close()
@@ -68,7 +72,10 @@ def test_fixed_assets_per_asset_rounding_differs_from_rounding_aggregated_usd():
     )
     try:
         rows = builder._load_fixed_asset_source_order_rows(1412000004)
-        assert rows[0]["numeric_months"]["202604"] == 2
+        assert rows[0]["terms"]["202604"] == [
+            "ROUND(0.5*$B$2,0)",
+            "ROUND(0.5*$B$2,0)",
+        ]
         # At FX=1: ROUND(0.5)+ROUND(0.5)=2, while ROUND(0.5+0.5)=1.
         assert 2 != 1
     finally:
@@ -86,8 +93,12 @@ def test_fixed_assets_payload_omits_months_after_depreciation_ends():
         rows = builder._load_fixed_asset_source_order_rows(1412000004)
         assert len(rows) == 1
         assert rows[0]["account_code"] == 5006016243
-        assert rows[0]["numeric_months"] == {"202604": 1000, "202605": 325}
-        assert "202606" not in rows[0]["numeric_months"]
+        assert rows[0]["terms"] == {
+            "202604": ["ROUND(10*$B$2,0)"],
+            "202605": ["ROUND(3.25*$B$2,0)"],
+        }
+        assert rows[0]["numeric_months"] == {}
+        assert "202606" not in rows[0]["terms"]
     finally:
         conn.close()
 
@@ -101,7 +112,8 @@ def test_fixed_assets_payload_marks_explicit_zero_terminal_month_without_post_te
     )
     try:
         rows = builder._load_fixed_asset_source_order_rows(1412000004)
-        assert rows[0]["numeric_months"] == {"202604": 1000}
+        assert rows[0]["terms"] == {"202604": ["ROUND(10*$B$2,0)"]}
+        assert rows[0]["numeric_months"] == {}
         assert rows[0]["explicit_zero_periods"] == {"202605"}
         assert "202606" not in rows[0]["numeric_months"]
         assert "202606" not in rows[0]["explicit_zero_periods"]

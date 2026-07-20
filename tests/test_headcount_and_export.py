@@ -1324,7 +1324,7 @@ class TestPostingMonthOverride(unittest.TestCase):
         self.assertIn("source_month=202701", bonenkai[0]["description"])
         conn.close()
 
-    def test_actual_event_rules_fail_closed_until_manual_event_input_exists(self):
+    def test_fixed_month_event_rules_use_posting_month_headcount(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
         periods = get_fy_months(2027)
@@ -1377,11 +1377,8 @@ class TestPostingMonthOverride(unittest.TestCase):
             """,
             (str(cc_code),),
         ).fetchall()
-        self.assertEqual(fact_count, 2)
-        self.assertEqual(
-            {row["area"]: int(row["count"]) for row in missing_rows},
-            {"manual_distribution_driver": 1},
-        )
+        self.assertEqual(fact_count, 3)
+        self.assertEqual({row["area"]: int(row["count"]) for row in missing_rows}, {})
         conn.close()
 
     def test_pocket_calendar_keeps_november_all_staff_allocation_when_driver_mentions_distribution_count(self):
@@ -2050,6 +2047,28 @@ class TestNewHireAllocationIdentityDedupe(unittest.TestCase):
         self.assertIn("new_worker=3", july["description"])
         self.assertIn("source_month=202606", july["description"])
         self.assertIn("formula_expr=(2+3)*0", july["description"])
+
+        generated = conn.execute(
+            "SELECT period FROM fact_input_data WHERE source=? ORDER BY period",
+            (f"alloc_{rule_id}",),
+        ).fetchall()
+        self.assertEqual([row["period"] for row in generated], ["202607"])
+
+        tmpdir, output_path = self._export(conn, cc_code, "out_recruitment_health_next_month.xlsx")
+        try:
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                july_col = 6 + periods.index("202607")
+                self.assertEqual(ws.cell(58, july_col).value, "=(2+3)*0")
+                self.assertEqual(ws.cell(58, july_col).fill.fgColor.rgb, "00FFC7CE")
+                for col in range(6, 18):
+                    if col != july_col:
+                        self.assertIsNone(ws.cell(58, col).value)
+            finally:
+                workbook.close()
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
         conn.close()
 
     def test_recruitment_health_does_not_offset_staff_decrease(self):
@@ -2206,6 +2225,62 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
         self.assertEqual(apply_audited_fy2027_reference_price("月餅 Bánh Trung Thu", 0), 56000.0)
         self.assertEqual(apply_audited_fy2027_reference_price("運動会 Đại hội thể thao", 0), 107000.0)
         self.assertEqual(apply_audited_fy2027_reference_price("運動会 Đại hội thể thao", 123), 123.0)
+
+    def test_company_trip_and_mooncake_use_total_headcount_of_their_posting_month(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        _seed_complete_staffing_time(
+            conn,
+            cc_code,
+            staff_values={"202605": 3, "202609": 4},
+            worker_values={"202605": 7, "202609": 8},
+        )
+        rules = [
+            (
+                "社員旅行 Du lịch công ty",
+                "5月",
+                2061000,
+                "headcount_worker",
+                "実際の参加人数で実施月に振替",
+            ),
+            (
+                "月餅 Bánh Trung Thu",
+                "9月",
+                56000,
+                "headcount_staff",
+                "配布数で引渡し月に振替",
+            ),
+        ]
+        conn.executemany(
+            """
+            INSERT INTO map_allocation_rules
+            (source_dept, item_name, account_name, mfg_account, ga_account, sales_account,
+             posting_month, unit_price, unit, driver_type, driver_raw)
+            VALUES ('GA', ?, '福利厚生費', 5004086291, 6004086651, 6004086551,
+                    ?, ?, '/person', ?, ?)
+            """,
+            rules,
+        )
+        conn.commit()
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        rows = conn.execute(
+            """
+            SELECT period, amount_vnd, description
+            FROM fact_input_data
+            WHERE cc_code=? AND source LIKE 'alloc_%'
+            ORDER BY period
+            """,
+            (cc_code,),
+        ).fetchall()
+        self.assertEqual([row["period"] for row in rows], ["202605", "202609"])
+        self.assertEqual(float(rows[0]["amount_vnd"]), 10 * 2061000)
+        self.assertEqual(float(rows[1]["amount_vnd"]), 12 * 56000)
+        self.assertIn("driver_value=10", rows[0]["description"])
+        self.assertIn("driver_value=12", rows[1]["description"])
+        self.assertTrue(all("missing_separate_count=1" not in row["description"] for row in rows))
+        conn.close()
 
 
     def test_allocation_loader_prefers_fiscal_year_sheet(self):
@@ -4675,9 +4750,9 @@ class TestHubBuilderExport(unittest.TestCase):
             rows = HubBuilder(conn, fiscal_year=2027)._load_append_rows(cc_code)
 
             self.assertEqual(len(rows), 1)
-            self.assertEqual(rows[0]["terms"], {})
+            self.assertEqual(rows[0]["terms"], {"202604": ["ROUND(10*$B$2,0)"]})
             self.assertEqual(rows[0]["months"], {})
-            self.assertEqual(rows[0]["numeric_months"], {"202604": 262730})
+            self.assertEqual(rows[0]["numeric_months"], {})
             self.assertEqual(rows[0]["highlight_periods"], set())
             self.assertEqual(rows[0]["provenance"], "fixed_assets_accounting|depreciation|machinery_equipment")
         finally:

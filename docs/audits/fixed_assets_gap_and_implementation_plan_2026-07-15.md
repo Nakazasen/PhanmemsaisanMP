@@ -3,7 +3,7 @@
 Status: `HISTORICAL_PROVENANCE_SUPERSEDED_BY_EVIDENCE_DRIVEN_HANDOVER`
 
 > [!WARNING]
-> Snapshot này giữ nguyên finding lịch sử, nhưng workflow “hỏi Accounting/MP trước” và bảng `Chưa chốt` không còn là điểm bắt đầu hiện hành. Successor bắt buộc: `docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md`. Phải cross-trace canonical, source/calculation MP2026/MP2027 và reference outputs trước; chỉ escalation phần còn mâu thuẫn hoặc thiếu evidence.
+> **HISTORICAL:** Snapshot này giữ nguyên finding lịch sử nhưng không phải handover hoặc backlog hiện hành. Xem `docs/audits/AUDIT_STATUS_INDEX.md` để biết lifecycle; không triển khai thay đổi kế toán từ các “next step” trong tài liệu này.
 
 ## 1. Mục đích
 

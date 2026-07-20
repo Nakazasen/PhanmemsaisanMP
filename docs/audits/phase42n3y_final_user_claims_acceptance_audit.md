@@ -1,6 +1,6 @@
 # Phase 42N3Y - Final user claims acceptance audit
 
-> **LIFECYCLE (2026-07-16): `OPEN_AUDIT`.** This is current successor evidence that closes the old technical defects it explicitly passes, but its run used the 09.06 workbook. It does not establish full business acceptance against canonical 10.07; current residual work is in `docs/handover/CURRENT_OPEN_ITEMS.md`.
+> **LIFECYCLE (2026-07-20): `HISTORICAL EVIDENCE`.** This run used the 09.06 workbook and does not establish full business acceptance against canonical 10.07. It does not define current work; use `docs/handover/HANDOVER_FOR_NEXT_AGENT.md`.
 
 CLASSIFICATION: PARTIAL_PHASE_42N3Y_ACCEPTANCE_BLOCKED_BY_MISSING_DRIVER_DATA
 

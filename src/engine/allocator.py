@@ -1076,8 +1076,6 @@ class AllocationEngine:
         return any(token in normalized_item_name for token in SUPPRESSED_UNIFORM_ITEM_NORMALIZED_TOKENS)
 
     def _requires_separate_count_placeholder(self, rule) -> bool:
-        if self._is_fixed_headcount_override_rule(rule):
-            return False
         normalized_item_name = self._normalize_text(rule["item_name"] or "")
         for token_group in SEPARATE_COUNT_PLACEHOLDER_TOKENS:
             if all(self._normalize_text(token) in normalized_item_name for token in token_group):
@@ -1094,6 +1092,13 @@ class AllocationEngine:
 
     def _is_fixed_headcount_override_rule(self, rule) -> bool:
         return self._fixed_headcount_rule_spec(rule) is not None
+
+    def _uses_posting_month_total_headcount(self, rule) -> bool:
+        normalized_item_name = self._normalize_text(rule["item_name"] or "")
+        return any(
+            self._normalize_text(token) in normalized_item_name
+            for token in (*MOONCAKE_TOKENS, *COMPANY_TRIP_TOKENS)
+        )
 
     def _is_fiscal_year_kickoff_rule(self, rule) -> bool:
         normalized_item_name = self._normalize_text(rule["item_name"] or "")
@@ -1198,6 +1203,12 @@ class AllocationEngine:
         # computed from monthly headcount deltas plus fixed-month headcount.
         if self._is_mixed_event_and_fixed_month_rule(rule["posting_month"]):
             return False
+        # These two audited annual rules intentionally use the total headcount
+        # of their posting month (company trip: May, mooncake: September).
+        # That explicit rule takes precedence over generic wording such as
+        # "actual participants" or "distribution count" in the source note.
+        if self._uses_posting_month_total_headcount(rule):
+            return False
         driver_raw = str(rule["driver_raw"] or "")
         normalized_driver = self._normalize_text(driver_raw)
         requires_actual_count = any(
@@ -1207,8 +1218,6 @@ class AllocationEngine:
         )
         if requires_actual_count:
             return True
-        if self._is_fixed_headcount_override_rule(rule):
-            return False
         return False
 
     def run_allocation(self) -> dict:
@@ -1320,6 +1329,12 @@ class AllocationEngine:
                     for cc in self.cost_centers:
                         staff_new, worker_new = self._recruitment_health_new_hires(cc["code"], source_period, rule)
                         total_new = staff_new + worker_new
+                        # A recruitment-health cost exists only when the source
+                        # month has at least one new hire.  Do not emit 0*price
+                        # formulas for every month: they obscure the actual
+                        # posting months and make the output look fully populated.
+                        if total_new <= 0:
+                            continue
                         target_acc = self._get_account_for_cc(
                             str(cc["cost_type"]), rule["mfg_account"], rule["ga_account"], rule["sales_account"]
                         )

@@ -963,9 +963,34 @@ CHUẨN BỊ NĂM TÀI CHÍNH MỚI
 
 
 class MPManagerApp:
+    TITLE_OWNER = "Bùi Đức Vinh - Phòng Phát triển hệ thống Chế tạo"
+
+    @staticmethod
+    def _application_version() -> str:
+        """Return the release version for a user-visible GUI label."""
+        try:
+            return current_release_version()
+        except Exception:
+            return "không xác định"
+
+    @classmethod
+    def _window_title(cls, fiscal_year: str, version: str) -> str:
+        return f"MP{fiscal_year} Manager v{version} - Quản lý Ngân sách | {cls.TITLE_OWNER}"
+
+    @staticmethod
+    def _initial_window_size(screen_width: int, screen_height: int) -> tuple[int, int]:
+        """Choose a usable initial size without extending beyond smaller screens."""
+        return (
+            max(480, min(1180, int(screen_width) - 48)),
+            max(360, min(800, int(screen_height) - 96)),
+        )
+
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.geometry("980x720")
+        width, height = self._initial_window_size(root.winfo_screenwidth(), root.winfo_screenheight())
+        self.root.geometry(f"{width}x{height}")
+        self.root.minsize(480, 360)
+        self.application_version = self._application_version()
         initial_fiscal_year = _default_fiscal_year()
         self.project, project_created = discover_or_create_project(BASE_DIR, initial_fiscal_year)
         if self.project.ensure_fiscal_year(initial_fiscal_year):
@@ -1253,7 +1278,7 @@ class MPManagerApp:
     def _refresh_fiscal_year_labels(self, *_args):
         raw = self.fiscal_year.get().strip()
         label = raw if raw.isdigit() and len(raw) == 4 else "—"
-        self.root.title(f"MP{label} Manager - Quản lý Ngân sách")
+        self.root.title(self._window_title(label, self.application_version))
         if hasattr(self, "main_heading"):
             self.main_heading.configure(text=f"Tính toán Ngân sách MP{label}")
 
@@ -1489,13 +1514,58 @@ class MPManagerApp:
         style.configure("Primary.TButton", font=("Segoe UI", 10, "bold"), padding=10)
 
     def setup_ui(self):
-        container = ttk.Frame(self.root, padding=20)
-        container.pack(fill=tk.BOTH, expand=True)
-        container.columnconfigure(1, weight=1)
-        container.rowconfigure(14, weight=1)
+        shell = ttk.Frame(self.root, padding=12)
+        shell.pack(fill=tk.BOTH, expand=True)
+        shell.columnconfigure(0, weight=1)
+        shell.rowconfigure(0, weight=1)
 
-        self.main_heading = ttk.Label(container, text="", style="Header.TLabel")
-        self.main_heading.grid(row=0, column=0, sticky="w", pady=(0, 16))
+        content_shell = ttk.Frame(shell)
+        content_shell.grid(row=0, column=0, sticky="nsew")
+        content_shell.columnconfigure(0, weight=1)
+        content_shell.rowconfigure(0, weight=1)
+        content_canvas = tk.Canvas(content_shell, highlightthickness=0, borderwidth=0)
+        vertical_scrollbar = ttk.Scrollbar(content_shell, orient=tk.VERTICAL, command=content_canvas.yview)
+        horizontal_scrollbar = ttk.Scrollbar(content_shell, orient=tk.HORIZONTAL, command=content_canvas.xview)
+        content_canvas.configure(
+            yscrollcommand=vertical_scrollbar.set,
+            xscrollcommand=horizontal_scrollbar.set,
+        )
+        content_canvas.grid(row=0, column=0, sticky="nsew")
+        vertical_scrollbar.grid(row=0, column=1, sticky="ns")
+        horizontal_scrollbar.grid(row=1, column=0, sticky="ew")
+
+        container = ttk.Frame(content_canvas, padding=8)
+        content_window = content_canvas.create_window((0, 0), window=container, anchor="nw")
+
+        def refresh_scroll_region(_event=None):
+            content_canvas.configure(scrollregion=content_canvas.bbox("all"))
+
+        def resize_content_width(event):
+            content_canvas.itemconfigure(
+                content_window,
+                width=max(event.width, container.winfo_reqwidth()),
+            )
+
+        container.bind("<Configure>", refresh_scroll_region)
+        content_canvas.bind("<Configure>", resize_content_width)
+
+        def scroll_content(event):
+            content_canvas.yview_scroll(int(-event.delta / 120), "units")
+
+        content_canvas.bind("<Enter>", lambda _event: content_canvas.bind_all("<MouseWheel>", scroll_content))
+        content_canvas.bind("<Leave>", lambda _event: content_canvas.unbind_all("<MouseWheel>"))
+
+        container.columnconfigure(1, weight=1)
+
+        header_frame = ttk.Frame(container)
+        header_frame.grid(row=0, column=0, sticky="w", pady=(0, 16))
+        self.main_heading = ttk.Label(header_frame, text="", style="Header.TLabel")
+        self.main_heading.pack(anchor="w")
+        ttk.Label(
+            header_frame,
+            text=f"Phiên bản ứng dụng: v{self.application_version}",
+            foreground="#4b5563",
+        ).pack(anchor="w", pady=(2, 0))
         project_bar = ttk.Frame(container)
         project_bar.grid(row=0, column=1, columnspan=2, sticky="e", pady=(0, 16))
         ttk.Label(project_bar, textvariable=self.project_file, width=44).pack(side="left", padx=(0, 6))
@@ -1626,11 +1696,14 @@ class MPManagerApp:
         )
         self.start_btn.grid(row=12, column=0, columnspan=3, sticky="w", pady=(8, 0))
 
-        ttk.Label(container, text="Nhật ký xử lý").grid(row=13, column=0, columnspan=3, sticky="w", pady=(12, 4))
+        log_frame = ttk.Frame(shell)
+        log_frame.grid(row=1, column=0, sticky="ew", pady=(8, 0))
+        log_frame.columnconfigure(0, weight=1)
+        ttk.Label(log_frame, text="Nhật ký xử lý").grid(row=0, column=0, sticky="w", pady=(0, 4))
         self.log_widget = scrolledtext.ScrolledText(
-            container, height=12, state=tk.DISABLED, font=("Consolas", 9)
+            log_frame, height=5, state=tk.DISABLED, font=("Consolas", 9)
         )
-        self.log_widget.grid(row=14, column=0, columnspan=3, sticky="nsew")
+        self.log_widget.grid(row=1, column=0, sticky="ew")
 
 
     def _run_on_ui_thread(self, callback, *args, **kwargs):
@@ -1733,7 +1806,7 @@ class MPManagerApp:
             f"Đã có MP2027 phiên bản {candidate.version} (hiện tại: {current_version}).\n\n"
         )
         if candidate.notes:
-            message += f"Ghi chú: {candidate.notes}\n\n"
+            message += f"Nội dung cập nhật:\n{candidate.notes.strip()}\n\n"
         message += "Bạn có muốn tải và cài đặt ngay không?"
         if messagebox.askyesno("Có bản cập nhật MP2027", message):
             self._install_discovered_update(candidate, app_root)

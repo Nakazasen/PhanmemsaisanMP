@@ -22,7 +22,10 @@ from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat
 
 
 MANIFEST_SCHEMA = 1
-MAX_MANIFEST_BYTES = 512 * 1024
+# Shared by update discovery, package inspection, and the release builder.  Keep
+# this bounded to avoid reading arbitrarily large untrusted ZIP members, while
+# leaving sufficient headroom for a full onedir application's file inventory.
+MAX_MANIFEST_BYTES = 1024 * 1024
 MAX_ARTIFACT_BYTES = 512 * 1024 * 1024
 FORBIDDEN_ARTIFACT_SUFFIXES = {".exe", ".dll", ".pyd", ".py", ".pyc", ".bat", ".cmd", ".ps1"}
 

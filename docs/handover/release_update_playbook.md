@@ -71,7 +71,10 @@ Không bao giờ đặt khóa riêng trong source control, `dist`, `build`, `rel
 
 Bộ cài ban đầu là ranh giới tin cậy khởi tạo. `current.json` cố định hash manifest ban đầu. Việc xác minh `.mpupdate` có chữ ký là bắt buộc cho các phiên bản ứng dụng tiếp theo.
 
-### Bằng chứng build 0.1.0 trên máy phát hành hiện tại
+### Bằng chứng build 0.1.0 trước commit LAN/WAN
+
+Các số liệu dưới đây là snapshot lịch sử trước commit `c7fd76b`; không dùng để
+tuyên bố HEAD hiện tại đã qua full regression hoặc đã được đóng gói lại.
 
 | Cổng | Kết quả |
 |---|---|
@@ -161,7 +164,7 @@ Loại driver mới hoặc hành vi thực thi là bản cập nhật code ứng
 
 ## Checklist nghiệm thu phát hành
 
-- [x] Cổng compile/source và full regression local đạt.
+- [ ] Cổng compile/source và full regression local đạt trên commit phát hành.
 - [ ] Test an toàn cho CI đạt trên cả Windows và Linux ở commit phát hành.
 - [x] Contract hiệu năng/đường nóng liên quan đạt; benchmark opt-in chỉ chạy khi code đường nóng thay đổi.
 - [x] `--health-check` bản đóng gói trả exit code 0.
@@ -180,18 +183,18 @@ Loại driver mới hoặc hành vi thực thi là bản cập nhật code ứng
 1. Provision khóa công khai Ed25519 production trong `release.json` bất biến; giữ khóa riêng ngoài Git và mọi artifact.
 2. Ký Authenticode cho Setup và timestamp bằng certificate phát hành.
 3. Hoàn thành nghiệm thu Windows sạch thật/không Python và kích hoạt/rollback N-1 → N bằng gói có chữ ký production.
-4. Xác định endpoint phát hành, chính sách channel và hành vi tải xuống trước khi thêm luồng online tùy chọn.
+4. Xác minh endpoint LAN đã cấu hình có thể truy cập từ máy pilot và giữ channel `pilot` trong đợt diễn tập.
 
-## Handover: bật tự phát hiện update LAN/WAN tại công ty
+## Cấu hình tự phát hiện update LAN/WAN tại công ty
 
 > [!IMPORTANT]
-> Bản code hiện tại mang `update_sources.default.json` rỗng để không suy đoán
-> đường dẫn mạng ở máy nhà. Điền nguồn thật **trước khi build Setup** để mọi máy
-> cài mới nhận cùng một cấu hình. Cấu hình được bundle vào `_internal` của app.
+> `update_sources.default.json` đã được cấu hình với thư mục LAN do người dùng
+> xác nhận. Phải giữ đúng cấu hình này khi build Setup để mọi máy cài mới nhận
+> cùng một nguồn. Cấu hình được bundle vào `_internal` của app.
 
 ### 1. Chọn một nguồn phát hành
 
-**Ưu tiên LAN/Domain** khi các máy cùng công ty:
+**Nguồn LAN/Domain đã chốt:**
 
 ```json
 {
@@ -200,14 +203,15 @@ Loại driver mới hoặc hành vi thực thi là bản cập nhật code ứng
   "sources": [
     {
       "type": "folder",
-      "location": "\\\\FILESERVER\\Software\\MP2027\\Updates",
+      "location": "\\\\fstvn01\\Data\\00_KDTVN Common(KDTVN共通)\\⑤Production Engineering(製造技術)\\Hang muc can luu\\Vinh\\MP Saisan\\release_update",
       "enabled": true
     }
   ]
 }
 ```
 
-Hoặc dùng **HTTPS/WAN** (URL gốc chứa `latest.json` và package):
+**HTTPS/WAN chưa có và tạm thời không cấu hình.** Mẫu dưới đây chỉ dùng trong
+tương lai khi người dùng cung cấp URL gốc chứa `latest.json` và package:
 
 ```json
 {
@@ -224,11 +228,33 @@ Hoặc dùng **HTTPS/WAN** (URL gốc chứa `latest.json` và package):
 ```
 
 Chỉ `https://` được chấp nhận cho WAN. Không đưa username/password vào URL.
-Không dùng ví dụ `FILESERVER` hoặc domain mẫu ở trên cho bản phát hành thật.
+Không đưa domain mẫu ở trên vào bản phát hành hiện tại.
 
 Có thể dùng `%PROGRAMDATA%\MPManager\update_sources.json` làm policy cao nhất
 cho một máy/nhóm máy đã cài. Policy thay thế toàn bộ config mặc định và user
 config; nó chỉ quyết định **nơi dò**, không thể thay thế yêu cầu ký Ed25519.
+
+### Trạng thái pilot đã tạo ngày 20.07.2026
+
+- Bootstrap Setup `0.1.0` đã được build với public key
+  `mp2027-prod-2026` và nguồn LAN trong `_internal`.
+- Gói pilot `0.1.1` đã được cài thủ công thành công. Gói cập nhật `0.1.6` đã được
+  ký/publish; Setup `0.1.6` đã được build và copy lên LAN; `latest.json` hiện trỏ
+  tới `0.1.6`.
+- Bản `0.1.2` hiển thị phiên bản ứng dụng trên giao diện. Bản `0.1.3` dùng chung
+  giới hạn manifest 1 MiB cho dò nền, kiểm tra gói và builder; builder từ chối gói
+  vượt giới hạn trước khi publish. Manifest thực tế là 261,83 KiB. Client `0.1.1`
+  còn giới hạn dò nền 256 KiB nên không tự thấy gói; dùng **Cài bản cập nhật...**
+  để cài trực tiếp `0.1.5` một lần. Bản `0.1.4` hiển thị người phụ trách trong
+  title và dùng `latest.json` để popup tự động hiển thị nội dung phát hành. Sau khi
+  chạy `0.1.5`, các bản tiếp theo dùng giới hạn mới và có thể được dò tự động.
+  Bản `0.1.5` cho phần biểu mẫu cuộn được để Nhật ký xử lý luôn thấy trên màn hình
+  thấp và tự bật mẫu manifest cũ đã nhận diện đúng nhưng vô tình bị để TẮT.
+  Bản `0.1.6` sửa công thức tài sản cố định, thời điểm khám sức khỏe tuyển dụng,
+  đồng thời tính du lịch tháng 5 và bánh Trung Thu tháng 9 theo tổng headcount của
+  chính tháng phát sinh.
+- Còn bắt buộc: nghiệm thu GUI trên Windows sạch/pilot, cập nhật N-1 → N,
+  rollback và lưu evidence.
 
 ### 2. Tạo trust bootstrap trước khi phát hành `.mpupdate`
 

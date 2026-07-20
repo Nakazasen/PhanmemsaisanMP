@@ -14,6 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.services.update_security import generate_signing_keypair, resolve_trusted_signing_key
+from src.utils.cli import configure_utf8_console
 
 _KEY_ID = re.compile(r"^[A-Za-z0-9._-]+$")
 
@@ -73,6 +74,7 @@ def _parse_args(argv=None):
 
 
 def main(argv=None) -> int:
+    configure_utf8_console()
     args = _parse_args(argv)
     output, public_key = provision_update_key(
         args.private_key_output,

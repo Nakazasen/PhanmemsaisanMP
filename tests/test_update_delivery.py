@@ -119,6 +119,59 @@ def test_folder_discovery_ignores_partial_invalid_and_selects_newest(tmp_path):
     assert candidate.location == str(newest)
 
 
+def test_folder_catalog_supplies_release_notes_and_verifies_its_package(tmp_path):
+    private_key, public_key = generate_signing_keypair()
+    release = tmp_path / "release.json"
+    updates = tmp_path / "updates"
+    updates.mkdir()
+    _write_release(release, public_key)
+    package = updates / "MP2027_Manager-0.3.0.mpupdate"
+    _build_update(package, private_key, version="0.3.0")
+    updates.joinpath("latest.json").write_text(json.dumps({
+        "schema": 1,
+        "channel": "pilot",
+        "version": "0.3.0",
+        "package": package.name,
+        "sha256": sha256_bytes(package.read_bytes()),
+        "size": package.stat().st_size,
+        "notes": "• Sửa lỗi\n• Cải thiện trải nghiệm",
+    }), encoding="utf-8")
+
+    candidate = update_delivery.discover_available_update(
+        [{"type": "folder", "location": str(updates), "enabled": True}],
+        current_version="0.1.0",
+        current_database_schema=1,
+        release_metadata_path_override=release,
+    )
+
+    assert candidate is not None
+    assert candidate.version == "0.3.0"
+    assert candidate.notes == "• Sửa lỗi\n• Cải thiện trải nghiệm"
+    assert candidate.sha256 == sha256_bytes(package.read_bytes())
+
+
+def test_manifest_identity_allows_the_same_size_as_application_inspection(tmp_path):
+    package = tmp_path / "large-manifest.mpupdate"
+    manifest = {
+        "key_id": "pilot-2027-01",
+        "version": "0.2.0",
+        "padding": "x" * (update_delivery.MAX_CATALOG_BYTES + 1),
+    }
+    manifest_bytes = json.dumps(manifest).encode("utf-8")
+    assert len(manifest_bytes) <= update_delivery.MAX_UPDATE_MANIFEST_BYTES
+
+    with zipfile.ZipFile(package, "w") as archive:
+        archive.writestr("manifest.json", manifest_bytes)
+
+    assert update_delivery._manifest_identity(package) == ("pilot-2027-01", "0.2.0")
+
+
+def test_update_manifest_limit_is_shared_with_package_security():
+    from src.services.update_security import MAX_MANIFEST_BYTES
+
+    assert update_delivery.MAX_UPDATE_MANIFEST_BYTES == MAX_MANIFEST_BYTES == 1024 * 1024
+
+
 def test_fetch_folder_candidate_uses_atomic_local_cache(tmp_path):
     source = tmp_path / "release.mpupdate"
     source.write_bytes(b"signed-package-placeholder")

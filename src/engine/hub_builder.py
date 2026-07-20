@@ -984,7 +984,20 @@ class HubBuilder:
             self._write_lookup_formulas(worksheet, row_index)
         worksheet.cell(row=row_index, column=DESCRIPTION_COL, value="採用の健康診断費/Chi phí khám sức khỏe tuyển dụng")
         worksheet.cell(row=row_index, column=WBS_COL, value="business_identity=recruitment_health; placement=health_group")
-        self._write_formula_series(worksheet, row_index, terms_by_period, numeric_values)
+        # The source rule deliberately has no universal unit price: staff use
+        # the actual hospital price and workers use the actual average/rate.
+        # Highlight only months with a new-hire formula so users know where a
+        # real medical-exam amount must be confirmed.
+        highlight_periods = set(terms_by_period) | {
+            period for period, value in numeric_values.items() if float(value or 0.0) != 0.0
+        }
+        self._write_formula_series(
+            worksheet,
+            row_index,
+            terms_by_period,
+            numeric_values,
+            highlight_periods,
+        )
 
     def _load_explicit_form_rows(self, cc_code: int) -> list[dict[str, object]]:
         rows = self.conn.execute(
@@ -1503,12 +1516,12 @@ class HubBuilder:
         self._write_explicit_form_rows(worksheet, cc_code)
 
     def _load_fixed_asset_source_order_rows(self, cc_code: int) -> list[dict[str, object]]:
-        """Build source-order values from VND amounts rounded per individual asset.
+        """Build auditable asset-level formulas in source order.
 
-        The parser applies the authoritative runtime rate and Excel rounding to
-        each asset before it reaches this aggregation.  Writing the resulting
-        VND value avoids a formula longer than Excel's 8,192-character limit
-        for cost centers with hundreds of assets.
+        Each term keeps the original USD amount visible and applies the runtime
+        exchange rate with Excel rounding per asset.  The complete-v1 writer
+        rejects formulas beyond Excel's 8,192-character limit instead of
+        silently writing a workbook that Excel cannot calculate.
         """
         category_order = tuple(CATEGORY_SPECS)
         rows = self.conn.execute(
@@ -1522,6 +1535,9 @@ class HubBuilder:
             (str(cc_code),),
         ).fetchall()
         grouped: dict[tuple[str, str], dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        formula_terms: dict[tuple[str, str], dict[str, list[str]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
         explicit_zeroes: dict[tuple[str, str], set[str]] = defaultdict(set)
         for row in rows:
             description = str(row["description"] or "")
@@ -1538,8 +1554,15 @@ class HubBuilder:
             period = str(row["period"])
             rounded_vnd = int(round(float(row["amount_vnd"] or 0.0)))
             grouped[key][period] += rounded_vnd
-            if float(row["amount_usd"] or 0.0) == 0.0:
+            amount_usd = float(row["amount_usd"] or 0.0)
+            if amount_usd == 0.0:
                 explicit_zeroes[key].add(period)
+            else:
+                # Keep the accounting rule visible in Excel and preserve the
+                # required per-asset rounding: SUM(ROUND(asset_usd * FX, 0)).
+                formula_terms[key][period].append(
+                    f"ROUND({self._format_number(amount_usd)}*$B$2,0)"
+                )
 
         payload: list[dict[str, object]] = []
         for kind in ("depreciation", "interest"):
@@ -1555,11 +1578,6 @@ class HubBuilder:
                     if kind == "depreciation"
                     else f"Lãi tài sản cố định - {label}"
                 )
-                numeric_months = {
-                    period: amount
-                    for period, amount in months.items()
-                    if amount != 0
-                }
                 explicit_zero_periods = {
                     period for period in explicit_zeroes[(kind, category_key)] if months.get(period, 0) == 0
                 }
@@ -1568,8 +1586,12 @@ class HubBuilder:
                     "account_code": account_code,
                     "description": description,
                     "months": {},
-                    "terms": {},
-                    "numeric_months": numeric_months,
+                    "terms": {
+                        period: list(terms)
+                        for period, terms in formula_terms[(kind, category_key)].items()
+                        if terms
+                    },
+                    "numeric_months": {},
                     "explicit_zero_periods": explicit_zero_periods,
                     "highlight_periods": set(),
                     "provenance": f"fixed_assets_accounting|{kind}|{category_key}",

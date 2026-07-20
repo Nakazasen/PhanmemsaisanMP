@@ -1,5 +1,11 @@
 {
   "schema": 1,
   "startup_check": true,
-  "sources": []
+  "sources": [
+    {
+      "type": "folder",
+      "location": "\\\\fstvn01\\Data\\00_KDTVN Common(KDTVN共通)\\⑤Production Engineering(製造技術)\\Hang muc can luu\\Vinh\\MP Saisan\\release_update",
+      "enabled": true
+    }
+  ]
 }

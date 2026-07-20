@@ -1,6 +1,6 @@
 # Walkthrough — FY2027 simulation and reference audit
 
-> **LIFECYCLE (2026-07-16): `HISTORICAL`.** Keep the fixed-assets comparison evidence. The old gas identity blocker is superseded by the current account+token resolver/writer; its regression tests currently stop at the FY2027 headcount integrity guard before gas assertions, so output acceptance remains open in `docs/handover/CURRENT_OPEN_ITEMS.md`.
+> **LIFECYCLE (2026-07-20): `HISTORICAL`.** Keep the fixed-assets comparison evidence. Do not turn findings or next steps in this report into current work; the only current product handover is `docs/handover/HANDOVER_FOR_NEXT_AGENT.md`.
 
 ## Kết quả chạy
 

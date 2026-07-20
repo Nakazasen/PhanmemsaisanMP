@@ -38,7 +38,7 @@ Thông tin lịch sử không tự động override code hiện tại. Mọi cla
 
 Nguồn trạng thái work hiện hành:
 
-- `docs/handover/CURRENT_OPEN_ITEMS.md` — backlog/handover duy nhất.
+- `docs/handover/HANDOVER_FOR_NEXT_AGENT.md` — handover hiện hành duy nhất.
 - `docs/audits/AUDIT_STATUS_INDEX.md` — successor và lifecycle của audit cũ.
 
 Các “recommended next phase” trong audit/knowledge lịch sử không phải work mở nếu không xuất hiện trong current register.
@@ -162,7 +162,7 @@ Hai field bus độc lập với staff/worker/male/female headcount. Chỉnh hea
 
 ## 7. Six-claim acceptance status
 
-Bảng này là successor evidence cho các defect N3Q/N3S và dùng run historical 09.06; không phải full acceptance của workbook canonical 10.07. Current residual item chỉ lấy từ `CURRENT_OPEN_ITEMS.md`.
+Bảng này là successor evidence cho các defect N3Q/N3S và dùng run historical 09.06; không phải full acceptance của workbook canonical 10.07. Không tự biến kết luận lịch sử thành backlog hiện hành; mục tiêu hiện tại chỉ lấy từ `docs/handover/HANDOVER_FOR_NEXT_AGENT.md`.
 
 | Claim | Trạng thái | Ghi chú |
 |---|---|---|
@@ -395,7 +395,7 @@ Nếu `OUTPUT_FY2027` bị Windows lock, chạy từ thư mục temp và dùng a
 
 Fixed-assets deep audit:
 
-- Handover hiện hành: `docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md`.
+- Lifecycle và bằng chứng fixed-assets lịch sử: `docs/audits/AUDIT_STATUS_INDEX.md`; không có handover fixed-assets hiện hành riêng.
 - Audit GAP 15.07 là provenance; không dùng bảng “Chưa chốt” làm lý do hỏi Accounting trước khi đọc đủ evidence.
 - Cross-trace canonical → source/calculation MP2026/MP2027 → reference outputs FY2026/FY2027 → code/tests; tạo asset ledger và decision matrix có file/sheet/cell/row evidence.
 - Chỉ chuyển phần còn mâu thuẫn/thiếu sau cross-trace sang Accounting/MP review.

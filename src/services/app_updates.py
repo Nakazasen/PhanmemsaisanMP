@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 from src.services.update_security import (
     ArtifactVerificationError,
+    MAX_MANIFEST_BYTES,
     canonical_json_bytes,
     release_metadata_path,
     resolve_trusted_signing_key,
@@ -110,7 +111,7 @@ def inspect_update_package(
 ) -> dict[str, Any]:
     try:
         with zipfile.ZipFile(update_path) as archive:
-            manifest = json.loads(_read_member(archive, "manifest.json", 512 * 1024).decode("utf-8-sig"))
+            manifest = json.loads(_read_member(archive, "manifest.json", MAX_MANIFEST_BYTES).decode("utf-8-sig"))
             signature = _read_member(archive, "manifest.sig", 1024).decode("ascii")
             validate_application_manifest(
                 manifest,

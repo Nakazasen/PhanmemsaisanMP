@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import PatternFill
 
@@ -715,6 +716,28 @@ def test_complete_v1_writer_keeps_explicit_zero_distinct_from_post_terminal_blan
         assert "fixed_assets_audit_table" in _note_text(ws.cell(row, 20))
     finally:
         wb.close()
+
+
+def test_complete_v1_writer_rejects_formula_beyond_excel_limit(tmp_path):
+    path = _workbook(tmp_path / "out.xlsx")
+    periods = ["202604"]
+    oversized_terms = ["1"] * 4097
+
+    with pytest.raises(ValueError, match="8.192"):
+        apply_complete_v1_source_order_to_workbook(
+            path,
+            start_row=30,
+            clear_until_row=90,
+            dynamic_allocation_rows=[
+                {
+                    "source_file": CANONICAL_SOURCE_FILE_ORDER[1],
+                    "account_code": 5006016242,
+                    "description": "oversized fixed asset formula",
+                    "terms": {"202604": oversized_terms},
+                }
+            ],
+            fiscal_periods=periods,
+        )
 
 
 def test_complete_v1_writer_preserves_unmanaged_business_rows_inside_clear_range(tmp_path):

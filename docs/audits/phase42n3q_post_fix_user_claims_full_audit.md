@@ -1,6 +1,6 @@
 # Phase 42N3Q - Post-Fix User Claims Full Audit
 
-> **LIFECYCLE (2026-07-16): `HISTORICAL / SUPERSEDED`.** This report's empty-output state and repair backlog were replaced by the non-empty N3S run and the post-fix N3Y acceptance audit. Preserve the observations below as chronology; use `docs/audits/AUDIT_STATUS_INDEX.md` and `docs/handover/CURRENT_OPEN_ITEMS.md` for current work.
+> **LIFECYCLE (2026-07-20): `HISTORICAL / SUPERSEDED`.** Preserve the observations below as chronology. This report does not define current work; use `docs/handover/HANDOVER_FOR_NEXT_AGENT.md`.
 
 CLASSIFICATION:
 - FAIL_PHASE_42N3Q_POST_FIX_USER_CLAIMS_FULL_AUDIT

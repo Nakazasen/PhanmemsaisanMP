@@ -22,6 +22,48 @@ from src.services.app_updates import (
 from src.services.update_security import canonical_json_bytes, generate_signing_keypair, sha256_bytes, sign_payload
 
 
+def test_gui_application_version_uses_release_metadata(monkeypatch):
+    monkeypatch.setattr(universal_app, "current_release_version", lambda: "0.9.1")
+
+    assert universal_app.MPManagerApp._application_version() == "0.9.1"
+
+
+def test_gui_window_title_identifies_owner_and_department():
+    title = universal_app.MPManagerApp._window_title("2027", "0.9.1")
+
+    assert title == "MP2027 Manager v0.9.1 - Quản lý Ngân sách | Bùi Đức Vinh - Phòng Phát triển hệ thống Chế tạo"
+
+
+def test_gui_initial_window_size_fits_lower_resolution_screens():
+    assert universal_app.MPManagerApp._initial_window_size(1920, 1080) == (1180, 800)
+    assert universal_app.MPManagerApp._initial_window_size(1024, 768) == (976, 672)
+    assert universal_app.MPManagerApp._initial_window_size(800, 600) == (752, 504)
+
+
+def test_gui_discovered_update_shows_release_notes(monkeypatch):
+    calls = {}
+    logs = []
+    candidate = SimpleNamespace(version="0.2.0", notes="• Sửa lỗi\n• Thêm hướng dẫn")
+    monkeypatch.setattr(
+        universal_app.messagebox,
+        "askyesno",
+        lambda title, message: calls.setdefault("prompt", (title, message)) and False,
+    )
+
+    app = SimpleNamespace(
+        _startup_update_prompted=False,
+        _application_update_running=False,
+        log=logs.append,
+    )
+
+    universal_app.MPManagerApp._offer_discovered_update(app, candidate, "unused", "0.1.0")
+
+    assert calls["prompt"][0] == "Có bản cập nhật MP2027"
+    assert "Nội dung cập nhật:" in calls["prompt"][1]
+    assert candidate.notes in calls["prompt"][1]
+    assert any("hoãn" in message.lower() for message in logs)
+
+
 def _build_update(path, private_key, *, version="0.2.0", payload=b"fake-exe", extras=None):
     entrypoint = "MP2027_Portable.exe"
     manifest = {
@@ -186,6 +228,31 @@ def test_release_builder_is_deterministic_and_verifiable(tmp_path):
         "MP2027_Portable.exe",
         "_internal/runtime.dll",
     ]
+
+
+def test_release_builder_rejects_manifest_larger_than_shared_limit(tmp_path, monkeypatch):
+    from scripts import package_app
+    from src.services import update_security
+
+    private, _public = generate_signing_keypair()
+    app_dist = tmp_path / "app-dist"
+    app_dist.mkdir()
+    (app_dist / "MP2027_Portable.exe").write_bytes(b"portable-app")
+    key_path = tmp_path / "release.key"
+    key_path.write_text(private, encoding="ascii")
+    release_path = tmp_path / "release.json"
+    release_path.write_text(json.dumps({"version": "0.2.0"}), encoding="utf-8")
+    monkeypatch.setattr(update_security, "MAX_MANIFEST_BYTES", 1)
+
+    with pytest.raises(ValueError, match="Tệp kê khai cập nhật"):
+        package_app.build_signed_update(
+            app_dist,
+            tmp_path / "release.mpupdate",
+            private_key_path=key_path,
+            key_id="pilot-2027-01",
+            min_app_version="0.1.0",
+            release_path=release_path,
+        )
 
 
 def test_release_builder_rejects_private_key_inside_repository(tmp_path, monkeypatch):

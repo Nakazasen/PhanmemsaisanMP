@@ -56,6 +56,24 @@ CATEGORY_ORDER = {
 }
 
 
+def _is_legacy_confirmation_left_disabled(row: dict[str, str]) -> bool:
+    """Detect the old editor pattern where confirming a type kept its disabled box.
+
+    It is deliberately narrow: explicit "ignored" rows and normal user-disabled
+    rows remain disabled. Only the former placeholder wording with no usable
+    signature is repaired after the current workbook still proves the category.
+    """
+    return (
+        str(row.get("enabled", "1")).strip() == "0"
+        and str(row.get("status", "")).strip().lower() == "recognized"
+        and str(row.get("detection_method", "")).strip().lower() == "manual"
+        and str(row.get("signature", "")).strip().lower() in {"", "none", "null"}
+        and str(row.get("description", "")).strip() == "Cần xác nhận loại nguồn"
+        and str(row.get("reason", "")).strip() == "Người dùng đã xác nhận loại nguồn này."
+        and bool(str(row.get("category", "")).strip())
+    )
+
+
 def _source_dir_path(source_dir: str | None) -> Path | None:
     if not source_dir:
         return None
@@ -587,6 +605,7 @@ def merge_manifest_with_detected(
                 or saved_category in current_matches
             )
             if structure_still_matches:
+                restore_legacy_enabled = _is_legacy_confirmation_left_disabled(row)
                 signature_note = (
                     " Cấu trúc vẫn tương thích dù nội dung workbook đã thay đổi."
                     if saved_signature and saved_signature != current.get("signature") else
@@ -595,11 +614,19 @@ def merge_manifest_with_detected(
                 merged_row.update(
                     {
                         "category": saved_category,
-                        "enabled": row.get("enabled", "1"),
+                        "enabled": "1" if restore_legacy_enabled else row.get("enabled", "1"),
                         "status": "recognized",
-                        "detection_method": saved_method or "manifest",
+                        "detection_method": (
+                            current.get("detection_method", "structure")
+                            if restore_legacy_enabled else saved_method or "manifest"
+                        ),
                         "description": row.get("description", "") or DEFAULT_DESCRIPTIONS.get(saved_category, ""),
-                        "reason": (row.get("reason", "") or "Giữ phân loại đã xác nhận trong manifest.") + signature_note,
+                        "reason": (
+                            "Tự bật nguồn đã xác nhận vì cấu trúc workbook hiện tại khớp duy nhất; "
+                            "manifest cũ chỉ còn cờ TẮT mặc định."
+                            if restore_legacy_enabled else
+                            (row.get("reason", "") or "Giữ phân loại đã xác nhận trong manifest.") + signature_note
+                        ),
                     }
                 )
             else:

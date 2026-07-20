@@ -340,7 +340,7 @@ class TestPostingMonthLogic(unittest.TestCase):
         self.assertEqual(_missing_areas(conn, cc), {})
         conn.close()
 
-    def test_mooncake_requires_explicit_distribution_count(self):
+    def test_mooncake_uses_total_september_headcount(self):
         conn = _mk_conn()
         cc = _seed_cc(conn)
         _seed_hc(conn, cc, [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
@@ -358,8 +358,8 @@ class TestPostingMonthLogic(unittest.TestCase):
 
         AllocationEngine(conn)._process_allocation_rules()
 
-        self.assertEqual(_alloc_periods(conn, rid), {})
-        self.assertEqual(_missing_areas(conn, cc), {"manual_distribution_driver": 1})
+        self.assertEqual(_alloc_periods(conn, rid), {"202609": 15 * 56000.0})
+        self.assertEqual(_missing_areas(conn, cc), {})
         conn.close()
 
     def test_company_founding_thanks_event_requires_explicit_participant_count(self):
@@ -408,7 +408,7 @@ class TestPostingMonthLogic(unittest.TestCase):
         self.assertEqual(_missing_areas(conn, cc), {})
         conn.close()
 
-    def test_company_trip_requires_explicit_participant_count(self):
+    def test_company_trip_uses_total_may_headcount(self):
         conn = _mk_conn()
         cc = _seed_cc(conn)
         _seed_hc(conn, cc, [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
@@ -426,8 +426,8 @@ class TestPostingMonthLogic(unittest.TestCase):
 
         AllocationEngine(conn)._process_allocation_rules()
 
-        self.assertEqual(_alloc_periods(conn, rid), {})
-        self.assertEqual(_missing_areas(conn, cc), {"manual_distribution_driver": 1})
+        self.assertEqual(_alloc_periods(conn, rid), {"202605": 11 * 2061000.0})
+        self.assertEqual(_missing_areas(conn, cc), {})
         conn.close()
 
     def test_new_hire_medical_uses_canonical_delta_with_explicit_source_price(self):

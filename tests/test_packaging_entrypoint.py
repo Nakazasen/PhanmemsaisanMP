@@ -154,9 +154,10 @@ def test_assemble_install_bundle_writes_versioned_current_pointer(tmp_path, monk
     monkeypatch.setattr(package_app, "PROJECT_ROOT", Path.cwd())
 
     result = package_app.assemble_install_bundle(app_dist, launcher_dist, bundle)
+    version = json.loads(Path("release.json").read_text(encoding="utf-8"))["version"]
 
     assert result == bundle
-    assert (bundle / "apps" / "0.1.0" / "MP2027_Portable.exe").is_file()
+    assert (bundle / "apps" / version / "MP2027_Portable.exe").is_file()
     assert (bundle / "MP2027_Launcher.exe").is_file()
     assert (bundle / "current.json").read_text(encoding="utf-8").startswith('{"entrypoint":"MP2027_Portable.exe"')
 
@@ -172,8 +173,9 @@ def test_assembled_initial_bundle_resolves_through_launcher_contract(tmp_path, m
     monkeypatch.setattr(package_app, "PROJECT_ROOT", Path.cwd())
 
     package_app.assemble_install_bundle(app_dist, launcher_dist, bundle)
+    version = json.loads(Path("release.json").read_text(encoding="utf-8"))["version"]
 
-    assert resolve_current_entrypoint(bundle) == bundle / "apps" / "0.1.0" / "MP2027_Portable.exe"
+    assert resolve_current_entrypoint(bundle) == bundle / "apps" / version / "MP2027_Portable.exe"
 
 
 def test_inno_installer_uses_complete_vietnamese_messages():

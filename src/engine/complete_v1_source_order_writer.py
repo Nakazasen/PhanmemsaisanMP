@@ -43,6 +43,7 @@ SOURCE_ORDER_METADATA_SHEET = "_mp2027_source_order_meta"
 ACCOUNT_MASTER_SHEET = "\u52d8\u5b9a\u79d1\u76ee"
 NO_FILL = PatternFill(fill_type=None)
 MISSING_SEPARATE_COUNT_FILL = PatternFill(fill_type="solid", fgColor="FFC7CE")
+MAX_EXCEL_FORMULA_LENGTH = 8192
 GENERATED_FILE_ORDER_POLICIES = (
     "ROUND_USD_BY_B2",
     "COPY_VND_MONTHLY",
@@ -447,7 +448,13 @@ def _collect_dynamic_allocation_rows(
             if terms and numeric_value:
                 terms.append(str(int(numeric_value)) if numeric_value.is_integer() else str(numeric_value))
             if terms:
-                values[col] = "=" + "+".join(str(term).lstrip("=") for term in terms)
+                formula = "=" + "+".join(str(term).lstrip("=") for term in terms)
+                if len(formula) > MAX_EXCEL_FORMULA_LENGTH:
+                    raise ValueError(
+                        "Công thức Excel vượt giới hạn 8.192 ký tự; "
+                        f"period={period}, description={row.get('description')!r}, length={len(formula)}"
+                    )
+                values[col] = formula
             elif numeric_value or period in explicit_zero_periods:
                 values[col] = numeric_value
             if period in highlight_periods:

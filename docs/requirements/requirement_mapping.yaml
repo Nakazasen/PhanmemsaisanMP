@@ -3,12 +3,12 @@
 canonical_source_of_truth: "raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx"
 canonical_reconciled_at_local: "2026-07-11 (user-confirmed source authority; implementation re-audit pending)"
 legacy_source_snapshot: "09.06.2026 (historical trace only; superseded by canonical 10.07.2026 workbook)"
-current_open_items_register: "docs/handover/CURRENT_OPEN_ITEMS.md"
+current_handover: "docs/handover/HANDOVER_FOR_NEXT_AGENT.md"
 audit_status_index: "docs/audits/AUDIT_STATUS_INDEX.md"
 status_policy:
   implemented_in_code_existing: "Code path exists; this is not canonical-output acceptance."
   REQUIRES_CURRENT_OUTPUT_AUDIT: "Retain as OPEN_AUDIT until current output is checked against canonical 10.07."
-  needs_confirmation: "Retain as OPEN_DECISION or BLOCKED_BY_INPUT according to CURRENT_OPEN_ITEMS.md."
+  needs_confirmation: "Do not implement without explicit source evidence or user/business confirmation."
   historical_audit: "Historical evidence never overrides the current register or canonical workbook."
 canonical_workbook_inventory:
   - sheet: "Sheet1"

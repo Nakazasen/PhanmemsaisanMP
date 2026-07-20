@@ -48,7 +48,7 @@ Markdown không được override workbook canonical.
 - Nâng cấp README tiếng Việt cho người vận hành và agent tiếp quản.
 - Tạo `docs/requirements/requirement_mapping.yaml` dạng máy đọc được.
 - Thêm `docs/development_setup.md`.
-- Thêm `docs/HANDOVER_FOR_NEXT_AGENT.md`.
+- Đã từng thêm `docs/HANDOVER_FOR_NEXT_AGENT.md`; bản trùng này được loại bỏ ngày 20.07.2026 khi hợp nhất về `docs/handover/HANDOVER_FOR_NEXT_AGENT.md`.
 - Thêm `main()` cho `scripts/run_e2e.py` và giữ behavior `py scripts/run_e2e.py`.
 - Thêm smoke tests cho README/mapping/entrypoint.
 - Thêm GitHub Actions CI đơn giản.

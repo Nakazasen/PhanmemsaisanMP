@@ -7,14 +7,14 @@ Current source hierarchy:
 
 - `CANONICAL_SOURCE_USER_CONFIRMED_AT=2026-07-11`
 - Canonical requirement date: `10.07.2026`.
-- Live backlog: `docs/handover/CURRENT_OPEN_ITEMS.md`.
+- Current product handover: `docs/handover/HANDOVER_FOR_NEXT_AGENT.md`.
 - Audit lifecycle/successors: `docs/audits/AUDIT_STATUS_INDEX.md`.
 - Historical implementation evidence verified against 09.06 must not be reused as acceptance against 10.07.
 - Historical content must not override current audits, code, or the canonical 10.07.2026 workbook.
 
 ## Historical reconcile note - 09.06 workbook
 
-Local reconcile time: `2026-07-07 06:40:00`. The Markdown and machine-readable mapping were refreshed against the 09.06 workbook after it received additional content. This is historical context only: the 10.07 workbook is now canonical and current residual work is listed only in `CURRENT_OPEN_ITEMS.md`.
+Local reconcile time: `2026-07-07 06:40:00`. The Markdown and machine-readable mapping were refreshed against the 09.06 workbook after it received additional content. This is historical context only: the 10.07 workbook is now canonical, and this knowledge base does not define current work.
 
 ---
 # MP Saisan Business Knowledge Base v2 - Full Business Specification
@@ -334,7 +334,7 @@ Reference-assisted output must carry label like `REFERENCE_FILLED_FROM_PRIMARY` 
 
 Do not use this knowledge document as a task list.
 
-1. Read `docs/handover/CURRENT_OPEN_ITEMS.md` for current work and closure status.
+1. Read `docs/handover/HANDOVER_FOR_NEXT_AGENT.md` for the current product goal.
 2. Read `docs/audits/AUDIT_STATUS_INDEX.md` before following any historical phase recommendation.
 3. Continue fixed-assets only from the 2026-07-15 GAP plan and approved Accounting decisions.
 4. For other modules, audit current output against canonical 10.07 only after required real inputs are available.

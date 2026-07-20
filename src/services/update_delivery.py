@@ -22,6 +22,7 @@ from typing import Any, Iterable
 from src.services.app_updates import ApplicationUpdateError, inspect_update_package
 from src.services.update_security import (
     MAX_ARTIFACT_BYTES,
+    MAX_MANIFEST_BYTES,
     ArtifactVerificationError,
     release_metadata_path,
     resolve_trusted_signing_key,
@@ -32,6 +33,9 @@ CONFIG_SCHEMA = 1
 CATALOG_SCHEMA = 1
 MAX_CONFIG_BYTES = 256 * 1024
 MAX_CATALOG_BYTES = 256 * 1024
+# Backward-compatible export for delivery tests and callers. The authoritative
+# ceiling is shared with package inspection and the release builder.
+MAX_UPDATE_MANIFEST_BYTES = MAX_MANIFEST_BYTES
 MAX_DOWNLOAD_BYTES = MAX_ARTIFACT_BYTES
 DEFAULT_TIMEOUT_SECONDS = 5.0
 _SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
@@ -176,7 +180,7 @@ def _manifest_identity(package_path: Path) -> tuple[str, str]:
     try:
         with zipfile.ZipFile(package_path) as archive:
             info = archive.getinfo("manifest.json")
-            if info.file_size > MAX_CATALOG_BYTES:
+            if info.file_size > MAX_UPDATE_MANIFEST_BYTES:
                 raise UpdateDeliveryError("Tệp kê khai cập nhật quá lớn")
             manifest = json.loads(archive.read(info).decode("utf-8-sig"))
         return str(manifest.get("key_id", "")), str(manifest.get("version", ""))
@@ -222,6 +226,34 @@ def discover_folder_updates(
     if not root.is_dir():
         raise UpdateDeliveryError(f"Không truy cập được thư mục cập nhật: {root}")
     metadata = _release_metadata(release_metadata_path_override)
+    catalog_path = root / "latest.json"
+    if catalog_path.is_file():
+        package_name, catalog_version, digest, size, notes = _validated_catalog(
+            _read_json_file(catalog_path, max_bytes=MAX_CATALOG_BYTES)
+        )
+        package_path = root / package_name
+        candidate = _verified_folder_candidate(
+            package_path,
+            metadata,
+            current_database_schema=current_database_schema,
+        )
+        if candidate.version != catalog_version:
+            raise UpdateDeliveryError("Catalog có phiên bản không khớp gói cập nhật")
+        if candidate.size != size or sha256_file(package_path) != digest:
+            raise UpdateDeliveryError("Catalog có hash hoặc dung lượng không khớp gói cập nhật")
+        return [
+            UpdateCandidate(
+                version=candidate.version,
+                source_type="folder",
+                location=candidate.location,
+                package_name=candidate.package_name,
+                size=size,
+                sha256=digest,
+                notes=notes,
+            )
+        ]
+
+    # Legacy shares without latest.json still work, but cannot carry release notes.
     candidates: list[UpdateCandidate] = []
     for path in sorted(root.glob("*.mpupdate")):
         if not path.is_file():
@@ -253,9 +285,7 @@ def _read_https_json(url: str, *, timeout: float) -> Any:
         raise UpdateDeliveryError("Catalog cập nhật không phải JSON hợp lệ") from exc
 
 
-def discover_https_update(base_url: str, *, current_version: str, timeout: float = 5.0) -> UpdateCandidate | None:
-    base = base_url.rstrip("/") + "/"
-    value = _read_https_json(urllib.parse.urljoin(base, "latest.json"), timeout=timeout)
+def _validated_catalog(value: Any) -> tuple[str, str, str, int, str]:
     required = {"schema", "channel", "version", "package", "sha256", "size", "notes"}
     if not isinstance(value, dict) or set(value) != required or value["schema"] != CATALOG_SCHEMA:
         raise UpdateDeliveryError("Catalog cập nhật có các trường không hợp lệ")
@@ -273,6 +303,14 @@ def discover_https_update(base_url: str, *, current_version: str, timeout: float
         raise UpdateDeliveryError("Catalog có dung lượng gói không hợp lệ")
     if not isinstance(value["channel"], str) or not isinstance(notes, str) or len(notes) > 2000:
         raise UpdateDeliveryError("Catalog có channel hoặc ghi chú không hợp lệ")
+    return package_name, version, digest, size, notes
+
+
+def discover_https_update(base_url: str, *, current_version: str, timeout: float = 5.0) -> UpdateCandidate | None:
+    base = base_url.rstrip("/") + "/"
+    package_name, version, digest, size, notes = _validated_catalog(
+        _read_https_json(urllib.parse.urljoin(base, "latest.json"), timeout=timeout)
+    )
     if _version(version) <= _version(current_version):
         return None
     return UpdateCandidate(

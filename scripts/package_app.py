@@ -168,6 +168,7 @@ def build_signed_update(
     from src.db.migrations import CURRENT_SCHEMA_VERSION
     from src.services.update_security import (
         MAX_ARTIFACT_BYTES,
+        MAX_MANIFEST_BYTES,
         canonical_json_bytes,
         sign_payload,
     )
@@ -206,6 +207,11 @@ def build_signed_update(
     }
     private_key = _read_external_private_key(private_key_path)
     manifest_bytes = canonical_json_bytes(manifest)
+    if len(manifest_bytes) > MAX_MANIFEST_BYTES:
+        raise ValueError(
+            f"Tệp kê khai cập nhật có kích thước {len(manifest_bytes):,} byte, vượt giới hạn "
+            f"{MAX_MANIFEST_BYTES:,} byte. Hãy giảm số lượng tệp hoặc tăng giới hạn dùng chung trước khi phát hành."
+        )
     signature_bytes = sign_payload(manifest, private_key).encode("ascii")
     extracted_size = sum(int(entry["size"]) for entry in inventory) + len(manifest_bytes) + len(signature_bytes)
     if extracted_size > MAX_ARTIFACT_BYTES:

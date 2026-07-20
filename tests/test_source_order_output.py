@@ -133,6 +133,28 @@ def test_manual_manifest_decision_survives_rename_but_not_structure_change(tmp_p
     assert "thay đổi" in changed[0]["reason"].lower()
 
 
+def test_legacy_manual_confirmation_left_disabled_is_restored_when_structure_matches(tmp_path):
+    path = tmp_path / "facility.xlsx"
+    _write_facility_source(path)
+    detected = detect_source_files(str(tmp_path))[0]
+    saved = [{
+        **detected,
+        "category": "facility",
+        "enabled": "0",
+        "status": "recognized",
+        "detection_method": "manual",
+        "signature": "None",
+        "description": "Cần xác nhận loại nguồn",
+        "reason": "Người dùng đã xác nhận loại nguồn này.",
+    }]
+
+    merged = merge_manifest_with_detected(str(tmp_path), saved)
+
+    assert merged[0]["category"] == "facility"
+    assert merged[0]["enabled"] == "1"
+    assert "tự bật" in merged[0]["reason"].lower()
+
+
 def test_manual_decision_survives_raw_multi_match_structure(monkeypatch, tmp_path):
     from src.utils import source_manifest
 
