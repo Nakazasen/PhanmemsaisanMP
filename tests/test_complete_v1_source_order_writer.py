@@ -718,6 +718,90 @@ def test_complete_v1_writer_keeps_explicit_zero_distinct_from_post_terminal_blan
         wb.close()
 
 
+def test_complete_v1_writer_does_not_leak_legacy_row_58_red_fill(tmp_path):
+    workbook = tmp_path / "out_row_58_style_leak.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    for col in range(6, 18):
+        ws.cell(58, col).fill = BLUE_FILL
+    # These alerts belonged to the old business rule staged on physical row 58.
+    ws.cell(58, 7).fill = PatternFill(fill_type="solid", fgColor="FFC7CE")
+    ws.cell(58, 10).fill = PatternFill(fill_type="solid", fgColor="FFC7CE")
+    wb.save(workbook)
+    wb.close()
+
+    periods = [
+        "202604", "202605", "202606", "202607", "202608", "202609",
+        "202610", "202611", "202612", "202701", "202702", "202703",
+    ]
+    apply_complete_v1_source_order_to_workbook(
+        workbook,
+        start_row=58,
+        clear_until_row=90,
+        dynamic_allocation_rows=[
+            {
+                "account_code": 600001,
+                "description": "new item occupying physical row 58",
+                "terms": {"202604": ["10*100"]},
+                "highlight_periods": set(),
+            }
+        ],
+        fiscal_periods=periods,
+    )
+
+    wb = load_workbook(workbook)
+    try:
+        ws = wb[SHEET]
+        assert all((_fill_rgb(ws.cell(58, col)) or "").endswith("CCFFFF") for col in range(6, 18))
+    finally:
+        wb.close()
+
+
+def test_complete_v1_writer_reapplies_only_current_rows_red_alerts(tmp_path):
+    workbook = tmp_path / "out_row_58_current_alert.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    for col in range(6, 18):
+        ws.cell(58, col).fill = BLUE_FILL
+    ws.cell(58, 7).fill = PatternFill(fill_type="solid", fgColor="FFC7CE")
+    ws.cell(58, 10).fill = PatternFill(fill_type="solid", fgColor="FFC7CE")
+    wb.save(workbook)
+    wb.close()
+
+    periods = [
+        "202604", "202605", "202606", "202607", "202608", "202609",
+        "202610", "202611", "202612", "202701", "202702", "202703",
+    ]
+    apply_complete_v1_source_order_to_workbook(
+        workbook,
+        start_row=58,
+        clear_until_row=90,
+        dynamic_allocation_rows=[
+            {
+                "account_code": 600001,
+                "description": "current separate-count item",
+                "terms": {"202606": ["0*100"]},
+                "highlight_periods": {"202606"},
+            }
+        ],
+        fiscal_periods=periods,
+    )
+
+    wb = load_workbook(workbook)
+    try:
+        ws = wb[SHEET]
+        assert (_fill_rgb(ws["H58"]) or "").endswith("FFC7CE")
+        assert all(
+            (_fill_rgb(ws.cell(58, col)) or "").endswith("CCFFFF")
+            for col in range(6, 18)
+            if col != 8
+        )
+    finally:
+        wb.close()
+
+
 def test_complete_v1_writer_rejects_formula_beyond_excel_limit(tmp_path):
     path = _workbook(tmp_path / "out.xlsx")
     periods = ["202604"]
@@ -767,6 +851,53 @@ def test_complete_v1_writer_preserves_unmanaged_business_rows_inside_clear_range
         assert ws.cell(32, 6).value == "=$B32*100"
         assert ws.cell(32, 18).value == "=SUM(F32:Q32)"
         assert ws.cell(52, 19).value is None
+    finally:
+        wb.close()
+
+
+def test_complete_v1_writer_clears_generated_allocations_below_legacy_row_199(tmp_path):
+    path = tmp_path / "out.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    ws.cell(36, 2).value = 5006016260
+    ws.cell(36, 6).value = 100
+    ws.cell(36, 19).value = "facility building depreciation"
+    ws.cell(205, 2).value = 5005246288
+    ws.cell(205, 6).value = "=4*3000"
+    ws.cell(205, 18).value = "=SUM(F205:Q205)"
+    ws.cell(205, 19).value = "Alloc: Pen"
+    # The reusable FORM contains lookup/total formulas far below the visible
+    # output.  They must not prevent cleanup of the actual append payload.
+    ws.cell(1015, 3).value = '=IFERROR(VLOOKUP($B1015,A:B,2,0),"")'
+    ws.cell(1015, 18).value = "=SUM(F1015:Q1015)"
+    wb.save(path)
+    wb.close()
+
+    result = apply_complete_v1_source_order_to_workbook(
+        path,
+        start_row=30,
+        clear_until_row=199,
+        dynamic_allocation_rows=[{
+            "account_code": 5005246288,
+            "description": "Alloc: Pen",
+            "terms": {"202604": ["4*3000"]},
+        }],
+        fiscal_periods=["202604"],
+    )
+
+    assert result["cleared_through_row"] == 205
+    assert result["tail_formulas_cleared"] == 2
+    wb = load_workbook(path)
+    try:
+        ws = wb[SHEET]
+        descriptions = [ws.cell(row, 19).value for row in range(30, 1016)]
+        assert descriptions.count("Pen") == 1
+        assert ws.cell(205, 2).value is None
+        assert ws.cell(205, 6).value is None
+        assert ws.cell(205, 19).value is None
+        assert ws.cell(1015, 3).value is None
+        assert ws.cell(1015, 18).value is None
     finally:
         wb.close()
 

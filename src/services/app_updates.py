@@ -388,3 +388,28 @@ def resolve_current_entrypoint(app_root: str | os.PathLike[str]) -> Path:
     if version_dir.resolve() not in entrypoint.parents or not entrypoint.is_file():
         raise ApplicationUpdateError("Không tìm thấy tệp khởi động của phiên bản đang dùng")
     return entrypoint
+
+
+def launch_activated_update(
+    app_root: str | os.PathLike[str],
+    *,
+    current_pid: int | None = None,
+    popen: Callable[..., Any] = subprocess.Popen,
+) -> Path:
+    """Start the activated version and make it wait for this process to exit."""
+    entrypoint = resolve_current_entrypoint(app_root)
+    pid = int(current_pid if current_pid is not None else os.getpid())
+    if pid <= 0:
+        raise ApplicationUpdateError("Không xác định được tiến trình phiên bản cũ để khởi động lại.")
+    command = [str(entrypoint), "--wait-for-pid", str(pid)]
+    kwargs: dict[str, Any] = {
+        "cwd": str(entrypoint.parent),
+        "close_fds": True,
+    }
+    if os.name == "nt":
+        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    try:
+        popen(command, **kwargs)
+    except OSError as exc:
+        raise ApplicationUpdateError("Không thể tự khởi động phiên bản MP2027 mới.") from exc
+    return entrypoint

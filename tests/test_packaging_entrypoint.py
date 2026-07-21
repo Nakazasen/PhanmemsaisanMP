@@ -41,6 +41,23 @@ def test_packaging_health_dispatch_does_not_import_gui(tmp_path, monkeypatch):
     assert module.main() == 0
 
 
+def test_packaging_restart_waits_for_old_process_before_loading_gui(monkeypatch):
+    entrypoint = Path("packaging/mp2027_portable_entry.py")
+    spec = importlib.util.spec_from_file_location("mp2027_portable_entry_restart", entrypoint)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    calls = []
+    app = types.ModuleType("src.universal_app")
+    app.main = lambda: calls.append("gui") or 0
+    monkeypatch.setitem(sys.modules, "src.universal_app", app)
+    monkeypatch.setattr(module, "_wait_for_process_exit", lambda pid: calls.append(("wait", pid)) or True)
+    monkeypatch.setattr(sys, "argv", ["MP2027_Portable.exe", "--wait-for-pid", "4321"])
+
+    assert module.main() == 0
+    assert calls == [("wait", 4321), "gui"]
+    assert sys.argv == ["MP2027_Portable.exe"]
+
+
 def test_run_e2e_tolerates_windowed_packaged_streams(monkeypatch):
     module = importlib.import_module("scripts.run_e2e")
 

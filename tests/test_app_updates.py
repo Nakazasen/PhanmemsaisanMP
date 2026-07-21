@@ -15,6 +15,7 @@ from src.services.app_updates import (
     backup_runtime_databases,
     inspect_update_package,
     install_runtime_application_update,
+    launch_activated_update,
     resolve_current_entrypoint,
     rollback_activation,
     stage_application_update,
@@ -310,6 +311,28 @@ def test_runtime_offline_update_uses_application_key_health_backup_and_activatio
     assert calls[0][0][-1] == "--health-check"
 
 
+def test_launch_activated_update_waits_for_old_pid(tmp_path, monkeypatch):
+    entrypoint = tmp_path / "apps" / "0.2.0" / "MP2027_Portable.exe"
+    entrypoint.parent.mkdir(parents=True)
+    entrypoint.write_bytes(b"app")
+    calls = []
+    monkeypatch.setattr(
+        "src.services.app_updates.resolve_current_entrypoint",
+        lambda _root: entrypoint,
+    )
+
+    launched = launch_activated_update(
+        tmp_path,
+        current_pid=4321,
+        popen=lambda *args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    assert launched == entrypoint
+    assert calls[0][0][0] == [str(entrypoint), "--wait-for-pid", "4321"]
+    assert calls[0][1]["cwd"] == str(entrypoint.parent)
+    assert calls[0][1]["close_fds"] is True
+
+
 def test_runtime_offline_update_rejects_content_only_key_before_staging(tmp_path):
     private, public = generate_signing_keypair()
     update = tmp_path / "release.mpupdate"
@@ -338,9 +361,10 @@ def test_application_install_root_only_accepts_versioned_onedir_layout(tmp_path)
         application_install_root(tmp_path / "source-checkout")
 
 
-def test_gui_offline_update_uses_runtime_trust_without_key_prompt(monkeypatch, tmp_path):
+def test_gui_update_button_scans_configured_sources_and_installs_latest(monkeypatch, tmp_path):
     version_dir = tmp_path / "MP2027 Manager" / "apps" / "0.1.0"
     package_path = tmp_path / "release.mpupdate"
+    candidate = SimpleNamespace(version="0.2.0", notes="Fix mới", package_name=package_path.name)
     calls = {}
     logs = []
 
@@ -360,9 +384,34 @@ def test_gui_offline_update_uses_runtime_trust_without_key_prompt(monkeypatch, t
     monkeypatch.setattr(
         universal_app.filedialog,
         "askopenfilename",
-        lambda **kwargs: calls.setdefault("file_dialog", kwargs) and str(package_path),
+        lambda **kwargs: (_ for _ in ()).throw(AssertionError("không được mở hộp chọn file update")),
+    )
+    sources = [{"type": "folder", "location": r"\\server\updates", "enabled": True}]
+    monkeypatch.setattr(
+        universal_app,
+        "load_update_config",
+        lambda _root: {"schema": 1, "startup_check": True, "sources": sources},
+    )
+    monkeypatch.setattr(universal_app, "current_release_version", lambda: "0.1.0")
+    monkeypatch.setattr(universal_app, "check_update_source", lambda _source: None)
+
+    def fake_discover(actual_sources, *, current_version, current_database_schema):
+        calls["discover"] = (actual_sources, current_version, current_database_schema)
+        return candidate
+
+    monkeypatch.setattr(universal_app, "discover_available_update", fake_discover)
+    monkeypatch.setattr(
+        universal_app,
+        "fetch_update_candidate",
+        lambda actual_candidate, runtime_root: calls.setdefault("fetch", (actual_candidate, runtime_root)) and package_path,
     )
     monkeypatch.setattr(universal_app, "install_runtime_application_update", fake_install)
+    monkeypatch.setattr(
+        universal_app,
+        "launch_activated_update",
+        lambda app_root, *, current_pid: calls.setdefault("restart", (app_root, current_pid))
+        and app_root / "apps" / "0.2.0" / "MP2027_Portable.exe",
+    )
     monkeypatch.setattr(universal_app.threading, "Thread", ImmediateThread)
     monkeypatch.setattr(
         universal_app.messagebox,
@@ -377,29 +426,81 @@ def test_gui_offline_update_uses_runtime_trust_without_key_prompt(monkeypatch, t
     monkeypatch.setattr(
         universal_app.messagebox,
         "askyesno",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("must not prompt for key trust")),
+        lambda title, message: calls.setdefault("askyesno", (title, message)) and True,
     )
 
     app = SimpleNamespace(
         _application_update_running=False,
         log=logs.append,
+        root=SimpleNamespace(
+            quit=lambda: calls.setdefault("root_quit", True),
+            destroy=lambda: calls.setdefault("root_destroy", True),
+        ),
     )
     app._finish_application_update = lambda state, error: (
         universal_app.MPManagerApp._finish_application_update(app, state, error)
+    )
+    app._finish_manual_update_discovery = lambda *args: (
+        universal_app.MPManagerApp._finish_manual_update_discovery(app, *args)
+    )
+    app._install_discovered_update = lambda *args: (
+        universal_app.MPManagerApp._install_discovered_update(app, *args)
     )
     app._run_on_ui_thread = lambda callback, *args: callback(*args)
 
     universal_app.MPManagerApp.install_application_update(app)
 
+    assert calls["discover"] == (sources, "0.1.0", universal_app.CURRENT_SCHEMA_VERSION)
+    assert calls["fetch"] == (candidate, universal_app.BASE_DIR)
     assert calls["install"] == (
-        str(package_path),
+        package_path,
         tmp_path / "MP2027 Manager",
         universal_app.BASE_DIR,
         universal_app.CURRENT_SCHEMA_VERSION,
     )
-    assert calls["file_dialog"]["filetypes"] == [("Bản cập nhật MP2027", "*.mpupdate")]
+    assert "0.2.0" in calls["askyesno"][1]
+    assert "Fix mới" in calls["askyesno"][1]
     assert calls["thread_daemon"] is True
     assert "0.2.0" in calls["showinfo"][1]
     assert "showerror" not in calls
     assert app._application_update_running is False
+    assert calls["restart"][0] == tmp_path / "MP2027 Manager"
+    assert calls["root_quit"] is True
+    assert calls["root_destroy"] is True
     assert any("kích hoạt" in message.lower() for message in logs)
+
+
+def test_gui_update_button_reports_when_current_version_is_latest(monkeypatch, tmp_path):
+    version_dir = tmp_path / "MP2027 Manager" / "apps" / "0.2.0"
+    calls = {}
+
+    class ImmediateThread:
+        def __init__(self, *, target, daemon):
+            self.target = target
+
+        def start(self):
+            self.target()
+
+    monkeypatch.setattr(universal_app, "APP_DIR", str(version_dir))
+    monkeypatch.setattr(
+        universal_app,
+        "load_update_config",
+        lambda _root: {"schema": 1, "startup_check": True, "sources": [{"type": "folder", "location": "share", "enabled": True}]},
+    )
+    monkeypatch.setattr(universal_app, "current_release_version", lambda: "0.2.0")
+    monkeypatch.setattr(universal_app, "check_update_source", lambda _source: None)
+    monkeypatch.setattr(universal_app, "discover_available_update", lambda *args, **kwargs: None)
+    monkeypatch.setattr(universal_app.threading, "Thread", ImmediateThread)
+    monkeypatch.setattr(universal_app.messagebox, "showinfo", lambda title, message: calls.setdefault("info", (title, message)))
+
+    app = SimpleNamespace(
+        _application_update_running=False,
+        log=lambda message: calls.setdefault("log", []).append(message),
+    )
+    app._run_on_ui_thread = lambda callback, *args: callback(*args)
+    app._finish_manual_update_discovery = lambda *args: universal_app.MPManagerApp._finish_manual_update_discovery(app, *args)
+
+    universal_app.MPManagerApp.install_application_update(app)
+
+    assert calls["info"][0] == "Đang dùng phiên bản mới nhất"
+    assert "0.2.0" in calls["info"][1]

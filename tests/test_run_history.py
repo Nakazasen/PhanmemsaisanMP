@@ -22,7 +22,10 @@ from src.services.run_history import (
     publish_run_output,
 )
 from src.db.schema import create_schema, get_connection
-from src.services.manual_staffing_overrides import copy_annual_manual_inputs
+from src.services.manual_staffing_overrides import (
+    ANNUAL_MANUAL_INPUT_TABLES,
+    copy_annual_manual_inputs,
+)
 from scripts.run_e2e import run_universal_pipeline
 
 
@@ -356,6 +359,104 @@ def test_selected_fy_bus_input_is_copied_and_visible_to_the_run(tmp_path):
         "SELECT fiscal_year,bus_expat_count,bus_vietnamese_count FROM fact_bus_headcount_drivers WHERE cc_code='CC'"
     ).fetchone()
     assert tuple(row) == (2028, 3, 4)
+
+
+def test_selected_fy_manual_gender_is_copied_into_isolated_run(tmp_path):
+    input_db = tmp_path / "manual_inputs.db"
+    source = get_connection(str(input_db))
+    create_schema(source)
+    source.execute(
+        """INSERT INTO fact_monthly_headcount
+           (period,cc_code,headcount_male,headcount_female,source,description)
+           VALUES('202712','CC',25,2,'manual','annual health check')"""
+    )
+    source.execute(
+        """INSERT INTO fact_monthly_headcount
+           (period,cc_code,headcount_male,headcount_female,source)
+           VALUES('202612','OLD',99,99,'manual')"""
+    )
+    source.commit()
+    target = get_connection(str(tmp_path / "run.db"))
+    create_schema(target)
+
+    copied = copy_annual_manual_inputs(target, 2028, input_db)
+
+    assert copied["fact_monthly_headcount"] == 1
+    row = target.execute(
+        """SELECT headcount_male,headcount_female,description
+           FROM fact_monthly_headcount
+           WHERE period='202712' AND cc_code='CC' AND source='manual'"""
+    ).fetchone()
+    assert tuple(row) == (25, 2, "annual health check")
+    assert target.execute(
+        "SELECT COUNT(*) FROM fact_monthly_headcount WHERE cc_code='OLD'"
+    ).fetchone()[0] == 0
+
+
+def test_snapshot_copy_contract_covers_every_manual_staffing_input(tmp_path):
+    input_db = tmp_path / "manual_inputs.db"
+    source = get_connection(str(input_db))
+    create_schema(source)
+    source.execute(
+        """INSERT INTO fact_manual_headcount_time_override
+           (period,cc_code,fiscal_year,fixed_hours_local)
+           VALUES('202704','CC',2028,160)"""
+    )
+    source.execute(
+        """INSERT INTO fact_manual_headcount_baseline_override
+           (period,cc_code,fiscal_year,headcount_all)
+           VALUES('202703','CC',2028,10)"""
+    )
+    source.execute(
+        """INSERT INTO fact_bus_headcount_drivers
+           (cc_code,fiscal_year,bus_expat_count,bus_vietnamese_count)
+           VALUES('CC',2028,1,9)"""
+    )
+    source.execute(
+        """INSERT INTO fact_monthly_headcount
+           (period,cc_code,headcount_male,headcount_female,source)
+           VALUES('202712','CC',8,2,'manual')"""
+    )
+    source.commit()
+    target = get_connection(str(tmp_path / "run.db"))
+    create_schema(target)
+
+    copied = copy_annual_manual_inputs(target, 2028, input_db)
+
+    assert tuple(copied) == ANNUAL_MANUAL_INPUT_TABLES
+    assert copied == {table: 1 for table in ANNUAL_MANUAL_INPUT_TABLES}
+
+
+def test_manual_gender_copy_preserves_legacy_csv_staffing_values(tmp_path):
+    input_db = tmp_path / "manual_inputs.db"
+    source = get_connection(str(input_db))
+    create_schema(source)
+    source.execute(
+        """INSERT INTO fact_monthly_headcount
+           (period,cc_code,headcount_all,headcount_staff,headcount_worker,
+            headcount_male,headcount_female,source)
+           VALUES('202712','CC',0,0,0,25,2,'manual')"""
+    )
+    source.commit()
+    target = get_connection(str(tmp_path / "run.db"))
+    create_schema(target)
+    target.execute(
+        """INSERT INTO fact_monthly_headcount
+           (period,cc_code,headcount_all,headcount_staff,headcount_worker,
+            headcount_male,headcount_female,source)
+           VALUES('202712','CC',27,27,0,0,0,'manual')"""
+    )
+    target.commit()
+
+    copy_annual_manual_inputs(target, 2028, input_db)
+
+    row = target.execute(
+        """SELECT headcount_all,headcount_staff,headcount_worker,
+                  headcount_male,headcount_female
+           FROM fact_monthly_headcount
+           WHERE period='202712' AND cc_code='CC' AND source='manual'"""
+    ).fetchone()
+    assert tuple(row) == (27, 27, 0, 25, 2)
 
 
 def test_pipeline_connection_cleanup_rolls_back_before_close():

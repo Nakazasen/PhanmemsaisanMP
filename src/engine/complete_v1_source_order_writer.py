@@ -42,6 +42,7 @@ SOURCE_NOTE_RE = re.compile(r"source_file=([^;]+);\s*original_row=(\d+)")
 SOURCE_ORDER_METADATA_SHEET = "_mp2027_source_order_meta"
 ACCOUNT_MASTER_SHEET = "\u52d8\u5b9a\u79d1\u76ee"
 NO_FILL = PatternFill(fill_type=None)
+MONTH_INPUT_FILL = PatternFill(fill_type="solid", fgColor="FFCCFFFF")
 MISSING_SEPARATE_COUNT_FILL = PatternFill(fill_type="solid", fgColor="FFC7CE")
 MAX_EXCEL_FORMULA_LENGTH = 8192
 GENERATED_FILE_ORDER_POLICIES = (
@@ -104,6 +105,11 @@ def _staged_row_has_month_payload(row: StagedWorkbookRow) -> bool:
     return any(_norm(row.values.get(col)) for col in MONTH_COLS)
 
 
+def _fill_rgb(cell) -> str:
+    color = cell.fill.fgColor
+    return str(color.rgb or "") if color.type == "rgb" else ""
+
+
 def _copy_staged_row(
     ws,
     source_file: str,
@@ -142,6 +148,12 @@ def _clear_business_row(ws, row: int) -> None:
         cell = ws.cell(row, col)
         cell.value = None
         cell.comment = None
+        # Red is a semantic alert for the row currently occupying this cell,
+        # not part of the physical FORM row.  The source-order rewrite moves
+        # different business items onto legacy staging rows (notably row 58),
+        # so retaining this fill leaks an old rule's alert into the new item.
+        if col in MONTH_COLS and _fill_rgb(cell).endswith("FFC7CE"):
+            cell.fill = copy(MONTH_INPUT_FILL)
         if col == NOTE_COL:
             _clear_metadata_note_for_cell(cell)
 
@@ -289,10 +301,10 @@ def _write_staged_row(ws, target_row: int, staged: StagedWorkbookRow) -> None:
     ws.cell(target_row, TOTAL_COL).value = f"=SUM(F{target_row}:Q{target_row})"
 
 
-def _normalize_final_output_layout(ws, start_row: int) -> dict[str, int]:
+def _normalize_final_output_layout(ws, start_row: int, end_row: int) -> dict[str, int]:
     cleared_fills = 0
     cleared_item_ids = 0
-    for row in range(max(1, int(start_row)), int(ws.max_row or 0) + 1):
+    for row in range(max(1, int(start_row)), max(int(end_row), int(start_row) - 1) + 1):
         for col in LAYOUT_WHITE_COLUMNS:
             cell = ws.cell(row, col)
             if cell.fill and cell.fill.fill_type:
@@ -306,6 +318,28 @@ def _normalize_final_output_layout(ws, start_row: int) -> dict[str, int]:
         "layout_fills_cleared": cleared_fills,
         "item_ids_cleared": cleared_item_ids,
     }
+
+
+def _last_business_payload_row(ws, start_row: int) -> int:
+    for row in range(int(ws.max_row or 0), int(start_row) - 1, -1):
+        if _business_row_present(ws, row):
+            return row
+    return int(start_row) - 1
+
+
+def _clear_unused_template_formula_tail(ws, start_row: int, end_row: int) -> int:
+    """Remove lookup/total formulas below the final concrete payload cheaply."""
+    cleared = 0
+    for row in range(max(int(start_row), 1), max(int(end_row), 0) + 1):
+        if _business_row_present(ws, row):
+            continue
+        for col in (LOOKUP_NAME_COL, LOOKUP_GROUP_COL, TOTAL_COL):
+            cell = ws.cell(row, col)
+            value = cell.value
+            if cell.data_type == "f" or (isinstance(value, str) and value.startswith("=")):
+                cell.value = None
+                cleared += 1
+    return cleared
 
 
 def _source_rows_to_clear(ws) -> set[int]:
@@ -538,7 +572,7 @@ def apply_complete_v1_source_order_to_workbook(
     workbook_path: str | Path,
     *,
     start_row: int = 30,
-    clear_until_row: int = 212,
+    clear_until_row: int | None = None,
     dynamic_allocation_rows: Iterable[dict[str, object]] | None = None,
     fiscal_periods: Iterable[str] | None = None,
     source_file_order: Iterable[str] | None = None,
@@ -557,8 +591,18 @@ def apply_complete_v1_source_order_to_workbook(
             ws = wb[helpers.find_hub_sheet_name(wb)]
         except ValueError:
             ws = wb.active
+        # HubBuilder appends generated facts after the last occupied business
+        # row.  The number differs by cost center, so a fixed cleanup boundary
+        # (historically row 199) can leave duplicate allocations below it.
+        # Structural lookup formulas in otherwise blank template rows do not
+        # expand the heavy cleanup range; they are removed in a light pass.
+        sheet_last_row = int(ws.max_row or (start_row - 1))
+        effective_clear_until_row = max(
+            int(clear_until_row or (start_row - 1)),
+            _last_business_payload_row(ws, start_row),
+        )
         source_rows_to_clear = _source_rows_to_clear(ws)
-        staged = _collect_existing_source_order_rows(ws, start_row, clear_until_row)
+        staged = _collect_existing_source_order_rows(ws, start_row, effective_clear_until_row)
         if not staged:
             staged = _collect_staged_rows(ws, resolved_source_order)
         dynamic_staged = _collect_dynamic_allocation_rows(dynamic_allocation_rows, fiscal_periods, resolved_source_order)
@@ -601,12 +645,17 @@ def apply_complete_v1_source_order_to_workbook(
         preserved = _collect_preserved_unmanaged_rows(
             ws,
             start_row,
-            clear_until_row,
+            effective_clear_until_row,
             source_rows_to_clear=source_rows_to_clear,
         )
 
-        _clear_rows(ws, range(start_row, clear_until_row + 1))
+        _clear_rows(ws, range(start_row, effective_clear_until_row + 1))
         _clear_rows(ws, source_rows_to_clear)
+        tail_formulas_cleared = _clear_unused_template_formula_tail(
+            ws,
+            effective_clear_until_row + 1,
+            sheet_last_row,
+        )
 
         current_row = int(start_row)
         source_blocks_written = 0
@@ -638,7 +687,7 @@ def apply_complete_v1_source_order_to_workbook(
                 preserved_rows_written += 1
                 current_row += 1
 
-        layout_stats = _normalize_final_output_layout(ws, start_row)
+        layout_stats = _normalize_final_output_layout(ws, start_row, effective_clear_until_row)
         wb.save(workbook_file)
         return {
             "source_blocks_written": source_blocks_written,
@@ -647,6 +696,8 @@ def apply_complete_v1_source_order_to_workbook(
             "blank_rows_written": blank_rows_written,
             "start_row": start_row,
             "end_row": current_row - 1 if rows_written or preserved_rows_written else start_row - 1,
+            "cleared_through_row": effective_clear_until_row,
+            "tail_formulas_cleared": tail_formulas_cleared,
             "nnn_rows_written": sum(
                 1 for row in staged if row.source_file == resolved_source_order[6]
             ),

@@ -1055,6 +1055,24 @@ class AllocationEngine:
         worker_new = self._get_event_delta(cc_code, source_period, "headcount_worker", rule=rule)
         return staff_new, worker_new
 
+    def _new_hire_driver_delta(self, cc_code: object, period: str, driver_type: str, rule) -> float:
+        """Return positive hires without allowing one personnel group to offset another.
+
+        A common new-hire item may apply to both staff and workers, but a staff
+        hire is still a hire when worker headcount falls in the same month (and
+        vice versa).  ``headcount_all`` therefore means the sum of the two
+        independently floored deltas for event-driven new-hire rules, not the
+        positive delta of their net total.
+        """
+        if driver_type != "headcount_all":
+            return self._get_event_delta(cc_code, period, driver_type, rule=rule)
+        # Preserve the existing fail-closed diagnostic for the rule's declared
+        # aggregate driver before requiring the finer staff/worker split.
+        self._get_event_delta(cc_code, period, "headcount_all", rule=rule)
+        staff_new = self._get_event_delta(cc_code, period, "headcount_staff", rule=rule)
+        worker_new = self._get_event_delta(cc_code, period, "headcount_worker", rule=rule)
+        return staff_new + worker_new
+
     def _requires_manual_event_source(self, rule) -> bool:
         if self._is_recruitment_health_rule(rule):
             return False
@@ -1407,11 +1425,15 @@ class AllocationEngine:
                         elif mixed_event_fixed_month:
                             driver_val = 0.0
                             if self._is_event_month_rule(posting_month):
-                                driver_val += self._get_event_delta(cc["code"], period, driver_type, rule=rule)
+                                driver_val += self._new_hire_driver_delta(
+                                    cc["code"], period, driver_type, rule
+                                )
                             elif self._is_next_event_month_rule(posting_month):
                                 prev_period = self._get_prev_period(period)
                                 if prev_period:
-                                    driver_val += self._get_event_delta(cc["code"], prev_period, driver_type, rule=rule)
+                                    driver_val += self._new_hire_driver_delta(
+                                        cc["code"], prev_period, driver_type, rule
+                                    )
                             if int(str(period)[-2:]) in fixed_month_numbers:
                                 driver_val += self._get_monthly_hc(cc["code"], period, driver_type)
                         else:
@@ -1419,9 +1441,13 @@ class AllocationEngine:
                                 prev_period = self._get_prev_period(period)
                                 if not prev_period:
                                     continue
-                                driver_val = self._get_event_delta(cc["code"], prev_period, driver_type, rule=rule)
+                                driver_val = self._new_hire_driver_delta(
+                                    cc["code"], prev_period, driver_type, rule
+                                )
                             elif self._is_event_month_rule(posting_month) or new_hire_driven:
-                                driver_val = self._get_event_delta(cc["code"], period, driver_type, rule=rule)
+                                driver_val = self._new_hire_driver_delta(
+                                    cc["code"], period, driver_type, rule
+                                )
                             elif fixed_month_override and source_period:
                                 driver_val = self._get_monthly_hc(cc["code"], source_period, driver_type)
                             else:

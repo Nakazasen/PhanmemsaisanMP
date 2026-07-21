@@ -6,6 +6,7 @@ import csv
 import hashlib
 import os
 import queue
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -13,6 +14,7 @@ import sys
 import threading
 import time
 import tkinter as tk
+import unicodedata
 from datetime import datetime
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
@@ -95,12 +97,16 @@ from src.services.app_updates import (
     ApplicationUpdateError,
     application_install_root,
     install_runtime_application_update,
+    launch_activated_update,
 )
 from src.services.update_delivery import (
+    UpdateDeliveryError,
+    check_update_source,
     current_release_version,
     discover_available_update,
     fetch_update_candidate,
     load_update_config,
+    validate_update_source,
 )
 from src.services.content_packs import (
     ContentPackError,
@@ -959,7 +965,39 @@ CHUẨN BỊ NĂM TÀI CHÍNH MỚI
    chương trình dừng trước khi tính và tạo báo cáo trong RUN_HISTORY/FY<năm>/<mã lần chạy>/reports.
 6. Kết quả chỉ được công bố khi chạy thành công. Lần chạy cũ và dữ liệu nhập tay của năm khác được giữ
    riêng, không tham gia tính toán của năm mới.
+
+CẬP NHẬT CHƯƠNG TRÌNH
+
+- Khi bấm "Cài bản cập nhật...", chương trình tự quét nguồn cập nhật đã cấu hình của công ty và chọn
+  phiên bản mới nhất cao hơn phiên bản đang chạy. Người dùng không cần tự tìm hoặc chọn file `.mpupdate`.
+- Trước khi cài, chương trình hiển thị số phiên bản và nội dung thay đổi để người dùng xác nhận.
+- Gói vẫn phải vượt qua kiểm tra chữ ký, hash, schema và health-check. Sau khi thành công, phiên bản cũ
+  tự đóng và phiên bản mới tự mở.
 """.strip()
+
+
+def _normalize_guide_search(value: object) -> str:
+    text = unicodedata.normalize("NFKD", str(value or "").casefold())
+    return " ".join("".join(ch for ch in text if not unicodedata.combining(ch)).split())
+
+
+def filter_user_guide_text(text: str, query: str) -> tuple[str, int]:
+    """Return compact matching guide paragraphs using accent-insensitive terms."""
+    terms = _normalize_guide_search(query).split()
+    if not terms:
+        return text, 0
+    blocks = [block.strip() for block in re.split(r"\n\s*\n", text) if block.strip()]
+    matches = [
+        block for block in blocks
+        if all(term in _normalize_guide_search(block) for term in terms)
+    ]
+    if not matches:
+        return (
+            "Không tìm thấy nội dung phù hợp. Hãy thử từ khóa ngắn hơn, "
+            "ví dụ: cập nhật, Nam Nữ, nguồn, tỷ giá hoặc kết quả.",
+            0,
+        )
+    return "KẾT QUẢ TÌM KIẾM NHANH\n\n" + "\n\n".join(matches), len(matches)
 
 
 class MPManagerApp:
@@ -1839,33 +1877,89 @@ class MPManagerApp:
             return
         try:
             app_root = application_install_root(APP_DIR)
-        except ApplicationUpdateError as exc:
+            config = load_update_config(BASE_DIR)
+            current_version = current_release_version()
+        except Exception as exc:
             messagebox.showerror("Không thể tự cập nhật", _friendly_error_message(exc))
             return
-        package_path = filedialog.askopenfilename(
-            initialdir=BASE_DIR,
-            title="Chọn bản cập nhật MP2027",
-            filetypes=[("Bản cập nhật MP2027", "*.mpupdate")],
-        )
-        if not package_path:
+        if not config["sources"]:
+            messagebox.showerror(
+                "Chưa có nguồn cập nhật",
+                "Chương trình chưa được cấu hình thư mục cập nhật của công ty.",
+            )
             return
         self._application_update_running = True
-        self.log("Đang xác minh và kiểm tra bản cập nhật...")
+        self.log("Đang quét nguồn cập nhật của công ty để tìm phiên bản mới nhất...")
 
         def worker():
             try:
-                state = install_runtime_application_update(
-                    package_path,
-                    app_root,
-                    BASE_DIR,
+                reachable_sources = []
+                source_errors = []
+                for source in config["sources"]:
+                    if not source.get("enabled", True):
+                        continue
+                    try:
+                        validated = validate_update_source(
+                            str(source.get("type", "")),
+                            str(source.get("location", "")),
+                            enabled=True,
+                        )
+                        check_update_source(validated)
+                        reachable_sources.append(source)
+                    except Exception as exc:
+                        source_errors.append(_friendly_error_message(exc))
+                if not reachable_sources:
+                    detail = source_errors[0] if source_errors else "Không có nguồn cập nhật đang bật."
+                    raise UpdateDeliveryError(detail)
+                candidate = discover_available_update(
+                    reachable_sources,
+                    current_version=current_version,
                     current_database_schema=CURRENT_SCHEMA_VERSION,
                 )
             except Exception as exc:
-                self._run_on_ui_thread(self._finish_application_update, None, exc)
+                self._run_on_ui_thread(
+                    self._finish_manual_update_discovery,
+                    None,
+                    app_root,
+                    current_version,
+                    exc,
+                )
                 return
-            self._run_on_ui_thread(self._finish_application_update, state, None)
+            self._run_on_ui_thread(
+                self._finish_manual_update_discovery,
+                candidate,
+                app_root,
+                current_version,
+                None,
+            )
 
         threading.Thread(target=worker, daemon=True).start()
+
+    def _finish_manual_update_discovery(self, candidate, app_root, current_version, error):
+        self._application_update_running = False
+        if error is not None:
+            message = _friendly_error_message(error)
+            self.log(f"Không quét được nguồn cập nhật: {message}")
+            messagebox.showerror("Không kiểm tra được cập nhật", message)
+            return
+        if candidate is None:
+            self.log(f"Không có bản cập nhật mới hơn phiên bản {current_version}.")
+            messagebox.showinfo(
+                "Đang dùng phiên bản mới nhất",
+                f"Không tìm thấy bản cập nhật mới hơn MP2027 {current_version} trong nguồn công ty.",
+            )
+            return
+        message = (
+            f"Tìm thấy MP2027 phiên bản {candidate.version} "
+            f"(hiện tại: {current_version}).\n\n"
+        )
+        if candidate.notes:
+            message += f"Nội dung cập nhật:\n{candidate.notes.strip()}\n\n"
+        message += "Bạn có muốn cài đặt ngay không?"
+        if messagebox.askyesno("Có bản cập nhật MP2027", message):
+            self._install_discovered_update(candidate, app_root)
+        else:
+            self.log(f"Đã hoãn cập nhật MP2027 {candidate.version}")
 
     def _finish_application_update(self, state, error):
         self._application_update_running = False
@@ -1880,8 +1974,22 @@ class MPManagerApp:
         self.log(f"Đã xác minh, kiểm tra và kích hoạt phiên bản {version}.")
         messagebox.showinfo(
             "Đã cài bản cập nhật",
-            f"Phiên bản {version} đã sẵn sàng. Hãy đóng ứng dụng và mở lại từ biểu tượng MP2027.",
+            f"Phiên bản {version} đã sẵn sàng. MP2027 sẽ đóng phiên bản cũ và tự khởi động phiên bản mới ngay bây giờ.",
         )
+        try:
+            app_root = application_install_root(APP_DIR)
+            entrypoint = launch_activated_update(app_root, current_pid=os.getpid())
+        except Exception as exc:
+            self.log(f"Không thể tự khởi động phiên bản mới: {exc}")
+            messagebox.showerror(
+                "Không thể tự khởi động lại",
+                "Bản cập nhật đã được kích hoạt nhưng không thể tự mở phiên bản mới. "
+                "Ứng dụng hiện tại sẽ tiếp tục chạy để bạn có thể lưu công việc và mở lại MP2027 thủ công.",
+            )
+            return
+        self.log(f"Đã lên lịch khởi động phiên bản mới: {entrypoint}")
+        self.root.quit()
+        self.root.destroy()
 
     def browse_template(self):
         current = self.template_path.get().strip()
@@ -2654,10 +2762,42 @@ class MPManagerApp:
         tk.Label(tip, text="MẸO AN TOÀN", bg="#e8f1ff", fg="#2457a6", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=10)
         tk.Label(tip, text="Chạy thử một Trung tâm chi phí, mở tệp kết quả để đối chiếu, sau đó mới chạy toàn bộ.", bg="#e8f1ff", fg="#2457a6", font=("Segoe UI", 9)).pack(anchor="w", padx=10, pady=(2, 0))
 
+        search_bar = ttk.Frame(details)
+        search_bar.pack(fill="x", pady=(0, 8))
+        ttk.Label(search_bar, text="Tìm nhanh:").pack(side="left")
+        search_var = tk.StringVar()
+        search_entry = ttk.Entry(search_bar, textvariable=search_var)
+        search_entry.pack(side="left", fill="x", expand=True, padx=(8, 6))
+        search_status = ttk.Label(search_bar, text="Nhập từ khóa để lọc hướng dẫn")
+        search_status.pack(side="right", padx=(8, 0))
+
+        suggestions = ttk.Frame(details)
+        suggestions.pack(fill="x", pady=(0, 8))
+        ttk.Label(suggestions, text="Từ khóa gợi ý:").pack(side="left")
+        for keyword in ("cập nhật", "Nam Nữ", "nguồn", "tỷ giá", "kết quả"):
+            ttk.Button(
+                suggestions,
+                text=keyword,
+                command=lambda value=keyword: search_var.set(value),
+            ).pack(side="left", padx=(6, 0))
+
         guide_text = scrolledtext.ScrolledText(details, wrap=tk.WORD, font=("Segoe UI", 10))
         guide_text.pack(fill=tk.BOTH, expand=True)
-        guide_text.insert("1.0", USER_GUIDE_TEXT_LATEST)
-        guide_text.configure(state=tk.DISABLED)
+
+        def refresh_search(*_args):
+            rendered, count = filter_user_guide_text(USER_GUIDE_TEXT_LATEST, search_var.get())
+            guide_text.configure(state=tk.NORMAL)
+            guide_text.delete("1.0", tk.END)
+            guide_text.insert("1.0", rendered)
+            guide_text.configure(state=tk.DISABLED)
+            guide_text.yview_moveto(0.0)
+            if search_var.get().strip():
+                search_status.configure(text=f"{count} mục phù hợp" if count else "Không có kết quả")
+            else:
+                search_status.configure(text="Nhập từ khóa để lọc hướng dẫn")
+
+        search_var.trace_add("write", refresh_search)
+        refresh_search()
 
         ttk.Button(frame, text="Đã hiểu — Đóng", command=guide.destroy).pack(anchor="e", pady=(10, 0))
 

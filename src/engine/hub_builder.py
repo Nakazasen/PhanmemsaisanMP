@@ -916,6 +916,27 @@ class HubBuilder:
                 return row_index
         return None
 
+    def _fixed_row_for_input_row(self, row: sqlite3.Row) -> int | None:
+        """Resolve fixed identities with rule metadata, not description alone."""
+        description = str(row["description"] or "")
+        normalized = self._normalize_text(description)
+        if "business_identity=recruitment_health" in normalized or self._match_description(
+            description,
+            ("採用の健康診断費", "採用時健診", "kham suc khoe tuyen dung", "kham suc khoe khi tuyen dung"),
+            ("hang nam", "dinh ky", "cho cnv nam", "cho cnv nu"),
+        ):
+            return -1
+        for row_index, matcher in FIXED_ALLOCATION_ROW_MATCHERS.items():
+            if self._row_matches_allocation_matcher(
+                row,
+                tokens=matcher["tokens"],
+                exclude_tokens=matcher["exclude_tokens"],
+                account_codes=matcher.get("account_codes", ()),
+                driver_types=matcher.get("driver_types", ()),
+            ):
+                return row_index
+        return None
+
     def _find_recruitment_health_row(self, worksheet) -> int:
         recruitment_tokens = (
             "採用の健康診断費", "採用時健診", "kham suc khoe tuyen dung", "kham suc khoe khi tuyen dung"
@@ -1603,7 +1624,12 @@ class HubBuilder:
                 })
         return payload
 
-    def _load_append_rows(self, cc_code: int) -> list[dict[str, object]]:
+    def _load_append_rows(
+        self,
+        cc_code: int,
+        *,
+        include_source_order_fixed: bool = False,
+    ) -> list[dict[str, object]]:
         rows = self.conn.execute(
             """
             SELECT source, account_code, description, period, SUM(amount_vnd) AS amount
@@ -1621,10 +1647,20 @@ class HubBuilder:
         grouped: dict[tuple[int, str], dict[str, object]] = {}
         for row in rows:
             description = str(row["description"] or "")
-            if self._fixed_row_for_description(description) is not None:
+            fixed_row = self._fixed_row_for_input_row(row)
+            if fixed_row is not None and fixed_row not in (97, 98):
+                continue
+            if fixed_row in (97, 98) and not include_source_order_fixed:
                 continue
 
-            clean_description = self._strip_explicit_formula_metadata(description)
+            if fixed_row in (97, 98):
+                # Carry both notebook identities in the dynamic final payload.
+                # Reference/source-order rewrites may legitimately discard the
+                # old physical staging rows 97/98, so correctness must not rely
+                # on those row numbers surviving until the final pass.
+                clean_description = FIXED_ROW_DESCRIPTIONS[fixed_row]
+            else:
+                clean_description = self._strip_explicit_formula_metadata(description)
             key = (int(row["account_code"]), clean_description)
             bucket = grouped.setdefault(
                 key,

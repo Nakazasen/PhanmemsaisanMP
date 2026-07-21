@@ -55,7 +55,7 @@ def test_source_order_writers_are_enabled_by_canonical_default():
     assert "if mp_saisan_complete_v1:" in source
     assert "facility_file_order_export = True" in source
     assert "COMPLETE_V1_SOURCE_ORDER_START_ROW = 30" in source
-    assert "COMPLETE_V1_SOURCE_ORDER_CLEAR_UNTIL_ROW = 199" in source
+    assert '"clear_until_row": None' in source
     assert 'phase="final"' in source
     assert "source_file_order=_annual_complete_v1_source_order(run_context)" in source
 
@@ -178,9 +178,9 @@ def test_complete_v1_single_export_finalizes_source_order_after_reference_layer(
         "facility",
         "admin",
         "system",
-        ("source-order", 30, 199),
+        ("source-order", 30, None),
         "complete-reference",
-        ("source-order", 30, 199),
+        ("source-order", 30, None),
     ]
 
 
@@ -312,7 +312,7 @@ def test_complete_v1_single_export_without_reference_still_finalizes_source_orde
         "facility",
         "admin",
         "system",
-        ("source-order", 30, 199),
+        ("source-order", 30, None),
     ]
     incomplete_marker = Path(published_output) / "BAO_CAO_KIEM_TRA" / "KET_QUA_CHUA_DAY_DU.txt"
     assert incomplete_marker.is_file()

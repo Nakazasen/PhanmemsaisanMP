@@ -117,7 +117,6 @@ from src.services.run_history import (
 )
 
 COMPLETE_V1_SOURCE_ORDER_START_ROW = 30
-COMPLETE_V1_SOURCE_ORDER_CLEAR_UNTIL_ROW = 199
 
 
 def _safe_console_print(message):
@@ -270,7 +269,9 @@ def _apply_complete_v1_source_order(
 ) -> dict[str, int]:
     kwargs = {
         "start_row": COMPLETE_V1_SOURCE_ORDER_START_ROW,
-        "clear_until_row": COMPLETE_V1_SOURCE_ORDER_CLEAR_UNTIL_ROW,
+        # The writer resolves the cleanup boundary from the actual sheet
+        # payload so appended facts cannot survive below a hard-coded row.
+        "clear_until_row": None,
     }
     if dynamic_allocation_rows and fiscal_periods:
         kwargs["dynamic_allocation_rows"] = dynamic_allocation_rows
@@ -306,7 +307,7 @@ def _load_complete_v1_dynamic_allocation_rows(builder, target_cc) -> list[dict[s
     rows: list[dict[str, object]] = []
     allocation_loader = getattr(builder, "_load_append_rows", None)
     if callable(allocation_loader):
-        rows.extend(allocation_loader(str(target_cc)))
+        rows.extend(allocation_loader(str(target_cc), include_source_order_fixed=True))
     nnn_loader = getattr(builder, "_load_nnn_source_order_rows", None)
     if callable(nnn_loader):
         rows.extend(nnn_loader(str(target_cc)))

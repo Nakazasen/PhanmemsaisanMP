@@ -15,11 +15,71 @@ TIME_FIELDS = (
 )
 
 
-_MANUAL_TABLES = (
+_FY_SCOPED_MANUAL_TABLES = (
     "fact_manual_headcount_time_override",
     "fact_manual_headcount_baseline_override",
     "fact_bus_headcount_drivers",
 )
+
+# Authoritative tables written by the manual-staffing screen that must cross
+# the annual-store -> immutable-run boundary.  Keep this contract explicit so
+# a saved input cannot silently disappear merely because its table was absent
+# from the snapshot copier.
+ANNUAL_MANUAL_INPUT_TABLES = (
+    *_FY_SCOPED_MANUAL_TABLES,
+    "fact_monthly_headcount",
+)
+
+
+def _copy_manual_gender_rows(
+    target_conn: sqlite3.Connection,
+    source: sqlite3.Connection,
+    fiscal_year: int,
+) -> int:
+    """Copy FY-scoped supplemental gender rows saved by the staffing UI.
+
+    ``fact_monthly_headcount`` predates the annual manual-input store and has
+    no ``fiscal_year`` column.  The store itself is physically isolated under
+    ``raw/FY<year>``, so periods plus ``source='manual'`` are the safe scope.
+    Preserve any staffing values already imported from the legacy CSV and
+    update only the supplemental male/female fields when a row already exists.
+    """
+    exists = source.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='fact_monthly_headcount'"
+    ).fetchone()
+    if not exists:
+        return 0
+    periods = fiscal_periods(fiscal_year)
+    placeholders = ",".join("?" for _ in periods)
+    rows = source.execute(
+        f"""SELECT period,cc_code,headcount_all,headcount_expat,headcount_staff,
+                   headcount_worker,headcount_male,headcount_female,split_status,
+                   headcount_local_total,source,description,source_file,source_sheet,
+                   imported_at
+            FROM fact_monthly_headcount
+            WHERE source='manual' AND period IN ({placeholders})
+            ORDER BY period,CAST(cc_code AS TEXT)""",
+        periods,
+    ).fetchall()
+    if not rows:
+        return 0
+    target_conn.executemany(
+        """INSERT INTO fact_monthly_headcount
+           (period,cc_code,headcount_all,headcount_expat,headcount_staff,
+            headcount_worker,headcount_male,headcount_female,split_status,
+            headcount_local_total,source,description,source_file,source_sheet,
+            imported_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           ON CONFLICT(period,cc_code,source) DO UPDATE SET
+             headcount_male=excluded.headcount_male,
+             headcount_female=excluded.headcount_female,
+             description=excluded.description,
+             source_file=excluded.source_file,
+             source_sheet=excluded.source_sheet,
+             imported_at=excluded.imported_at""",
+        [tuple(row) for row in rows],
+    )
+    return len(rows)
 
 
 def _table_columns(conn: sqlite3.Connection, table: str) -> list[str]:
@@ -38,9 +98,9 @@ def _copy_manual_rows(
     ``allow_legacy_unscoped_rows`` is intentionally private to the one-time
     FY2027 migration.  Normal runs never infer a year from an unscoped row.
     """
-    result = {table: 0 for table in _MANUAL_TABLES}
+    result = {table: 0 for table in _FY_SCOPED_MANUAL_TABLES}
     target_conn.row_factory = sqlite3.Row
-    for table in _MANUAL_TABLES:
+    for table in _FY_SCOPED_MANUAL_TABLES:
         exists = source.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
         ).fetchone()
@@ -92,7 +152,7 @@ def copy_annual_manual_inputs(
     reproducible while keeping the editable business input store outside its
     immutable run workspace.
     """
-    result = {table: 0 for table in _MANUAL_TABLES}
+    result = {table: 0 for table in ANNUAL_MANUAL_INPUT_TABLES}
     if not manual_input_store:
         return result
     source_path = Path(manual_input_store)
@@ -104,6 +164,10 @@ def copy_annual_manual_inputs(
         result = _copy_manual_rows(
             target_conn, source, int(fiscal_year), allow_legacy_unscoped_rows=False
         )
+        result["fact_monthly_headcount"] = _copy_manual_gender_rows(
+            target_conn, source, int(fiscal_year)
+        )
+        target_conn.commit()
     finally:
         source.close()
     return result
@@ -118,7 +182,7 @@ def migrate_legacy_fy2027_manual_inputs(
     legacy = Path(legacy_database)
     receipt = destination.with_name("manual_inputs_migration_fy2027.json")
     if not legacy.is_file():
-        return {table: 0 for table in _MANUAL_TABLES}
+        return {table: 0 for table in _FY_SCOPED_MANUAL_TABLES}
     destination.parent.mkdir(parents=True, exist_ok=True)
     # Local import avoids a schema dependency at module import time.
     from src.db.schema import create_schema, get_connection
@@ -130,13 +194,13 @@ def migrate_legacy_fy2027_manual_inputs(
         # fiscal-year field.  They live in the FY2027 folder, so this one-time
         # schema migration can safely stamp their rows before strict copying
         # is enforced for every later year.
-        for table in _MANUAL_TABLES:
+        for table in _FY_SCOPED_MANUAL_TABLES:
             target.execute(
                 f"UPDATE {table} SET fiscal_year=2027 WHERE fiscal_year IS NULL OR fiscal_year=0"
             )
         target.commit()
         if receipt.exists():
-            return {table: 0 for table in _MANUAL_TABLES}
+            return {table: 0 for table in _FY_SCOPED_MANUAL_TABLES}
         source = sqlite3.connect(legacy)
         source.row_factory = sqlite3.Row
         try:

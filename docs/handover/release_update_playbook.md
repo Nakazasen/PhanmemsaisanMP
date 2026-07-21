@@ -12,7 +12,7 @@ Bộ cài hoạt động theo từng người dùng và đặt ứng dụng dư�
 
 ### Cập nhật code sau này
 
-Artifact được hỗ trợ là một gói `.mpupdate` có chữ ký. Không gửi riêng từng tệp `.py`, `.dll` hoặc tệp thực thi thay thế. Trong ứng dụng đã cài, người dùng chọn **Cài bản cập nhật...** và chọn gói. Ứng dụng âm thầm xác định khóa của gói từ `release.json` bất biến đi kèm, xác minh chữ ký và khả năng tương thích, chuẩn bị phiên bản onedir mới, chạy kiểm tra sức khỏe bản đóng gói, sao lưu cơ sở dữ liệu runtime và cập nhật `current.json` theo cách nguyên tử. Sau đó người dùng đóng rồi mở lại MP2027 từ lối tắt thông thường. Phiên bản cũ vẫn được giữ để rollback.
+Artifact được hỗ trợ là một gói `.mpupdate` có chữ ký. Không gửi riêng từng tệp `.py`, `.dll` hoặc tệp thực thi thay thế. Từ phiên bản `0.1.8`, khi người dùng chọn **Cài bản cập nhật...**, ứng dụng tự quét các nguồn cập nhật đã cấu hình, chọn bản mới nhất và xin xác nhận cài; không yêu cầu người dùng tự tìm tệp. Ứng dụng âm thầm xác định khóa của gói từ `release.json` bất biến đi kèm, xác minh chữ ký và khả năng tương thích, chuẩn bị phiên bản onedir mới, chạy kiểm tra sức khỏe bản đóng gói, sao lưu cơ sở dữ liệu runtime và cập nhật `current.json` theo cách nguyên tử. Từ phiên bản `0.1.7`, sau khi kích hoạt update, chương trình lên lịch mở phiên bản mới, đóng giao diện/tiến trình phiên bản cũ; executable mới chờ PID cũ kết thúc rồi mới nạp GUI để người dùng không tiếp tục làm việc trên code cũ. Phiên bản cũ vẫn được giữ để rollback.
 
 Người dùng thông thường không bao giờ nhập, chọn, phê duyệt hoặc quản lý khóa ký. Gói bị can thiệp, không tương thích hoặc không đáng tin cậy sẽ bị từ chối an toàn và chỉ tạo một lỗi ngắn gọn. Ứng dụng có thể dò nền khi khởi động từ thư mục LAN/UNC hoặc HTTPS đã cấu hình, sau đó chỉ hỏi **Cập nhật ngay / Để sau**; không tự cài đặt im lặng. File `.mpupdate` tải/copy về vẫn phải qua toàn bộ xác minh chữ ký, manifest, hash, schema và health-check như luồng chọn file offline.
 
@@ -234,13 +234,13 @@ Có thể dùng `%PROGRAMDATA%\MPManager\update_sources.json` làm policy cao nh
 cho một máy/nhóm máy đã cài. Policy thay thế toàn bộ config mặc định và user
 config; nó chỉ quyết định **nơi dò**, không thể thay thế yêu cầu ký Ed25519.
 
-### Trạng thái pilot đã tạo ngày 20.07.2026
+### Trạng thái pilot cập nhật ngày 21.07.2026
 
 - Bootstrap Setup `0.1.0` đã được build với public key
   `mp2027-prod-2026` và nguồn LAN trong `_internal`.
-- Gói pilot `0.1.1` đã được cài thủ công thành công. Gói cập nhật `0.1.6` đã được
-  ký/publish; Setup `0.1.6` đã được build và copy lên LAN; `latest.json` hiện trỏ
-  tới `0.1.6`.
+- Gói pilot `0.1.1` đã được cài thủ công thành công. Gói cập nhật `0.1.8` đã được
+  ký/publish; Setup `0.1.8` đã được build và copy lên LAN; `latest.json` hiện trỏ
+  tới `0.1.8`.
 - Bản `0.1.2` hiển thị phiên bản ứng dụng trên giao diện. Bản `0.1.3` dùng chung
   giới hạn manifest 1 MiB cho dò nền, kiểm tra gói và builder; builder từ chối gói
   vượt giới hạn trước khi publish. Manifest thực tế là 261,83 KiB. Client `0.1.1`
@@ -253,6 +253,12 @@ config; nó chỉ quyết định **nơi dò**, không thể thay thế yêu c�
   Bản `0.1.6` sửa công thức tài sản cố định, thời điểm khám sức khỏe tuyển dụng,
   đồng thời tính du lịch tháng 5 và bánh Trung Thu tháng 9 theo tổng headcount của
   chính tháng phát sinh.
+  Bản `0.1.7` đưa dữ liệu Nam/Nữ nhập thủ công vào snapshot chạy để tính đủ chi
+  phí khám sức khỏe định kỳ tháng 12, loại bỏ màu đỏ staging tồn dư ở dòng 58 và
+  tự đóng bản cũ/tự mở bản mới sau khi cập nhật.
+  Bản `0.1.8` dọn dữ liệu phân bổ cũ theo vùng payload thực tế thay vì chặn cứng
+  ở dòng 199; nút cài cập nhật tự quét nguồn công ty và chọn bản mới nhất; Hướng
+  dẫn trực quan có tìm kiếm nhanh không phân biệt dấu.
 - Còn bắt buộc: nghiệm thu GUI trên Windows sạch/pilot, cập nhật N-1 → N,
   rollback và lưu evidence.
 
@@ -294,7 +300,7 @@ py scripts/package_app.py --build-update `
   --private-key-file "D:\MP2027-Secrets\mp2027-prod-2026.key" `
   --key-id "mp2027-prod-2026" `
   --min-app-version "0.1.0" `
-  --publish-dir "\\FILESERVER\Software\MP2027\Updates" `
+  --publish-dir "\\fstvn01\Data\00_KDTVN Common(KDTVN共通)\⑤Production Engineering(製造技術)\Hang muc can luu\Vinh\MP Saisan\release_update" `
   --release-notes "Mô tả ngắn thay đổi đã duyệt"
 ```
 
@@ -309,7 +315,7 @@ LAN chỉ cần `.mpupdate`; HTTPS dùng thêm `latest.json` theo
 2. Chạy app; UI phải hiện bình thường ngay cả khi share/HTTPS tạm mất kết nối.
 3. Publish một bản N mới hơn vào nguồn đã chọn.
 4. Mở lại app, xác nhận hiện prompt phiên bản N; chọn **Cập nhật ngay**.
-5. Chờ health-check xong, đóng app, mở qua launcher và xác nhận N hoạt động.
+5. Chờ health-check xong; xác nhận bản cũ tự đóng, launcher tự mở lại và phiên bản N hoạt động.
 6. Xác nhận dữ liệu `%LOCALAPPDATA%\MPManager\Projects\MP2027` còn nguyên.
 7. Thử rollback N → N-1 theo thủ tục release và lưu evidence/hash.
 

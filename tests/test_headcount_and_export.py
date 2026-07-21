@@ -1979,6 +1979,114 @@ class TestNewHireAllocationIdentityDedupe(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_common_new_hire_item_does_not_net_staff_gain_against_worker_loss(self):
+        """Một nhân viên mới vẫn cần bộ cấp phát dù tổng người của phòng giảm."""
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        all_periods = ["202603", *periods]
+        staff_values = {period: 20 for period in all_periods}
+        worker_values = {period: 89 for period in all_periods}
+        for period in periods[3:]:
+            staff_values[period] = 21
+            worker_values[period] = 87
+        self._insert_full_headcount_series(
+            conn,
+            cc_code,
+            staff_values=staff_values,
+            worker_values=worker_values,
+        )
+        rule_id = self._insert_allocation_rule(
+            conn,
+            item_name="Pen / Bút cho người mới",
+            posting_month="\u5165\u793e\u6708",
+            unit_price=3000,
+            driver_type="headcount_all",
+            driver_raw="\u914d\u5c5e\u4eba\u6570\u3067\u5165\u793e\u6708\u306b\u632f\u66ff",
+            account=5005246288,
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        rows = conn.execute(
+            "SELECT period,amount_vnd FROM fact_input_data WHERE source=? ORDER BY period",
+            (f"alloc_{rule_id}",),
+        ).fetchall()
+        self.assertEqual(
+            [(row["period"], float(row["amount_vnd"])) for row in rows],
+            [("202607", 3000.0)],
+        )
+        conn.close()
+
+    def test_worker_notebook_is_in_dynamic_payload_after_fixed_staging_is_lost(self):
+        """Final source-order pass phải tự mang rule công nhân, không dựa vào dòng 98."""
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        periods = get_fy_months(2027)
+        all_periods = ["202603", *periods]
+        staff_values = {period: 4 for period in all_periods}
+        worker_values = {period: 66 for period in all_periods}
+        for period in periods[1:]:
+            worker_values[period] = 69
+        for period in periods[8:]:
+            worker_values[period] = 70
+        self._insert_full_headcount_series(
+            conn,
+            cc_code,
+            staff_values=staff_values,
+            worker_values=worker_values,
+        )
+        self._insert_notebook_rule(conn, unit_price=4000, driver_type="headcount_worker")
+        AllocationEngine(conn)._process_allocation_rules()
+
+        builder = HubBuilder(conn, fiscal_year=2027)
+        dynamic_rows = builder._load_append_rows(cc_code, include_source_order_fixed=True)
+        worker_rows = [
+            row for row in dynamic_rows
+            if row["description"] == "新入社員：ノート (G7社員用）/Người mới: Sổ tay (Dùng cho công nhân)"
+        ]
+        self.assertEqual(len(worker_rows), 1)
+        self.assertEqual(worker_rows[0]["terms"]["202605"], ["3*4000"])
+        self.assertEqual(worker_rows[0]["terms"]["202612"], ["1*4000"])
+
+        tmpdir, output_path = self._export(conn, cc_code, "out_worker_notebook_dynamic.xlsx")
+        try:
+            workbook = openpyxl.load_workbook(output_path)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                for row_index in (97, 98):
+                    for column in range(2, 21):
+                        ws.cell(row_index, column).value = None
+                workbook.save(output_path)
+            finally:
+                workbook.close()
+
+            apply_complete_v1_source_order_to_workbook(
+                output_path,
+                start_row=168,
+                clear_until_row=212,
+                dynamic_allocation_rows=dynamic_rows,
+                fiscal_periods=periods,
+            )
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                ws = workbook[find_hub_sheet_name(workbook)]
+                matching = [
+                    row_index
+                    for row_index in range(30, 213)
+                    if ws.cell(row_index, 19).value
+                    == "新入社員：ノート (G7社員用）/Người mới: Sổ tay (Dùng cho công nhân)"
+                ]
+                self.assertEqual(len(matching), 1)
+                row_index = matching[0]
+                self.assertEqual(ws.cell(row_index, 7).value, "=3*4000")
+                self.assertEqual(ws.cell(row_index, 14).value, "=1*4000")
+            finally:
+                workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_monthly_new_hire_issue_export_uses_delta_and_skips_photo_only(self):
         """配布数 rules require manual distribution counts and must NOT auto-allocate.
         Photo-only rules are also skipped.  Neither should produce output."""
