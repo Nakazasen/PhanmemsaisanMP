@@ -109,3 +109,10 @@ launcher.json
 .understand-anything/knowledge-graph.json
 .understand-anything/cache/
 .understand-anything/output/
+.understand-anything/fingerprints.json
+.understand-anything/meta.json
+
+# Local runtime outputs and scratch files
+outputs/
+vba_code*.txt
+

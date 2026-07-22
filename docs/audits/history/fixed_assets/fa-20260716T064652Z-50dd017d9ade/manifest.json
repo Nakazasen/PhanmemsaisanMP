@@ -1,0 +1,26 @@
+{
+  "audit_date": "2026-07-16",
+  "cells": 638,
+  "classifications": {
+    "CONSISTENT_REFERENCE_ADJUSTMENT": 2,
+    "POST_TERMINAL_REFERENCE_CONTINUES": 4,
+    "REFERENCE_ASSET_NOT_IN_SOURCE_SNAPSHOT": 72,
+    "REFERENCE_EMBEDDED_USD_SNAPSHOT_FORMULA": 198,
+    "REFERENCE_MIXED_STATIC_AND_FORMULA_INPUT": 12,
+    "REFERENCE_STATIC_MANUAL_INPUT": 349,
+    "UNEXPLAINED_FORMULA_OR_AGGREGATE_CONTRADICTION": 1
+  },
+  "current_matrix_csv": "docs\\audits\\fixed_assets_true_mismatch_decision_matrix_2026-07-16.csv",
+  "current_matrix_report": "docs\\audits\\fixed_assets_true_mismatch_decision_matrix_2026-07-16.md",
+  "decision_statuses": {
+    "KHONG_THE_XAC_DINH_TU_DU_LIEU": 73,
+    "LA_NGOAI_LE_NHAP_TAY_HOAC_TANG_KHAC": 361,
+    "MAU_THUAN_CAN_NGHIEP_VU_DUYET": 200,
+    "XAC_DINH_TU_BANG_CHUNG": 4
+  },
+  "executed_at_utc": "2026-07-16T06:46:52+00:00",
+  "matrix_sha256": "50dd017d9adedb528c292678b12d34361d60c108ec377fe6d613f328dc5d30f8",
+  "run_id": "fa-20260716T064652Z-50dd017d9ade",
+  "snapshot_csv": "docs\\audits\\history\\fixed_assets\\fa-20260716T064652Z-50dd017d9ade\\fixed_assets_true_mismatch_decision_matrix_2026-07-16.csv",
+  "snapshot_report": "docs\\audits\\history\\fixed_assets\\fa-20260716T064652Z-50dd017d9ade\\fixed_assets_true_mismatch_decision_matrix_2026-07-16.md"
+}

@@ -1,0 +1,22 @@
+{
+  "FY2026": {
+    "asset_rows": 1860,
+    "audit_excluded_rows": 137,
+    "audit_included_rows": 1860,
+    "exchange_rate": 25390,
+    "expected_monthly_cells": 649,
+    "post_terminal_fact_rows": 0,
+    "rendered_monthly_cells": 649,
+    "source_rows": 1860
+  },
+  "FY2027": {
+    "asset_rows": 1141,
+    "audit_excluded_rows": 126,
+    "audit_included_rows": 1141,
+    "exchange_rate": 26273,
+    "expected_monthly_cells": 726,
+    "post_terminal_fact_rows": 0,
+    "rendered_monthly_cells": 726,
+    "source_rows": 1141
+  }
+}

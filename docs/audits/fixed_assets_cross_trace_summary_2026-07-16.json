@@ -1,0 +1,92 @@
+{
+  "FY2026": {
+    "comparison_classifications": {
+      "EXACT_MATCH": 155,
+      "EXTRA_REFERENCE_OUTPUT": 3,
+      "MISSING_REFERENCE_OUTPUT": 125,
+      "ROUNDING_ORDER": 134,
+      "TRUE_AMOUNT_MISMATCH": 243
+    },
+    "raw": {
+      "failures": [],
+      "fixed_asset_account_cells": 0,
+      "fixed_asset_keyword_cells": 0,
+      "workbooks": 63
+    },
+    "reference": {
+      "cc_count": 62,
+      "duplicate_cc_files": {},
+      "failures": [],
+      "missing_cc_files": [
+        "51.KDTVN 労働組合_MP FY2026_各予定(Ver01).xlsx",
+        "68.KDTVN MD5課_MP FY2026_各予定(Ver01) 修正.xlsx"
+      ],
+      "missing_rate_files": [],
+      "rates": {
+        "25390": 64
+      },
+      "top_level_workbooks": 64
+    },
+    "source": {
+      "out_of_scope": 131,
+      "rows": 1997,
+      "source_file": "docs\\MP2026\\固定資産情報_Fixed_Assets_Information_2024.12 - December.xlsx",
+      "source_sheet": "2024.12",
+      "supported_rows": 1860,
+      "terminal_after_fy": 683,
+      "terminal_before_fy": 261,
+      "terminal_missing": 6,
+      "terminal_within_fy": 1047,
+      "unknown": 6
+    }
+  },
+  "FY2027": {
+    "comparison_classifications": {
+      "EXACT_MATCH": 249,
+      "EXTRA_REFERENCE_OUTPUT": 4,
+      "MISSING_REFERENCE_OUTPUT": 78,
+      "ROUNDING_ORDER": 88,
+      "TRUE_AMOUNT_MISMATCH": 395
+    },
+    "raw": {
+      "failures": [
+        "44.KDTVN 第4資材課_FY2027マスタープラン人員・時間計画表(Ver01).xls: AssertionError: "
+      ],
+      "fixed_asset_account_cells": 0,
+      "fixed_asset_keyword_cells": 0,
+      "workbooks": 64
+    },
+    "reference": {
+      "cc_count": 64,
+      "duplicate_cc_files": {},
+      "failures": [],
+      "missing_cc_files": [
+        "51.KDTVN 労働組合_MP FY2027_各予定(Ver01).xlsx"
+      ],
+      "missing_rate_files": [
+        "03.KDTVN 機器製造管理課_MP FY2027_各予定(Ver01).xlsx",
+        "16.KDTVN 電気製造技術課_MP FY2027_各予定(Ver01).xlsx",
+        "18.KDTVN 部品検査1課_MP FY2027_各予定(Ver01-OK).xlsx",
+        "26.KDTVN 第1資材課_MP FY2027_各予定(Ver01).xlsx",
+        "32.KDTVN 施設課_MP FY2027_各予定(Ver01).xlsx",
+        "51.KDTVN 労働組合_MP FY2027_各予定(Ver01).xlsx"
+      ],
+      "rates": {
+        "26273": 59
+      },
+      "top_level_workbooks": 65
+    },
+    "source": {
+      "out_of_scope": 125,
+      "rows": 1267,
+      "source_file": "docs\\MP2027\\固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx",
+      "source_sheet": "2025.11",
+      "supported_rows": 1141,
+      "terminal_after_fy": 506,
+      "terminal_before_fy": 343,
+      "terminal_missing": 1,
+      "terminal_within_fy": 417,
+      "unknown": 1
+    }
+  }
+}
