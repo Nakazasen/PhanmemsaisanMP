@@ -1038,7 +1038,9 @@ class MPManagerApp:
         template_path = initial_paths.template_path
         self.fiscal_year = tk.StringVar(value=str(initial_fiscal_year))
         self.exchange_rate = tk.StringVar(value=self._initial_exchange_rate(template_path))
-        self.cc_code_filter = tk.StringVar(value="")
+        self.cc_code_filter = tk.StringVar(value="Chưa chọn Trung tâm chi phí")
+        self._available_cc_choices: list[str] = []
+        self._selected_cc_values: list[str] = []
         self.template_path = tk.StringVar(value=template_path)
         self.source_dir = tk.StringVar(value=initial_paths.source_dir)
         self.headcount_source_dir = tk.StringVar(value=initial_paths.headcount_source_dir)
@@ -1337,7 +1339,9 @@ class MPManagerApp:
         self.source_dir.set(paths.source_dir)
         self.headcount_source_dir.set(paths.headcount_source_dir)
         self.exchange_rate.set(self._initial_exchange_rate(paths.template_path))
-        self.cc_code_filter.set("")
+        self._selected_cc_values = []
+        self._available_cc_choices = []
+        self._update_cc_selection_summary()
         self.headcount_source_status.set(self._initial_headcount_source_status())
         self.load_cc_list()
         self._mark_preflight_stale()
@@ -1622,37 +1626,25 @@ class MPManagerApp:
             row=2, column=2, sticky="w", padx=(12, 0)
         )
 
-        ttk.Label(container, text="Trung tâm chi phí (Tùy chọn)").grid(row=3, column=0, sticky="w", pady=4)
-        cc_frame = ttk.Frame(container)
-        cc_frame.grid(row=3, column=1, sticky="w")
-        self.cc_combo = ttk.Combobox(cc_frame, textvariable=self.cc_code_filter, width=40, state="readonly")
-        self.cc_combo.pack(side="left")
-        self.refresh_btn = ttk.Button(
-            cc_frame,
-            text="Nạp lại CC từ FORM",
-            command=self.refresh_cost_centers_from_form,
+        ttk.Label(container, text="Tệp mẫu FORM").grid(row=3, column=0, sticky="w", pady=(14, 4))
+        ttk.Entry(container, textvariable=self.template_path).grid(
+            row=3, column=1, columnspan=2, sticky="ew"
         )
-        self.refresh_btn.pack(side="left", padx=(4, 0))
-        ttk.Label(container, text="Để trống để xuất toàn bộ").grid(row=3, column=2, sticky="w", padx=(12, 0))
 
-        ttk.Label(container, text="Tệp mẫu FORM").grid(row=4, column=0, sticky="w", pady=(14, 4))
-        ttk.Entry(container, textvariable=self.template_path).grid(row=4, column=1, sticky="ew", padx=(0, 8))
-        ttk.Button(container, text="Chọn...", width=11, command=self.browse_template).grid(row=4, column=2, sticky="w")
+        ttk.Label(container, text="Thư mục nguồn chi phí").grid(row=4, column=0, sticky="w", pady=4)
+        ttk.Entry(container, textvariable=self.source_dir).grid(
+            row=4, column=1, columnspan=2, sticky="ew"
+        )
 
-        ttk.Label(container, text="Thư mục nguồn chi phí").grid(row=5, column=0, sticky="w", pady=4)
-        ttk.Entry(container, textvariable=self.source_dir).grid(row=5, column=1, sticky="ew", padx=(0, 8))
-        ttk.Button(container, text="Chọn...", width=11, command=self.browse_source_dir).grid(row=5, column=2, sticky="w")
-
-        ttk.Label(container, text="Nguồn nhân sự & thời gian").grid(row=6, column=0, sticky="w", pady=4)
-        ttk.Entry(container, textvariable=self.headcount_source_dir).grid(row=6, column=1, sticky="ew", padx=(0, 8))
+        ttk.Label(container, text="Nguồn nhân sự & thời gian").grid(row=5, column=0, sticky="w", pady=4)
+        ttk.Entry(container, textvariable=self.headcount_source_dir).grid(row=5, column=1, sticky="ew", padx=(0, 8))
         source_buttons = ttk.Frame(container)
-        source_buttons.grid(row=6, column=2, sticky="w")
-        ttk.Button(source_buttons, text="Chọn...", width=11, command=self.browse_headcount_source_dir).pack(side="left")
+        source_buttons.grid(row=5, column=2, sticky="w")
         ttk.Button(
             source_buttons,
             text="Cập nhật CSDL",
             command=self.update_headcount_database,
-        ).pack(side="left", padx=(6, 0))
+        ).pack(side="left")
         ttk.Button(
             source_buttons,
             text="Dọn dữ liệu FY",
@@ -1662,7 +1654,33 @@ class MPManagerApp:
             container,
             textvariable=self.headcount_source_status,
             font=("Segoe UI", 9, "italic"),
-        ).grid(row=7, column=1, columnspan=2, sticky="w", pady=(0, 8))
+        ).grid(row=6, column=1, columnspan=2, sticky="w", pady=(0, 8))
+
+        ttk.Label(container, text="Trung tâm chi phí").grid(row=7, column=0, sticky="w", pady=4)
+        cc_frame = ttk.Frame(container)
+        cc_frame.grid(row=7, column=1, sticky="ew")
+        cc_frame.columnconfigure(0, weight=1)
+        ttk.Entry(
+            cc_frame,
+            textvariable=self.cc_code_filter,
+            state="readonly",
+            width=42,
+        ).grid(row=0, column=0, sticky="ew")
+        self.cc_select_btn = ttk.Button(
+            cc_frame,
+            text="Chọn phòng...",
+            command=self._open_cc_selection_dialog,
+        )
+        self.cc_select_btn.grid(row=0, column=1, padx=(6, 0))
+        self.refresh_btn = ttk.Button(
+            cc_frame,
+            text="Nạp lại CC từ FORM",
+            command=self.refresh_cost_centers_from_form,
+        )
+        self.refresh_btn.grid(row=0, column=2, padx=(4, 0))
+        ttk.Label(container, text="Có thể chọn một, nhiều hoặc tất cả phòng").grid(
+            row=7, column=2, sticky="w", padx=(12, 0)
+        )
 
         guide_panel = ttk.Frame(container, padding=(0, 6))
         guide_panel.grid(row=8, column=0, columnspan=3, sticky="ew", pady=(4, 8))
@@ -2537,26 +2555,127 @@ class MPManagerApp:
         frame.rowconfigure(2, weight=1)
         frame.columnconfigure(2, weight=1)
 
+    ALL_COST_CENTERS_LABEL = "Tất cả Trung tâm chi phí"
+
+    def _update_cc_selection_summary(self) -> None:
+        selected = list(getattr(self, "_selected_cc_values", []))
+        available = list(getattr(self, "_available_cc_choices", []))
+        if not selected:
+            summary = "Chưa chọn Trung tâm chi phí"
+        elif available and len(selected) == len(available):
+            summary = f"{self.ALL_COST_CENTERS_LABEL} ({len(available)})"
+        elif len(selected) == 1:
+            summary = selected[0]
+        else:
+            summary = f"Đã chọn {len(selected)} Trung tâm chi phí"
+        self.cc_code_filter.set(summary)
+
+    def _set_cc_choices(self, choices) -> None:
+        """Refresh available CCs while retaining every still-valid selection."""
+        values = list(dict.fromkeys(str(choice).strip() for choice in choices if str(choice).strip()))
+        current = list(getattr(self, "_selected_cc_values", []))
+        self._available_cc_choices = values
+        self._selected_cc_values = [choice for choice in current if choice in values]
+        self._update_cc_selection_summary()
+
+    def _open_cc_selection_dialog(self) -> None:
+        choices = list(getattr(self, "_available_cc_choices", []))
+        if not choices:
+            messagebox.showwarning(
+                "Chưa có Trung tâm chi phí",
+                "Danh sách Trung tâm chi phí đang trống. Hãy bấm “Nạp lại CC từ FORM” trước.",
+            )
+            return
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Chọn một hoặc nhiều Trung tâm chi phí")
+        dialog.geometry("660x600")
+        dialog.minsize(520, 420)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        ttk.Label(
+            dialog,
+            text="Chọn phòng cần tính toán",
+            font=("Segoe UI", 14, "bold"),
+        ).pack(anchor="w", padx=18, pady=(16, 4))
+        ttk.Label(
+            dialog,
+            text="Có thể chọn nhiều phòng trong cùng một lần chạy.",
+        ).pack(anchor="w", padx=18, pady=(0, 10))
+
+        list_shell = ttk.Frame(dialog)
+        list_shell.pack(fill="both", expand=True, padx=18)
+        canvas = tk.Canvas(list_shell, highlightthickness=1, highlightbackground="#cbd5e1")
+        scrollbar = ttk.Scrollbar(list_shell, orient=tk.VERTICAL, command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        checklist = ttk.Frame(canvas, padding=8)
+        checklist_window = canvas.create_window((0, 0), window=checklist, anchor="nw")
+        checklist.bind(
+            "<Configure>",
+            lambda _event: canvas.configure(scrollregion=canvas.bbox("all")),
+        )
+        canvas.bind(
+            "<Configure>",
+            lambda event: canvas.itemconfigure(checklist_window, width=event.width),
+        )
+
+        selected = set(getattr(self, "_selected_cc_values", []))
+        variables = {}
+        for row, choice in enumerate(choices):
+            variable = tk.BooleanVar(value=choice in selected)
+            variables[choice] = variable
+            ttk.Checkbutton(checklist, text=choice, variable=variable).grid(
+                row=row, column=0, sticky="w", pady=2
+            )
+
+        def set_all(value: bool) -> None:
+            for variable in variables.values():
+                variable.set(value)
+
+        def apply_selection() -> None:
+            self._selected_cc_values = [
+                choice for choice in choices if variables[choice].get()
+            ]
+            self._update_cc_selection_summary()
+            dialog.destroy()
+
+        actions = ttk.Frame(dialog)
+        actions.pack(fill="x", padx=18, pady=14)
+        ttk.Button(actions, text="Chọn tất cả", command=lambda: set_all(True)).pack(side="left")
+        ttk.Button(actions, text="Bỏ chọn tất cả", command=lambda: set_all(False)).pack(
+            side="left", padx=(6, 0)
+        )
+        ttk.Button(actions, text="Hủy", command=dialog.destroy).pack(side="right")
+        ttk.Button(actions, text="Áp dụng", style="Primary.TButton", command=apply_selection).pack(
+            side="right", padx=(0, 6)
+        )
+        dialog.bind("<Escape>", lambda _event: dialog.destroy())
+        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+
     def load_cc_list(self):
         db_path = self._operational_database()
 
         if not os.path.exists(db_path):
+            self._set_cc_choices([])
             self.log("Chưa có dữ liệu nền. Hãy bấm 'Nạp lại CC từ FORM'.")
             return
 
+        conn = None
         try:
             conn = get_connection(db_path)
             rows = conn.execute("SELECT code, name_jp FROM dim_cost_centers ORDER BY code").fetchall()
+            self._set_cc_choices([f"{row['code']} - {row['name_jp']}" for row in rows])
             if not rows:
-                conn.close()
-                self.cc_combo["values"] = []
                 self.log("Danh sách CC trong DB đang trống. Hãy bấm 'Nạp lại CC từ FORM'.")
-                return
-
-            self.cc_combo["values"] = [f"{row['code']} - {row['name_jp']}" for row in rows]
-            conn.close()
         except Exception as exc:
+            self._set_cc_choices([])
             self.log(f"Lỗi khi nạp danh sách CC: {exc}")
+        finally:
+            if conn is not None:
+                conn.close()
 
     def refresh_cost_centers_from_form(self):
         """Refresh existing CCs, or seed an empty master from the selected FORM."""
@@ -2571,7 +2690,7 @@ class MPManagerApp:
                 rows = conn.execute(
                     "SELECT code, name_jp FROM dim_cost_centers ORDER BY code"
                 ).fetchall()
-                self.cc_combo["values"] = [f"{row['code']} - {row['name_jp']}" for row in rows]
+                self._set_cc_choices([f"{row['code']} - {row['name_jp']}" for row in rows])
                 self.log(f"Đã làm mới danh sách {current_count} Trung tâm chi phí từ CSDL.")
                 return
 
@@ -2587,7 +2706,7 @@ class MPManagerApp:
             rows = conn.execute(
                 "SELECT code, name_jp FROM dim_cost_centers ORDER BY code"
             ).fetchall()
-            self.cc_combo["values"] = [f"{row['code']} - {row['name_jp']}" for row in rows]
+            self._set_cc_choices([f"{row['code']} - {row['name_jp']}" for row in rows])
             self.log(f"Đã nạp {loaded_count} Trung tâm chi phí từ FORM và làm mới danh sách.")
             messagebox.showinfo(
                 "Nạp Trung tâm chi phí thành công",
@@ -3675,11 +3794,21 @@ class MPManagerApp:
         tree.bind("<<TreeviewSelect>>", on_select)
         load_rows()
 
-    def _parse_selected_cc_code(self) -> str | None:
-        raw = self.cc_code_filter.get().strip()
-        if not raw:
-            return None
-        return raw.split(" - ")[0].strip() if " - " in raw else raw
+    def _parse_selected_cc_codes(self) -> tuple[str, ...]:
+        selected = list(getattr(self, "_selected_cc_values", []))
+        available = set(getattr(self, "_available_cc_choices", []))
+        selected = [choice for choice in selected if choice in available]
+        if not selected:
+            raise ValueError("Hãy chọn ít nhất một Trung tâm chi phí.")
+        return tuple(
+            choice.split(" - ")[0].strip() if " - " in choice else choice.strip()
+            for choice in selected
+        )
+
+    def _all_cost_centers_selected(self) -> bool:
+        available = list(getattr(self, "_available_cc_choices", []))
+        selected = list(getattr(self, "_selected_cc_values", []))
+        return bool(available) and len(selected) == len(available) and set(selected) == set(available)
 
     def _open_path(self, path: str):
         if not path or not os.path.exists(path):
@@ -3732,10 +3861,9 @@ class MPManagerApp:
             fiscal_year = int(self.fiscal_year.get())
             exchange_rate = validate_exchange_rate(self.exchange_rate.get())
 
-            cc_raw = self.cc_code_filter.get().strip()
-            target_cc = None
-            if cc_raw:
-                target_cc = cc_raw.split(" - ")[0].strip() if " - " in cc_raw else cc_raw
+            selected_ccs = self._parse_selected_cc_codes()
+            all_cost_centers = self._all_cost_centers_selected()
+            run_targets: tuple[str | None, ...] = (None,) if all_cost_centers else selected_ccs
 
             template = self.template_path.get()
             source = self.source_dir.get()
@@ -3758,7 +3886,7 @@ class MPManagerApp:
 
             headcount_source = self.headcount_source_dir.get().strip()
             if not os.path.isdir(headcount_source):
-                messagebox.showerror("Lỗi", "Hãy chọn thư mục nguồn nhân sự & thời gian hợp lệ.")
+                messagebox.showerror("Lỗi", "Hãy nhập thư mục nguồn nhân sự & thời gian hợp lệ.")
                 return
             signature = (
                 fiscal_year,
@@ -3798,10 +3926,10 @@ class MPManagerApp:
                     return
             self._accepted_missing_categories = ()
 
-            if target_cc is None:
+            if all_cost_centers:
                 proceed = messagebox.askokcancel(
                     "Xuất toàn bộ Trung tâm chi phí",
-                    "Bạn đang để trống Trung tâm chi phí.\n\n"
+                    f"Bạn đã chọn toàn bộ {len(selected_ccs)} Trung tâm chi phí.\n\n"
                     "Chương trình sẽ tự đồng bộ nguồn nhân sự, kiểm tra toàn bộ CC dự kiến xuất "
                     "và dừng trước khi xuất nếu có bất kỳ CC nào thiếu dữ liệu.\n\nTiếp tục?",
                 )
@@ -3809,21 +3937,41 @@ class MPManagerApp:
                     return
 
             self.start_btn.configure(state=tk.DISABLED)
+            if hasattr(self, "cc_select_btn"):
+                self.cc_select_btn.configure(state=tk.DISABLED)
             self.log("--- BẮT ĐẦU TÍNH TOÁN ---")
             self.log(f"Tệp mẫu xác nhận chạy: {template}")
             self.log(f"Thư mục nguồn xác nhận chạy: {source}")
             self.log(f"Nguồn nhân sự & thời gian xác nhận chạy: {headcount_source}")
             self.log(f"Tỷ giá hiệu lực cho lần chạy này: {exchange_rate:,.0f} USD/VND")
-            self._last_pipeline_args=(fiscal_year,template,source,headcount_source,exchange_rate,target_cc)
+            if all_cost_centers:
+                self.log(f"Phạm vi chạy: toàn bộ {len(selected_ccs)} Trung tâm chi phí")
+            else:
+                self.log(f"Phạm vi chạy: {len(selected_ccs)} Trung tâm chi phí")
             threading.Thread(
                 target=self.run_process,
-                args=self._last_pipeline_args,
+                args=(
+                    fiscal_year,
+                    template,
+                    source,
+                    headcount_source,
+                    exchange_rate,
+                    run_targets,
+                ),
                 daemon=True,
             ).start()
         except Exception as exc:
             messagebox.showerror("Lỗi nhập liệu", _friendly_error_message(exc))
 
-    def run_process(self, fiscal_year: int, template: str, source: str, headcount_source: str, rate: float, target_cc: int | None):
+    def _run_pipeline_process(
+        self,
+        fiscal_year: int,
+        template: str,
+        source: str,
+        headcount_source: str,
+        rate: float,
+        target_cc: str | None,
+    ) -> tuple[bool, object, str | None]:
         try:
             cmd = self._pipeline_subprocess_command(
                 fiscal_year, template, source, headcount_source, rate, target_cc
@@ -3842,7 +3990,7 @@ class MPManagerApp:
                 env=env,
             )
             assert process.stdout is not None
-            output_lines=[]
+            output_lines = []
             for line in process.stdout:
                 text = line.rstrip()
                 if text:
@@ -3850,7 +3998,7 @@ class MPManagerApp:
                     self.log(text)
             return_code = process.wait()
             success = return_code == 0
-            self._last_failed_run_database = (
+            failed_database = (
                 None
                 if success
                 else _failed_run_database_from_output(
@@ -3864,12 +4012,43 @@ class MPManagerApp:
                 if success
                 else _pipeline_failure_summary(output_lines, return_code)
             )
+            return success, result, failed_database
         except Exception as exc:
-            success = False
-            self._last_failed_run_database = None
-            result = exc
+            return False, exc, None
 
-        self._run_on_ui_thread(self._finish_pipeline, success, result)
+    def run_process(
+        self,
+        fiscal_year: int,
+        template: str,
+        source: str,
+        headcount_source: str,
+        rate: float,
+        target_ccs: tuple[str | None, ...],
+    ):
+        total = len(target_ccs)
+        final_result = self._project_paths(fiscal_year).output_dir
+        for index, target_cc in enumerate(target_ccs, start=1):
+            label = target_cc or self.ALL_COST_CENTERS_LABEL
+            self.log(f"--- PHẠM VI {index}/{total}: {label} ---")
+            self._last_pipeline_args = (
+                fiscal_year,
+                template,
+                source,
+                headcount_source,
+                rate,
+                target_cc,
+            )
+            success, result, failed_database = self._run_pipeline_process(
+                fiscal_year, template, source, headcount_source, rate, target_cc
+            )
+            self._last_failed_run_database = failed_database
+            if not success:
+                failure = RuntimeError(f"Trung tâm chi phí {label} thất bại: {_friendly_error_message(result)}")
+                self._run_on_ui_thread(self._finish_pipeline, False, failure)
+                return
+            final_result = result
+            self.log(f"Hoàn tất {index}/{total}: {label}")
+        self._run_on_ui_thread(self._finish_pipeline, True, final_result)
 
     def _pipeline_subprocess_command(
         self,
@@ -3969,7 +4148,15 @@ class MPManagerApp:
         if success:
             self.log(f"THÀNH CÔNG. Kết quả: {result}")
             self.root.after(100, self.load_cc_list)
-            messagebox.showinfo("Hoàn tất", f"Quá trình xuất dữ liệu hoàn tất.\n\nKết quả: {result}")
+            open_output = messagebox.askyesno(
+                "Hoàn tất",
+                f"Quá trình xuất dữ liệu hoàn tất.\n\nKết quả: {result}\n\n"
+                "Bạn có muốn mở thư mục kết quả ngay không?",
+            )
+            if open_output:
+                result_path = os.path.abspath(str(result))
+                output_dir = result_path if os.path.isdir(result_path) else os.path.dirname(result_path)
+                self._open_path(output_dir)
         else:
             recovery=self._missing_baseline_context(result)
             message = _friendly_error_message(result)
@@ -3978,6 +4165,8 @@ class MPManagerApp:
                 self._open_baseline_recovery_dialog(*recovery)
             else:
                 messagebox.showerror("Thất bại", message)
+        if hasattr(self, "cc_select_btn"):
+            self.cc_select_btn.configure(state=tk.NORMAL)
         # Source paths may have changed while the subprocess was running; do
         # not re-enable calculation until the current selection is checked.
         self._mark_preflight_stale()

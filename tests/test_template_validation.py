@@ -120,8 +120,14 @@ def test_refresh_cost_centers_seeds_empty_database_from_selected_form(tmp_path, 
     from src.db.schema import get_connection
 
     class Variable:
+        def __init__(self, value=""):
+            self.value = value
+
         def get(self):
-            return str(ROOT / "docs" / "MP2027" / "FORM.xlsx")
+            return self.value
+
+        def set(self, value):
+            self.value = value
 
     class Widget:
         def __init__(self):
@@ -150,8 +156,10 @@ def test_refresh_cost_centers_seeds_empty_database_from_selected_form(tmp_path, 
     )
     app = object.__new__(MPManagerApp)
     app.project = type("Project", (), {"operational_database": str(tmp_path / "mp2027.db")})()
-    app.template_path = Variable()
-    app.cc_combo = Widget()
+    app.template_path = Variable(str(ROOT / "docs" / "MP2027" / "FORM.xlsx"))
+    app.cc_code_filter = Variable()
+    app._available_cc_choices = []
+    app._selected_cc_values = []
     app.refresh_btn = Widget()
     app.messages = []
     app.log = app.messages.append
@@ -166,7 +174,8 @@ def test_refresh_cost_centers_seeds_empty_database_from_selected_form(tmp_path, 
         ).fetchone()[0] == "機器製造1課"
     finally:
         conn.close()
-    assert len(app.cc_combo.values) == 65
+    assert len(app._available_cc_choices) == 65
+    assert "1412000004 - 機器製造1課" in app._available_cc_choices
     assert app.refresh_btn.states == [universal_app.tk.DISABLED, universal_app.tk.NORMAL]
     assert notices and notices[0][0] == "Nạp Trung tâm chi phí thành công"
     assert any("Đã nạp 65" in message for message in app.messages)
@@ -179,8 +188,14 @@ def test_refresh_cost_centers_uses_existing_database_without_reloading_form(tmp_
     from src.db.schema import create_schema
 
     class Variable:
+        def __init__(self, value=""):
+            self.value = value
+
         def get(self):
-            return str(ROOT / "docs" / "MP2027" / "FORM.xlsx")
+            return self.value
+
+        def set(self, value):
+            self.value = value
 
     class Widget:
         def __init__(self):
@@ -213,15 +228,19 @@ def test_refresh_cost_centers_uses_existing_database_without_reloading_form(tmp_
     monkeypatch.setattr(universal_app.messagebox, "showinfo", fail_if_reloaded)
     app = object.__new__(MPManagerApp)
     app.project = type("Project", (), {"operational_database": str(tmp_path / "mp2027.db")})()
-    app.template_path = Variable()
-    app.cc_combo = Widget()
+    app.template_path = Variable(str(ROOT / "docs" / "MP2027" / "FORM.xlsx"))
+    app.cc_code_filter = Variable("1412000004 - 機器製造1課")
+    app._available_cc_choices = ["1412000004 - 機器製造1課"]
+    app._selected_cc_values = ["1412000004 - 機器製造1課"]
     app.refresh_btn = Widget()
     app.messages = []
     app.log = app.messages.append
 
     app.refresh_cost_centers_from_form()
 
-    assert app.cc_combo.values == ["1412000004 - 機器製造1課"]
+    assert app._available_cc_choices == ["1412000004 - 機器製造1課"]
+    assert app._selected_cc_values == ["1412000004 - 機器製造1課"]
+    assert app.cc_code_filter.get() == "Tất cả Trung tâm chi phí (1)"
     assert app.refresh_btn.states == [universal_app.tk.DISABLED, universal_app.tk.NORMAL]
     assert any("Đã làm mới danh sách 1" in message for message in app.messages)
 
