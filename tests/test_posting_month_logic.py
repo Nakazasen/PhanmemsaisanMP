@@ -3,6 +3,7 @@ import unittest
 
 from src.db.schema import create_schema, init_sys_params
 from src.engine.allocator import AllocationEngine
+from src.engine.hub_builder import HubBuilder
 from src.utils.excel_helpers import get_fy_months
 
 
@@ -362,7 +363,7 @@ class TestPostingMonthLogic(unittest.TestCase):
         self.assertEqual(_missing_areas(conn, cc), {})
         conn.close()
 
-    def test_company_founding_thanks_event_requires_explicit_participant_count(self):
+    def test_company_founding_thanks_event_uses_october_total_headcount(self):
         conn = _mk_conn()
         cc = _seed_cc(conn)
         _seed_hc(conn, cc, [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
@@ -377,8 +378,74 @@ class TestPostingMonthLogic(unittest.TestCase):
 
         AllocationEngine(conn)._process_allocation_rules()
 
-        self.assertEqual(_alloc_periods(conn, rid), {})
-        self.assertEqual(_missing_areas(conn, cc), {"manual_distribution_driver": 1})
+        self.assertEqual(_alloc_periods(conn, rid), {"202610": 16 * 1000.0})
+        row = conn.execute(
+            "SELECT description FROM fact_input_data WHERE source=?",
+            (f"alloc_{rid}",),
+        ).fetchone()
+        self.assertIn("driver_type=headcount_all", row["description"])
+        self.assertIn("source_month=202610", row["description"])
+        self.assertEqual(_missing_areas(conn, cc), {})
+        conn.close()
+
+    def test_adding_company_founding_event_preserves_existing_dynamic_cost_rows(self):
+        conn = _mk_conn()
+        cc = _seed_cc(conn)
+        _seed_hc(conn, cc, [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
+        existing_rules = [
+            _insert_rule(
+                conn,
+                "5月",
+                "headcount_staff",
+                unit_price=200,
+                rid_label="社員旅行 Du lịch công ty",
+                driver_raw="実際の参加人数で振替",
+            ),
+            _insert_rule(
+                conn,
+                "9月",
+                "headcount_staff",
+                unit_price=300,
+                rid_label="月餅 Bánh Trung Thu",
+                driver_raw="実際の配布人数で振替",
+            ),
+            _insert_rule(
+                conn,
+                "11月",
+                "headcount_all",
+                unit_price=400,
+                rid_label="京セラフェスティバル Lễ hội Kyocera",
+                driver_raw="11月",
+            ),
+        ]
+        founding_rule = _insert_rule(
+            conn,
+            "10月",
+            "headcount_staff",
+            unit_price=1000,
+            rid_label="会社設立記念 感謝イベント Sự kiện tri ân ngày thành lập công ty",
+            driver_raw="実際の参加人数で振替 / Phân bổ theo số người tham gia thực tế",
+        )
+
+        AllocationEngine(conn)._process_allocation_rules()
+
+        for rule_id in (*existing_rules, founding_rule):
+            self.assertTrue(_alloc_periods(conn, rule_id), rule_id)
+        dynamic_rows = HubBuilder(conn, fiscal_year=2027)._load_append_rows(cc)
+        descriptions = {
+            str(row["description"]).split("|", 1)[0]
+            for row in dynamic_rows
+        }
+        self.assertEqual(
+            descriptions,
+            {
+                "Alloc: 社員旅行 Du lịch công ty",
+                "Alloc: 月餅 Bánh Trung Thu",
+                "Alloc: 京セラフェスティバル Lễ hội Kyocera",
+                "Alloc: 会社設立記念 感謝イベント Sự kiện tri ân ngày thành lập công ty",
+            },
+        )
+        self.assertEqual(len(dynamic_rows), 4)
         conn.close()
 
     def test_lucky_money_uses_february_headcount_without_manual_input(self):

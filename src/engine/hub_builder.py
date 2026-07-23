@@ -39,7 +39,13 @@ APPEND_TEMPLATE_ROW = 29
 MIN_APPEND_START_ROW = 168
 APPEND_START_ROW = MIN_APPEND_START_ROW
 MIN_APPEND_LAST_ROW = 1000
-TEMPLATE_ACCOUNT_CLEAR_START_ROW = 30
+TEMPLATE_ACCOUNT_CLEAR_START_ROW = helpers.FORM_SHARED_COST_START_ROW
+# Rows 30:37 belong to the new QLLN form. Building/land depreciation used
+# rows 36:37 as temporary staging slots in the old form, so stage them in
+# unused rows below the fixed-cost area before the source-order writer packs
+# all generated rows from row 38.
+FACILITY_BUILDING_DEPR_STAGING_ROW = 154
+FACILITY_LAND_DEPR_STAGING_ROW = 155
 APPEND_LEFT_FILL = "CCFFFF"
 APPEND_MONTH_FILL = "CCFFFF"
 APPEND_NOTE_FILL = "CCFFFF"
@@ -117,6 +123,7 @@ MANAGED_FIXED_ROWS = tuple(
         set(range(38, 91))
         | set(range(93, 110))
         | set(range(111, 153))
+        | {FACILITY_BUILDING_DEPR_STAGING_ROW, FACILITY_LAND_DEPR_STAGING_ROW}
     )
 )
 
@@ -1230,8 +1237,8 @@ class HubBuilder:
 
     def _write_fixed_rows_legacy(self, worksheet, cc_code: int) -> None:
         fixed_account_codes = {
-            36: 5006016260,
-            37: 5006016261,
+            FACILITY_BUILDING_DEPR_STAGING_ROW: 5006016260,
+            FACILITY_LAND_DEPR_STAGING_ROW: 5006016261,
             38: 5006016244,
             40: 9114120007,
             41: 9114120007,
@@ -1293,12 +1300,12 @@ class HubBuilder:
         )
         self._write_fx_formula_series(
             worksheet,
-            36,
+            FACILITY_BUILDING_DEPR_STAGING_ROW,
             self._month_series(cc_code, source="facility", description="depreciation_building", value_column="amount_usd"),
         )
         self._write_fx_formula_series(
             worksheet,
-            37,
+            FACILITY_LAND_DEPR_STAGING_ROW,
             self._month_series(cc_code, source="facility", description="depreciation_land", value_column="amount_usd"),
         )
         self._write_fx_formula_series(
@@ -1362,8 +1369,8 @@ class HubBuilder:
 
     def _write_fixed_rows(self, worksheet, cc_code: int) -> None:
         fixed_account_codes = {
-            36: 5006016260,
-            37: 5006016261,
+            FACILITY_BUILDING_DEPR_STAGING_ROW: 5006016260,
+            FACILITY_LAND_DEPR_STAGING_ROW: 5006016261,
             38: 5006016244,
             40: 9114120007,
             41: 9114120007,
@@ -1388,9 +1395,35 @@ class HubBuilder:
         for row_index in MANAGED_FIXED_ROWS:
             self._clear_managed_fixed_row(worksheet, row_index)
 
+        def _resolve_fixed_account(raw_account_code: int) -> int:
+            # Old/minimal databases used by compatibility tests can omit the
+            # account master entirely.  When the raw account exists in the
+            # loaded master, however, writing it without resolving by the
+            # target CC's cost type creates a visible blank C/D lookup and
+            # makes row 3 report 経費→NG.
+            account_exists = self.conn.execute(
+                """
+                SELECT 1
+                FROM dim_accounts
+                WHERE code = ? OR mfg_code = ? OR ga_code = ? OR sales_code = ?
+                LIMIT 1
+                """,
+                (raw_account_code, raw_account_code, raw_account_code, raw_account_code),
+            ).fetchone()
+            if account_exists is None:
+                return raw_account_code
+            try:
+                return resolve_account_code_for_connection(self.conn, cc_code, raw_account_code)
+            except AccountResolutionError as exc:
+                raise ExportIntegrityError(
+                    "Không thể chuẩn hóa account cố định theo cost type của Cost Center "
+                    f"{cc_code}: raw_account={raw_account_code}. {exc}"
+                ) from exc
+
         def _set_fixed_row(row_index: int, description: str | None = None) -> None:
             account_code = fixed_account_codes.get(row_index)
             if account_code:
+                account_code = _resolve_fixed_account(account_code)
                 worksheet.cell(row=row_index, column=ACCOUNT_COL, value=account_code)
                 self._write_lookup_formulas(worksheet, row_index)
             self._write_fixed_description(worksheet, row_index, description)
@@ -1441,8 +1474,15 @@ class HubBuilder:
             value_column="amount_usd",
         )
         if self._series_has_output(building_depr_series):
-            _set_fixed_row(36)
-            self._write_fx_formula_series(worksheet, 36, building_depr_series)
+            _set_fixed_row(
+                FACILITY_BUILDING_DEPR_STAGING_ROW,
+                FIXED_ROW_DESCRIPTIONS[36],
+            )
+            self._write_fx_formula_series(
+                worksheet,
+                FACILITY_BUILDING_DEPR_STAGING_ROW,
+                building_depr_series,
+            )
 
         land_depr_series = self._month_series(
             cc_code,
@@ -1451,8 +1491,15 @@ class HubBuilder:
             value_column="amount_usd",
         )
         if self._series_has_output(land_depr_series):
-            _set_fixed_row(37)
-            self._write_fx_formula_series(worksheet, 37, land_depr_series)
+            _set_fixed_row(
+                FACILITY_LAND_DEPR_STAGING_ROW,
+                FIXED_ROW_DESCRIPTIONS[37],
+            )
+            self._write_fx_formula_series(
+                worksheet,
+                FACILITY_LAND_DEPR_STAGING_ROW,
+                land_depr_series,
+            )
 
         equipment_depr_series = self._month_series(
             cc_code,

@@ -163,9 +163,13 @@ _ACCOUNT_NAME_COST_TYPE_SUFFIXES = (
 
 def _account_name_stem(value: Any) -> str:
     text = "".join(str(value or "").split())
+    # Some account families put the cost-type marker in the middle of the
+    # name, e.g. "減価償却費配賦（製） 建物" versus
+    # "減価償却費配賦（一般） 建物".  Removing markers only at the end makes
+    # those semantic siblings look unrelated and leaves the resolver
+    # ambiguous.
     for suffix in _ACCOUNT_NAME_COST_TYPE_SUFFIXES:
-        if text.endswith(suffix):
-            return text[: -len(suffix)]
+        text = text.replace(suffix, "")
     return text
 
 

@@ -326,7 +326,7 @@ Reference-assisted output must carry label like `REFERENCE_FILLED_FROM_PRIMARY` 
 | Birthday writer | Birthday module | STATUS_REQUIRES_CURRENT_CODE_AUDIT | FORM row 59 target | Needs source mapping and current output proof. |
 | NNN writer | NNN paperwork module | STATUS_REQUIRES_CURRENT_CODE_AUDIT | FORM row 137 target | Needs source mapping and current output proof. |
 | Allocation writer | Allocation module | BLOCKED_BY_MISSING_DRIVER_DATA / STATUS_REQUIRES_CURRENT_CODE_AUDIT | allocation/travel rows | Needs exact mapping and complete headcount drivers. |
-| Column S cost-row rule | output normalizer | PASS; `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8` | month-cost rows from row 30 onward | Latest audit found cost+blank S = 0 and no-cost+nonblank S = 0. |
+| Column S cost-row rule | output normalizer | PASS; QLLN FORM 21.07.2026 migration verified locally | month-cost rows from row 38 onward; rows 30~37 protected | Direct FORM audit found 0 changed cells in rows 30~37, output starts at row 38, and no broken formula tokens. |
 | reference-assisted fill scope | complete-v1/reference assist | PASS_SCOPED_QUARANTINE; `LAST_VERIFIED_AT_COMMIT=b9ea4e4bed4e4716aeb9c223ed8b0de56e5e68d8` | primary reference candidates | Latest audit found 0 reference-filled workbook rows and 130 quarantined unscoped rows. |
 | secondary skeleton extraction | historical analysis workflow | SUPERSEDED | account `5005026371` candidates | Retained as evidence only; the fixed-assets deep-audit handover replaces this next phase. |
 

@@ -17,12 +17,12 @@ def _worksheet():
 def test_formula_cost_blank_s_gets_description_from_row_label():
     workbook, worksheet = _worksheet()
     try:
-        worksheet.cell(30, 2).value = "new hire notebook"
-        worksheet.cell(30, 6).value = "=1*9100"
+        worksheet.cell(38, 2).value = "new hire notebook"
+        worksheet.cell(38, 6).value = "=1*9100"
 
         stats = normalize_output_description_column_s(worksheet)
 
-        assert worksheet.cell(30, 19).value == "new hire notebook"
+        assert worksheet.cell(38, 19).value == "new hire notebook"
         assert stats["cost_rows_filled_description"] == 1
     finally:
         workbook.close()
@@ -44,14 +44,29 @@ def test_numeric_cost_blank_s_gets_description_from_row_label():
 def test_no_cost_nonblank_s_is_cleared():
     workbook, worksheet = _worksheet()
     try:
-        worksheet.cell(31, 19).value = "stale template text"
-        worksheet.cell(31, 6).value = None
-        worksheet.cell(31, 7).value = 0
+        worksheet.cell(39, 19).value = "stale template text"
+        worksheet.cell(39, 6).value = None
+        worksheet.cell(39, 7).value = 0
 
         stats = normalize_output_description_column_s(worksheet)
 
-        assert worksheet.cell(31, 19).value is None
+        assert worksheet.cell(39, 19).value is None
         assert stats["no_cost_rows_cleared_description"] == 1
+    finally:
+        workbook.close()
+
+
+def test_qlnn_rows_30_to_37_are_not_normalized():
+    workbook, worksheet = _worksheet()
+    try:
+        worksheet.cell(36, 2).value = 9114120009
+        worksheet.cell(36, 19).value = "protected QLLN row"
+
+        stats = normalize_output_description_column_s(worksheet)
+
+        assert worksheet.cell(36, 2).value == 9114120009
+        assert worksheet.cell(36, 19).value == "protected QLLN row"
+        assert stats["no_cost_rows_cleared_description"] == 0
     finally:
         workbook.close()
 

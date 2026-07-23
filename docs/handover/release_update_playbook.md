@@ -238,9 +238,9 @@ config; nó chỉ quyết định **nơi dò**, không thể thay thế yêu c�
 
 - Bootstrap Setup `0.1.0` đã được build với public key
   `mp2027-prod-2026` và nguồn LAN trong `_internal`.
-- Gói pilot `0.1.1` đã được cài thủ công thành công. Gói cập nhật `0.1.8` đã được
-  ký/publish; Setup `0.1.8` đã được build và copy lên LAN; `latest.json` hiện trỏ
-  tới `0.1.8`.
+- Gói pilot `0.1.1` đã được cài thủ công thành công. Gói cập nhật `0.1.9` đã được
+  ký/publish; Setup `0.1.9` đã được build và copy lên LAN; `latest.json` hiện trỏ
+  tới `0.1.9`.
 - Bản `0.1.2` hiển thị phiên bản ứng dụng trên giao diện. Bản `0.1.3` dùng chung
   giới hạn manifest 1 MiB cho dò nền, kiểm tra gói và builder; builder từ chối gói
   vượt giới hạn trước khi publish. Manifest thực tế là 261,83 KiB. Client `0.1.1`
@@ -259,6 +259,10 @@ config; nó chỉ quyết định **nơi dò**, không thể thay thế yêu c�
   Bản `0.1.8` dọn dữ liệu phân bổ cũ theo vùng payload thực tế thay vì chặn cứng
   ở dòng 199; nút cài cập nhật tự quét nguồn công ty và chọn bản mới nhất; Hướng
   dẫn trực quan có tìm kiếm nhanh không phân biệt dấu.
+  Bản `0.1.9` thay FORM chính thức bằng bản QLLN ngày 21.07.2026, bảo toàn dòng
+  30~37 và chuyển điểm bắt đầu chi phí chung sang dòng 38; đồng thời sửa lookup
+  account theo cost type và bảo đảm chi phí sự kiện thành lập công ty được cộng
+  thêm mà không loại mất hạng mục cũ.
 - Còn bắt buộc: nghiệm thu GUI trên Windows sạch/pilot, cập nhật N-1 → N,
   rollback và lưu evidence.
 

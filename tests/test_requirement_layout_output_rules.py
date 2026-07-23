@@ -23,18 +23,21 @@ def req_text():
 
 
 # ------------------------------------------------------------------
-# 22.1  Data output starts from row 30
+# 22.1  Data output starts from row 38
 # ------------------------------------------------------------------
-class TestRow30Rule:
-    def test_mentions_row_30(self, req_text):
-        assert "dòng 30" in req_text
+class TestRow38Rule:
+    def test_mentions_row_38(self, req_text):
+        assert "dòng 38" in req_text
 
-    def test_row_30_context_is_output_start(self, req_text):
-        assert "xuất dữ liệu từ" in req_text and "dòng 30" in req_text
+    def test_row_38_context_is_output_start(self, req_text):
+        assert "xuất dữ liệu chi phí chung từ" in req_text and "dòng 38" in req_text
+
+    def test_rows_30_to_37_are_protected(self, req_text):
+        assert "dòng 30~37" in req_text and "giữ nguyên" in req_text
 
 
 # ------------------------------------------------------------------
-# 22.2  Columns A:D must be white from row 30 onward
+# 22.2  Columns A:D must be white from row 38 onward
 # ------------------------------------------------------------------
 class TestColumnsADWhite:
     def test_mentions_columns_a_d(self, req_text):

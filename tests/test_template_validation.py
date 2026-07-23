@@ -267,11 +267,11 @@ def test_form_hygiene_ignores_structure_and_formulas_but_detects_payload(tmp_pat
         assert excel_helpers.find_form_template_hygiene_issues(workbook) == ()
         worksheet["B5"] = 1412000006
         worksheet["G9"] = 42
-        worksheet["T31"] = "WBS-OLD"
+        worksheet["T38"] = "WBS-OLD"
         assert excel_helpers.find_form_template_hygiene_issues(workbook) == (
             "B5",
             "G9",
-            "T31",
+            "T38",
         )
     finally:
         workbook.close()

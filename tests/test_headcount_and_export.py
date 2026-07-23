@@ -2231,21 +2231,21 @@ class TestNewHireAllocationIdentityDedupe(unittest.TestCase):
         builder = HubBuilder(conn, fiscal_year=2027)
         workbook = openpyxl.Workbook()
         ws = workbook.active
-        ws["B30"] = 5000000000
-        ws["S30"] = "old description"
-        ws["T30"] = "old WBS"
-        ws["B31"] = "=A31"
-        ws["S31"] = '=IFERROR(VLOOKUP(B31,A:H,2,0),"")'
-        ws["T31"] = "=A31"
+        ws["B38"] = 5000000000
+        ws["S38"] = "old description"
+        ws["T38"] = "old WBS"
+        ws["B39"] = "=A39"
+        ws["S39"] = '=IFERROR(VLOOKUP(B39,A:H,2,0),"")'
+        ws["T39"] = "=A39"
 
         builder._clear_template_business_payload(ws)
 
-        self.assertIsNone(ws["B30"].value)
-        self.assertIsNone(ws["S30"].value)
-        self.assertIsNone(ws["T30"].value)
-        self.assertEqual(ws["B31"].value, "=A31")
-        self.assertEqual(ws["S31"].value, '=IFERROR(VLOOKUP(B31,A:H,2,0),"")')
-        self.assertEqual(ws["T31"].value, "=A31")
+        self.assertIsNone(ws["B38"].value)
+        self.assertIsNone(ws["S38"].value)
+        self.assertIsNone(ws["T38"].value)
+        self.assertEqual(ws["B39"].value, "=A39")
+        self.assertEqual(ws["S39"].value, '=IFERROR(VLOOKUP(B39,A:H,2,0),"")')
+        self.assertEqual(ws["T39"].value, "=A39")
         workbook.close()
         conn.close()
 
@@ -4489,7 +4489,7 @@ class TestHubBuilderExport(unittest.TestCase):
             template_workbook = openpyxl.load_workbook(blank_detail_template)
             try:
                 template_ws = template_workbook[find_hub_sheet_name(template_workbook)]
-                for row_index in range(30, template_ws.max_row + 1):
+                for row_index in range(38, template_ws.max_row + 1):
                     template_ws.cell(row=row_index, column=2).value = None
                     template_ws.cell(row=row_index, column=19).value = None
                     template_ws.cell(row=row_index, column=20).value = None
@@ -4509,8 +4509,8 @@ class TestHubBuilderExport(unittest.TestCase):
             try:
                 ws = workbook[find_hub_sheet_name(workbook)]
                 expected_accounts = {
-                    36: 5006016260,
-                    37: 5006016261,
+                    154: 5006016260,
+                    155: 5006016261,
                     38: 5006016244,
                     40: 9114120007,
                     41: 9114120007,
@@ -4531,7 +4531,7 @@ class TestHubBuilderExport(unittest.TestCase):
                 for row_index, account_code in expected_accounts.items():
                     self.assertEqual(ws.cell(row_index, 2).value, account_code, f"B{row_index}")
 
-                self.assertIn("Khấu hao (Nhà)", ws["S36"].value)
+                self.assertIn("Khấu hao (Nhà)", ws["S154"].value)
                 self.assertIn("Lãi (Nhà)", ws["S40"].value)
                 self.assertIn("Tiền điện", ws["S44"].value)
                 self.assertIn("Hand wash", ws["S48"].value)
@@ -4544,8 +4544,8 @@ class TestHubBuilderExport(unittest.TestCase):
                 self.assertIn("Sổ tay", ws["S97"].value)
                 self.assertIn("Chi phí làm giấy tờ", ws["S137"].value)
 
-                self.assertEqual(ws["F36"].value, "=ROUND(1.5*$B$2,0)")
-                self.assertEqual(ws["F37"].value, "=ROUND(2.5*$B$2,0)")
+                self.assertEqual(ws["F154"].value, "=ROUND(1.5*$B$2,0)")
+                self.assertEqual(ws["F155"].value, "=ROUND(2.5*$B$2,0)")
                 self.assertEqual(ws["F38"].value, "=ROUND(3.5*$B$2,0)")
                 self.assertEqual(ws["F40"].value, "=ROUND(4.5*$B$2,0)")
                 self.assertEqual(ws["F41"].value, "=ROUND(5.5*$B$2,0)")
@@ -4569,6 +4569,72 @@ class TestHubBuilderExport(unittest.TestCase):
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_fixed_rows_resolve_facility_accounts_for_general_cost_center(self):
+        conn = _mk_conn()
+        cc_code = _seed_export_ready_cc(conn, cost_type="一般")
+        conn.executemany(
+            """
+            INSERT INTO dim_accounts
+            (code, name_jp, name_vn, group_name, group_vn, mfg_code, ga_code, sales_code)
+            VALUES (?, ?, NULL, ?, NULL, ?, ?, NULL)
+            """,
+            [
+                (
+                    5006016260,
+                    "減価償却費配賦（製） 建物",
+                    "減価償却費",
+                    5006016260,
+                    None,
+                ),
+                (
+                    6006016628,
+                    "減価償却費配賦（一般） 建物",
+                    "減価償却費",
+                    None,
+                    6006016628,
+                ),
+                (
+                    5005066281,
+                    "電気代（製）",
+                    "水道光熱費",
+                    5005066281,
+                    None,
+                ),
+                (
+                    6005056623,
+                    "電気代（一般）",
+                    "水道光熱費",
+                    None,
+                    6005056623,
+                ),
+            ],
+        )
+        period = get_fy_months(2027)[0]
+        conn.executemany(
+            """
+            INSERT INTO fact_input_data
+            (source, period, amount_vnd, amount_usd, cc_code, account_code, description)
+            VALUES (?, ?, ?, ?, ?, 0, ?)
+            """,
+            [
+                ("facility", period, 0, 1.5, cc_code, "depreciation_building"),
+                ("facility", period, 100, 0, cc_code, "electric"),
+            ],
+        )
+        conn.commit()
+
+        template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+        workbook = openpyxl.load_workbook(template_path)
+        try:
+            worksheet = workbook[find_hub_sheet_name(workbook)]
+            HubBuilder(conn, fiscal_year=2027)._write_fixed_rows(worksheet, cc_code)
+            self.assertEqual(worksheet["B154"].value, 6006016628)
+            self.assertEqual(worksheet["B36"].value, 9114120009)
+            self.assertEqual(worksheet["B44"].value, 6005056623)
+        finally:
+            workbook.close()
+            conn.close()
 
     def test_manual_event_reference_items_export_to_expected_rows_and_months(self):
         conn = _mk_conn()
@@ -5025,7 +5091,7 @@ class TestHubBuilderExport(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
-    def test_export_clears_unused_template_accounts_below_row_30(self):
+    def test_export_preserves_qlnn_rows_and_clears_unused_generated_accounts(self):
         conn = _mk_conn()
         cc_code = _seed_export_ready_cc(conn, code=1412000006, cost_type="陬ｽ騾")
         period = get_fy_months(2027)[0]
@@ -5057,7 +5123,8 @@ class TestHubBuilderExport(unittest.TestCase):
                 self.assertEqual(ws["B44"].value, 5005066281)
                 self.assertEqual(ws["B59"].value, 5004086291)
                 self.assertEqual(ws.cell(system_row, 2).value, 5005246282)
-                self.assertIsNone(ws["B31"].value)
+                self.assertEqual(ws["B31"].value, 9114120018)
+                self.assertEqual(ws["B36"].value, 9114120009)
                 self.assertIsNone(ws["B66"].value)
                 self.assertIsNone(ws["B130"].value)
             finally:

@@ -1115,7 +1115,11 @@ class AllocationEngine:
         normalized_item_name = self._normalize_text(rule["item_name"] or "")
         return any(
             self._normalize_text(token) in normalized_item_name
-            for token in (*MOONCAKE_TOKENS, *COMPANY_TRIP_TOKENS)
+            for token in (
+                *MOONCAKE_TOKENS,
+                *COMPANY_TRIP_TOKENS,
+                *COMPANY_FOUNDING_THANKS_EVENT_TOKENS,
+            )
         )
 
     def _is_fiscal_year_kickoff_rule(self, rule) -> bool:
@@ -1221,8 +1225,9 @@ class AllocationEngine:
         # computed from monthly headcount deltas plus fixed-month headcount.
         if self._is_mixed_event_and_fixed_month_rule(rule["posting_month"]):
             return False
-        # These two audited annual rules intentionally use the total headcount
-        # of their posting month (company trip: May, mooncake: September).
+        # These audited annual rules intentionally use the total headcount of
+        # their posting month (company trip: May, mooncake: September, company
+        # founding thanks event: October).
         # That explicit rule takes precedence over generic wording such as
         # "actual participants" or "distribution count" in the source note.
         if self._uses_posting_month_total_headcount(rule):

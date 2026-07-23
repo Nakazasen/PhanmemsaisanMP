@@ -2064,19 +2064,19 @@ Thứ tự chi phí output (lặp lại từ Row 221-236):
 
 ![Layout output tổng quan (Row 241)](images/Hạng_mục_cần_cải_tiến_row241_img27.png)
 
-### 22.1. Dữ liệu output bắt đầu từ dòng 30
+### 22.1. Dữ liệu output bắt đầu từ dòng 38
 
-File kết quả phải xuất dữ liệu từ **dòng 30** trở đi.
-Không được xuất dữ liệu chi phí vào các dòng trước dòng 30 (vùng header/layout cố định của FORM).
+Theo FORM QLLN mới ngày 21.07.2026, file kết quả phải xuất dữ liệu chi phí chung từ **dòng 38** trở đi.
+Các dòng 30~37 là vùng dữ liệu/layout cố định của FORM, phải được giữ nguyên cả giá trị, công thức và định dạng.
 
-### 22.2. Cột A đến D từ dòng 30 trở đi phải màu trắng
+### 22.2. Cột A đến D từ dòng 38 trở đi phải màu trắng
 
-Từ cột A đến cột D, dòng 30 trở đi phải có **màu trắng** (không fill color / background trắng).
+Từ cột A đến cột D, dòng 38 trở đi phải có **màu trắng** (không fill color / background trắng).
 Không được tô màu nền khác cho vùng A:D ở khu vực dữ liệu output.
 
-### 22.3. Cột E từ dòng 30 trở xuống không được có giải thích
+### 22.3. Cột E từ dòng 38 trở xuống không được có giải thích
 
-Cột E từ dòng 30 trở xuống **không được có giải thích** / diễn giải do agent tự nghĩ.
+Cột E từ dòng 38 trở xuống **không được có giải thích** / diễn giải do agent tự nghĩ.
 Nếu cột E cần chứa nội dung, nội dung đó phải lấy nguyên từ nguồn dữ liệu canonical,
 không được tự sáng tạo hoặc dịch thêm.
 
@@ -2129,7 +2129,7 @@ mà không cần đặc biệt hóa cho bất kỳ file cụ thể nào.
 > `"Xóa nội dung dưới đây"`
 
 Khi xuất output mới, phải **xóa/clear toàn bộ nội dung cũ** trong vùng output
-(từ dòng 30 đến hết vùng dữ liệu) trước khi ghi dữ liệu mới.
+(từ dòng 38 đến hết vùng dữ liệu) trước khi ghi dữ liệu mới.
 
 Rule:
 - Không được ghi đè lên dữ liệu cũ mà không clear trước.
@@ -2150,7 +2150,7 @@ giúp track xem hạng mục nào người dùng coi là "đã xong" và hạng 
 
 | # | Hạng mục (Excel gốc) | Trạng thái theo Excel | Ghi chú |
 |---|---|---|---|
-| 1 | File kết quả xuất từ dòng 30 | Yêu cầu mới 09.06 | Đã implement (start_row=30) |
+| 1 | File kết quả xuất từ dòng 38; bảo toàn dòng 30~37 | FORM QLLN 21.07.2026 | Đã implement (start_row=38) |
 | 2 | Xóa nội dung cũ | Yêu cầu mới 09.06 | Đã implement (clear_until_row) |
 | 3 | Bổ sung nhập số người bus biệt phái/VN | Yêu cầu mới 09.06 | Đã có manual input |
 | 4 | Chi phí TSCĐ | **Chưa chạy hết tất cả CC** | Cần audit thêm |
@@ -2243,7 +2243,7 @@ Người dùng xác nhận lại: cột E trong file output **không được c�
 Đây là lần xác nhận thứ hai (lần đầu ở Section 22.3, item 10 Row 239).
 
 Rule:
-- Cột E từ dòng 30 trở xuống phải **hoàn toàn trống** hoặc chỉ chứa nội dung
+- Cột E từ dòng 38 trở xuống phải **hoàn toàn trống** hoặc chỉ chứa nội dung
   lấy nguyên từ nguồn dữ liệu canonical.
 - Không được agent tự viết/dịch/diễn giải bất kỳ text nào vào cột E.
 

@@ -464,6 +464,37 @@ class TestSharedAccountResolver(unittest.TestCase):
         finally:
             conn.close()
 
+    def test_shared_numeric_variant_matches_cost_type_marker_inside_account_name(self):
+        from src.engine.account_resolver import resolve_account_code_for_connection
+
+        db_path, conn, _ = self._mk_file_db()
+        try:
+            conn.executemany(
+                """
+                INSERT INTO dim_accounts
+                (code, name_jp, name_vn, group_name, group_vn, mfg_code, ga_code, sales_code)
+                VALUES (?, ?, NULL, '減価償却費', NULL, ?, ?, NULL)
+                """,
+                [
+                    (5006016260, "減価償却費配賦（製） 建物", 5006016260, None),
+                    (5006016261, "減価償却費配賦（製） 土地使用権", 5006016261, None),
+                    (6006016628, "減価償却費配賦（一般） 建物", None, 6006016628),
+                    (6006016629, "減価償却費配賦（一般） 土地使用権", None, 6006016629),
+                ],
+            )
+            conn.commit()
+
+            self.assertEqual(
+                resolve_account_code_for_connection(conn, "1412000099", 5006016260),
+                6006016628,
+            )
+            self.assertEqual(
+                resolve_account_code_for_connection(conn, "1412000099", 5006016261),
+                6006016629,
+            )
+        finally:
+            conn.close()
+
     def test_manual_event_driver_uses_shared_connection_resolver(self):
         from unittest.mock import patch
         from src.parsers import manual_event_drivers

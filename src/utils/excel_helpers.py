@@ -49,7 +49,10 @@ def find_hub_sheet_name(workbook: openpyxl.Workbook) -> str:
 FORM_TEMPLATE_INPUT_ROWS = (8, 9, 16, 17, 24, 25)
 FORM_TEMPLATE_MONTH_COLUMNS = tuple(range(6, 18))  # F:Q
 FORM_TEMPLATE_PAYLOAD_COLUMNS = (2, 19, 20)  # B, S, T
-FORM_TEMPLATE_PAYLOAD_START_ROW = 30
+# FORM 2026-07-21 reserves rows 30:37 for QLLN-owned structural data.
+# Generated shared-cost rows must start below that protected block.
+FORM_SHARED_COST_START_ROW = 38
+FORM_TEMPLATE_PAYLOAD_START_ROW = FORM_SHARED_COST_START_ROW
 
 
 def is_form_template_payload_value(cell: Any) -> bool:

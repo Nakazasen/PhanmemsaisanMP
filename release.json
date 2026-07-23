@@ -1,6 +1,6 @@
 {
   "application": "MP2027 Manager",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "channel": "pilot",
   "minimum_supported_data_schema": 1,
   "maximum_supported_data_schema": 1,

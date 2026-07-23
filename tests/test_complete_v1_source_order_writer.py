@@ -96,26 +96,62 @@ def test_complete_v1_writer_rewrites_legacy_rows_to_source_order_blocks(tmp_path
         wb.close()
 
 
-def test_complete_v1_writer_default_output_starts_at_row_30(tmp_path):
+def test_complete_v1_writer_default_output_starts_at_row_38(tmp_path):
     workbook = _workbook(tmp_path / "out.xlsx")
 
     result = apply_complete_v1_source_order_to_workbook(workbook, clear_until_row=190)
 
-    assert result["start_row"] == 30
+    assert result["start_row"] == 38
     assert result["rows_written"] == 7
     assert result["blank_rows_written"] == 5
 
     wb = load_workbook(workbook)
     try:
         ws = wb[SHEET]
-        assert ws.cell(30, 19).value == "facility building depreciation"
-        assert ws.cell(30, 18).value == "=SUM(F30:Q30)"
-        assert ws.cell(31, 19).value is None
-        assert ws.cell(32, 19).value == "fixed asset depreciation"
-        assert ws.cell(33, 19).value == "fixed asset interest"
-        assert ws.cell(34, 19).value is None
-        assert ws.cell(35, 19).value == "system cost"
-        _assert_output_layout_clean(ws, 30, 40)
+        assert ws.cell(38, 19).value == "facility building depreciation"
+        assert ws.cell(38, 18).value == "=SUM(F38:Q38)"
+        assert ws.cell(39, 19).value is None
+        assert ws.cell(40, 19).value == "fixed asset depreciation"
+        assert ws.cell(41, 19).value == "fixed asset interest"
+        assert ws.cell(42, 19).value is None
+        assert ws.cell(43, 19).value == "system cost"
+        _assert_output_layout_clean(ws, 38, 48)
+    finally:
+        wb.close()
+
+
+def test_complete_v1_writer_preserves_qlnn_rows_30_to_37(tmp_path):
+    path = tmp_path / "out_qlnn.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    protected = {
+        31: (9114120018, "部内間接経費", "部内間接経費"),
+        32: (9114120029, "部外間接経費1", "部外間接経費1"),
+        33: (9114120030, "部外間接経費2", "部外間接経費2"),
+        34: (9114120021, "工場間接経費", "工場間接経費"),
+        36: (9114120009, "社内金利（在庫）", "在庫金利"),
+    }
+    for row, values in protected.items():
+        for column, value in zip((2, 3, 4), values):
+            ws.cell(row, column).value = value
+    ws.cell(154, 2).value = 5006016260
+    ws.cell(154, 6).value = "=ROUND(1.5*$B$2,0)"
+    ws.cell(154, 19).value = "facility building depreciation"
+    wb.save(path)
+    wb.close()
+
+    apply_complete_v1_source_order_to_workbook(path, clear_until_row=190)
+
+    wb = load_workbook(path, data_only=False)
+    try:
+        ws = wb[SHEET]
+        for row, values in protected.items():
+            assert tuple(ws.cell(row, column).value for column in (2, 3, 4)) == values
+        assert ws.cell(38, 2).value == 5006016260
+        assert ws.cell(38, 6).value == "=ROUND(1.5*$B$2,0)"
+        assert ws.cell(38, 19).value == "facility building depreciation"
+        assert ws.cell(154, 2).value is None
     finally:
         wb.close()
 

@@ -116,7 +116,7 @@ from src.services.run_history import (
     write_run_manifest,
 )
 
-COMPLETE_V1_SOURCE_ORDER_START_ROW = 30
+COMPLETE_V1_SOURCE_ORDER_START_ROW = 38
 
 
 def _safe_console_print(message):
