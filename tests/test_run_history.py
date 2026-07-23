@@ -130,6 +130,83 @@ def test_publish_replaces_the_complete_directory_without_leaving_stale_files(tmp
     assert not (destination / "old.txt").exists()
 
 
+def test_publish_retries_a_transient_lock_when_backing_up_current_output(tmp_path, monkeypatch):
+    destination = tmp_path / "OUTPUT_FY2028"
+    destination.mkdir()
+    (destination / "old.txt").write_text("old", encoding="utf-8")
+    staged = tmp_path / "staged"
+    staged.mkdir()
+    (staged / "new.txt").write_text("new", encoding="utf-8")
+    context = create_fiscal_run_context(
+        2028,
+        output_dir=destination,
+        history_root=tmp_path,
+        run_id="transient-lock",
+    )
+    backup = tmp_path / ".OUTPUT_FY2028.transient-lock.backup"
+    real_rename = Path.rename
+    attempts = []
+    delays = []
+
+    def transient_lock(path, target):
+        if path == destination and Path(target) == backup:
+            attempts.append(path)
+            if len(attempts) < 3:
+                raise PermissionError(5, "simulated transient Windows lock", str(path))
+        return real_rename(path, target)
+
+    monkeypatch.setattr(Path, "rename", transient_lock)
+    monkeypatch.setattr(run_history_module.time, "sleep", delays.append)
+
+    assert publish_run_output(context, str(staged)) == str(destination)
+    assert len(attempts) == 3
+    assert delays == [0.1, 0.2]
+    assert (destination / "new.txt").read_text(encoding="utf-8") == "new"
+    assert not backup.exists()
+
+
+def test_publish_reports_actionable_error_for_a_persistent_output_lock(tmp_path, monkeypatch):
+    destination = tmp_path / "OUTPUT_FY2028"
+    destination.mkdir()
+    (destination / "accepted.txt").write_text("accepted", encoding="utf-8")
+    staged = tmp_path / "staged"
+    staged.mkdir()
+    (staged / "new.txt").write_text("new", encoding="utf-8")
+    context = create_fiscal_run_context(
+        2028,
+        output_dir=destination,
+        history_root=tmp_path,
+        run_id="persistent-lock",
+    )
+    backup = tmp_path / ".OUTPUT_FY2028.persistent-lock.backup"
+    real_rename = Path.rename
+    attempts = []
+
+    def persistent_lock(path, target):
+        if path == destination and Path(target) == backup:
+            attempts.append(path)
+            raise PermissionError(5, "simulated persistent Windows lock", str(path))
+        return real_rename(path, target)
+
+    monkeypatch.setattr(Path, "rename", persistent_lock)
+    monkeypatch.setattr(run_history_module.time, "sleep", lambda _seconds: None)
+
+    try:
+        publish_run_output(context, str(staged))
+    except run_history_module.OutputPublicationLockedError as exc:
+        message = str(exc)
+        assert "Windows đang khóa" in message
+        assert "Excel" in message
+        assert str(destination) in message
+    else:
+        raise AssertionError("a persistent output lock must be surfaced")
+
+    assert len(attempts) == 8
+    assert (destination / "accepted.txt").read_text(encoding="utf-8") == "accepted"
+    assert not backup.exists()
+    assert not list(tmp_path.glob(".OUTPUT_FY2028.*.publishing"))
+
+
 def test_publish_failure_restores_the_previous_public_output(tmp_path):
     destination = tmp_path / "OUTPUT_FY2028"
     destination.mkdir()

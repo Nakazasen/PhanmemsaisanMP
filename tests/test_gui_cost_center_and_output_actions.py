@@ -1,6 +1,9 @@
+from pathlib import Path
+
 import pytest
 
-from src.universal_app import MPManagerApp
+from src.services.run_history import OutputPublicationLockedError
+from src.universal_app import MPManagerApp, _friendly_error_message
 
 
 class Variable:
@@ -17,6 +20,19 @@ class Variable:
 class Root:
     def after(self, _delay, _callback):
         return None
+
+
+def test_output_lock_error_keeps_actionable_vietnamese_guidance():
+    error = OutputPublicationLockedError(
+        Path("C:/runtime/OUTPUT_FY2027"),
+        Path("C:/runtime/.OUTPUT_FY2027.run.backup"),
+    )
+
+    message = _friendly_error_message(error)
+
+    assert "Windows đang khóa" in message
+    assert "Excel" in message
+    assert "File Explorer" in message
 
 
 def _app_with_choices(*selected):

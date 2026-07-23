@@ -22,6 +22,24 @@ RUN_STATUS_FAILED = "FAILED"
 RUN_STATUS_LEGACY_FY2027 = "LEGACY_FY2027"
 
 
+class OutputPublicationLockedError(PermissionError):
+    """Raised when Windows keeps an output path locked during publication."""
+
+    def __init__(self, source: Path, destination: Path) -> None:
+        self.source_path = str(source)
+        self.destination_path = str(destination)
+        super().__init__(
+            13,
+            (
+                "Không thể cập nhật thư mục kết quả vì Windows đang khóa tệp hoặc "
+                "thư mục bên trong. Hãy đóng các tệp Excel, cửa sổ File Explorer "
+                "và terminal đang mở tại thư mục kết quả, sau đó chạy lại. "
+                f"Nguồn: {source}; đích: {destination}"
+            ),
+            str(source),
+        )
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -38,6 +56,26 @@ def _remove_tree_with_retry(path: Path, *, attempts: int = 6, initial_delay: flo
                 raise
             time.sleep(delay)
             delay = min(delay * 2, 0.4)
+
+
+def _rename_with_retry(
+    source: Path,
+    destination: Path,
+    *,
+    attempts: int = 8,
+    initial_delay: float = 0.1,
+) -> None:
+    """Rename a path while tolerating short-lived Windows/antivirus locks."""
+    delay = initial_delay
+    for attempt in range(attempts):
+        try:
+            source.rename(destination)
+            return
+        except PermissionError as exc:
+            if attempt == attempts - 1:
+                raise OutputPublicationLockedError(source, destination) from exc
+            time.sleep(delay)
+            delay = min(delay * 2, 1.0)
 
 
 class PipelineStageEvidence:
@@ -350,11 +388,11 @@ def publish_run_output(
         if failure_injector:
             failure_injector("prepared")
         if destination.exists():
-            destination.rename(backup)
+            _rename_with_retry(destination, backup)
             moved_current = True
         if failure_injector:
             failure_injector("backed_up")
-        prepared.rename(destination)
+        _rename_with_retry(prepared, destination)
         published = True
         if failure_injector:
             failure_injector("published")
@@ -363,7 +401,7 @@ def publish_run_output(
         if published and destination.exists():
             _remove_tree_with_retry(destination)
         if moved_current and backup.exists():
-            backup.rename(destination)
+            _rename_with_retry(backup, destination)
         raise
     finally:
         if prepared.exists():
@@ -379,7 +417,7 @@ def publish_run_output(
                     # successful publication as a failed business run.
                     pass
             elif not destination.exists():
-                backup.rename(destination)
+                _rename_with_retry(backup, destination)
             # If a failed rollback leaves both paths present, retain the old
             # backup for recovery instead of deleting the last known-good data.
     return str(destination)
