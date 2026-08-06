@@ -334,6 +334,54 @@ class TestExportIntegrityGuard(unittest.TestCase):
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_export_preserves_qlnn_rows_30_to_37_in_real_form_template(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            conn.execute(
+                """
+                INSERT INTO fact_input_data
+                (source, period, amount_vnd, cc_code, account_code, description)
+                VALUES ('manual_special', '202604', 1000, ?, 5005136291, 'manual cost')
+                """,
+                (cc_code,),
+            )
+            conn.commit()
+            _seed_complete_staffing_time(conn, cc_code)
+            template_path = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+            output_path = tmpdir / "MP_CC_qlnn_safe.xlsx"
+
+            template_workbook = openpyxl.load_workbook(template_path, data_only=False)
+            try:
+                template_sheet = template_workbook[find_hub_sheet_name(template_workbook)]
+                protected_before = {
+                    row: tuple(template_sheet.cell(row, column).value for column in range(2, 21))
+                    for row in range(30, 38)
+                }
+            finally:
+                template_workbook.close()
+
+            self.assertTrue(
+                HubBuilder(conn, fiscal_year=2027).export_to_template(
+                    str(template_path), str(output_path), cc_code=cc_code
+                )
+            )
+
+            output_workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                output_sheet = output_workbook[find_hub_sheet_name(output_workbook)]
+                protected_after = {
+                    row: tuple(output_sheet.cell(row, column).value for column in range(2, 21))
+                    for row in range(30, 38)
+                }
+                self.assertEqual(protected_after, protected_before)
+            finally:
+                output_workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
 
 class TestManualHeadcountGenderSplit(unittest.TestCase):
     def _write_empty_headcount_csv(self, tmpdir: Path):

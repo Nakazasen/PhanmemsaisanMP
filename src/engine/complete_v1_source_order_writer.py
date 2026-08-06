@@ -603,6 +603,19 @@ def apply_complete_v1_source_order_to_workbook(
             ws = wb[helpers.find_hub_sheet_name(wb)]
         except ValueError:
             ws = wb.active
+        is_qlnn_layout = _norm(ws.cell(31, ACCOUNT_COL).value) == "9114120018"
+        protected_qlnn_rows = (
+            {
+                row: tuple(ws.cell(row, column).value for column in MANAGED_CLEAR_COLS)
+                for row in range(30, 38)
+            }
+            if is_qlnn_layout
+            else {}
+        )
+        # Rows 30–37 belong to the QLLN-owned layout in the current FORM.  This
+        # writer only manages generated cost rows from row 38 onward.  Capture
+        # their values/formulas now so any future regression fails safely before
+        # the workbook is saved.
         # HubBuilder appends generated facts after the last occupied business
         # row.  The number differs by cost center, so a fixed cleanup boundary
         # (historically row 199) can leave duplicate allocations below it.
@@ -700,6 +713,16 @@ def apply_complete_v1_source_order_to_workbook(
                 current_row += 1
 
         layout_stats = _normalize_final_output_layout(ws, start_row, effective_clear_until_row)
+        changed_protected_rows = [
+            row
+            for row, before in protected_qlnn_rows.items()
+            if tuple(ws.cell(row, column).value for column in MANAGED_CLEAR_COLS) != before
+        ]
+        if changed_protected_rows:
+            raise ValueError(
+                "Lỗi bảo vệ FORM: bước sắp xếp kết quả đã làm thay đổi các dòng QLLN "
+                f"{changed_protected_rows}. File không được lưu."
+            )
         wb.save(workbook_file)
         return {
             "source_blocks_written": source_blocks_written,

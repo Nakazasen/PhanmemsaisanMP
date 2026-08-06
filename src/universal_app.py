@@ -205,6 +205,12 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
         label = label_by_period.get(period, period)
         row_error_count = len(errors)
 
+        expat, expat_error = _parse_blank_zero_save_int(
+            period,
+            "headcount_expat",
+            values.get("expat", ""),
+            "số JP tại " + str(label),
+        )
         staff, staff_error = _parse_blank_zero_save_int(
             period,
             "headcount_staff",
@@ -217,6 +223,8 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
             values.get("worker", ""),
             "số công nhân tại " + str(label),
         )
+        if expat_error:
+            errors.append(expat_error)
         if staff_error:
             errors.append(staff_error)
         if worker_error:
@@ -245,18 +253,19 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
         if len(errors) != row_error_count:
             continue
 
+        expat_int = int(expat or "0")
         staff_int = int(staff or "0")
         worker_int = int(worker or "0")
         male_int = int(male or "0")
         female_int = int(female or "0")
-        if male_int + female_int > staff_int + worker_int:
+        if male_int + female_int > expat_int + staff_int + worker_int:
             errors.append(
                 _headcount_save_error(
                     period,
                     "headcount_male/headcount_female",
                     f"{values.get('male', '')}/{values.get('female', '')}",
                     "SUM_LE_TOTAL",
-                    f"Tổng số nam và nữ vượt quá tổng số nhân viên và công nhân tại {label}",
+                    f"Tổng số nam và nữ vượt quá tổng số người tại {label}",
                 )
             )
             continue
@@ -3287,7 +3296,10 @@ class MPManagerApp:
         ttk.Label(bus,text="Ghi chú").pack(side="left",padx=(12,4)); ttk.Entry(bus,textvariable=bus_note).pack(side="left",fill="x",expand=True,padx=(0,8))
         notebook=ttk.Notebook(frame); notebook.pack(fill="both",expand=True)
         people=ttk.Frame(notebook,padding=6); fixed=ttk.Frame(notebook,padding=6); overtime=ttk.Frame(notebook,padding=6)
-        notebook.add(people,text="Số người & bổ sung"); notebook.add(fixed,text="Thời gian cố định"); notebook.add(overtime,text="Thời gian tăng ca")
+        notebook.add(people, text="Số người & bổ sung")
+        # Tạm ẩn hai tab nhập giờ; giữ nguyên frame, biến và logic để có thể bật lại khi cần.
+        # notebook.add(fixed, text="Thời gian cố định")
+        # notebook.add(overtime, text="Thời gian tăng ca")
         fields=("expat","staff","worker","male","female","total","note"); month_vars={p:{f:tk.StringVar() for f in fields} for p in periods}
         headers=("Kỳ","JP","Nhân viên","Công nhân","Nam (T12)","Nữ (T12)","Tổng người","Ghi chú")
         for col,label in enumerate(headers): ttk.Label(people,text=label).grid(row=0,column=col,sticky="w",padx=3)
@@ -3415,7 +3427,27 @@ class MPManagerApp:
         def save():
             cc=cc_code()
             if not cc:return
-            try: be=nonneg(bus_exp.get(),"Bus JP"); bv=nonneg(bus_vn.get(),"Bus Việt Nam")
+            try:
+                be=nonneg(bus_exp.get(),"Bus JP"); bv=nonneg(bus_vn.get(),"Bus Việt Nam")
+                month_values = {
+                    period: {
+                        "expat": values["expat"].get(),
+                        "staff": values["staff"].get(),
+                        "worker": values["worker"].get(),
+                        "male": values["male"].get(),
+                        "female": values["female"].get(),
+                        "description": values["note"].get(),
+                    }
+                    for period, values in month_vars.items()
+                }
+                _, headcount_errors = validate_headcount_save_period_rows(
+                    periods,
+                    month_values,
+                    {period: (f"Tháng {int(period[-2:])}" if period in fy_periods else f"Baseline T3 ({period})") for period in periods},
+                )
+                if headcount_errors:
+                    messagebox.showerror("Dữ liệu không hợp lệ", format_headcount_save_errors(headcount_errors))
+                    return
             except ValueError as exc: messagebox.showerror("Dữ liệu không hợp lệ", _friendly_error_message(exc)); return
             conn=get_connection(self._manual_input_store(fiscal_year)); create_schema(conn)
             try:
