@@ -3,7 +3,11 @@ from pathlib import Path
 import pytest
 
 from src.services.run_history import OutputPublicationLockedError
-from src.universal_app import MPManagerApp, _friendly_error_message
+from src.universal_app import (
+    MPManagerApp,
+    _friendly_error_message,
+    _headcount_coverage_error_message,
+)
 
 
 class Variable:
@@ -64,6 +68,20 @@ def test_parse_selected_cost_centers_supports_multiple_rooms():
     assert app._parse_selected_cc_codes() == ("1412000004", "1412000036")
     assert app.cc_code_filter.get() == "Đã chọn 2 Trung tâm chi phí"
     assert not app._all_cost_centers_selected()
+
+
+def test_missing_selected_staffing_source_message_names_the_missing_cost_center():
+    message = _headcount_coverage_error_message(
+        2027,
+        {
+            "missing_cc_codes": ("1412000036",),
+            "available_cc_codes": ("1412000004",),
+        },
+    )
+
+    assert "1412000036" in message
+    assert "1412000004" in message
+    assert "không chạy" in message
 
 
 def test_selecting_every_cost_center_sets_all_summary():

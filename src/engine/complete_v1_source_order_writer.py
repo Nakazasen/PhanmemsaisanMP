@@ -87,6 +87,27 @@ SOURCE_ROW_GROUPS = (
 )
 LEGACY_FACILITY_SOURCE_ROWS = (36, 37, 40, 41, 44, 45)
 
+# These two account codes are the fixed FORM contract for Facility's building
+# and land depreciation.  A late reference layer can place them outside their
+# normal staging rows (154–155), where they no longer carry source-order
+# metadata.  Keep this narrowly scoped to the explicit account contract rather
+# than trying to infer a source from free-form descriptions.
+FACILITY_UNMARKED_DEPRECIATION_ORIGINAL_ROWS = {
+    "5006016260": 154,
+    "5006016261": 155,
+}
+FACILITY_OUTPUT_ROW_PRIORITY = {
+    36: 0,
+    154: 0,
+    37: 1,
+    155: 1,
+    40: 2,
+    41: 3,
+    44: 4,
+    45: 5,
+}
+FACILITY_STAGING_ROWS = frozenset(SOURCE_ROW_GROUPS[0][1] + LEGACY_FACILITY_SOURCE_ROWS)
+
 
 def _resolved_source_row_groups(ws):
     """Use legacy facility staging only for workbooks without the QLLN block."""
@@ -420,6 +441,46 @@ def _collect_existing_source_order_rows(ws, start_row: int, clear_until_row: int
     return staged
 
 
+def _collect_unmarked_facility_depreciation_rows(
+    ws,
+    start_row: int,
+    clear_until_row: int,
+    facility_source_file: str,
+) -> list[StagedWorkbookRow]:
+    """Recover known Facility depreciation rows written after source ordering.
+
+    Some reference-assisted workbooks place the two Facility depreciation rows
+    below the normal source blocks without the hidden source-order marker.  The
+    accounts themselves are a fixed FORM contract, so recover only those rows;
+    all other unmarked rows remain unmanaged and are preserved separately.
+    """
+    staged: list[StagedWorkbookRow] = []
+    for row in range(int(start_row), int(clear_until_row) + 1):
+        # Standard staging rows are collected by _collect_staged_rows.  Looking
+        # at them again here would create a second copy in legacy layouts.
+        if row in FACILITY_STAGING_ROWS:
+            continue
+        if _parse_source_order_note(ws.cell(row, NOTE_COL)) is not None:
+            continue
+        if _has_generated_file_order_policy(ws.cell(row, NOTE_COL)):
+            continue
+        original_row = FACILITY_UNMARKED_DEPRECIATION_ORIGINAL_ROWS.get(
+            _norm(ws.cell(row, ACCOUNT_COL).value)
+        )
+        if original_row is None:
+            continue
+        item = _copy_staged_row(
+            ws,
+            facility_source_file,
+            row,
+            original_row=original_row,
+            require_visible_month_cost=True,
+        )
+        if item is not None:
+            staged.append(item)
+    return staged
+
+
 def _has_generated_file_order_policy(note: object) -> bool:
     text = _note_text(note)
     return any(policy in text for policy in GENERATED_FILE_ORDER_POLICIES)
@@ -553,7 +614,21 @@ def _source_block_sort_key(row: StagedWorkbookRow) -> tuple[str, int, str]:
     )
 
 
-def _ordered_source_group(group: list[StagedWorkbookRow]) -> list[StagedWorkbookRow]:
+def _ordered_source_group(
+    group: list[StagedWorkbookRow], *, source_index: int | None = None
+) -> list[StagedWorkbookRow]:
+    if source_index == 0:
+        # Facility rows use a documented business sequence, independent of the
+        # physical row where a late reference layer happened to append them.
+        return sorted(
+            group,
+            key=lambda row: (
+                FACILITY_OUTPUT_ROW_PRIORITY.get(
+                    int(row.original_row), len(FACILITY_OUTPUT_ROW_PRIORITY)
+                ),
+                int(row.source_row),
+            ),
+        )
     if not _has_split_accounts(group):
         return group
     return sorted(group, key=_source_block_sort_key)
@@ -630,6 +705,25 @@ def apply_complete_v1_source_order_to_workbook(
         staged = _collect_existing_source_order_rows(ws, start_row, effective_clear_until_row)
         if not staged:
             staged = _collect_staged_rows(ws, resolved_source_order)
+        unmarked_facility_depreciation = _collect_unmarked_facility_depreciation_rows(
+            ws,
+            start_row,
+            effective_clear_until_row,
+            resolved_source_order[0],
+        )
+        existing_source_origins = {
+            (row.source_file, row.original_row)
+            for row in staged
+            if row.source_order_managed
+        }
+        for row in unmarked_facility_depreciation:
+            if (row.source_file, row.original_row) not in existing_source_origins:
+                staged.append(row)
+                existing_source_origins.add((row.source_file, row.original_row))
+        # Do not let a recovered row also be emitted as an unmanaged row after
+        # the source blocks.  The full range is cleared before rewrite, but this
+        # exclusion decides which logical bucket owns the row.
+        source_rows_to_clear.update(row.source_row for row in unmarked_facility_depreciation)
         dynamic_staged = _collect_dynamic_allocation_rows(dynamic_allocation_rows, fiscal_periods, resolved_source_order)
         has_dynamic_fixed_assets = any(
             row.source_file == resolved_source_order[1] for row in dynamic_staged
@@ -687,7 +781,7 @@ def apply_complete_v1_source_order_to_workbook(
         rows_written = 0
         blank_rows_written = 0
 
-        for source_file in resolved_source_order:
+        for source_index, source_file in enumerate(resolved_source_order):
             group = [row for row in staged if row.source_file == source_file]
             if not group:
                 continue
@@ -695,7 +789,7 @@ def apply_complete_v1_source_order_to_workbook(
                 _clear_business_row(ws, current_row)
                 blank_rows_written += 1
                 current_row += 1
-            for item in _ordered_source_group(group):
+            for item in _ordered_source_group(group, source_index=source_index):
                 _write_staged_row(ws, current_row, item)
                 rows_written += 1
                 current_row += 1

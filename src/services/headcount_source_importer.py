@@ -234,6 +234,51 @@ def _select_unique_sources(
     return selected_results
 
 
+def _normalized_cc_codes(cc_codes: tuple[str, ...] | list[str]) -> tuple[str, ...]:
+    """Return unique, non-empty cost-center codes while preserving the UI order."""
+    return tuple(dict.fromkeys(
+        str(code).strip() for code in cc_codes if str(code or "").strip()
+    ))
+
+
+def assess_headcount_time_source_coverage(
+    conn: sqlite3.Connection,
+    source_dir: str,
+    fiscal_year: int,
+    required_cc_codes: tuple[str, ...] | list[str],
+    *,
+    scan_results: list[Any] | None = None,
+) -> dict[str, Any]:
+    """Report whether each selected cost center has one usable staffing source.
+
+    A valid workbook alone is not sufficient: it must belong to every cost
+    center selected for the run.  Name mismatches, unknown cost centers and
+    duplicate candidate files are deliberately not counted as coverage.
+    """
+    required = _normalized_cc_codes(required_cc_codes)
+    review = review_headcount_time_sources(
+        conn,
+        source_dir,
+        fiscal_year,
+        scan_results=scan_results,
+    )
+    selection_errors = list(review["errors"])
+    importable = _select_unique_sources(
+        list(review["importable"]),
+        [],
+        selection_errors,
+    )
+    available = tuple(sorted({str(result.cc_code) for result in importable}))
+    missing = tuple(code for code in required if code not in available)
+    return {
+        **review,
+        "required_cc_codes": required,
+        "available_cc_codes": available,
+        "missing_cc_codes": missing,
+        "coverage_errors": selection_errors,
+    }
+
+
 def import_headcount_time_sources(
     conn: sqlite3.Connection,
     source_dir: str,
@@ -244,6 +289,7 @@ def import_headcount_time_sources(
     approved_name_files: set[str] | None = None,
     scan_results: list[Any] | None = None,
     target_cc: str | None = None,
+    required_cc_codes: tuple[str, ...] | list[str] = (),
 ) -> dict[str, Any]:
     """Import reviewed sources atomically; all approval lists are exact absolute paths."""
     approved_unknown = {os.path.abspath(path) for path in (approved_unknown_files or set())}
@@ -287,6 +333,32 @@ def import_headcount_time_sources(
             skipped.append((result, "Tên B5 chưa được xác nhận"))
 
     importable = _select_unique_sources(candidates, skipped, errors)
+    required = _normalized_cc_codes(required_cc_codes)
+    available = tuple(sorted({str(result.cc_code) for result in importable}))
+    missing_required_cc_codes = tuple(
+        code for code in required if code not in available
+    )
+    if missing_required_cc_codes:
+        # Do not partially synchronize another selected cost center.  The
+        # caller can display the missing CCs and no calculation input changes.
+        return {
+            "files": len(review["results"]),
+            "imported_files": 0,
+            "imported_rows": 0,
+            "split_required_files": 0,
+            "skipped": skipped,
+            "errors": errors,
+            "results": review["results"],
+            "unknown_cost_centers": review["unknown_cost_centers"],
+            "name_mismatches": review["name_mismatches"],
+            "confirmed_unknown_cost_centers": confirmed_unknown,
+            "rejected_unknown_cost_centers": rejected_unknown_results,
+            "approved_name_mismatches": approved_name_results,
+            "required_cc_codes": required,
+            "available_cc_codes": available,
+            "missing_required_cc_codes": missing_required_cc_codes,
+            "imported_cc_codes": (),
+        }
     imported_rows = 0
     split_required_files = 0
     periods = fiscal_year_periods(fiscal_year)
@@ -359,4 +431,8 @@ def import_headcount_time_sources(
         "confirmed_unknown_cost_centers": confirmed_unknown,
         "rejected_unknown_cost_centers": rejected_unknown_results,
         "approved_name_mismatches": approved_name_results,
+        "required_cc_codes": required,
+        "available_cc_codes": available,
+        "missing_required_cc_codes": (),
+        "imported_cc_codes": tuple(sorted({str(result.cc_code) for result in importable})),
     }

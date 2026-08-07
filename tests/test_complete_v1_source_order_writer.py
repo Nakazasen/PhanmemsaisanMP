@@ -156,6 +156,56 @@ def test_complete_v1_writer_preserves_qlnn_rows_30_to_37(tmp_path):
         wb.close()
 
 
+def test_complete_v1_writer_groups_unmarked_facility_depreciation_with_facility_rows(tmp_path):
+    """Late facility depreciation rows must not be left after the facility block."""
+    path = tmp_path / "out_facility_grouped.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    # This is the current FORM layout, where rows 30–37 belong to QLLN and
+    # facility depreciation is normally staged at rows 154–155.
+    ws.cell(31, 2).value = 9114120018
+    for row, account, description in [
+        (40, 9114120007, "facility building interest"),
+        (41, 9114120007, "facility land interest"),
+        (44, 5005066281, "facility electric"),
+        (45, 5005066282, "facility water"),
+        # These rows model the late reference-layer output from the reported
+        # workbook: their physical positions are far away and have no source
+        # metadata, but the account codes are the fixed facility contract.
+        (80, 5006016260, "facility building depreciation"),
+        (81, 5006016261, "facility land depreciation"),
+    ]:
+        ws.cell(row, 2).value = account
+        ws.cell(row, 6).value = f"={row}*100"
+        ws.cell(row, 19).value = description
+    wb.save(path)
+    wb.close()
+
+    result = apply_complete_v1_source_order_to_workbook(path, clear_until_row=90)
+
+    assert result["rows_written"] == 6
+    assert result["preserved_rows_written"] == 0
+    wb = load_workbook(path, data_only=False)
+    try:
+        ws = wb[SHEET]
+        assert [ws.cell(row, 19).value for row in range(38, 44)] == [
+            "facility building depreciation",
+            "facility land depreciation",
+            "facility building interest",
+            "facility land interest",
+            "facility electric",
+            "facility water",
+        ]
+        assert ws.cell(44, 19).value is None
+        assert ws.cell(80, 19).value is None
+        assert ws.cell(81, 19).value is None
+        for row in range(38, 44):
+            assert CANONICAL_SOURCE_FILE_ORDER[0] in _note_text(ws.cell(row, 20))
+    finally:
+        wb.close()
+
+
 def test_complete_v1_writer_preserves_missing_separate_count_red_fill(tmp_path):
     workbook = tmp_path / "out_missing_count.xlsx"
     wb = Workbook()

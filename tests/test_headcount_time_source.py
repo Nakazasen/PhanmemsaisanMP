@@ -3,10 +3,12 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 from src.db.schema import create_schema
 from src.parsers.headcount_time_plan import parse_headcount_time_plan
 from src.services.headcount_source_importer import (
+    assess_headcount_time_source_coverage,
     cleanup_headcount_truth,
     count_headcount_truth_rows,
     fiscal_year_periods,
@@ -205,6 +207,51 @@ class HeadcountTimeSourceTests(unittest.TestCase):
         self.assertEqual(parsed.verification_method, "fallback_master_name")
         self.assertEqual(
             conn.execute("SELECT COUNT(*) FROM fact_monthly_headcount").fetchone()[0], 12
+        )
+
+    def test_selected_cost_centers_require_matching_staffing_sources_before_import(self):
+        parsed = SimpleNamespace(
+            status="valid",
+            cc_code="1412000004",
+            department_name="Device department",
+            lookup_status="matched",
+            errors=[],
+            path="device_FY2027_staffing_truth.xlsx",
+            rows=(),
+        )
+        missing_cc = "1412000999"
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        create_schema(conn)
+        conn.executemany(
+            "INSERT INTO dim_cost_centers(code,name_jp,saisan_type,cost_type) VALUES(?,?,'MFG','Fixed')",
+            (
+                (parsed.cc_code, parsed.department_name),
+                (missing_cc, "Missing department"),
+            ),
+        )
+
+        coverage = assess_headcount_time_source_coverage(
+            conn,
+            str(SOURCE),
+            2027,
+            (parsed.cc_code, missing_cc),
+            scan_results=[parsed],
+        )
+        blocked = import_headcount_time_sources(
+            conn,
+            str(SOURCE),
+            2027,
+            scan_results=[parsed],
+            required_cc_codes=(parsed.cc_code, missing_cc),
+        )
+
+        self.assertEqual(coverage["available_cc_codes"], (parsed.cc_code,))
+        self.assertEqual(coverage["missing_cc_codes"], (missing_cc,))
+        self.assertEqual(blocked["missing_required_cc_codes"], (missing_cc,))
+        self.assertEqual(blocked["imported_files"], 0)
+        self.assertEqual(
+            conn.execute("SELECT COUNT(*) FROM fact_monthly_headcount").fetchone()[0], 0
         )
 
     def test_unknown_cc_requires_confirmation_then_imports_without_master_and_audits(self):

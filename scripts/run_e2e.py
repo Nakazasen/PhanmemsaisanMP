@@ -904,10 +904,20 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             staffing_dir,
             fiscal_year,
             target_cc=str(target_cc) if target_cc is not None else None,
+            required_cc_codes=(str(target_cc),) if target_cc is not None else (),
         )
         parser_results = {"headcount_time_sources": staffing_result}
         for line in _staffing_sync_log_lines(staffing_result):
             log_callback(line)
+
+        missing_source_ccs = tuple(staffing_result.get("missing_required_cc_codes", ()))
+        if missing_source_ccs:
+            raise ValueError(
+                f"Nguồn nhân sự & thời gian FY{fiscal_year} chưa có dữ liệu cho "
+                f"Trung tâm chi phí: {', '.join(missing_source_ccs)}.\n"
+                "Chương trình dừng ngay sau khi kiểm tra nguồn, trước khi tính phân bổ "
+                "và xuất FORM để tránh kết quả sai."
+            )
 
         if staffing_result["files"] == 0:
             raise ValueError(

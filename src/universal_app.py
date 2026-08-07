@@ -114,6 +114,7 @@ from src.services.content_packs import (
     load_runtime_content_rules,
 )
 from src.services.headcount_source_importer import (
+    assess_headcount_time_source_coverage,
     cleanup_headcount_truth,
     count_headcount_truth_rows,
     import_headcount_time_sources,
@@ -496,6 +497,20 @@ def _pipeline_failure_summary(output_lines: list[str], return_code: int) -> str:
         if text and "chi tiết kỹ thuật đã được ẩn" not in text.lower():
             return text
     return f"Tiến trình tính toán đã kết thúc với mã lỗi {return_code}"
+
+
+def _headcount_coverage_error_message(fiscal_year: int, coverage: dict) -> str:
+    """Make a selected-CC staffing coverage gap clear to a non-technical user."""
+    missing = ", ".join(coverage.get("missing_cc_codes", ())) or "không xác định"
+    available_codes = tuple(coverage.get("available_cc_codes", ()))
+    available = ", ".join(available_codes) if available_codes else "chưa có trung tâm nào"
+    return (
+        f"Nguồn Nhân sự & thời gian FY{fiscal_year} chưa đủ cho các Trung tâm chi phí đã chọn.\n\n"
+        f"Thiếu dữ liệu cho: {missing}.\n"
+        f"Hệ thống hiện chỉ đọc được nguồn hợp lệ cho: {available}.\n\n"
+        "Hãy bổ sung hoặc chọn đúng file nguồn của các trung tâm còn thiếu, rồi bấm “Kiểm tra thay đổi nhanh”. "
+        "Chương trình sẽ không chạy và không xuất FORM khi còn thiếu dữ liệu này."
+    )
 
 
 def _failed_run_database_from_output(
@@ -1134,6 +1149,7 @@ class MPManagerApp:
             source = self.source_dir.get().strip()
             headcount = self.headcount_source_dir.get().strip()
             exchange_rate = validate_exchange_rate(self.exchange_rate.get())
+            selected_ccs = self._parse_selected_cc_codes()
         except Exception as exc:
             self.preflight_status.set(f"Chưa thể kiểm tra: {_friendly_error_message(exc)}")
             return
@@ -1193,6 +1209,25 @@ class MPManagerApp:
                             extra_paths=(self.project.config_path,),
                             checker=checker,
                         )
+                coverage = self._selected_headcount_source_coverage(
+                    fiscal_year,
+                    headcount,
+                    selected_ccs,
+                )
+                if coverage["missing_cc_codes"]:
+                    summary = _headcount_coverage_error_message(fiscal_year, coverage)
+                    self._run_on_ui_thread(
+                        self._finish_preflight_check,
+                        token,
+                        False,
+                        summary,
+                        None,
+                        None,
+                        None,
+                        False,
+                        time.perf_counter() - started_at,
+                    )
+                    return
                 if report.ok:
                     summary = "Đủ nguồn đã chọn và đúng năm"
                 elif report.can_run:
@@ -1246,6 +1281,27 @@ class MPManagerApp:
                 )
 
         threading.Thread(target=worker, daemon=True).start()
+
+    def _selected_headcount_source_coverage(
+        self,
+        fiscal_year: int,
+        source_dir: str,
+        selected_ccs: tuple[str, ...],
+    ) -> dict:
+        """Check the actual CC inside staffing files, not merely file count."""
+        conn = None
+        try:
+            conn = get_connection(self._operational_database())
+            create_schema(conn)
+            return assess_headcount_time_source_coverage(
+                conn,
+                source_dir,
+                fiscal_year,
+                selected_ccs,
+            )
+        finally:
+            if conn is not None:
+                conn.close()
 
     def _update_preflight_progress(self, token: int, message: str) -> None:
         if token == self._preflight_token:
@@ -1654,11 +1710,6 @@ class MPManagerApp:
             text="Cập nhật CSDL",
             command=self.update_headcount_database,
         ).pack(side="left")
-        ttk.Button(
-            source_buttons,
-            text="Dọn dữ liệu FY",
-            command=self.cleanup_headcount_database,
-        ).pack(side="left", padx=(6, 0))
         ttk.Label(
             container,
             textvariable=self.headcount_source_status,
@@ -2649,6 +2700,7 @@ class MPManagerApp:
                 choice for choice in choices if variables[choice].get()
             ]
             self._update_cc_selection_summary()
+            self._mark_preflight_stale()
             dialog.destroy()
 
         actions = ttk.Frame(dialog)
@@ -3919,6 +3971,17 @@ class MPManagerApp:
             headcount_source = self.headcount_source_dir.get().strip()
             if not os.path.isdir(headcount_source):
                 messagebox.showerror("Lỗi", "Hãy nhập thư mục nguồn nhân sự & thời gian hợp lệ.")
+                return
+            coverage = self._selected_headcount_source_coverage(
+                fiscal_year,
+                headcount_source,
+                selected_ccs,
+            )
+            if coverage["missing_cc_codes"]:
+                message = _headcount_coverage_error_message(fiscal_year, coverage)
+                self.log(message)
+                messagebox.showerror("Thiếu nguồn nhân sự & thời gian", message)
+                self._mark_preflight_stale(force_refresh=True)
                 return
             signature = (
                 fiscal_year,
