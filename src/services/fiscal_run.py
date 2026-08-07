@@ -1,8 +1,8 @@
-"""Fiscal-year source resolution and fail-closed preflight validation.
+"""Xác định nguồn theo năm tài chính và kiểm tra trước theo nguyên tắc đóng khi lỗi.
 
-This module is intentionally independent from the calculation engine.  It
-answers one question before a run is allowed to mutate any calculation data:
-"are these the approved sources for the fiscal year that was selected?"
+Mô-đun độc lập với bộ máy tính toán. Trước khi cho phép lần chạy thay đổi dữ
+liệu tính, nó trả lời câu hỏi: các nguồn này có đúng là nguồn đã được duyệt cho
+năm tài chính được chọn hay không?
 """
 
 from __future__ import annotations

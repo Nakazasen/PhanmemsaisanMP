@@ -1,6 +1,4 @@
-"""
-MP2027 Manager - ứng dụng giao diện chính.
-"""
+"""Ứng dụng giao diện chính của MP2027 Manager."""
 
 import csv
 import hashlib

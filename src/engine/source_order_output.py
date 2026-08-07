@@ -1,7 +1,7 @@
-"""Source-file-order output row placement helpers.
+"""Các tiện ích đặt dòng kết quả theo thứ tự tệp nguồn.
 
-This module is intentionally pure. It does not read or write Excel files; it only
-assigns output rows to already-derived business rows.
+Mô-đun thuần, không đọc hoặc ghi tệp Excel mà chỉ gán dòng kết quả cho các dòng
+nghiệp vụ đã được tính sẵn.
 """
 
 from __future__ import annotations

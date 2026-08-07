@@ -1,9 +1,8 @@
-"""Explicit FY2027-only compatibility metadata.
+"""Siêu dữ liệu tương thích chỉ dành riêng cho FY2027.
 
-New fiscal-year runs receive their source order from ``FiscalRunContext`` and
-must never import this module.  The names remain solely so historical FY2027
-workbooks and focused writer tests can be opened without changing the accepted
-FY2027 layout.
+Các lần chạy năm tài chính mới nhận thứ tự tệp từ ``FiscalRunContext`` và không
+được nhập mô-đun này. Tên tệp chỉ còn để mở các sổ FY2027 lịch sử và kiểm thử bộ
+ghi mà không thay đổi bố cục FY2027 đã được chấp nhận.
 """
 
 FY2027_COMPAT_SOURCE_FILE_ORDER = (

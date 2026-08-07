@@ -1,9 +1,7 @@
-"""
-MP2027 Manager - Facility Parser (施設課)
-Parses 施設課 MPFY[Year].xlsx to extract:
-  - Depreciation (減価償却費) per CC in USD → convert to VND
-  - Interest (固定資産金利) per CC in USD → convert to VND
-  - Electricity & Water (水道光熱費) per CC in VND
+"""Bộ đọc dữ liệu phòng thiết bị của MP2027 Manager.
+
+Đọc tệp MPFY[năm] của phòng thiết bị để lấy khấu hao và lãi tài sản cố định
+theo trung tâm chi phí bằng USD rồi đổi sang VND, cùng chi phí điện nước theo VND.
 """
 import pandas as pd
 import sqlite3

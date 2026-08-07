@@ -1,4 +1,4 @@
-"""Extract traceable departmental staffing truth using the company Master Plan form."""
+"""Trích xuất dữ liệu nhân sự phòng ban có thể truy nguyên từ mẫu kế hoạch tổng thể của công ty."""
 from __future__ import annotations
 
 import ast

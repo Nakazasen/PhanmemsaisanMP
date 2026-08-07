@@ -1,4 +1,4 @@
-"""Manual event-driver parser for business counts that cannot be inferred."""
+"""Bộ đọc chỉ tiêu sự kiện nhập tay khi số liệu nghiệp vụ không thể suy ra."""
 
 from __future__ import annotations
 

@@ -1,8 +1,8 @@
-"""Discover and fetch MP2027 application updates from folders or HTTPS.
+"""Tìm và lấy bản cập nhật ứng dụng MP2027 từ thư mục hoặc HTTPS.
 
-Delivery metadata is only a discovery aid. A downloaded package must still pass
-``install_runtime_application_update``: catalog SHA-256, manifest inventory,
-safe extraction, and staged health checks.
+Siêu dữ liệu phân phối chỉ hỗ trợ tìm kiếm. Gói tải về vẫn phải qua
+``install_runtime_application_update``: kiểm tra SHA-256 của danh mục, danh sách
+tệp, giải nén an toàn và kiểm tra sức khỏe bản đã chuẩn bị.
 """
 
 from __future__ import annotations

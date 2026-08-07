@@ -1,4 +1,4 @@
-"""Explicit Admin consumables file-order writer."""
+"""Bộ ghi rõ ràng các dòng vật tư hành chính theo thứ tự tệp nguồn."""
 
 from __future__ import annotations
 

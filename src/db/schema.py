@@ -1,6 +1,4 @@
-"""
-MP2027 Manager - Database Schema (Refactored V4.5.0)
-"""
+"""Lược đồ cơ sở dữ liệu MP2027 Manager đã tái cấu trúc."""
 import os
 import sqlite3
 import sys

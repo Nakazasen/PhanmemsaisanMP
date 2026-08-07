@@ -1,11 +1,8 @@
-"""
-Manual headcount parser.
+"""Bộ đọc nhân sự nhập tay.
 
-Users can provide monthly staff/worker headcount by CC in the active input:
-  raw/headcount_manual.csv
-
-CSV columns:
-  cc_code,period,headcount_staff,headcount_worker,description
+Người dùng có thể cung cấp nhân sự nhân viên và công nhân theo tháng, theo
+trung tâm chi phí, trong tệp ``raw/headcount_manual.csv`` với các cột mã trung
+tâm, kỳ, nhân sự nhân viên, nhân sự công nhân và mô tả.
 """
 
 import csv

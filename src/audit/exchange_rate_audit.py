@@ -1,4 +1,4 @@
-"""Guards for USD/VND formulas written into MP output workbooks."""
+"""Các kiểm tra bảo vệ công thức USD/VND được ghi vào tệp Excel kết quả MP."""
 from __future__ import annotations
 
 import json

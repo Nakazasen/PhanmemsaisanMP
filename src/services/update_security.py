@@ -1,8 +1,8 @@
-"""Integrity primitives shared by content packs and full releases.
+"""Các phép kiểm tra toàn vẹn dùng chung cho gói nội dung và bản phát hành đầy đủ.
 
-The MP2027 updater has no signing key or key provisioning step.  The controlled
-company update folder is its trust boundary; this module protects clients from
-corruption, partial copies and unsafe archive paths with SHA-256 inventories.
+Bộ cập nhật MP2027 không có khóa ký và không cần cấp phát khóa. Thư mục cập
+nhật nội bộ được kiểm soát là ranh giới tin cậy; mô-đun dùng danh sách SHA-256
+để bảo vệ khỏi hỏng dữ liệu, sao chép dở dang và đường dẫn lưu trữ không an toàn.
 """
 
 from __future__ import annotations

@@ -1,9 +1,9 @@
-"""Build, smoke-test, and publish MP2027 Manager Windows artifacts.
+"""Đóng gói, kiểm tra nhanh và công bố các tệp MP2027 Manager cho Windows.
 
-The normal path builds the onedir application and launcher, assembles the
-versioned install bundle, and runs health checks.  ``--build-update`` creates a
-hash-checked ``.mpupdate`` package and publishes its catalog atomically to the
-configured LAN folder; it intentionally does not require signing credentials.
+Luồng thường dựng ứng dụng onedir và trình khởi chạy, ghép bộ cài theo phiên
+bản rồi kiểm tra sức khỏe. Tùy chọn ``--build-update`` tạo gói ``.mpupdate``
+được kiểm tra mã băm và công bố danh mục nguyên tử vào thư mục mạng đã cấu
+hình; không yêu cầu thông tin xác thực ký.
 """
 
 import argparse

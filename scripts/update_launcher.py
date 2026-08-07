@@ -1,4 +1,4 @@
-"""Stable launcher for versioned MP2027 onedir releases."""
+"""Trình khởi chạy ổn định cho các bản phát hành onedir MP2027 theo phiên bản."""
 
 from __future__ import annotations
 

@@ -1,8 +1,7 @@
-"""Isolated Excel COM worker for reference staffing workbook rendering.
+"""Tiến trình COM Excel tách biệt để dựng sổ nhân sự tham chiếu.
 
-Business-source selection, reconciliation, post-render validation, manifest
-creation, and publication remain in the parent process. The worker owns only
-the Excel-backed rendering lifecycle.
+Tiến trình cha vẫn chọn nguồn nghiệp vụ, đối chiếu, kiểm tra sau khi dựng, tạo
+danh mục và công bố. Tiến trình phụ này chỉ quản lý vòng đời dựng dựa trên Excel.
 """
 
 from __future__ import annotations

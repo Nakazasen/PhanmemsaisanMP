@@ -1,7 +1,7 @@
-"""Explicit Facility file-order preview/export workbook writer.
+"""Bộ xem trước và ghi sổ làm việc phòng thiết bị theo thứ tự tệp nguồn.
 
-This module is intentionally separate from HubBuilder. It only writes when callers
-explicitly provide an output path, and it never changes the default export flow.
+Mô-đun tách khỏi bộ dựng Hub, chỉ ghi khi bên gọi cung cấp rõ đường dẫn kết quả
+và không thay đổi luồng xuất mặc định.
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
-"""
-MP2027 Manager - Excel Helper Utilities (Refactored V4.5.0)
-Universal helper functions for reading financial workbooks.
+"""Các tiện ích Excel dùng chung của MP2027 Manager.
+
+Cung cấp các hàm hỗ trợ đọc và chuẩn hóa sổ làm việc tài chính.
 """
 import pandas as pd
 import openpyxl

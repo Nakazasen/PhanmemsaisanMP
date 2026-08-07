@@ -1,4 +1,4 @@
-"""Convert the source application icon into the Windows packaging format."""
+"""Chuyển ảnh biểu tượng nguồn sang định dạng dùng khi đóng gói Windows."""
 
 import argparse
 from pathlib import Path

@@ -1,4 +1,4 @@
-"""Shared account resolver for Cost Center -> cost type -> account column lookup."""
+"""Bộ phân giải dùng chung từ trung tâm chi phí, loại chi phí đến cột tài khoản."""
 
 from __future__ import annotations
 

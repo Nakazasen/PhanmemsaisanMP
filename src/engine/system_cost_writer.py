@@ -1,4 +1,4 @@
-"""Explicit System Cost file-order writer."""
+"""Bộ ghi rõ ràng các dòng chi phí hệ thống theo thứ tự tệp nguồn."""
 from __future__ import annotations
 from pathlib import Path
 from openpyxl import load_workbook

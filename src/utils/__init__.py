@@ -1,1 +1,1 @@
-"""Small cross-cutting helpers shared by parsers, engines, and services."""
+"""Các tiện ích dùng chung cho bộ đọc dữ liệu, bộ máy nghiệp vụ và dịch vụ."""

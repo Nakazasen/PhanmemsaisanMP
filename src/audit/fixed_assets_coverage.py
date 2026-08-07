@@ -1,4 +1,4 @@
-"""Non-sensitive fixed-assets coverage audit helpers."""
+"""Các tiện ích kiểm tra phạm vi dữ liệu tài sản cố định không nhạy cảm."""
 from __future__ import annotations
 
 import sqlite3

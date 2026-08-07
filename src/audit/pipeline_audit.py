@@ -1,4 +1,4 @@
-"""Pipeline audit report for user confidence and missing-input review."""
+"""Báo cáo kiểm tra luồng chạy để người dùng xem độ tin cậy và dữ liệu thiếu."""
 
 from __future__ import annotations
 

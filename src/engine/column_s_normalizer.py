@@ -1,4 +1,4 @@
-"""Column S description rule for generated MP detail workbooks."""
+"""Quy tắc chuẩn hóa mô tả ở cột S của các tệp chi tiết MP được tạo."""
 
 from __future__ import annotations
 

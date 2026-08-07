@@ -1,1 +1,1 @@
-"""SQLite schema, migrations, and master-data loading for MP2027."""
+"""Lược đồ SQLite, chuyển đổi phiên bản và nạp dữ liệu gốc cho MP2027."""

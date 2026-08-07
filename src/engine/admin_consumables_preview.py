@@ -1,4 +1,4 @@
-﻿"""Read-only Admin consumables file-order preview for MP2027."""
+"""Xem trước chỉ đọc thứ tự tệp chi phí vật tư hành chính cho MP2027."""
 
 from __future__ import annotations
 

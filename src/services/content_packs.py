@@ -1,4 +1,4 @@
-"""Install and activate signed, data-only MP2027 content packs."""
+"""Cài đặt và kích hoạt các gói nội dung MP2027 chỉ chứa dữ liệu có kiểm tra toàn vẹn."""
 
 from __future__ import annotations
 

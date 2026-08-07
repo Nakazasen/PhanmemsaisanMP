@@ -1,10 +1,7 @@
-"""
-GA parser.
+"""Bộ đọc dữ liệu phòng hành chính tổng vụ.
 
-Loads:
-- per-unit GA costs into fact_input_data as source='ga_unit_price'
-- working days into sys_params as working_days_YYYYMM
-- monthly headcount by CC into fact_monthly_headcount as source='ga'
+Nạp chi phí đơn giá vào ``fact_input_data``, ngày công vào ``sys_params`` và
+nhân sự theo tháng của từng trung tâm chi phí vào ``fact_monthly_headcount``.
 """
 
 import os

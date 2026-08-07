@@ -1,4 +1,4 @@
-"""Read-only System Cost file-order preview for MP2027."""
+"""Xem trước chỉ đọc thứ tự tệp chi phí hệ thống cho MP2027."""
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path

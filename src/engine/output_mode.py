@@ -1,7 +1,7 @@
-"""Output mode definitions for MP2027 hub row placement.
+"""Định nghĩa chế độ đặt dòng kết quả trong Hub MP2027.
 
-This module is intentionally a pure planning abstraction. It does not import or
-call the workbook writer, parsers, database layer, or template code.
+Đây là lớp trừu tượng lập kế hoạch thuần, không nhập hoặc gọi bộ ghi sổ làm
+việc, bộ đọc dữ liệu, lớp cơ sở dữ liệu hay mã mẫu biểu.
 """
 
 from __future__ import annotations

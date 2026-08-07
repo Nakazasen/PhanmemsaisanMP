@@ -1,4 +1,4 @@
-"""Versioned, fail-safe SQLite schema migration support."""
+"""Hỗ trợ chuyển đổi lược đồ SQLite theo phiên bản và an toàn khi lỗi."""
 
 from __future__ import annotations
 

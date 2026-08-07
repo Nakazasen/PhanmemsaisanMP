@@ -1,9 +1,7 @@
-"""
-Allocation engine.
+"""Bộ máy phân bổ chi phí.
 
-Responsibilities:
-- map direct-cost staging rows to account_code
-- generate allocation rows from map_allocation_rules
+Chuyển các dòng chi phí trực tiếp sang mã tài khoản và tạo dòng phân bổ
+từ bảng quy tắc phân bổ.
 """
 
 import re

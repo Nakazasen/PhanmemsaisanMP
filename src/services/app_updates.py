@@ -1,9 +1,9 @@
-"""Stage, health-check, activate, and roll back hash-checked onedir releases.
+"""Chuẩn bị, kiểm tra, kích hoạt và hoàn tác bản phát hành onedir theo mã băm.
 
-Application updates intentionally use the controlled company update folder as
-their trust boundary.  A package has no private-key signature: its catalog and
-every extracted file are checked with SHA-256, then the staged application must
-pass its health check before activation.
+Bản cập nhật dùng thư mục cập nhật nội bộ được kiểm soát của công ty làm ranh
+giới tin cậy. Gói không có chữ ký khóa riêng; danh mục và mọi tệp giải nén đều
+được kiểm tra SHA-256, sau đó bản đã chuẩn bị phải vượt qua kiểm tra sức khỏe
+trước khi kích hoạt.
 """
 
 from __future__ import annotations

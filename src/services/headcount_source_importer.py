@@ -1,4 +1,4 @@
-"""Transactional import service for official and extracted staffing source workbooks."""
+"""Dịch vụ nhập giao dịch cho sổ nguồn nhân sự chính thức và đã trích xuất."""
 from __future__ import annotations
 
 import glob

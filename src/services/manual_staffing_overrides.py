@@ -1,4 +1,4 @@
-"""Persistent manual staffing overrides used by the GUI and pipeline."""
+"""Các điều chỉnh nhân sự nhập tay được lưu bền vững cho giao diện và luồng chạy."""
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence

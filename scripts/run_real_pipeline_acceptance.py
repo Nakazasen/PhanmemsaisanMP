@@ -1,8 +1,8 @@
-"""Run the real fiscal pipeline in an isolated acceptance workspace.
+"""Chạy luồng tài chính thực tế trong không gian nghiệm thu tách biệt.
 
-This command deliberately crosses the same subprocess boundary as the Windows GUI.
-It never monkeypatches pipeline internals and never writes the production manual
-store, operational database, output directory, or run-history directory.
+Lệnh này cố ý đi qua cùng ranh giới tiến trình con như giao diện Windows. Nó
+không thay thế tạm các phần nội bộ của luồng và không ghi vào kho nhập tay,
+cơ sở dữ liệu vận hành, thư mục kết quả hay thư mục lịch sử chạy chính thức.
 """
 from __future__ import annotations
 

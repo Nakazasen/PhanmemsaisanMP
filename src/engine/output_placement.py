@@ -1,7 +1,7 @@
-"""Pure output row placement planner for MP2027.
+"""Bộ lập kế hoạch vị trí dòng kết quả thuần cho MP2027.
 
-This module calculates planned row positions from output mode specs only. It has
-no Excel/openpyxl dependency and does not write workbooks.
+Mô-đun chỉ tính vị trí dòng từ đặc tả chế độ kết quả, không phụ thuộc Excel hay
+openpyxl và không ghi sổ làm việc.
 """
 
 from __future__ import annotations

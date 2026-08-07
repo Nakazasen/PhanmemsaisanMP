@@ -1,4 +1,4 @@
-"""Resolve MP2027 source workbooks from a configurable ordered manifest."""
+"""Xác định các sổ làm việc nguồn MP2027 từ danh mục thứ tự có thể cấu hình."""
 
 from __future__ import annotations
 

@@ -1,1 +1,1 @@
-"""Pure business engines that transform validated source data into outputs."""
+"""Các bộ máy nghiệp vụ thuần chuyển dữ liệu nguồn đã kiểm tra thành kết quả."""

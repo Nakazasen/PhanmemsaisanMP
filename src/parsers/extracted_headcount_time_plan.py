@@ -1,4 +1,4 @@
-"""Parser for extracted staffing truth workbooks in the company Master Plan form."""
+"""Bộ đọc sổ sự thật nhân sự đã trích xuất từ mẫu kế hoạch tổng thể của công ty."""
 from __future__ import annotations
 
 import os

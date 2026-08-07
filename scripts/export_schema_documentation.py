@@ -1,4 +1,4 @@
-"""Xuất schema SQLite hiện hành thành JSON và từ điển dữ liệu dễ đọc."""
+"""Xuất lược đồ SQLite hiện hành thành JSON và từ điển dữ liệu dễ đọc."""
 from __future__ import annotations
 
 import argparse

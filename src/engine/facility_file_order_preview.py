@@ -1,7 +1,7 @@
-"""Read-only Facility file-order preview for MP2027.
+"""Xem trước chỉ đọc thứ tự tệp của phòng thiết bị cho MP2027.
 
-The preview scans the Facility workbook and combines source evidence with the
-pure output placement planner. It does not save or modify any workbook.
+Mô-đun quét sổ làm việc phòng thiết bị, kết hợp bằng chứng nguồn với bộ lập kế
+hoạch vị trí dòng kết quả thuần. Mô-đun không lưu hoặc sửa sổ làm việc nào.
 """
 
 from __future__ import annotations

@@ -1,10 +1,9 @@
-"""Verify parser-to-writer fixed-assets policy against FY2026/FY2027 audit truth.
+"""Kiểm tra chính sách tài sản cố định từ bộ đọc đến bộ ghi theo dữ liệu đối chiếu.
 
-This is an in-memory integration check.  It imports each source ledger using
-the production parser, builds production source-order payloads, evaluates only
-their individual ``ROUND(USD*$B$2,0)`` terms at the rate observed in the
-reference corpus, and reconciles them to the per-asset expected values from
-the cross-trace comparator.  No workbook is written or changed.
+Đây là kiểm tra tích hợp trong bộ nhớ: đọc từng sổ nguồn bằng bộ đọc chính thức,
+tạo dữ liệu theo thứ tự tệp, chỉ tính từng hạng mục ``ROUND(USD*$B$2,0)`` theo
+tỷ giá trong dữ liệu tham chiếu rồi đối chiếu với giá trị kỳ vọng từng tài sản.
+Không sổ làm việc nào bị ghi hoặc thay đổi.
 """
 
 from __future__ import annotations

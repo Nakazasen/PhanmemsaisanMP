@@ -1,4 +1,4 @@
-"""Canonical field-level source policy for monthly headcount."""
+"""Chính sách nguồn chuẩn ở cấp trường dữ liệu cho nhân sự theo tháng."""
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -1,4 +1,4 @@
-"""Tiện ích console và argparse tiếng Việt dùng chung cho các CLI MP2027."""
+"""Tiện ích dòng lệnh và argparse tiếng Việt dùng chung cho MP2027."""
 from __future__ import annotations
 
 import argparse

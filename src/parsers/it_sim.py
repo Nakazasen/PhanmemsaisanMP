@@ -1,9 +1,7 @@
-"""
-MP2027 Manager - IT Simulation Parser.
+"""Bộ đọc dữ liệu mô phỏng công nghệ thông tin của MP2027 Manager.
 
-Parses the IT Simulation .xls files for the fiscal year. Besides the summary
-total, it also captures per-system detailed terms so the exporter can rebuild
-the business formula in the form `so_nguoi * don_gia`.
+Đọc các tệp mô phỏng ``.xls`` của năm tài chính, lấy tổng hợp và cả chi tiết
+từng hệ thống để bộ xuất dựng lại công thức nghiệp vụ ``so_nguoi * don_gia``.
 """
 
 from __future__ import annotations

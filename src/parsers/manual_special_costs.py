@@ -1,13 +1,9 @@
-"""
-Manual special-cost parser.
+"""Bộ đọc chi phí đặc biệt nhập tay.
 
-Users can provide row-specific monthly costs in:
-  source_dir/special_costs_manual.csv
-
-This is intended for business cases that already have a fixed destination row
-in FORM.xlsx but do not yet have a machine-readable source workbook, such as:
-- foreign-worker visa / resident-card / GPLD paperwork
-- one-off administrative costs with exact target rows
+Người dùng có thể cung cấp chi phí theo từng dòng và từng tháng trong
+``source_dir/special_costs_manual.csv``. Cách này dành cho nghiệp vụ đã có dòng
+đích cố định trong FORM.xlsx nhưng chưa có sổ nguồn đọc máy được, chẳng hạn chi
+phí giấy tờ lao động nước ngoài hoặc chi phí hành chính phát sinh một lần.
 """
 
 from __future__ import annotations

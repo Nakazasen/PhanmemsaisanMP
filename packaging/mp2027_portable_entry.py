@@ -1,4 +1,4 @@
-"""Lightweight entrypoint for the frozen MP2027 desktop application."""
+"""Điểm vào nhẹ cho ứng dụng MP2027 trên máy tính để bàn đã đóng băng."""
 
 import sys
 import os

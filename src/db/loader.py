@@ -1,6 +1,6 @@
-"""
-MP2027 Manager - Master Data Loader
-Loads Cost Centers, Accounts, and Allocation Rules from source Excel files.
+"""Bộ nạp dữ liệu gốc của MP2027 Manager.
+
+Đọc trung tâm chi phí, tài khoản và quy tắc phân bổ từ các tệp Excel nguồn.
 """
 import csv
 import sqlite3

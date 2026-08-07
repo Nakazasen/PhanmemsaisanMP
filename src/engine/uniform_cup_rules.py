@@ -1,4 +1,4 @@
-"""Canonical uniform/cup entitlement and allocation-rule identities."""
+"""Định danh chuẩn cho quyền lợi đồng phục, cốc và quy tắc phân bổ."""
 
 from __future__ import annotations
 

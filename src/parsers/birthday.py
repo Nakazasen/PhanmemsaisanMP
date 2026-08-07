@@ -1,4 +1,4 @@
-"""Parser for FY2027 birthday-cost workbook."""
+"""Bộ đọc sổ làm việc chi phí sinh nhật FY2027."""
 
 from __future__ import annotations
 

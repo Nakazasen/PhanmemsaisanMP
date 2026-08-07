@@ -1,4 +1,4 @@
-"""Read-only acceptance checks for one real fiscal pipeline run."""
+"""Các kiểm tra nghiệm thu chỉ đọc cho một lần chạy luồng tài chính thực tế."""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field

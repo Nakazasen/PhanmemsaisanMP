@@ -1,6 +1,6 @@
-"""MP2027 Manager application package.
+"""Gói ứng dụng MP2027 Manager.
 
-Subpackages separate database access, business parsers, allocation engines,
-runtime services, and shared utilities so the GUI and command-line pipeline
-can reuse the same rules.
+Các gói con tách riêng truy cập cơ sở dữ liệu, bộ đọc dữ liệu nghiệp vụ,
+bộ máy phân bổ, dịch vụ thời gian chạy và tiện ích dùng chung để giao diện
+cũng như luồng dòng lệnh có thể dùng lại cùng một bộ quy tắc.
 """

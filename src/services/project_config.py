@@ -1,4 +1,4 @@
-"""Project-level path configuration, independent from the application directory."""
+"""Cấu hình đường dẫn cấp dự án, độc lập với thư mục cài ứng dụng."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Cost-center context validation for explicit export writers."""
+"""Kiểm tra ngữ cảnh trung tâm chi phí cho các bộ ghi kết quả được gọi rõ ràng."""
 
 from __future__ import annotations
 

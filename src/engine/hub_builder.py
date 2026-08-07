@@ -1,8 +1,7 @@
-"""
-MP2027 Manager - Hub Builder.
+"""Bộ dựng Hub của MP2027 Manager.
 
-Writes shared-cost data back into the MP detail sheet while preserving the
-original FORM layout and formulas.
+Ghi dữ liệu chi phí dùng chung vào trang chi tiết MP, đồng thời giữ nguyên bố
+cục và công thức FORM ban đầu.
 """
 
 from __future__ import annotations

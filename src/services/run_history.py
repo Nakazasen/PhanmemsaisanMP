@@ -1,4 +1,4 @@
-"""Immutable workspace and catalogue for fiscal planning runs."""
+"""Không gian làm việc và danh mục bất biến cho các lần chạy lập kế hoạch tài chính."""
 
 from __future__ import annotations
 

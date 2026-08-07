@@ -1,9 +1,8 @@
-"""Create a row-level decision matrix for fixed-assets cross-trace mismatches.
+"""Tạo ma trận quyết định theo dòng cho các chênh lệch đối chiếu tài sản cố định.
 
-This script intentionally consumes the reproducible CSV artifacts produced by
-``audit_fixed_assets_cross_trace.py``.  It does not alter any source or output
-workbook.  The purpose is to finish classifying every TRUE_AMOUNT_MISMATCH
-before an accounting-code change is considered.
+Tập lệnh chỉ dùng các tệp CSV có thể tái lập do ``audit_fixed_assets_cross_trace.py``
+tạo ra và không sửa sổ nguồn hay sổ kết quả. Mục tiêu là phân loại đầy đủ mọi
+``TRUE_AMOUNT_MISMATCH`` trước khi cân nhắc thay đổi mã kế toán.
 """
 
 from __future__ import annotations

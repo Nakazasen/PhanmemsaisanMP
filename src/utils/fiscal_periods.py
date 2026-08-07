@@ -1,8 +1,8 @@
-"""Fiscal-year period helpers for MP2027.
+"""Các tiện ích kỳ năm tài chính cho MP2027.
 
-The company fiscal year starts in April of the prior calendar year and
-ends in March of the fiscal year. These helpers are the single source of
-truth for manual headcount GUI labels, CSV/DB validation, and period lists.
+Năm tài chính của công ty bắt đầu từ tháng 4 của năm dương lịch trước và kết
+thúc vào tháng 3 của năm tài chính. Đây là nguồn quy tắc duy nhất cho nhãn nhân
+sự trên giao diện, kiểm tra CSV/cơ sở dữ liệu và danh sách kỳ.
 """
 
 from __future__ import annotations

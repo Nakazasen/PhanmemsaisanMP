@@ -1,4 +1,4 @@
-"""Machine-readable runtime health checks for source and packaged releases."""
+"""Các kiểm tra sức khỏe thời gian chạy có thể đọc bằng máy cho bản nguồn và đóng gói."""
 
 from __future__ import annotations
 

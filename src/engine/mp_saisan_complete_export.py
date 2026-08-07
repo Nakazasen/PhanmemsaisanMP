@@ -1,7 +1,7 @@
-"""Unified MP Saisan complete export orchestration helpers.
+"""Các tiện ích điều phối xuất hoàn chỉnh MP Saisan.
 
-The complete export layer is explicit-only and preserves provenance. It does not
-claim reference-assisted rows are source-derived.
+Lớp xuất hoàn chỉnh chỉ chạy khi được gọi rõ ràng và luôn giữ nguồn gốc dữ liệu;
+không coi các dòng hỗ trợ bằng tài liệu tham chiếu là dữ liệu từ nguồn gốc.
 """
 from __future__ import annotations
 

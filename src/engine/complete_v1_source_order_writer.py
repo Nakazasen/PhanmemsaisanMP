@@ -1,9 +1,8 @@
-"""Complete-v1 source-file-order workbook migration pass.
+"""Lượt chuyển đổi sổ làm việc hoàn chỉnh phiên bản 1 theo thứ tự tệp nguồn.
 
-The legacy HubBuilder still knows how to derive many business formulas, but it
-historically staged them on fixed FORM rows. This module treats those rows only
-as staging evidence, then rewrites the final visible complete-v1 output by
-source file order.
+Bộ dựng Hub cũ vẫn tính được nhiều công thức nghiệp vụ nhưng từng đặt chúng
+trên các dòng FORM cố định. Mô-đun này chỉ dùng các dòng đó làm bằng chứng tạm,
+sau đó ghi lại kết quả hiển thị theo thứ tự tệp nguồn.
 """
 
 from __future__ import annotations

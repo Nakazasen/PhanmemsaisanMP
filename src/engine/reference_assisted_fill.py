@@ -1,7 +1,7 @@
-"""Reference-assisted workbook fill helpers.
+"""Các tiện ích điền sổ làm việc có hỗ trợ từ tài liệu tham chiếu.
 
-These helpers deliberately label copied rows as reference-assisted. They do not
-claim source-derived provenance.
+Các tiện ích luôn đánh dấu dòng sao chép là được hỗ trợ bằng tham chiếu và không
+nhận đó là dữ liệu có nguồn gốc trực tiếp.
 """
 from __future__ import annotations
 

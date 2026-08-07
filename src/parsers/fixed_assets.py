@@ -1,6 +1,6 @@
-"""
-MP2027 Manager - Fixed Assets Parser (Refactored V4.5.0)
-Processes depreciation and interest schedules with month-end logic.
+"""Bộ đọc tài sản cố định của MP2027 Manager.
+
+Xử lý lịch khấu hao và lãi tài sản theo quy tắc chốt cuối tháng.
 """
 from __future__ import annotations
 

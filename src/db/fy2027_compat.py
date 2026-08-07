@@ -1,4 +1,4 @@
-"""Read-only FY2027 compatibility helpers, excluded from future-year loading."""
+"""Tiện ích tương thích FY2027 chỉ đọc, không được nạp cho các năm sau."""
 
 import unicodedata
 

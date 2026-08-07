@@ -1,4 +1,4 @@
-"""Parser for FY2027 foreign-worker paperwork costs."""
+"""Bộ đọc chi phí giấy tờ lao động nước ngoài FY2027."""
 
 from __future__ import annotations
 

@@ -1,8 +1,8 @@
-"""Fixed-assets reference skeleton writer.
+"""Bộ ghi khung tham chiếu cho dữ liệu tài sản cố định.
 
-This module writes explicit opt-in, reference-assisted skeleton rows for account
-5005026371 from the Phase 42N2E secondary skeleton candidate CSV. Rows written by
-this module are not source-derived and must carry provenance in column T.
+Mô-đun chỉ ghi khi được bật rõ ràng các dòng khung hỗ trợ bằng tài liệu tham
+chiếu cho tài khoản 5005026371 từ tệp CSV ứng viên. Các dòng này không phải dữ
+liệu lấy trực tiếp từ nguồn và phải ghi nguồn gốc tại cột T.
 """
 from __future__ import annotations
 

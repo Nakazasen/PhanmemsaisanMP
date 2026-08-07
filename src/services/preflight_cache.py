@@ -1,4 +1,4 @@
-"""Persistent, metadata-only cache for fiscal-run source preflight reports."""
+"""Bộ nhớ đệm bền vững chỉ chứa siêu dữ liệu của báo cáo kiểm tra nguồn trước chạy."""
 
 from __future__ import annotations
 

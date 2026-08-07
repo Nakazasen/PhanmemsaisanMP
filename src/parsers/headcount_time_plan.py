@@ -1,4 +1,4 @@
-"""Parse departmental FY headcount/time plan workbooks submitted as source truth."""
+"""Đọc sổ kế hoạch nhân sự và thời gian FY của các phòng ban làm dữ liệu nguồn."""
 from __future__ import annotations
 
 import os

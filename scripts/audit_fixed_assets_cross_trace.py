@@ -1,9 +1,8 @@
-"""Read-only fixed-assets cross-trace for FY2026/FY2027.
+"""Đối chiếu chỉ đọc tài sản cố định FY2026/FY2027.
 
-The audit compares company fixed-assets source workbooks with department
-reference outputs. It deliberately calculates both the canonical per-asset
-rounding and the current writer's category-first rounding so the difference is
-observable instead of inferred.
+Kiểm tra so sánh sổ nguồn tài sản cố định của công ty với kết quả tham chiếu
+theo phòng ban. Nó chủ động tính cả cách làm tròn chuẩn theo từng tài sản và
+cách làm tròn theo nhóm của bộ ghi hiện tại để thấy rõ chênh lệch.
 """
 from __future__ import annotations
 

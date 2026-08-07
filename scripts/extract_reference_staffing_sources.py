@@ -1,4 +1,4 @@
-"""CLI trích xuất nguồn sự thật nhân sự theo bộ phận từ các tệp Excel tham chiếu FY."""
+"""Công cụ dòng lệnh trích xuất nguồn sự thật nhân sự theo bộ phận từ tệp Excel tham chiếu FY."""
 from __future__ import annotations
 import argparse
 from pathlib import Path

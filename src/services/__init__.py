@@ -1,1 +1,1 @@
-"""Application services coordinating preflight, runtime state, and delivery."""
+"""Các dịch vụ ứng dụng điều phối kiểm tra trước chạy, trạng thái và phân phối."""

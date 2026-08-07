@@ -1,9 +1,8 @@
-"""
-MP2027 Manager - Universal E2E Execution Pipeline
-Supports Single CC and Batch Export.
+"""Luồng chạy kiểm thử đầu cuối dùng chung của MP2027 Manager.
 
-Compatibility guard: facility file-order export remains explicit via
-`if facility_file_order_export:`; runtime adds workbook-existence checks.
+Hỗ trợ xuất một trung tâm chi phí hoặc xuất hàng loạt. Chức năng xuất phòng
+thiết bị theo thứ tự tệp vẫn chỉ bật khi được yêu cầu rõ ràng; thời gian chạy
+bổ sung kiểm tra sự tồn tại của sổ làm việc.
 """
 import sqlite3
 import argparse

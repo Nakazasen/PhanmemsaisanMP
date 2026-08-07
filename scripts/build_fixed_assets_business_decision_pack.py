@@ -1,9 +1,9 @@
-"""Condense the fixed-assets decision matrix into business-review requests.
+"""Thu gọn ma trận quyết định tài sản cố định thành yêu cầu xem xét nghiệp vụ.
 
-This consumes the row-level matrix; it makes no accounting or workbook change.
-Each request groups one FY/cost-center/account/cause so business reviewers can
-choose a governing snapshot or supply the missing evidence without reviewing
-all 638 monthly cells individually.
+Tập lệnh chỉ đọc ma trận theo dòng và không thay đổi kế toán hay sổ làm việc.
+Mỗi yêu cầu gom một năm tài chính, trung tâm chi phí, tài khoản và nguyên nhân
+để người nghiệp vụ chọn ảnh chụp dữ liệu chuẩn hoặc bổ sung bằng chứng thiếu,
+không phải xem riêng lẻ toàn bộ 638 ô theo tháng.
 """
 
 from __future__ import annotations
