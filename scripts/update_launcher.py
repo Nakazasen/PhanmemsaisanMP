@@ -50,7 +50,7 @@ def _safe_entrypoint(value: Any) -> str:
 
 
 def resolve_current_entrypoint(app_root: str | os.PathLike[str]) -> Path:
-    """Resolve the active version without importing signing dependencies."""
+    """Resolve the active version without importing update services."""
     root = Path(app_root).resolve()
     state = _read_json(root / "current.json")
     version_dir = root / "apps" / str(state.get("version", ""))

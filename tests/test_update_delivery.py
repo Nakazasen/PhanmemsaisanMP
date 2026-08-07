@@ -7,9 +7,7 @@ import pytest
 from src.services import update_delivery
 from src.services.update_security import (
     canonical_json_bytes,
-    generate_signing_keypair,
     sha256_bytes,
-    sign_payload,
 )
 
 
@@ -22,25 +20,22 @@ def _write_config(path: Path, value: dict):
     path.write_text(json.dumps(value), encoding="utf-8")
 
 
-def _write_release(path: Path, public_key: str):
+def _write_release(path: Path, _unused_value: str = ""):
     path.write_text(
         json.dumps(
             {
                 "version": "0.1.0",
-                "trusted_signing_keys": [
-                    {
-                        "id": "pilot-2027-01",
-                        "public_key": public_key,
-                        "purposes": ["application"],
-                    }
-                ],
             }
         ),
         encoding="utf-8",
     )
 
 
-def _build_update(path: Path, private_key: str, *, version: str):
+def _legacy_values() -> tuple[str, str]:
+    return "unused", "unused"
+
+
+def _build_update(path: Path, _unused_private_key: str, *, version: str):
     payload = f"portable-{version}".encode("ascii")
     manifest = {
         "schema": 1,
@@ -48,7 +43,6 @@ def _build_update(path: Path, private_key: str, *, version: str):
         "id": "MP2027_Manager",
         "version": version,
         "min_app_version": "0.1.0",
-        "key_id": "pilot-2027-01",
         "database_schema": 1,
         "health_check": "--health-check",
         "entrypoint": "MP2027_Portable.exe",
@@ -62,7 +56,6 @@ def _build_update(path: Path, private_key: str, *, version: str):
     }
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr("manifest.json", canonical_json_bytes(manifest))
-        archive.writestr("manifest.sig", sign_payload(manifest, private_key))
         archive.writestr("MP2027_Portable.exe", payload)
 
 
@@ -96,7 +89,7 @@ def test_load_update_config_prefers_user_then_company_policy(tmp_path):
 
 
 def test_folder_discovery_ignores_partial_invalid_and_selects_newest(tmp_path):
-    private_key, public_key = generate_signing_keypair()
+    private_key, public_key = _legacy_values()
     release = tmp_path / "release.json"
     updates = tmp_path / "updates"
     updates.mkdir()
@@ -120,7 +113,7 @@ def test_folder_discovery_ignores_partial_invalid_and_selects_newest(tmp_path):
 
 
 def test_folder_catalog_supplies_release_notes_and_verifies_its_package(tmp_path):
-    private_key, public_key = generate_signing_keypair()
+    private_key, public_key = _legacy_values()
     release = tmp_path / "release.json"
     updates = tmp_path / "updates"
     updates.mkdir()
@@ -153,7 +146,6 @@ def test_folder_catalog_supplies_release_notes_and_verifies_its_package(tmp_path
 def test_manifest_identity_allows_the_same_size_as_application_inspection(tmp_path):
     package = tmp_path / "large-manifest.mpupdate"
     manifest = {
-        "key_id": "pilot-2027-01",
         "version": "0.2.0",
         "padding": "x" * (update_delivery.MAX_CATALOG_BYTES + 1),
     }
@@ -163,7 +155,7 @@ def test_manifest_identity_allows_the_same_size_as_application_inspection(tmp_pa
     with zipfile.ZipFile(package, "w") as archive:
         archive.writestr("manifest.json", manifest_bytes)
 
-    assert update_delivery._manifest_identity(package) == ("pilot-2027-01", "0.2.0")
+    assert update_delivery._manifest_identity(package) == "0.2.0"
 
 
 def test_update_manifest_limit_is_shared_with_package_security():
@@ -222,7 +214,7 @@ def test_https_catalog_requires_valid_fields_and_newer_version(monkeypatch):
 
 
 def test_unavailable_source_does_not_hide_valid_source(tmp_path):
-    private_key, public_key = generate_signing_keypair()
+    private_key, public_key = _legacy_values()
     release = tmp_path / "release.json"
     updates = tmp_path / "updates"
     updates.mkdir()

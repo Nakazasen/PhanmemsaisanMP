@@ -1,7 +1,8 @@
 """Discover and fetch MP2027 application updates from folders or HTTPS.
 
 Delivery metadata is only a discovery aid. A downloaded package must still pass
-``install_runtime_application_update`` and its immutable Ed25519 trust root.
+``install_runtime_application_update``: catalog SHA-256, manifest inventory,
+safe extraction, and staged health checks.
 """
 
 from __future__ import annotations
@@ -25,7 +26,6 @@ from src.services.update_security import (
     MAX_MANIFEST_BYTES,
     ArtifactVerificationError,
     release_metadata_path,
-    resolve_trusted_signing_key,
     sha256_file,
 )
 
@@ -176,14 +176,14 @@ def current_release_version(
     return version
 
 
-def _manifest_identity(package_path: Path) -> tuple[str, str]:
+def _manifest_identity(package_path: Path) -> str:
     try:
         with zipfile.ZipFile(package_path) as archive:
             info = archive.getinfo("manifest.json")
             if info.file_size > MAX_UPDATE_MANIFEST_BYTES:
                 raise UpdateDeliveryError("Tệp kê khai cập nhật quá lớn")
             manifest = json.loads(archive.read(info).decode("utf-8-sig"))
-        return str(manifest.get("key_id", "")), str(manifest.get("version", ""))
+        return str(manifest.get("version", ""))
     except UpdateDeliveryError:
         raise
     except (OSError, KeyError, zipfile.BadZipFile, UnicodeError, json.JSONDecodeError) as exc:
@@ -192,17 +192,15 @@ def _manifest_identity(package_path: Path) -> tuple[str, str]:
 
 def _verified_folder_candidate(
     path: Path,
-    metadata: dict[str, Any],
+    current_app_version: str,
     *,
     current_database_schema: int,
 ) -> UpdateCandidate:
-    key_id, _untrusted_version = _manifest_identity(path)
+    _manifest_identity(path)
     try:
-        current_version, public_key = resolve_trusted_signing_key(metadata, key_id, purpose="application")
         manifest = inspect_update_package(
             path,
-            public_key_b64=public_key,
-            current_app_version=current_version,
+            current_app_version=current_app_version,
             current_database_schema=current_database_schema,
         )
     except (ApplicationUpdateError, ArtifactVerificationError) as exc:
@@ -226,6 +224,8 @@ def discover_folder_updates(
     if not root.is_dir():
         raise UpdateDeliveryError(f"Không truy cập được thư mục cập nhật: {root}")
     metadata = _release_metadata(release_metadata_path_override)
+    current_app_version = str(metadata.get("version", ""))
+    _version(current_app_version)
     catalog_path = root / "latest.json"
     if catalog_path.is_file():
         package_name, catalog_version, digest, size, notes = _validated_catalog(
@@ -234,7 +234,7 @@ def discover_folder_updates(
         package_path = root / package_name
         candidate = _verified_folder_candidate(
             package_path,
-            metadata,
+            current_app_version,
             current_database_schema=current_database_schema,
         )
         if candidate.version != catalog_version:
@@ -259,7 +259,7 @@ def discover_folder_updates(
         if not path.is_file():
             continue
         try:
-            candidates.append(_verified_folder_candidate(path, metadata, current_database_schema=current_database_schema))
+            candidates.append(_verified_folder_candidate(path, current_app_version, current_database_schema=current_database_schema))
         except (UpdateDeliveryError, OSError):
             continue
     return candidates

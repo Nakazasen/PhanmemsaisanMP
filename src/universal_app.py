@@ -995,7 +995,7 @@ CẬP NHẬT CHƯƠNG TRÌNH
 - Khi bấm "Cài bản cập nhật...", chương trình tự quét nguồn cập nhật đã cấu hình của công ty và chọn
   phiên bản mới nhất cao hơn phiên bản đang chạy. Người dùng không cần tự tìm hoặc chọn file `.mpupdate`.
 - Trước khi cài, chương trình hiển thị số phiên bản và nội dung thay đổi để người dùng xác nhận.
-- Gói vẫn phải vượt qua kiểm tra chữ ký, hash, schema và health-check. Sau khi thành công, phiên bản cũ
+- Gói vẫn phải vượt qua kiểm tra hash, schema và health-check. Sau khi thành công, phiên bản cũ
   tự đóng và phiên bản mới tự mở.
 """.strip()
 

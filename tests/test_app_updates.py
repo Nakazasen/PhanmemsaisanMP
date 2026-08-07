@@ -20,7 +20,12 @@ from src.services.app_updates import (
     rollback_activation,
     stage_application_update,
 )
-from src.services.update_security import canonical_json_bytes, generate_signing_keypair, sha256_bytes, sign_payload
+from src.services.update_security import canonical_json_bytes, sha256_bytes
+
+
+def generate_signing_keypair() -> tuple[str, str]:
+    """Legacy fixture values; application updates no longer use keys."""
+    return "unused", "unused"
 
 
 def test_gui_application_version_uses_release_metadata(monkeypatch):
@@ -65,7 +70,7 @@ def test_gui_discovered_update_shows_release_notes(monkeypatch):
     assert any("hoãn" in message.lower() for message in logs)
 
 
-def _build_update(path, private_key, *, version="0.2.0", payload=b"fake-exe", extras=None):
+def _build_update(path, _unused_private_key=None, *, version="0.2.0", payload=b"fake-exe", extras=None):
     entrypoint = "MP2027_Portable.exe"
     manifest = {
         "schema": 1,
@@ -73,7 +78,6 @@ def _build_update(path, private_key, *, version="0.2.0", payload=b"fake-exe", ex
         "id": "MP2027_Manager",
         "version": version,
         "min_app_version": "0.1.0",
-        "key_id": "pilot-2027-01",
         "database_schema": 1,
         "health_check": "--health-check",
         "entrypoint": entrypoint,
@@ -81,7 +85,6 @@ def _build_update(path, private_key, *, version="0.2.0", payload=b"fake-exe", ex
     }
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr("manifest.json", canonical_json_bytes(manifest))
-        archive.writestr("manifest.sig", sign_payload(manifest, private_key))
         archive.writestr(entrypoint, payload)
         for name, value in (extras or {}).items():
             archive.writestr(name, value)
@@ -106,7 +109,7 @@ def test_signed_update_stages_health_checks_activates_and_rolls_back(tmp_path):
     _build_update(update, private)
 
     staged = stage_application_update(
-        update, root, public_key_b64=public, current_app_version="0.1.0", current_database_schema=1
+        update, root, current_app_version="0.1.0", current_database_schema=1
     )
     calls = []
 
@@ -115,7 +118,7 @@ def test_signed_update_stages_health_checks_activates_and_rolls_back(tmp_path):
         return subprocess.CompletedProcess(command, 0)
 
     state = activate_staged_update(
-        root, "0.2.0", public_key_b64=public,
+        root, "0.2.0",
         health_data_root=tmp_path / "health", health_runner=healthy,
     )
 
@@ -127,28 +130,29 @@ def test_signed_update_stages_health_checks_activates_and_rolls_back(tmp_path):
     assert resolve_current_entrypoint(root) == old / "MP2027_Portable.exe"
 
 
-def test_update_rejects_wrong_key_downgrade_and_unexpected_files(tmp_path):
+def test_update_rejects_downgrade_and_unexpected_files(tmp_path):
     private, public = generate_signing_keypair()
-    _other_private, other_public = generate_signing_keypair()
     update = tmp_path / "release.mpupdate"
     _build_update(update, private)
-    with pytest.raises(ApplicationUpdateError, match="chữ ký"):
+    with zipfile.ZipFile(update, "a") as archive:
+        archive.writestr("manifest.sig", "obsolete-signature")
+    with pytest.raises(ApplicationUpdateError, match="không có trong kê khai"):
         inspect_update_package(
-            update, public_key_b64=other_public, current_app_version="0.1.0", current_database_schema=1
+            update, current_app_version="0.1.0", current_database_schema=1
         )
 
     downgrade = tmp_path / "downgrade.mpupdate"
     _build_update(downgrade, private, version="0.1.0")
     with pytest.raises(ApplicationUpdateError, match="mới hơn"):
         inspect_update_package(
-            downgrade, public_key_b64=public, current_app_version="0.1.0", current_database_schema=1
+            downgrade, current_app_version="0.1.0", current_database_schema=1
         )
 
     extra = tmp_path / "extra.mpupdate"
     _build_update(extra, private, extras={"surprise.txt": "no"})
     with pytest.raises(ApplicationUpdateError, match="không có trong kê khai"):
         inspect_update_package(
-            extra, public_key_b64=public, current_app_version="0.1.0", current_database_schema=1
+            extra, current_app_version="0.1.0", current_database_schema=1
         )
 
 
@@ -158,7 +162,7 @@ def test_health_failure_does_not_change_current_pointer(tmp_path):
     update = tmp_path / "release.mpupdate"
     _build_update(update, private)
     stage_application_update(
-        update, root, public_key_b64=public, current_app_version="0.1.0", current_database_schema=1
+        update, root, current_app_version="0.1.0", current_database_schema=1
     )
 
     def unhealthy(*_args, **_kwargs):
@@ -166,7 +170,7 @@ def test_health_failure_does_not_change_current_pointer(tmp_path):
 
     with pytest.raises(ApplicationUpdateError, match="kiểm tra tình trạng"):
         activate_staged_update(
-            root, "0.2.0", public_key_b64=public,
+            root, "0.2.0",
             health_data_root=tmp_path / "health", health_runner=unhealthy,
         )
     assert not (root / "current.json").exists()
@@ -208,23 +212,23 @@ def test_release_builder_is_deterministic_and_verifiable(tmp_path):
     second = tmp_path / "second.mpupdate"
 
     for output in (first, second):
-        package_app.build_signed_update(
+        package_app.build_hash_checked_update(
             app_dist,
             output,
-            private_key_path=key_path,
-            key_id="pilot-2027-01",
             min_app_version="0.1.0",
             release_path=release_path,
         )
 
     assert first.read_bytes() == second.read_bytes()
+    with zipfile.ZipFile(first) as archive:
+        assert "manifest.sig" not in archive.namelist()
     manifest = inspect_update_package(
         first,
-        public_key_b64=public,
         current_app_version="0.1.0",
         current_database_schema=1,
     )
     assert manifest["version"] == "0.2.0"
+    assert "key_id" not in manifest
     assert [item["path"] for item in manifest["files"]] == [
         "MP2027_Portable.exe",
         "_internal/runtime.dll",
@@ -246,11 +250,9 @@ def test_release_builder_rejects_manifest_larger_than_shared_limit(tmp_path, mon
     monkeypatch.setattr(update_security, "MAX_MANIFEST_BYTES", 1)
 
     with pytest.raises(ValueError, match="Tệp kê khai cập nhật"):
-        package_app.build_signed_update(
+        package_app.build_hash_checked_update(
             app_dist,
             tmp_path / "release.mpupdate",
-            private_key_path=key_path,
-            key_id="pilot-2027-01",
             min_app_version="0.1.0",
             release_path=release_path,
         )
@@ -269,23 +271,16 @@ def test_release_builder_rejects_private_key_inside_repository(tmp_path, monkeyp
         package_app._read_external_private_key(key_path)
 
 
-def _write_release_keyring(path, public_key, *, purposes):
-    path.write_text(json.dumps({
-        "version": "0.1.0",
-        "trusted_signing_keys": [{
-            "id": "pilot-2027-01",
-            "public_key": public_key,
-            "purposes": purposes,
-        }],
-    }), encoding="utf-8")
+def _write_release_metadata(path, *_unused, **_unused_kwargs):
+    path.write_text(json.dumps({"version": "0.1.0"}), encoding="utf-8")
 
 
-def test_runtime_offline_update_uses_application_key_health_backup_and_activation(tmp_path):
+def test_runtime_offline_update_uses_hash_checks_health_backup_and_activation(tmp_path):
     private, public = generate_signing_keypair()
     update = tmp_path / "release.mpupdate"
     _build_update(update, private)
     release_metadata = tmp_path / "release.json"
-    _write_release_keyring(release_metadata, public, purposes=["application"])
+    _write_release_metadata(release_metadata)
     install_root = tmp_path / "MP2027 Manager"
     runtime_root = tmp_path / "runtime"
     runtime_root.mkdir()
@@ -333,25 +328,24 @@ def test_launch_activated_update_waits_for_old_pid(tmp_path, monkeypatch):
     assert calls[0][1]["close_fds"] is True
 
 
-def test_runtime_offline_update_rejects_content_only_key_before_staging(tmp_path):
+def test_runtime_offline_update_does_not_require_key_metadata(tmp_path):
     private, public = generate_signing_keypair()
     update = tmp_path / "release.mpupdate"
     _build_update(update, private)
     release_metadata = tmp_path / "release.json"
-    _write_release_keyring(release_metadata, public, purposes=["content"])
+    _write_release_metadata(release_metadata)
     install_root = tmp_path / "MP2027 Manager"
 
-    with pytest.raises(ApplicationUpdateError, match="không nằm trong danh sách tin cậy"):
-        install_runtime_application_update(
-            update,
-            install_root,
-            tmp_path / "runtime",
-            current_database_schema=1,
-            release_metadata_path_override=release_metadata,
-        )
+    state = install_runtime_application_update(
+        update,
+        install_root,
+        tmp_path / "runtime",
+        current_database_schema=1,
+        release_metadata_path_override=release_metadata,
+        health_runner=lambda command, **_kwargs: subprocess.CompletedProcess(command, 0),
+    )
 
-    assert not (install_root / "apps" / "0.2.0").exists()
-    assert not (install_root / "current.json").exists()
+    assert state["version"] == "0.2.0"
 
 
 def test_application_install_root_only_accepts_versioned_onedir_layout(tmp_path):

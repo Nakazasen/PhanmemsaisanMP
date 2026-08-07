@@ -1,6 +1,9 @@
 # Bàn giao hiện hành — MP2027 Manager
 
-Ngày chốt lại: `2026-07-20`
+Ngày chốt lại: `2026-08-07`
+
+> [!IMPORTANT]
+> Chính sách hiện hành thay thế mọi ghi chú cũ về public/private key, chữ ký hoặc trust bootstrap trong tài liệu này: đọc `release_update_playbook.md` và `AGENTS.md`. MP2027 dùng `HASH_ONLY_LAN`; không tạo hay yêu cầu khóa để phát hành/cập nhật.
 
 Đây là **handover hiện hành duy nhất**. Các audit cũ chỉ là bằng chứng lịch sử;
 không lấy phần “next step”, “open item” hoặc “recommended phase” trong audit cũ
@@ -45,8 +48,8 @@ tra cấu hình, chuẩn bị trust bootstrap và build bộ cài pilot.
 
 ```powershell
 py -m pytest tests/test_update_delivery.py tests/test_app_updates.py `
-  tests/test_packaging_entrypoint.py tests/test_provision_update_key.py `
-  tests/test_repo_handover_docs.py -q
+  tests/test_content_packs.py tests/test_update_security.py `
+  tests/test_packaging_entrypoint.py tests/test_repo_handover_docs.py -q
 ```
 
 ## Cấu hình đã được người dùng chốt

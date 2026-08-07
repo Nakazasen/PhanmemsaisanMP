@@ -1,18 +1,9 @@
 {
   "application": "MP2027 Manager",
-  "version": "0.1.10",
+  "version": "0.1.1",
   "channel": "pilot",
   "minimum_supported_data_schema": 1,
   "maximum_supported_data_schema": 1,
   "content_schema": 1,
-  "update_manifest_schema": 1,
-  "trusted_signing_keys": [
-    {
-      "id": "mp2027-prod-2026",
-      "public_key": "vng+thyYQRhIA1u3UDZtTyPlBMLLdjLmP8z8AePZgz8=",
-      "purposes": [
-        "application"
-      ]
-    }
-  ]
+  "update_manifest_schema": 1
 }

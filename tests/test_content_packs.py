@@ -31,10 +31,13 @@ from src.services.content_packs import (
 )
 from src.services.update_security import (
     canonical_json_bytes,
-    generate_signing_keypair,
     sha256_bytes,
-    sign_payload,
 )
+
+
+def _legacy_values() -> tuple[str, str]:
+    """Temporary test inputs retained while old test fixtures are simplified."""
+    return "unused", "unused"
 
 
 def _rules():
@@ -54,7 +57,7 @@ def _rules():
     }
 
 
-def _build_pack(path, private_key, *, min_app="0.1.0", rules=None, extras=None):
+def _build_pack(path, _unused_private_key=None, *, min_app="0.1.0", rules=None, extras=None):
     rules_bytes = canonical_json_bytes(rules or _rules())
     manifest = {
         "schema": 1,
@@ -62,14 +65,12 @@ def _build_pack(path, private_key, *, min_app="0.1.0", rules=None, extras=None):
         "id": "dept-ga",
         "version": "1.2.0",
         "min_app_version": min_app,
-        "key_id": "pilot-2027-01",
         "content_schema": 1,
         "fiscal_year": 2027,
         "files": [{"path": "rules.json", "sha256": sha256_bytes(rules_bytes), "size": len(rules_bytes)}],
     }
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr("manifest.json", canonical_json_bytes(manifest))
-        archive.writestr("manifest.sig", sign_payload(manifest, private_key))
         archive.writestr("rules.json", rules_bytes)
         for name, value in (extras or {}).items():
             archive.writestr(name, value)
@@ -99,15 +100,14 @@ def _write_allocation_workbook(path, *, source_dept="GA", item_name="Workbook ru
     workbook.close()
 
 
-def test_signed_content_pack_installs_and_activates_atomically(tmp_path):
-    private, public = generate_signing_keypair()
+def test_hash_checked_content_pack_installs_and_activates_atomically(tmp_path):
+    private, public = _legacy_values()
     pack = tmp_path / "dept-ga.mpcontent"
     _build_pack(pack, private)
 
     destination = install_content_pack(
         pack,
         tmp_path / "content-packs",
-        public_key_b64=public,
         current_app_version="0.1.0",
         activate=True,
     )
@@ -120,26 +120,26 @@ def test_signed_content_pack_installs_and_activates_atomically(tmp_path):
     assert not (tmp_path / "content-packs" / "active.json.tmp").exists()
 
 
-def test_content_pack_rejects_wrong_key_tamper_and_unexpected_code(tmp_path):
-    private, _public = generate_signing_keypair()
-    _other_private, other_public = generate_signing_keypair()
+def test_content_pack_rejects_unexpected_code(tmp_path):
+    private, _public = _legacy_values()
+    _other_private, other_public = _legacy_values()
     pack = tmp_path / "pack.mpcontent"
     _build_pack(pack, private)
-    with pytest.raises(ContentPackError, match="chữ ký"):
-        inspect_content_pack(pack, public_key_b64=other_public, current_app_version="0.1.0")
+    manifest, _rules_payload = inspect_content_pack(pack, current_app_version="0.1.0")
+    assert manifest["version"] == "1.2.0"
 
     code_pack = tmp_path / "code.mpcontent"
     _build_pack(code_pack, private, extras={"plugin.py": "raise SystemExit"})
     with pytest.raises(ContentPackError, match="không có trong kê khai"):
-        inspect_content_pack(code_pack, public_key_b64=_public, current_app_version="0.1.0")
+        inspect_content_pack(code_pack, current_app_version="0.1.0")
 
 
 def test_content_pack_enforces_version_and_restricted_rules(tmp_path):
-    private, public = generate_signing_keypair()
+    private, public = _legacy_values()
     pack = tmp_path / "future.mpcontent"
     _build_pack(pack, private, min_app="9.0.0")
     with pytest.raises(ContentPackError, match="mới hơn"):
-        inspect_content_pack(pack, public_key_b64=public, current_app_version="0.1.0")
+        inspect_content_pack(pack, current_app_version="0.1.0")
 
     invalid = _rules()
     invalid["rules"][0]["driver_type"] = "execute_python"
@@ -153,21 +153,19 @@ def test_activation_requires_an_installed_version(tmp_path):
 
 
 def test_active_content_rules_are_fully_revalidated_for_each_fiscal_run(tmp_path):
-    private, public = generate_signing_keypair()
+    private, public = _legacy_values()
     pack = tmp_path / "dept-ga.mpcontent"
     _build_pack(pack, private)
     root = tmp_path / "content-packs"
     destination = install_content_pack(
         pack,
         root,
-        public_key_b64=public,
         current_app_version="0.1.0",
         activate=True,
     )
 
     rules = load_active_content_rules(
         root,
-        public_key_b64=public,
         current_app_version="0.1.0",
         fiscal_year=2027,
     )
@@ -176,7 +174,6 @@ def test_active_content_rules_are_fully_revalidated_for_each_fiscal_run(tmp_path
     with pytest.raises(ContentPackError, match="FY2027, không phải FY2028"):
         load_active_content_rules(
             root,
-            public_key_b64=public,
             current_app_version="0.1.0",
             fiscal_year=2028,
         )
@@ -185,21 +182,19 @@ def test_active_content_rules_are_fully_revalidated_for_each_fiscal_run(tmp_path
     with pytest.raises(ContentPackError, match="không có trong kê khai"):
         load_active_content_rules(
             root,
-            public_key_b64=public,
             current_app_version="0.1.0",
             fiscal_year=2027,
         )
 
 
 def test_active_content_state_hash_tamper_is_rejected(tmp_path):
-    private, public = generate_signing_keypair()
+    private, public = _legacy_values()
     pack = tmp_path / "dept-ga.mpcontent"
     _build_pack(pack, private)
     root = tmp_path / "content-packs"
     install_content_pack(
         pack,
         root,
-        public_key_b64=public,
         current_app_version="0.1.0",
         activate=True,
     )
@@ -211,7 +206,6 @@ def test_active_content_state_hash_tamper_is_rejected(tmp_path):
     with pytest.raises(ContentPackError, match="Tệp kê khai.*bị thiếu hoặc đã thay đổi"):
         load_active_content_rules(
             root,
-            public_key_b64=public,
             current_app_version="0.1.0",
             fiscal_year=2027,
         )
@@ -285,27 +279,19 @@ def test_runtime_content_rules_are_noop_without_active_pack(tmp_path):
     ) == []
 
 
-def test_runtime_content_rules_select_trusted_key_by_id_and_purpose(tmp_path):
-    private, public = generate_signing_keypair()
+def test_runtime_content_rules_use_release_version_without_a_key(tmp_path):
+    private, _public = _legacy_values()
     pack = tmp_path / "dept-ga.mpcontent"
     _build_pack(pack, private)
     content_root = tmp_path / "content-packs"
     install_content_pack(
         pack,
         content_root,
-        public_key_b64=public,
         current_app_version="0.1.0",
         activate=True,
     )
     release_metadata = tmp_path / "release.json"
-    release_metadata.write_text(json.dumps({
-        "version": "0.1.0",
-        "trusted_signing_keys": [{
-            "id": "pilot-2027-01",
-            "public_key": public,
-            "purposes": ["content"],
-        }],
-    }), encoding="utf-8")
+    release_metadata.write_text(json.dumps({"version": "0.1.0"}), encoding="utf-8")
 
     assert load_runtime_content_rules(
         tmp_path,
@@ -313,15 +299,6 @@ def test_runtime_content_rules_select_trusted_key_by_id_and_purpose(tmp_path):
         release_metadata_path=release_metadata,
     ) == _rules()["rules"]
 
-    payload = json.loads(release_metadata.read_text(encoding="utf-8"))
-    payload["trusted_signing_keys"][0]["purposes"] = ["application"]
-    release_metadata.write_text(json.dumps(payload), encoding="utf-8")
-    with pytest.raises(ContentPackError, match="không nằm trong danh sách tin cậy"):
-        load_runtime_content_rules(
-            tmp_path,
-            fiscal_year=2027,
-            release_metadata_path=release_metadata,
-        )
 
 
 def test_content_collision_preserves_unrelated_pending_transaction(tmp_path):
@@ -452,19 +429,12 @@ def test_commit_failure_after_release_preserves_commit_error(tmp_path):
         connection.close()
 
 
-def test_runtime_installer_uses_trusted_key_and_activates(tmp_path):
-    private, public = generate_signing_keypair()
+def test_runtime_installer_uses_release_version_and_activates(tmp_path):
+    private, _public = _legacy_values()
     pack = tmp_path / "dept-ga.mpcontent"
     _build_pack(pack, private)
     release_metadata = tmp_path / "release.json"
-    release_metadata.write_text(json.dumps({
-        "version": "0.1.0",
-        "trusted_signing_keys": [{
-            "id": "pilot-2027-01",
-            "public_key": public,
-            "purposes": ["content"],
-        }],
-    }), encoding="utf-8")
+    release_metadata.write_text(json.dumps({"version": "0.1.0"}), encoding="utf-8")
 
     installed = install_runtime_content_pack(
         pack,
@@ -483,18 +453,11 @@ def test_runtime_installer_uses_trusted_key_and_activates(tmp_path):
 
 
 def test_runtime_installer_rejects_wrong_fy_before_install(tmp_path):
-    private, public = generate_signing_keypair()
+    private, _public = _legacy_values()
     pack = tmp_path / "dept-ga.mpcontent"
     _build_pack(pack, private)
     release_metadata = tmp_path / "release.json"
-    release_metadata.write_text(json.dumps({
-        "version": "0.1.0",
-        "trusted_signing_keys": [{
-            "id": "pilot-2027-01",
-            "public_key": public,
-            "purposes": ["content"],
-        }],
-    }), encoding="utf-8")
+    release_metadata.write_text(json.dumps({"version": "0.1.0"}), encoding="utf-8")
 
     with pytest.raises(ContentPackError, match="FY2027, không phải FY2028"):
         install_runtime_content_pack(

@@ -92,7 +92,7 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-_UPDATE_RESERVED_NAMES = {"manifest.json", "manifest.sig"}
+_UPDATE_RESERVED_NAMES = {"manifest.json"}
 _UPDATE_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 _SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 
@@ -154,27 +154,27 @@ def _application_inventory(app_dist: str | os.PathLike[str]) -> list[dict[str, o
     return inventory
 
 
-def build_signed_update(
+def build_hash_checked_update(
     app_dist: str | os.PathLike[str],
     output_path: str | os.PathLike[str],
     *,
-    private_key_path: str | os.PathLike[str],
-    key_id: str,
     min_app_version: str,
     release_path: str | os.PathLike[str] = PROJECT_ROOT / "release.json",
     database_schema: int | None = None,
 ) -> Path:
-    """Build a reproducible signed update from an already validated onedir app."""
+    """Build a reproducible hash-checked update from an already validated onedir app.
+
+    Application packages are intentionally unsigned. The controlled company
+    update folder is the trust boundary; catalog and manifest SHA-256 values
+    detect incomplete or corrupted files before activation.
+    """
     from src.db.migrations import CURRENT_SCHEMA_VERSION
     from src.services.update_security import (
         MAX_ARTIFACT_BYTES,
         MAX_MANIFEST_BYTES,
         canonical_json_bytes,
-        sign_payload,
     )
 
-    if not re.fullmatch(r"[A-Za-z0-9._-]+", str(key_id)):
-        raise ValueError("key_id chỉ được chứa chữ, số, dấu chấm, gạch dưới hoặc gạch ngang.")
     release = json.loads(Path(release_path).read_text(encoding="utf-8-sig"))
     version = str(release.get("version", ""))
     if not _SEMVER.fullmatch(version) or not _SEMVER.fullmatch(str(min_app_version)):
@@ -199,21 +199,18 @@ def build_signed_update(
         "id": "MP2027_Manager",
         "version": version,
         "min_app_version": str(min_app_version),
-        "key_id": str(key_id),
         "database_schema": schema,
         "health_check": "--health-check",
         "entrypoint": entrypoint,
         "files": inventory,
     }
-    private_key = _read_external_private_key(private_key_path)
     manifest_bytes = canonical_json_bytes(manifest)
     if len(manifest_bytes) > MAX_MANIFEST_BYTES:
         raise ValueError(
             f"Tệp kê khai cập nhật có kích thước {len(manifest_bytes):,} byte, vượt giới hạn "
             f"{MAX_MANIFEST_BYTES:,} byte. Hãy giảm số lượng tệp hoặc tăng giới hạn dùng chung trước khi phát hành."
         )
-    signature_bytes = sign_payload(manifest, private_key).encode("ascii")
-    extracted_size = sum(int(entry["size"]) for entry in inventory) + len(manifest_bytes) + len(signature_bytes)
+    extracted_size = sum(int(entry["size"]) for entry in inventory) + len(manifest_bytes)
     if extracted_size > MAX_ARTIFACT_BYTES:
         raise ValueError(
             f"Bản cập nhật có tổng kích thước giải nén {extracted_size:,} byte, vượt giới hạn "
@@ -226,7 +223,6 @@ def build_signed_update(
     try:
         with zipfile.ZipFile(temporary, "w", allowZip64=True) as archive:
             archive.writestr(_update_zip_info("manifest.json"), manifest_bytes)
-            archive.writestr(_update_zip_info("manifest.sig"), signature_bytes)
             for entry in inventory:
                 relative = str(entry["path"])
                 source = root / Path(relative)
@@ -362,10 +358,8 @@ def package() -> None:
 
 
 def _parse_args(argv=None):
-    parser = VietnameseArgumentParser(description="Đóng gói MP2027 Manager hoặc tạo bản cập nhật đã ký.")
+    parser = VietnameseArgumentParser(description="Đóng gói MP2027 Manager hoặc tạo bản cập nhật kiểm tra hash.")
     parser.add_argument("--build-update", action="store_true", help="Tạo .mpupdate từ dist onedir hiện có.")
-    parser.add_argument("--private-key-file", help="Tệp khóa Ed25519 riêng nằm ngoài repo.")
-    parser.add_argument("--key-id", help="Mã khóa công khai mà bản phát hành sử dụng.")
     parser.add_argument("--min-app-version", help="Phiên bản cũ nhất được phép cập nhật.")
     parser.add_argument("--update-output", help="Đường dẫn .mpupdate đầu ra.")
     parser.add_argument("--publish-dir", help="Thư mục LAN/web-root nhận package và latest.json.")
@@ -378,27 +372,18 @@ def main(argv=None) -> int:
     if not args.build_update:
         package()
         return 0
-    missing = [
-        name for name, value in (
-            ("--private-key-file", args.private_key_file),
-            ("--key-id", args.key_id),
-            ("--min-app-version", args.min_app_version),
-        ) if not value
-    ]
-    if missing:
-        raise SystemExit("Thiếu tham số tạo update: " + ", ".join(missing))
+    if not args.min_app_version:
+        raise SystemExit("Thiếu tham số tạo update: --min-app-version")
     release = json.loads((PROJECT_ROOT / "release.json").read_text(encoding="utf-8-sig"))
     output = Path(args.update_output) if args.update_output else (
         PROJECT_ROOT / "release_artifacts" / f"MP2027_Manager-{release['version']}.mpupdate"
     )
-    artifact = build_signed_update(
+    artifact = build_hash_checked_update(
         DIST_ROOT,
         output,
-        private_key_path=args.private_key_file,
-        key_id=args.key_id,
         min_app_version=args.min_app_version,
     )
-    print(f"Đã tạo bản cập nhật đã ký: {artifact}")
+    print(f"Đã tạo bản cập nhật kiểm tra hash: {artifact}")
     if args.publish_dir:
         published, catalog = publish_update(
             artifact,

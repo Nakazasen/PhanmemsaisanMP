@@ -211,5 +211,8 @@ def run_health_checks(runtime_root: str | os.PathLike[str]) -> dict:
 
 def print_health_report(runtime_root: str | os.PathLike[str]) -> int:
     report = run_health_checks(runtime_root)
-    print(json.dumps(report, ensure_ascii=False, indent=2))
+    # Health-check also runs from a packaged executable started by older
+    # Japanese Windows consoles (for example CP932). ASCII JSON is portable to
+    # every console code page while remaining machine-readable.
+    print(json.dumps(report, ensure_ascii=True, indent=2))
     return 0 if report["status"] == "ok" else 2

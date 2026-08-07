@@ -1,4 +1,10 @@
-"""Stage, health-check, activate, and roll back signed onedir releases."""
+"""Stage, health-check, activate, and roll back hash-checked onedir releases.
+
+Application updates intentionally use the controlled company update folder as
+their trust boundary.  A package has no private-key signature: its catalog and
+every extracted file are checked with SHA-256, then the staged application must
+pass its health check before activation.
+"""
 
 from __future__ import annotations
 
@@ -17,12 +23,10 @@ from src.services.update_security import (
     MAX_MANIFEST_BYTES,
     canonical_json_bytes,
     release_metadata_path,
-    resolve_trusted_signing_key,
     safe_extract_zip,
     sha256_file,
     validate_manifest,
     verify_manifest_files,
-    verify_payload,
 )
 
 _SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
@@ -78,13 +82,10 @@ def validate_application_manifest(
     current_database_schema: int,
 ) -> None:
     validate_manifest(manifest, artifact_kind="application")
-    required = {"database_schema", "health_check", "entrypoint", "key_id"}
+    required = {"database_schema", "health_check", "entrypoint"}
     missing = sorted(required - set(manifest))
     if missing:
         raise ApplicationUpdateError("Tệp kê khai ứng dụng thiếu các trường: " + ", ".join(missing))
-    key_id = manifest["key_id"]
-    if not isinstance(key_id, str) or not re.fullmatch(r"[A-Za-z0-9._-]+", key_id):
-        raise ApplicationUpdateError("Tệp kê khai ứng dụng có mã khóa key_id không hợp lệ")
     target = _version(manifest["version"])
     current = _version(current_app_version)
     minimum = _version(manifest["min_app_version"])
@@ -105,22 +106,19 @@ def validate_application_manifest(
 def inspect_update_package(
     update_path: str | os.PathLike[str],
     *,
-    public_key_b64: str,
     current_app_version: str,
     current_database_schema: int,
 ) -> dict[str, Any]:
     try:
         with zipfile.ZipFile(update_path) as archive:
             manifest = json.loads(_read_member(archive, "manifest.json", MAX_MANIFEST_BYTES).decode("utf-8-sig"))
-            signature = _read_member(archive, "manifest.sig", 1024).decode("ascii")
             validate_application_manifest(
                 manifest,
                 current_app_version=current_app_version,
                 current_database_schema=current_database_schema,
             )
-            verify_payload(manifest, signature, public_key_b64)
             names = {info.filename.replace("\\", "/") for info in archive.infolist() if not info.is_dir()}
-            expected = {"manifest.json", "manifest.sig", *(item["path"].replace("\\", "/") for item in manifest["files"])}
+            expected = {"manifest.json", *(item["path"].replace("\\", "/") for item in manifest["files"])}
             if names != expected:
                 raise ApplicationUpdateError("Bản cập nhật có tệp bị thiếu hoặc không có trong kê khai")
     except ApplicationUpdateError:
@@ -136,13 +134,11 @@ def stage_application_update(
     update_path: str | os.PathLike[str],
     app_root: str | os.PathLike[str],
     *,
-    public_key_b64: str,
     current_app_version: str,
     current_database_schema: int,
 ) -> Path:
     manifest = inspect_update_package(
         update_path,
-        public_key_b64=public_key_b64,
         current_app_version=current_app_version,
         current_database_schema=current_database_schema,
     )
@@ -162,27 +158,6 @@ def stage_application_update(
         shutil.rmtree(staging, ignore_errors=True)
         raise
     return destination
-
-
-def _read_update_identity(update_path: str | os.PathLike[str]) -> tuple[str, str]:
-    try:
-        with zipfile.ZipFile(update_path) as archive:
-            manifest = json.loads(
-                _read_member(archive, "manifest.json", 512 * 1024).decode("utf-8-sig")
-            )
-    except ApplicationUpdateError:
-        raise
-    except (OSError, zipfile.BadZipFile, UnicodeError, json.JSONDecodeError) as exc:
-        raise ApplicationUpdateError("Bản cập nhật ứng dụng không hợp lệ hoặc đã bị hỏng") from exc
-    if not isinstance(manifest, dict):
-        raise ApplicationUpdateError("Tệp kê khai bản cập nhật ứng dụng phải là một đối tượng dữ liệu")
-    key_id = manifest.get("key_id")
-    version = manifest.get("version")
-    if not isinstance(key_id, str) or not re.fullmatch(r"[A-Za-z0-9._-]+", key_id):
-        raise ApplicationUpdateError("Tệp kê khai ứng dụng có mã khóa key_id không hợp lệ")
-    if not isinstance(version, str):
-        raise ApplicationUpdateError("Tệp kê khai ứng dụng có phiên bản không hợp lệ")
-    return key_id, version
 
 
 def run_staged_health(
@@ -266,7 +241,6 @@ def activate_staged_update(
     app_root: str | os.PathLike[str],
     version: str,
     *,
-    public_key_b64: str,
     health_data_root: str | os.PathLike[str],
     runtime_root: str | os.PathLike[str] | None = None,
     health_runner: Callable[..., Any] = subprocess.run,
@@ -274,14 +248,12 @@ def activate_staged_update(
     root = Path(app_root).resolve()
     version_dir = root / "apps" / version
     manifest_path = version_dir / "manifest.json"
-    signature_path = version_dir / "manifest.sig"
-    if not manifest_path.is_file() or not signature_path.is_file():
+    if not manifest_path.is_file():
         raise ApplicationUpdateError(f"Phiên bản đang chuẩn bị chưa đầy đủ: {version}")
     manifest = _read_json(manifest_path)
     if manifest.get("version") != version or manifest.get("kind") != "application":
         raise ApplicationUpdateError("Thông tin nhận dạng trong tệp kê khai không khớp với thư mục phiên bản")
     try:
-        verify_payload(manifest, signature_path.read_text(encoding="ascii"), public_key_b64)
         verify_manifest_files(manifest, version_dir)
     except ArtifactVerificationError as exc:
         raise ApplicationUpdateError(str(exc)) from exc
@@ -330,20 +302,18 @@ def install_runtime_application_update(
     health_data_root: str | os.PathLike[str] | None = None,
     health_runner: Callable[..., Any] = subprocess.run,
 ) -> dict[str, Any]:
-    """Verify, stage, health-check, back up, and activate an offline update."""
+    """Verify hashes, stage, health-check, back up, and activate an offline update."""
     try:
-        key_id, version = _read_update_identity(update_path)
         metadata_path = (
             Path(release_metadata_path_override).resolve()
             if release_metadata_path_override
             else release_metadata_path()
         )
         metadata = json.loads(metadata_path.read_text(encoding="utf-8-sig"))
-        current_version, public_key = resolve_trusted_signing_key(
-            metadata,
-            key_id,
-            purpose="application",
-        )
+        if not isinstance(metadata, dict):
+            raise ApplicationUpdateError("Thông tin phát hành của ứng dụng không hợp lệ")
+        current_version = str(metadata.get("version", ""))
+        _version(current_version)
     except ApplicationUpdateError:
         raise
     except (ArtifactVerificationError, OSError, json.JSONDecodeError) as exc:
@@ -355,14 +325,12 @@ def install_runtime_application_update(
         staged = stage_application_update(
             update_path,
             root,
-            public_key_b64=public_key,
             current_app_version=current_version,
             current_database_schema=current_database_schema,
         )
         return activate_staged_update(
             root,
-            version,
-            public_key_b64=public_key,
+            staged.name,
             health_data_root=health_data_root or (root / ".health"),
             runtime_root=runtime_root,
             health_runner=health_runner,

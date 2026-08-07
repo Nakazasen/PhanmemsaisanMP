@@ -15,13 +15,11 @@ from typing import Any
 from src.services.update_security import (
     ArtifactVerificationError,
     canonical_json_bytes,
-    release_metadata_path,
-    resolve_trusted_signing_key,
+    release_metadata_path as bundled_release_metadata_path,
     safe_extract_zip,
     sha256_file,
     validate_manifest,
     verify_manifest_files,
-    verify_payload,
 )
 
 CONTENT_SCHEMA = 1
@@ -130,7 +128,6 @@ def _read_zip_member(archive: zipfile.ZipFile, name: str, *, max_bytes: int) -> 
 def inspect_content_pack(
     pack_path: str | os.PathLike[str],
     *,
-    public_key_b64: str,
     current_app_version: str,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     path = Path(pack_path)
@@ -138,22 +135,17 @@ def inspect_content_pack(
         with zipfile.ZipFile(path) as archive:
             names = {info.filename for info in archive.infolist() if not info.is_dir()}
             manifest_bytes = _read_zip_member(archive, "manifest.json", max_bytes=512 * 1024)
-            signature = _read_zip_member(archive, "manifest.sig", max_bytes=1024).decode("ascii")
             manifest = json.loads(manifest_bytes.decode("utf-8-sig"))
             validate_manifest(manifest, artifact_kind="content")
-            key_id = manifest.get("key_id")
-            if not isinstance(key_id, str) or not re.fullmatch(r"[A-Za-z0-9._-]+", key_id):
-                raise ContentPackError("Gói quy tắc thiếu hoặc có mã khóa key_id không hợp lệ")
             if manifest.get("content_schema") != CONTENT_SCHEMA:
                 raise ContentPackError("Không hỗ trợ phiên bản cấu trúc gói quy tắc này")
             if not isinstance(manifest.get("fiscal_year"), int) or manifest["fiscal_year"] < 2027:
                 raise ContentPackError("Năm tài chính của gói quy tắc không hợp lệ")
             if _version(current_app_version) < _version(manifest["min_app_version"]):
                 raise ContentPackError("Gói quy tắc yêu cầu phiên bản ứng dụng mới hơn")
-            expected = {"manifest.json", "manifest.sig", *(item["path"] for item in manifest["files"])}
+            expected = {"manifest.json", *(item["path"] for item in manifest["files"])}
             if names != expected:
                 raise ContentPackError("Gói quy tắc có tệp bị thiếu hoặc không có trong kê khai")
-            verify_payload(manifest, signature, public_key_b64)
             rules_bytes = _read_zip_member(archive, "rules.json", max_bytes=8 * 1024 * 1024)
             rules_payload = json.loads(rules_bytes.decode("utf-8-sig"))
             validate_rules(rules_payload)
@@ -170,13 +162,11 @@ def install_content_pack(
     pack_path: str | os.PathLike[str],
     content_root: str | os.PathLike[str],
     *,
-    public_key_b64: str,
     current_app_version: str,
     activate: bool = False,
 ) -> Path:
     manifest, _rules = inspect_content_pack(
         pack_path,
-        public_key_b64=public_key_b64,
         current_app_version=current_app_version,
     )
     root = Path(content_root).resolve()
@@ -221,17 +211,6 @@ def activate_content_pack(content_root: str | os.PathLike[str], pack_id: str, ve
     return pack_dir
 
 
-def _release_metadata_path() -> Path:
-    return release_metadata_path()
-
-
-def _trusted_content_public_key(metadata: Any, key_id: str) -> tuple[str, str]:
-    try:
-        return resolve_trusted_signing_key(metadata, key_id, purpose="content")
-    except ArtifactVerificationError as exc:
-        raise ContentPackError(str(exc)) from exc
-
-
 def install_runtime_content_pack(
     pack_path: str | os.PathLike[str],
     runtime_root: str | os.PathLike[str],
@@ -239,21 +218,14 @@ def install_runtime_content_pack(
     fiscal_year: int,
     release_metadata_path: str | os.PathLike[str] | None = None,
 ) -> Path:
-    """Install and activate a signed pack using immutable application trust."""
+    """Install and activate a hash-checked pack from the controlled source."""
     try:
-        with zipfile.ZipFile(pack_path) as archive:
-            manifest = json.loads(
-                _read_zip_member(archive, "manifest.json", max_bytes=512 * 1024).decode("utf-8-sig")
-            )
-        key_id = manifest.get("key_id") if isinstance(manifest, dict) else None
-        if not isinstance(key_id, str) or not re.fullmatch(r"[A-Za-z0-9._-]+", key_id):
-            raise ContentPackError("Gói quy tắc thiếu hoặc có mã khóa key_id không hợp lệ")
-        metadata_path = Path(release_metadata_path).resolve() if release_metadata_path else _release_metadata_path()
+        metadata_path = Path(release_metadata_path).resolve() if release_metadata_path else bundled_release_metadata_path()
         metadata = json.loads(metadata_path.read_text(encoding="utf-8-sig"))
-        app_version, public_key = _trusted_content_public_key(metadata, key_id)
+        app_version = str(metadata.get("version", "")) if isinstance(metadata, dict) else ""
+        _version(app_version)
         verified_manifest, _rules = inspect_content_pack(
             pack_path,
-            public_key_b64=public_key,
             current_app_version=app_version,
         )
         if verified_manifest.get("fiscal_year") != fiscal_year:
@@ -263,11 +235,10 @@ def install_runtime_content_pack(
     except ContentPackError:
         raise
     except (OSError, UnicodeError, json.JSONDecodeError, zipfile.BadZipFile) as exc:
-        raise ContentPackError("Không xác định được khóa tin cậy cho gói quy tắc") from exc
+        raise ContentPackError("Không xác định được phiên bản ứng dụng cho gói quy tắc") from exc
     return install_content_pack(
         pack_path,
         Path(runtime_root).resolve() / "content-packs",
-        public_key_b64=public_key,
         current_app_version=app_version,
         activate=True,
     )
@@ -281,9 +252,9 @@ def load_runtime_content_rules(
 ) -> list[dict[str, Any]]:
     """Resolve and verify active content rules for one fiscal run.
 
-    A normal installation without an active pack returns immediately and does
-    not require a configured signing key. If an active pointer exists, trust or
-    verification failures are fatal before allocation rules are changed.
+    A normal installation without an active pack returns immediately. If an
+    active pointer exists, hash or compatibility failures are fatal before
+    allocation rules are changed.
     """
     content_root = Path(runtime_root).resolve() / "content-packs"
     active_path = content_root / "active.json"
@@ -300,19 +271,16 @@ def load_runtime_content_rules(
         _version(pack_version)
         manifest_path = content_root / "installed" / pack_id / pack_version / "manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
-        key_id = manifest.get("key_id") if isinstance(manifest, dict) else None
-        if not isinstance(key_id, str) or not re.fullmatch(r"[A-Za-z0-9._-]+", key_id):
-            raise ContentPackError("Gói quy tắc thiếu hoặc có mã khóa key_id không hợp lệ")
-        metadata_path = Path(release_metadata_path).resolve() if release_metadata_path else _release_metadata_path()
+        metadata_path = Path(release_metadata_path).resolve() if release_metadata_path else bundled_release_metadata_path()
         metadata = json.loads(metadata_path.read_text(encoding="utf-8-sig"))
-        app_version, public_key = _trusted_content_public_key(metadata, key_id)
+        app_version = str(metadata.get("version", "")) if isinstance(metadata, dict) else ""
+        _version(app_version)
     except ContentPackError:
         raise
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise ContentPackError("Không xác định được khóa tin cậy cho gói quy tắc đang dùng") from exc
+        raise ContentPackError("Không xác định được phiên bản ứng dụng cho gói quy tắc đang dùng") from exc
     return load_active_content_rules(
         content_root,
-        public_key_b64=public_key,
         current_app_version=app_version,
         fiscal_year=fiscal_year,
     )
@@ -321,7 +289,6 @@ def load_runtime_content_rules(
 def load_active_content_rules(
     content_root: str | os.PathLike[str],
     *,
-    public_key_b64: str,
     current_app_version: str,
     fiscal_year: int,
 ) -> list[dict[str, Any]]:
@@ -342,16 +309,12 @@ def load_active_content_rules(
     _version(str(version))
     pack_dir = root / "installed" / pack_id / str(version)
     manifest_path = pack_dir / "manifest.json"
-    signature_path = pack_dir / "manifest.sig"
     rules_path = pack_dir / "rules.json"
     try:
         if not manifest_path.is_file() or sha256_file(manifest_path) != state.get("manifest_sha256"):
             raise ContentPackError("Tệp kê khai của gói quy tắc đang dùng bị thiếu hoặc đã thay đổi")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
         validate_manifest(manifest, artifact_kind="content")
-        key_id = manifest.get("key_id")
-        if not isinstance(key_id, str) or not re.fullmatch(r"[A-Za-z0-9._-]+", key_id):
-            raise ContentPackError("Gói quy tắc thiếu hoặc có mã khóa key_id không hợp lệ")
         if manifest.get("id") != pack_id or manifest.get("version") != version:
             raise ContentPackError("Thông tin kích hoạt không khớp với tệp kê khai của gói đã cài")
         if manifest.get("content_schema") != CONTENT_SCHEMA:
@@ -362,9 +325,6 @@ def load_active_content_rules(
             )
         if _version(current_app_version) < _version(manifest["min_app_version"]):
             raise ContentPackError("Gói quy tắc yêu cầu phiên bản ứng dụng mới hơn")
-        if not signature_path.is_file():
-            raise ContentPackError("Thiếu chữ ký của gói quy tắc đang dùng")
-        verify_payload(manifest, signature_path.read_text(encoding="ascii"), public_key_b64)
         verify_manifest_files(manifest, pack_dir)
         if {item["path"] for item in manifest["files"]} != {"rules.json"}:
             raise ContentPackError("Gói quy tắc đang dùng chứa tệp không được hỗ trợ")
@@ -374,7 +334,7 @@ def load_active_content_rules(
                 raise ContentPackError("Gói quy tắc đang dùng chứa liên kết tượng trưng")
             if installed_path.is_file():
                 actual_files.add(installed_path.relative_to(pack_dir).as_posix())
-        expected_files = {"manifest.json", "manifest.sig", "rules.json"}
+        expected_files = {"manifest.json", "rules.json"}
         if actual_files != expected_files:
             raise ContentPackError("Gói quy tắc đang dùng có tệp bị thiếu hoặc không có trong kê khai")
         rules_payload = json.loads(rules_path.read_text(encoding="utf-8-sig"))
