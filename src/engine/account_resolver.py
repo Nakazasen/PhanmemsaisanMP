@@ -1,4 +1,10 @@
-"""Bộ phân giải dùng chung từ trung tâm chi phí, loại chi phí đến cột tài khoản."""
+"""Bộ phân giải mã tài khoản kế toán (Account Code Resolver).
+
+Module này chịu trách nhiệm ánh xạ (map) từ các nguồn dữ liệu đầu vào (Source), 
+Trung tâm chi phí (Cost Center - CC), và Loại chi phí (Cost Type: 製造 - Sản xuất, 
+一般 - Quản lý chung, 販売 - Bán hàng) sang Mã tài khoản kế toán chính xác (Account Code) 
+trong danh mục tài khoản (dim_accounts).
+"""
 
 from __future__ import annotations
 
@@ -26,6 +32,17 @@ ACCOUNT_STRATEGY_NOT_APPLICABLE = "not_applicable"
 
 @dataclass(frozen=True)
 class SourceAccountPolicy:
+    """Chính sách ánh xạ tài khoản kế toán theo từng loại nguồn dữ liệu.
+
+    Attributes:
+        strategy: Chiến lược xác định mã tài khoản cơ sở.
+        cc_only: True nếu mã tài khoản phụ thuộc hoàn toàn vào Cost Center.
+        notes: Ghi chú mô tả quy tắc ánh xạ.
+        fixed_form_row: Dòng cố định trên mẫu Excel FORM.xlsx (nếu có).
+        fixed_base_account_code: Mã tài khoản cơ sở cố định (nếu có).
+        base_account_by_form_row: Ánh xạ từ chỉ số dòng FORM sang mã tài khoản.
+        base_account_by_description: Ánh xạ từ từ khóa mô tả sang mã tài khoản.
+    """
     strategy: str
     cc_only: bool = True
     notes: str = ""

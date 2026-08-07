@@ -1,7 +1,8 @@
-"""Bộ máy phân bổ chi phí.
+"""Bộ máy phân bổ chi phí (Cost Allocation Engine).
 
-Chuyển các dòng chi phí trực tiếp sang mã tài khoản và tạo dòng phân bổ
-từ bảng quy tắc phân bổ.
+Module này chịu trách nhiệm tính toán và phân bổ các khoản chi phí dùng chung (quần áo bảo hộ,
+khám sức khỏe, sinh nhật, xe bus, chi phí quản lý hành chính,...) dựa trên số lượng nhân sự
+(Headcount), thời gian làm việc và các bảng quy tắc phân bổ (Allocation Rules).
 """
 
 import re

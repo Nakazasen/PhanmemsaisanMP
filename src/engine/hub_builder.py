@@ -132,6 +132,12 @@ class ExportIntegrityError(RuntimeError):
 
 
 class HubBuilder:
+    """Trình xây dựng Hub và xuất báo cáo Excel cho dự án MP.
+
+    Lớp này chịu trách nhiệm tổng hợp dữ liệu chi phí từ SQLite (fact_input_data),
+    xây dựng các khối công thức/dữ liệu và xuất ra file Excel HUB dựa trên mẫu FORM.xlsx.
+    """
+
     def __init__(self, conn: sqlite3.Connection, fiscal_year: int = 2027, source_file_by_category: dict[str, str] | None = None):
         self.conn = conn
         self.fiscal_year = fiscal_year

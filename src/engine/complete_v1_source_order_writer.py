@@ -664,7 +664,21 @@ def apply_complete_v1_source_order_to_workbook(
     source_file_order: Iterable[str] | None = None,
     fiscal_year: int | None = None,
 ) -> dict[str, int]:
-    """Rewrite complete-v1 business rows into canonical source-file blocks."""
+    """Ghi lại các dòng nghiệp vụ hoàn chỉnh (Complete-v1) theo từng khối tệp nguồn.
+
+    Hàm thực hiện dọn dẹp các dòng dữ liệu cũ, gom nhóm theo từng tệp nguồn đầu vào,
+    xắp xếp lại thứ tự dòng và bảo vệ các dòng QLNN (Quản lý Nhà nước từ dòng 30-37).
+
+    Args:
+        workbook_path: Đường dẫn tới file Excel HUB/FORM.
+        start_row: Dòng bắt đầu ghi dữ liệu nghiệp vụ (mặc định: 38).
+        clear_until_row: Dòng tối đa cần xóa dữ liệu cũ.
+        source_file_order: Danh sách thứ tự tệp nguồn tùy chỉnh.
+        fiscal_year: Năm tài chính (FY).
+
+    Returns:
+        dict chứa thống kê số lượng khối nguồn và số dòng đã ghi.
+    """
     workbook_file = Path(workbook_path)
     wb = load_workbook(workbook_file)
     try:
