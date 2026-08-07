@@ -1,3 +1,11 @@
+"""Build, smoke-test, and publish MP2027 Manager Windows artifacts.
+
+The normal path builds the onedir application and launcher, assembles the
+versioned install bundle, and runs health checks.  ``--build-update`` creates a
+hash-checked ``.mpupdate`` package and publishes its catalog atomically to the
+configured LAN folder; it intentionally does not require signing credentials.
+"""
+
 import argparse
 import json
 import os

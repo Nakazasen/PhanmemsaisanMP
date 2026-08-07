@@ -1,3 +1,5 @@
+"""Convert the source application icon into the Windows packaging format."""
+
 import argparse
 from pathlib import Path
 import sys
