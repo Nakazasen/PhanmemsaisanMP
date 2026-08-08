@@ -125,6 +125,40 @@ py scripts/run_e2e.py --target-cc 1412000040
 
 CLI E2E là developer smoke/integration path. Nó có thể cần `docs/MP2027/FORM.xlsx` và source workbook thật; nếu thiếu, chương trình phải báo lỗi rõ thay vì tạo dữ liệu giả.
 
+### Kiểm chứng output sau refactor
+
+Khi cần chứng minh refactor không làm thay đổi output, chạy cùng một input snapshot
+ở commit baseline và code hiện tại. Lệnh dưới đây tự tạo Git worktree cho baseline,
+sao chép SQLite sang hai workspace riêng, chạy pipeline tách biệt, rồi so sánh từng
+`MP_CC_<mã>.xlsx`:
+
+```powershell
+py tools/verify_refactor_output.py --run-pipelines `
+  --baseline-ref ca2bc52 `
+  --fy 2027 `
+  --template D:/evidence/input/FORM.xlsx `
+  --source D:/evidence/input/source `
+  --headcount-source D:/evidence/input/headcount `
+  --operational-db D:/evidence/input/mp2027.db `
+  --manual-input-store D:/evidence/input/manual_inputs.db `
+  --report-dir D:/evidence/refactor-check
+```
+
+Kết quả terminal báo từng CC với số dòng payload từ dòng 38 và kiểm tra tuyệt đối
+vùng `B31:T36`, bao gồm công thức và ô trống. `PASS` chỉ khi cả hai điều kiện đều
+khớp. Evidence được ghi ở `refactor_output_verification.json` và
+`refactor_output_verification.xlsx` trong `--report-dir`; log hai lần pipeline cũng
+được giữ tại đó. Lệnh không ghi vào database, output hay lịch sử run vận hành.
+
+Nếu đã có sẵn hai thư mục output, chỉ cần so sánh mà không chạy pipeline:
+
+```powershell
+py tools/verify_refactor_output.py `
+  --baseline-output D:/evidence/baseline-output `
+  --candidate-output D:/evidence/refactor-output `
+  --report-dir D:/evidence/refactor-check
+```
+
 ## Cách test
 
 ```powershell

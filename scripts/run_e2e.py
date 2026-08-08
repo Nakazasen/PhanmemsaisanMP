@@ -194,6 +194,8 @@ def _friendly_pipeline_error_message(error) -> str:
         "mẫu",
     )
 
+    if "kiểm tra điều kiện chạy fy" in lower_text or "[headcount/" in lower_text:
+        return text
     if "unable to locate system cost row" in lower_text or "không tìm thấy dòng system cost" in lower_text:
         return (
             "Không tìm thấy dòng System Cost trong tệp FORM. "
@@ -658,7 +660,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            preserve_run_history: bool = True,
                            accepted_missing_categories: tuple[str, ...] = (),
                            project_config_path: str | None = None,
-                           mp_saisan_complete_v1: bool = True):
+                            defer_publication: bool = False,
+                            mp_saisan_complete_v1: bool = True):
     """
     Runs the pipeline and exports results to OUTPUT_FY[Year] folder.
     - target_cc: if None, exports every CC represented by generated facts.
@@ -821,7 +824,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     RUN_STATUS_PRECHECK_FAILED,
                     error_summary=preflight_error,
                 )
-            preflight.raise_if_invalid()
+            raise ValueError(preflight_error)
         if incomplete_run:
             log_callback("CẢNH BÁO — KẾT QUẢ CHƯA ĐẦY ĐỦ. Phạm vi nguồn bị bỏ qua:")
             for issue in skipped_source_issues:
@@ -1168,14 +1171,15 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             )
             complete_v1_fiscal_periods = get_fy_months(fiscal_year) if mp_saisan_complete_v1 else []
             output_workbook_exists = os.path.exists(out_path)
-            if facility_file_order_export and facility_source_path and output_workbook_exists and (explicit_facility_file_order_export or template_is_excel):
-                apply_facility_file_order_to_workbook(
-                    workbook_path=out_path,
-                    facility_source_path=facility_source_path,
-                    cost_center=target_cc,
-                    start_row=facility_file_order_start_row,
-                )
-                log_callback(f"Đã áp dụng xuất Cơ sở vật chất theo thứ tự tệp: {out_path}")
+            if facility_file_order_export:
+                if facility_source_path and output_workbook_exists and (explicit_facility_file_order_export or template_is_excel):
+                    apply_facility_file_order_to_workbook(
+                        workbook_path=out_path,
+                        facility_source_path=facility_source_path,
+                        cost_center=target_cc,
+                        start_row=facility_file_order_start_row,
+                    )
+                    log_callback(f"Đã áp dụng xuất Cơ sở vật chất theo thứ tự tệp: {out_path}")
             if admin_consumables_export and admin_source_path and allocation_source_path and output_workbook_exists and (explicit_admin_consumables_export or template_is_excel):
                 apply_admin_consumables_to_workbook(
                     workbook_path=out_path,
@@ -1454,31 +1458,52 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
 
         published_output = output_dir
         if run_context is not None and run_context.workspace_dir:
-            publication_mode = "merge" if target_cc is not None else "replace"
-            published_output = publish_run_output(
-                run_context,
-                output_dir,
-                mode=publication_mode,
-                target_cc=target_cc,
-            )
-            if stage_evidence is not None:
-                stage_evidence.complete(
-                    details={"mode": publication_mode, "output_path": str(published_output)}
+            if defer_publication:
+                if stage_evidence is not None:
+                    stage_evidence.complete(
+                        details={"mode": "deferred", "output_path": str(published_output)}
+                    )
+                    stage_evidence.finalize(
+                        RUN_STATUS_SUCCEEDED_INCOMPLETE if incomplete_run else RUN_STATUS_SUCCEEDED
+                    )
+                register_run(
+                    run_context,
+                    RUN_STATUS_SUCCEEDED_INCOMPLETE if incomplete_run else RUN_STATUS_SUCCEEDED,
+                    target_cc=target_cc,
+                    output_path=published_output,
+                    error_summary=(
+                        "KẾT QUẢ CHƯA ĐẦY ĐỦ — category nguồn bị bỏ qua: "
+                        + ", ".join(skipped_categories)
+                        if incomplete_run else None
+                    ),
                 )
-                stage_evidence.finalize(
-                    RUN_STATUS_SUCCEEDED_INCOMPLETE if incomplete_run else RUN_STATUS_SUCCEEDED
+            else:
+                publication_mode = "merge" if target_cc is not None else "replace"
+                published_output = publish_run_output(
+                    run_context,
+                    output_dir,
+                    mode=publication_mode,
+                    target_cc=target_cc,
                 )
-            register_run(
-                run_context,
-                RUN_STATUS_SUCCEEDED_INCOMPLETE if incomplete_run else RUN_STATUS_SUCCEEDED,
-                target_cc=target_cc,
-                output_path=published_output,
-                error_summary=(
-                    "KẾT QUẢ CHƯA ĐẦY ĐỦ — category nguồn bị bỏ qua: "
-                    + ", ".join(skipped_categories)
-                    if incomplete_run else None
-                ),
-            )
+                if stage_evidence is not None:
+                    stage_evidence.complete(
+                        details={"mode": publication_mode, "output_path": str(published_output)}
+                    )
+                    stage_evidence.finalize(
+                        RUN_STATUS_SUCCEEDED_INCOMPLETE if incomplete_run else RUN_STATUS_SUCCEEDED
+                    )
+                register_run(
+                    run_context,
+                    RUN_STATUS_SUCCEEDED_INCOMPLETE if incomplete_run else RUN_STATUS_SUCCEEDED,
+                    target_cc=target_cc,
+                    output_path=published_output,
+                    error_summary=(
+                        "KẾT QUẢ CHƯA ĐẦY ĐỦ — category nguồn bị bỏ qua: "
+                        + ", ".join(skipped_categories)
+                        if incomplete_run else None
+                    ),
+                )
+        log_callback(f"PIPELINE_OUTPUT={published_output}")
         return True, published_output
 
 
@@ -1549,6 +1574,11 @@ def main(argv=None):
     parser.add_argument('--exchange-rate', type=float, default=25450.0)
     parser.add_argument('--exchange-rate-source', type=str, default="explicit pipeline input")
     parser.add_argument('--target-cc', type=int, default=None)
+    parser.add_argument(
+        '--simulate-baseline-t3-from-t4',
+        action='store_true',
+        help='Chỉ dùng kiểm chứng trong database cách ly: tạm lấy T04 làm baseline T03, không sửa dữ liệu thật.',
+    )
     parser.add_argument(
         '--accept-missing-source',
         action='append',
@@ -1636,6 +1666,11 @@ def main(argv=None):
         action='store_true',
         help='Chạy chẩn đoán không phá hủy cho bản đóng gói/runtime và in kết quả JSON.',
     )
+    parser.add_argument(
+        '--defer-publication',
+        action='store_true',
+        help='Chỉ dùng bởi batch UI: giữ output trong run history cho đến khi toàn bộ CC hoàn tất.',
+    )
     args = parser.parse_args(argv)
     if args.health_check:
         from src.services.runtime_health import print_health_report
@@ -1681,6 +1716,8 @@ def main(argv=None):
         fixed_assets_skeleton_start_row=args.fixed_assets_skeleton_start_row,
         mp_saisan_complete_v1=True,
         project_config_path=args.project_config,
+        defer_publication=args.defer_publication,
+        simulate_baseline_t3_from_t4=args.simulate_baseline_t3_from_t4,
     )
     return 0 if success else 1
 

@@ -5,13 +5,18 @@ Cung cấp các hàm hỗ trợ đọc và chuẩn hóa sổ làm việc tài ch
 import pandas as pd
 import openpyxl
 import math
+from src.services.template_manifest import (
+    layout_hub_sheet_name,
+    layout_hub_sheet_name_for_output,
+    layout_payload_bounds,
+)
 from src.utils.fiscal_periods import fiscal_month_order, fiscal_periods
 from datetime import datetime
 from typing import Optional, Any
 from pathlib import Path
 
-# Constants for Hub Sheet Identification
-HUB_SHEET_CANDIDATES = ('内訳ﾘｽﾄ(4～3月)', '内訳リスト(4～3月)')
+# The FORM hub name is resolved only by the approved layout registry.
+HUB_SHEET_CANDIDATES: tuple[str, ...] = ()
 
 def get_month_mapping(fiscal_year: int = 2027) -> dict:
     """Returns a mapping of month Index (0-11) to Period String (YYYYMM)."""
@@ -38,12 +43,16 @@ def normalize_period(value: Any) -> Optional[str]:
     return None
 
 def find_hub_sheet_name(workbook: openpyxl.Workbook) -> str:
-    """Find the hub sheet name in FORM.xlsx dynamically."""
-    for candidate in HUB_SHEET_CANDIDATES:
-        if candidate in workbook.sheetnames: return candidate
-    for sheet_name in workbook.sheetnames:
-        if '内訳' in sheet_name and '4' in sheet_name and '3' in sheet_name: return sheet_name
-    raise ValueError('Không tìm thấy sheet chi tiết 内訳ﾘｽﾄ(4～3月) trong FORM.xlsx')
+    """Return the canonical hub sheet for a template or its derived output.
+
+    Template admission stays fail-closed in ``resolve_template_layout``. This
+    compatibility helper also supports derived workbooks, whose payload and
+    dynamic rows legitimately change dimensions and approved-cell values.
+    """
+    try:
+        return layout_hub_sheet_name(workbook)
+    except ValueError:
+        return layout_hub_sheet_name_for_output(workbook)
 
 
 FORM_TEMPLATE_INPUT_ROWS = (8, 9, 16, 17, 24, 25)
@@ -77,6 +86,7 @@ def find_form_template_hygiene_issues(
     preflight messages without dumping workbook contents.
     """
     worksheet = workbook[find_hub_sheet_name(workbook)]
+    layout_payload_start, layout_payload_columns = layout_payload_bounds(workbook)
     issue_cells: list[str] = []
 
     def record(cell: Any) -> bool:
@@ -95,17 +105,17 @@ def find_form_template_hygiene_issues(
     # In read-only mode, repeated worksheet.cell() calls can seek through the
     # worksheet XML for every coordinate. Read the bounded B:S range once and
     # inspect only the non-contiguous payload columns B, S and T in memory.
-    payload_start = FORM_TEMPLATE_PAYLOAD_START_ROW
+    payload_start = layout_payload_start
     payload_end = max(payload_start - 1, worksheet.max_row)
     payload_column_offsets = {
         column_index: column_index - 2
-        for column_index in FORM_TEMPLATE_PAYLOAD_COLUMNS
+        for column_index in layout_payload_columns
     }
     for row in worksheet.iter_rows(
         min_row=payload_start,
         max_row=payload_end,
         min_col=2,
-        max_col=max(FORM_TEMPLATE_PAYLOAD_COLUMNS),
+        max_col=max(layout_payload_columns),
         values_only=False,
     ):
         for column_index, offset in payload_column_offsets.items():

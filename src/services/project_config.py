@@ -39,6 +39,7 @@ class ProjectConfig:
         self.data.setdefault("project_name", Path(self.root_dir).name or "Master Plan")
         self.data.setdefault("operational_database", "mp2027.db")
         self.data.setdefault("fiscal_years", {})
+        self.data.setdefault("form_confirmations", {})
 
     @classmethod
     def load(cls, config_path: str) -> "ProjectConfig":
@@ -235,6 +236,19 @@ class ProjectConfig:
             output_dir=self.resolve_path(entry.get("output_dir")),
             history_root=self.resolve_path(entry.get("history_root")),
         )
+
+    def form_confirmations(self, fiscal_year: int) -> dict[str, dict[str, Any]]:
+        """Return confirmation records for one FY, keyed by FORM checksum."""
+        records = self.data.setdefault("form_confirmations", {}).setdefault(str(int(fiscal_year)), {})
+        return records if isinstance(records, dict) else {}
+
+    def confirm_form(self, fiscal_year: int, record: dict[str, Any]) -> None:
+        """Remember a user's confirmation for the exact inspected FORM file."""
+        checksum = str(record.get("checksum", "")).strip()
+        if not checksum:
+            raise ValueError("Không thể lưu xác nhận FORM khi chưa có checksum")
+        confirmations = self.form_confirmations(fiscal_year)
+        confirmations[checksum] = dict(record)
 
     def update_fiscal_paths(self, fiscal_year: int, **paths: str | None) -> None:
         year = int(fiscal_year)

@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 
 import openpyxl
 
@@ -246,14 +247,13 @@ def test_refresh_cost_centers_uses_existing_database_without_reloading_form(tmp_
 
 
 def _write_hygiene_test_form(path: Path) -> None:
-    workbook = openpyxl.Workbook()
-    worksheet = workbook.active
-    worksheet.title = "内訳ﾘｽﾄ(4～3月)"
-    worksheet["B2"] = 26273
-    worksheet["S4"] = "structural label"
-    worksheet["F8"] = "=SUM(1, 1)"
+    """Create a clean copy of an approved FORM for payload-hygiene tests."""
+    shutil.copy2(ROOT / "docs" / "MP2027" / "FORM.xlsx", path)
+    workbook = openpyxl.load_workbook(path)
+    worksheet = workbook["内訳ﾘｽﾄ(4～3月)"]
+    worksheet["B5"] = None
+    worksheet["G9"] = "=SUM(1, 1)"
     worksheet["S30"] = "=IFERROR(VLOOKUP(B30,A:H,2,0),\"\")"
-    worksheet["BC30"] = "preserve workbook dimensions"
     workbook.save(path)
     workbook.close()
 

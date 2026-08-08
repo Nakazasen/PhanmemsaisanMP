@@ -151,8 +151,12 @@ def test_batch_pipeline_runs_selected_cost_centers_in_order(tmp_path):
     app._finish_pipeline = lambda success, result: finished.append((success, result))
 
     def run_one(*args):
-        calls.append(args[-1])
-        return True, str(output_dir), None
+        target_cc = args[-1]
+        calls.append(target_cc)
+        private_output = tmp_path / f"run-{target_cc}"
+        private_output.mkdir()
+        (private_output / f"MP_CC_{target_cc}.xlsx").write_text(f"result-{target_cc}")
+        return True, str(private_output), None
 
     app._run_pipeline_process = run_one
 
@@ -186,7 +190,10 @@ def test_batch_pipeline_stops_at_first_failed_cost_center(tmp_path):
         calls.append(target_cc)
         if target_cc == "1412000036":
             return False, RuntimeError("source invalid"), None
-        return True, str(output_dir), None
+        private_output = tmp_path / f"run-{target_cc}"
+        private_output.mkdir()
+        (private_output / f"MP_CC_{target_cc}.xlsx").write_text(f"result-{target_cc}")
+        return True, str(private_output), None
 
     app._run_pipeline_process = run_one
 

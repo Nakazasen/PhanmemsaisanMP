@@ -22,6 +22,7 @@ from src.engine.account_resolver import AccountResolutionError, resolve_account_
 from src.engine.column_s_normalizer import normalize_output_description_column_s
 from src.engine.output_mode import OutputGroupSpec, get_default_output_group_specs
 from src.parsers.fixed_assets import CATEGORY_SPECS, INTEREST_ACCOUNT
+from src.services.workbook_export_service import WorkbookExportRequest, WorkbookExportService
 from src.services.headcount_source_policy import HeadcountSourceError, load_canonical_headcount
 from src.utils import excel_helpers as helpers
 from src.utils.fiscal_periods import fiscal_baseline_period
@@ -1792,6 +1793,26 @@ class HubBuilder:
         return list(grouped.values())
 
     def export_to_template(
+        self,
+        template_path: str,
+        output_path: str,
+        cc_code: Optional[object] = None,
+        sheet_name: Optional[str] = None,
+        start_row: int = APPEND_START_ROW,
+    ) -> bool:
+        """Export one CC workbook through the dedicated lifecycle coordinator."""
+        return WorkbookExportService().export(
+            self,
+            WorkbookExportRequest(
+                template_path=template_path,
+                output_path=output_path,
+                cc_code=cc_code,
+                sheet_name=sheet_name,
+                start_row=start_row,
+            ),
+        )
+
+    def _export_to_template_legacy(
         self,
         template_path: str,
         output_path: str,

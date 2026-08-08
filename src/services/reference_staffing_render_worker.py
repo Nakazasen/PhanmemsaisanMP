@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +28,14 @@ def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
         json.dump(payload, handle, ensure_ascii=False, sort_keys=True)
         handle.flush()
         os.fsync(handle.fileno())
-    os.replace(temporary, path)
+    for attempt in range(5):
+        try:
+            os.replace(temporary, path)
+            return
+        except PermissionError:
+            if attempt == 4:
+                raise
+            time.sleep(0.05 * (attempt + 1))
 
 
 def _write_status(

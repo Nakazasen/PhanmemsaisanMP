@@ -655,7 +655,9 @@ def _read_worker_status(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
     try:
-        status = json.loads(path.read_text(encoding="utf-8"))
+        with path.open("r", encoding="utf-8") as handle:
+            raw_status = handle.read()
+        status = json.loads(raw_status)
     except (OSError, json.JSONDecodeError):
         return {}
     return status if status.get("protocol_version") == _RENDER_WORKER_PROTOCOL else {}
@@ -665,10 +667,15 @@ def _preserve_worker_diagnostic(
     output_dir: Path,
     stdout_path: Path,
     stderr_path: Path,
+    response_path: Path,
     reason: str,
 ) -> None:
     sections = [f"reason: {reason}"]
-    for label, path in (("stdout", stdout_path), ("stderr", stderr_path)):
+    for label, path in (
+        ("response", response_path),
+        ("stdout", stdout_path),
+        ("stderr", stderr_path),
+    ):
         try:
             content = path.read_text(encoding="utf-8", errors="replace").strip()
         except OSError:
@@ -788,7 +795,13 @@ def _run_render_worker(
     except Exception as exc:
         if process is not None:
             _terminate_worker_tree(process)
-        _preserve_worker_diagnostic(output_dir, stdout_path, stderr_path, failure_reason or str(exc))
+        _preserve_worker_diagnostic(
+            output_dir,
+            stdout_path,
+            stderr_path,
+            response_path,
+            failure_reason or str(exc),
+        )
         raise
 
 def extract_reference_staffing_sources(
@@ -822,19 +835,27 @@ def extract_reference_staffing_sources(
             item.template_source = str(template_path)
         stage_dir = Path(tempfile.mkdtemp(prefix=".staffing_truth_stage_", dir=output_dir))
         try:
-            try:
-                _run_render_worker(
-                    results,
-                    template_path,
-                    stage_dir,
-                    output_dir,
-                    fiscal_year,
-                    progress_callback,
-                )
-            except Exception as exc:
+            render_error: Exception | None = None
+            for render_attempt in range(2):
+                try:
+                    _run_render_worker(
+                        results,
+                        template_path,
+                        stage_dir,
+                        output_dir,
+                        fiscal_year,
+                        progress_callback,
+                    )
+                    render_error = None
+                    break
+                except Exception as exc:
+                    render_error = exc
+                    if render_attempt == 0:
+                        continue
+            if render_error is not None:
                 failed_item = results[0]
                 failed_item.status = "ERROR"
-                failed_item.errors.append(str(exc))
+                failed_item.errors.append(str(render_error))
                 errors.append(failed_item)
                 if progress_callback is not None:
                     progress_callback(0, len(results), Path(failed_item.output_path).name, "error")

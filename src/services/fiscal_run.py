@@ -498,10 +498,17 @@ def create_fiscal_run_context(
     year = int(fiscal_year)
     defaults = annual_default_paths(year, base_dir)
     root = Path(base_dir) if base_dir else _base_dir()
-    resolved_headcount_dir = headcount_source_dir or defaults["headcount_source_dir"]
+    resolved_headcount_dir = headcount_source_dir or source_dir or defaults["headcount_source_dir"]
     # The FY2027 delivered data predates the annual raw/FY folder convention.
-    # Preserve that compatibility only when its annual folder has no workbooks.
-    if year == 2027 and not headcount_source_dir and not _has_headcount_workbook(Path(resolved_headcount_dir)):
+    # Preserve that compatibility only for project-root runs. An explicitly
+    # supplied source directory denotes an isolated run and must not silently
+    # consume unrelated project-wide staffing data.
+    if (
+        year == 2027
+        and not headcount_source_dir
+        and source_dir is None
+        and not _has_headcount_workbook(Path(resolved_headcount_dir))
+    ):
         resolved_headcount_dir = str(root / "raw")
     resolved_uniform = resolve_uniform_policy_path(year, uniform_policy_path, base_dir=root)
     try:
@@ -967,6 +974,22 @@ def preflight_fiscal_run(
                 impact="Workbook này không được đưa vào kết quả; các nguồn đã xác nhận vẫn được chạy.",
             ))
 
+    if not Path(context.source_dir).is_dir():
+        issues.append(SourceIssue("source_dir", context.source_dir, None, "Thư mục nguồn chi phí không tồn tại", f"Tạo hoặc chọn docs/MP{context.fiscal_year}."))
+    notify("Đang kiểm tra nguồn nhân sự và dữ liệu nhập tay...")
+    if not Path(context.headcount_source_dir).is_dir():
+        issues.append(SourceIssue("headcount", context.headcount_source_dir, None, "Thư mục nguồn nhân sự không tồn tại", f"Tạo hoặc chọn raw/FY{context.fiscal_year}."))
+    elif not _has_headcount_workbook(Path(context.headcount_source_dir)):
+        issues.append(SourceIssue("headcount", context.headcount_source_dir, None, "Không có file nguồn nhân sự/thời gian", "Bổ sung đủ nguồn nhân sự có tháng 3 mốc và 12 tháng FY."))
+    elif context.fiscal_year >= 2028 or Path(context.headcount_source_dir).resolve() == Path(context.source_dir).resolve():
+        coverage, coverage_error = _preflight_headcount_coverage(context)
+        if coverage_error:
+            issues.append(SourceIssue(
+                "headcount", context.headcount_source_dir, context.fiscal_year,
+                coverage_error,
+                "Bổ sung đủ 12 tháng nhân sự/thời gian theo đúng mẫu FY; tháng 3 mốc phải được nhập tay có truy vết nếu không có trong file.",
+                period_coverage=coverage,
+            ))
     notify("Đang kiểm tra FORM sạch và đúng cấu trúc...")
     template_error = _template_validation_error(context.template_path)
     if template_error:
@@ -978,22 +1001,6 @@ def preflight_fiscal_run(
             "Chọn FORM sạch đúng FY; không dùng FORM còn mã phòng, nhân sự hoặc chi phí cũ.",
             code="FORM_TEMPLATE_NOT_CLEAN",
         ))
-    if not Path(context.source_dir).is_dir():
-        issues.append(SourceIssue("source_dir", context.source_dir, None, "Thư mục nguồn chi phí không tồn tại", f"Tạo hoặc chọn docs/MP{context.fiscal_year}."))
-    notify("Đang kiểm tra nguồn nhân sự và dữ liệu nhập tay...")
-    if not Path(context.headcount_source_dir).is_dir():
-        issues.append(SourceIssue("headcount", context.headcount_source_dir, None, "Thư mục nguồn nhân sự không tồn tại", f"Tạo hoặc chọn raw/FY{context.fiscal_year}."))
-    elif not _has_headcount_workbook(Path(context.headcount_source_dir)):
-        issues.append(SourceIssue("headcount", context.headcount_source_dir, None, "Không có file nguồn nhân sự/thời gian", "Bổ sung đủ nguồn nhân sự có tháng 3 mốc và 12 tháng FY."))
-    elif context.fiscal_year >= 2028:
-        coverage, coverage_error = _preflight_headcount_coverage(context)
-        if coverage_error:
-            issues.append(SourceIssue(
-                "headcount", context.headcount_source_dir, context.fiscal_year,
-                coverage_error,
-                "Bổ sung đủ 12 tháng nhân sự/thời gian theo đúng mẫu FY; tháng 3 mốc phải được nhập tay có truy vết nếu không có trong file.",
-                period_coverage=coverage,
-            ))
     if context.exchange_rate <= 0 or not context.exchange_rate_source:
         issues.append(SourceIssue(
             "exchange_rate", "", None,

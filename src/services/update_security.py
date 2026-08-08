@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import sys
 import zipfile
 from pathlib import Path, PurePosixPath
@@ -105,6 +106,22 @@ def verify_manifest_files(manifest: dict[str, Any], artifact_root: str | os.Path
             raise ArtifactVerificationError(f"Giá trị băm hoặc kích thước không khớp: {relative}")
 
 
+ZIP_COPY_BUFFER_BYTES = 1024 * 1024
+
+
+class _CountingReader:
+    """Wrap a binary reader and retain the byte count copied by ``copyfileobj``."""
+
+    def __init__(self, source) -> None:
+        self._source = source
+        self.bytes_read = 0
+
+    def read(self, size: int = -1) -> bytes:
+        block = self._source.read(size)
+        self.bytes_read += len(block)
+        return block
+
+
 def safe_extract_zip(
     archive_path: str | os.PathLike[str],
     target_dir: str | os.PathLike[str],
@@ -128,9 +145,18 @@ def safe_extract_zip(
             if target not in destination.parents:
                 raise ArtifactVerificationError(f"Tệp nén ghi ra ngoài thư mục đích: {info.filename}")
             destination.parent.mkdir(parents=True, exist_ok=True)
-            with archive.open(info) as source:
-                data = source.read(MAX_ARTIFACT_BYTES + 1)
-            if len(data) != info.file_size:
-                raise ArtifactVerificationError(f"Kích thước mục trong tệp nén không khớp: {info.filename}")
-            with open(destination, "xb") as output:
-                output.write(data)
+            try:
+                with archive.open(info) as source, open(destination, "xb") as output:
+                    counted_source = _CountingReader(source)
+                    shutil.copyfileobj(
+                        counted_source,
+                        output,
+                        length=ZIP_COPY_BUFFER_BYTES,
+                    )
+                if counted_source.bytes_read != info.file_size:
+                    raise ArtifactVerificationError(
+                        f"Kích thước mục trong tệp nén không khớp: {info.filename}"
+                    )
+            except Exception:
+                destination.unlink(missing_ok=True)
+                raise

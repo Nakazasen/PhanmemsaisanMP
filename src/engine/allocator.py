@@ -9,6 +9,7 @@ import re
 import sqlite3
 import unicodedata
 
+from src.engine.allocation_phases import AllocationPhaseCoordinator
 from src.engine.account_resolver import AccountResolutionError, resolve_account_code_for_source
 from src.engine.uniform_cup_rules import (
     LONG_SLEEVE_KEYS,
@@ -1243,12 +1244,10 @@ class AllocationEngine:
         return False
 
     def run_allocation(self) -> dict:
+        """Run explicit business phases while retaining the public façade API."""
         print("Bắt đầu tính phân bổ...")
-        self._map_direct_costs()
-        self._process_allocation_rules()
-        self._process_bus_headcount_drivers()
-        self.conn.commit()
-        return {"status": "success"}
+        result = AllocationPhaseCoordinator().run(self)
+        return {"status": "success", "direct_cost_mapping": result.direct_cost_mapping}
 
     def _map_direct_costs(self) -> dict[str, int]:
         cursor = self.conn.cursor()

@@ -9,6 +9,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import tkinter as tk
@@ -132,6 +133,8 @@ from src.services.project_config import (
     remember_last_project,
 )
 from src.services.run_history import filter_runs
+from src.services.template_confirmation import confirmation_status, inspect_form
+from src.services.batch_publication import publish_selected_cc_batch
 from src.parsers.manual_event_drivers import TEMPLATE_COLUMNS, ensure_manual_event_drivers_template
 from src.parsers.manual_headcount import (
     BUS_DRIVER_COLUMNS,
@@ -3399,77 +3402,139 @@ class MPManagerApp:
             for vals in time_vars.values():
                 for var in vals.values(): var.set("")
             bus_exp.set("0"); bus_vn.set("0"); bus_note.set("")
+        load_request = {"id": 0}
+
         def load_cc(*_):
-            clear(); cc=cc_code()
-            if not cc:return
-            source_conn = None
-            manual_conn = None
-            try:
-                source_conn=get_connection(self._operational_database()); create_schema(source_conn)
-                manual_conn=get_connection(self._manual_input_store(fiscal_year)); create_schema(manual_conn)
-                fy_period_list = get_fy_months(fiscal_year)
-                period_placeholders = ",".join("?" for _ in fy_period_list)
-                source_rows=source_conn.execute(
-                    f"""SELECT * FROM fact_monthly_headcount
-                    WHERE CAST(cc_code AS TEXT)=? AND source='department_plan'
-                    AND period IN ({period_placeholders}) ORDER BY period""",
-                    (cc, *fy_period_list),
-                ).fetchall()
-                manual_periods = periods
-                manual_placeholders = ",".join("?" for _ in manual_periods)
-                manual={
-                    r["period"]:r
-                    for r in manual_conn.execute(
-                        f"""SELECT * FROM fact_monthly_headcount
-                        WHERE CAST(cc_code AS TEXT)=? AND source='manual'
-                        AND period IN ({manual_placeholders})""",
-                        (cc, *manual_periods),
-                    ).fetchall()
-                }
-                for r in source_rows:
-                    if r["period"] in month_vars:
-                        v=month_vars[r["period"]]; v["expat"].set(f"{float(r['headcount_expat'] or 0):g}"); v["staff"].set(f"{float(r['headcount_staff'] or 0):g}"); v["worker"].set(f"{float(r['headcount_worker'] or 0):g}")
-                for period,r in manual.items():
+            """Load one CC without blocking Tkinter while SQLite is busy."""
+            load_request["id"] += 1
+            request_id = load_request["id"]
+            clear()
+            cc = cc_code()
+            if not cc:
+                source_status.set("Chưa chọn mã CC")
+                return
+
+            source_status.set(f"Đang tải dữ liệu cho CC {cc}...")
+            cc_combo.state(["disabled"])
+            load_button.state(["disabled"])
+
+            def read_cc_data():
+                source_conn = None
+                manual_conn = None
+                try:
+                    source_conn = get_connection(self._operational_database())
+                    manual_conn = get_connection(self._manual_input_store(fiscal_year))
+                    create_schema(source_conn)
+                    create_schema(manual_conn)
+                    fy_period_list = get_fy_months(fiscal_year)
+                    period_placeholders = ",".join("?" for _ in fy_period_list)
+                    source_rows = [
+                        dict(row) for row in source_conn.execute(
+                            f"""SELECT * FROM fact_monthly_headcount
+                            WHERE CAST(cc_code AS TEXT)=? AND source='department_plan'
+                            AND period IN ({period_placeholders}) ORDER BY period""",
+                            (cc, *fy_period_list),
+                        ).fetchall()
+                    ]
+                    manual_periods = periods
+                    manual_placeholders = ",".join("?" for _ in manual_periods)
+                    manual = {
+                        row["period"]: dict(row)
+                        for row in manual_conn.execute(
+                            f"""SELECT * FROM fact_monthly_headcount
+                            WHERE CAST(cc_code AS TEXT)=? AND source='manual'
+                            AND period IN ({manual_placeholders})""",
+                            (cc, *manual_periods),
+                        ).fetchall()
+                    }
+                    busrow = manual_conn.execute(
+                        "SELECT * FROM fact_bus_headcount_drivers WHERE cc_code=? AND fiscal_year=?",
+                        (cc, fiscal_year),
+                    ).fetchone()
+                    timerows = [
+                        dict(row) for row in source_conn.execute(
+                            f"""SELECT * FROM fact_headcount_time_source
+                            WHERE CAST(cc_code AS TEXT)=? AND period IN ({period_placeholders}) ORDER BY period""",
+                            (cc, *fy_period_list),
+                        ).fetchall()
+                    ]
+                    time_overrides = {
+                        row["period"]: dict(row)
+                        for row in manual_conn.execute(
+                            f"""SELECT * FROM fact_manual_headcount_time_override
+                            WHERE fiscal_year=? AND CAST(cc_code AS TEXT)=?
+                            AND period IN ({period_placeholders}) ORDER BY period""",
+                            (fiscal_year, cc, *fy_period_list),
+                        ).fetchall()
+                    }
+                    return {
+                        "source_rows": source_rows,
+                        "manual": manual,
+                        "busrow": dict(busrow) if busrow else None,
+                        "timerows": timerows,
+                        "time_overrides": time_overrides,
+                    }
+                finally:
+                    if manual_conn is not None:
+                        manual_conn.close()
+                    if source_conn is not None:
+                        source_conn.close()
+
+            def apply_result(result=None, error=None):
+                if request_id != load_request["id"] or not editor.winfo_exists():
+                    return
+                cc_combo.state(["!disabled"])
+                load_button.state(["!disabled"])
+                if error is not None:
+                    source_status.set(f"Không tải được CC {cc}: {_friendly_error_message(error)}")
+                    return
+                for row in result["source_rows"]:
+                    period = row["period"]
                     if period in month_vars:
-                        v=month_vars[period]
-                        if period not in fy_periods:
-                            v["expat"].set(f"{float(r['headcount_expat'] or 0):g}"); v["staff"].set(f"{float(r['headcount_staff'] or 0):g}"); v["worker"].set(f"{float(r['headcount_worker'] or 0):g}")
-                        v["male"].set(f"{float(r['headcount_male'] or 0):g}" if period.endswith("12") else ""); v["female"].set(f"{float(r['headcount_female'] or 0):g}" if period.endswith("12") else ""); v["note"].set(r["description"] or "")
-                busrow=manual_conn.execute(
-                    "SELECT * FROM fact_bus_headcount_drivers WHERE cc_code=? AND fiscal_year=?",
-                    (cc, fiscal_year),
-                ).fetchone()
-                if busrow: bus_exp.set(f"{float(busrow['bus_expat_count'] or 0):g}"); bus_vn.set(f"{float(busrow['bus_vietnamese_count'] or 0):g}"); bus_note.set(busrow["description"] or "")
-                timerows=source_conn.execute(
-                    f"""SELECT * FROM fact_headcount_time_source
-                    WHERE CAST(cc_code AS TEXT)=? AND period IN ({period_placeholders}) ORDER BY period""",
-                    (cc, *fy_period_list),
-                ).fetchall()
-                time_overrides={
-                    r["period"]: r
-                    for r in manual_conn.execute(
-                        f"""SELECT * FROM fact_manual_headcount_time_override
-                        WHERE fiscal_year=? AND CAST(cc_code AS TEXT)=?
-                        AND period IN ({period_placeholders}) ORDER BY period""",
-                        (fiscal_year, cc, *fy_period_list),
-                    ).fetchall()
-                }
-                for r in timerows:
-                    if r["period"] not in time_vars: continue
-                    for key in time_fields:
-                        time_vars[r["period"]][key].set(f"{float(r[key] or 0):g}")
-                for period,r in time_overrides.items():
-                    if period not in time_vars: continue
-                    for key in time_fields:
-                        time_vars[period][key].set(f"{float(r[key] or 0):g}")
+                        values = month_vars[period]
+                        values["expat"].set(f"{float(row['headcount_expat'] or 0):g}")
+                        values["staff"].set(f"{float(row['headcount_staff'] or 0):g}")
+                        values["worker"].set(f"{float(row['headcount_worker'] or 0):g}")
+                for period, row in result["manual"].items():
+                    if period not in month_vars:
+                        continue
+                    values = month_vars[period]
+                    if period not in fy_periods:
+                        values["expat"].set(f"{float(row['headcount_expat'] or 0):g}")
+                        values["staff"].set(f"{float(row['headcount_staff'] or 0):g}")
+                        values["worker"].set(f"{float(row['headcount_worker'] or 0):g}")
+                    values["male"].set(f"{float(row['headcount_male'] or 0):g}" if period.endswith("12") else "")
+                    values["female"].set(f"{float(row['headcount_female'] or 0):g}" if period.endswith("12") else "")
+                    values["note"].set(row["description"] or "")
+                busrow = result["busrow"]
+                if busrow:
+                    bus_exp.set(f"{float(busrow['bus_expat_count'] or 0):g}")
+                    bus_vn.set(f"{float(busrow['bus_vietnamese_count'] or 0):g}")
+                    bus_note.set(busrow["description"] or "")
+                for row in result["timerows"]:
+                    period = row["period"]
+                    if period in time_vars:
+                        for key in time_fields:
+                            time_vars[period][key].set(f"{float(row[key] or 0):g}")
+                for period, row in result["time_overrides"].items():
+                    if period in time_vars:
+                        for key in time_fields:
+                            time_vars[period][key].set(f"{float(row[key] or 0):g}")
                 source_status.set(
-                    f"Đã có {len(source_rows)} kỳ nguồn FY{fiscal_year} trong CSDL"
-                    if source_rows
+                    f"Đã có {len(result['source_rows'])} kỳ nguồn FY{fiscal_year} trong CSDL"
+                    if result["source_rows"]
                     else f"Chưa có dữ liệu nguồn FY{fiscal_year} cho CC này"
                 )
-            finally:
-                if manual_conn is not None: manual_conn.close()
-                if source_conn is not None: source_conn.close()
+
+            def worker():
+                try:
+                    result = read_cc_data()
+                except Exception as exc:
+                    self._run_on_ui_thread(apply_result, None, exc)
+                else:
+                    self._run_on_ui_thread(apply_result, result)
+
+            threading.Thread(target=worker, daemon=True).start()
         def nonneg(text,label):
             value=str(text or "").strip() or "0"
             if not value.isdecimal(): raise ValueError(f"{label} phải là số nguyên không âm")
@@ -3517,7 +3582,14 @@ class MPManagerApp:
             except ValueError as exc: conn.rollback(); messagebox.showerror("Dữ liệu không hợp lệ", _friendly_error_message(exc)); return
             finally: conn.close()
             messagebox.showinfo("Đã lưu","Đã lưu baseline T3, dữ liệu bổ sung, xe buýt và 12 tháng thời gian (ô trống = 0).")
-        buttons=ttk.Frame(frame); buttons.pack(fill="x",pady=(8,0)); ttk.Button(buttons,text="Tải dữ liệu CC",command=load_cc).pack(side="left"); ttk.Button(buttons,text="Lưu nhân sự & thời gian",style="Primary.TButton",command=save).pack(side="left",padx=6); ttk.Button(buttons,text="Đóng",command=editor.destroy).pack(side="left")
+        buttons = ttk.Frame(frame)
+        buttons.pack(fill="x", pady=(8, 0))
+        load_button = ttk.Button(buttons, text="Tải dữ liệu CC", command=load_cc)
+        load_button.pack(side="left")
+        ttk.Button(
+            buttons, text="Lưu nhân sự & thời gian", style="Primary.TButton", command=save
+        ).pack(side="left", padx=6)
+        ttk.Button(buttons, text="Đóng", command=editor.destroy).pack(side="left")
         cc_combo.bind("<<ComboboxSelected>>",load_cc)
         if cc_combo["values"]:
             initial=selected_cc if selected_cc in cc_combo["values"] else cc_combo["values"][0]
@@ -3938,6 +4010,29 @@ class MPManagerApp:
         }
 
 
+    def _confirm_selected_form(self, template: str, fiscal_year: int) -> bool:
+        """Ask once for a usable new or changed FORM and retain that decision locally."""
+        inspection = inspect_form(template)
+        if not inspection.is_valid:
+            messagebox.showerror(
+                "FORM không đúng cấu trúc",
+                "FORM không đúng cấu trúc.\nVui lòng chọn lại file hoặc kiểm tra các sheet bắt buộc.",
+            )
+            return False
+        status = confirmation_status(self.project.form_confirmations(fiscal_year), inspection)
+        if status == "known":
+            return True
+        if status == "changed":
+            message = "FORM đã thay đổi so với lần dùng trước.\nVui lòng kiểm tra lại trước khi chạy."
+        else:
+            message = "FORM này chưa được dùng trước đây.\nVui lòng kiểm tra lại biểu mẫu trước khi chạy."
+        if not messagebox.askyesno("Xác nhận FORM", message):
+            return False
+        self.project.confirm_form(fiscal_year, inspection.as_confirmation())
+        self.project.save()
+        self.log("Đã xác nhận FORM cho lần chạy này.")
+        return True
+
     def start_pipeline(self):
         try:
             fiscal_year = int(self.fiscal_year.get())
@@ -3952,6 +4047,8 @@ class MPManagerApp:
             template_error = _validate_selected_template(template, fiscal_year)
             if template_error:
                 messagebox.showerror("Lỗi", template_error)
+                return
+            if not self._confirm_selected_form(template, fiscal_year):
                 return
 
             source_error = _validate_selected_source_dir(source, fiscal_year)
@@ -4067,7 +4164,8 @@ class MPManagerApp:
     ) -> tuple[bool, object, str | None]:
         try:
             cmd = self._pipeline_subprocess_command(
-                fiscal_year, template, source, headcount_source, rate, target_cc
+                fiscal_year, template, source, headcount_source, rate, target_cc,
+                defer_publication=bool(getattr(self, "_defer_batch_publication", False)),
             )
             env = os.environ.copy()
             env["PYTHONIOENCODING"] = "utf-8"
@@ -4100,8 +4198,16 @@ class MPManagerApp:
                     fiscal_year,
                 )
             )
+            deferred_output = next(
+                (
+                    line.partition("=")[2]
+                    for line in reversed(output_lines)
+                    if line.startswith("PIPELINE_OUTPUT=")
+                ),
+                None,
+            )
             result = (
-                self._project_paths(fiscal_year).output_dir
+                deferred_output or self._project_paths(fiscal_year).output_dir
                 if success
                 else _pipeline_failure_summary(output_lines, return_code)
             )
@@ -4120,28 +4226,51 @@ class MPManagerApp:
     ):
         total = len(target_ccs)
         final_result = self._project_paths(fiscal_year).output_dir
-        for index, target_cc in enumerate(target_ccs, start=1):
-            label = target_cc or self.ALL_COST_CENTERS_LABEL
-            self.log(f"--- PHẠM VI {index}/{total}: {label} ---")
-            self._last_pipeline_args = (
-                fiscal_year,
-                template,
-                source,
-                headcount_source,
-                rate,
-                target_cc,
-            )
-            success, result, failed_database = self._run_pipeline_process(
-                fiscal_year, template, source, headcount_source, rate, target_cc
-            )
-            self._last_failed_run_database = failed_database
-            if not success:
-                failure = RuntimeError(f"Trung tâm chi phí {label} thất bại: {_friendly_error_message(result)}")
-                self._run_on_ui_thread(self._finish_pipeline, False, failure)
-                return
-            final_result = result
-            self.log(f"Hoàn tất {index}/{total}: {label}")
-        self._run_on_ui_thread(self._finish_pipeline, True, final_result)
+        selected_batch = total > 0 and all(target_cc is not None for target_cc in target_ccs)
+        staged_output_root = None
+        if selected_batch:
+            staged_output_root = tempfile.mkdtemp(prefix=f"mp{fiscal_year}_cc_batch_")
+        try:
+            for index, target_cc in enumerate(target_ccs, start=1):
+                label = target_cc or self.ALL_COST_CENTERS_LABEL
+                self.log(f"--- PHẠM VI {index}/{total}: {label} ---")
+                self._last_pipeline_args = (
+                    fiscal_year,
+                    template,
+                    source,
+                    headcount_source,
+                    rate,
+                    target_cc,
+                )
+                self._defer_batch_publication = selected_batch
+                success, result, failed_database = self._run_pipeline_process(
+                    fiscal_year, template, source, headcount_source, rate, target_cc,
+                )
+                self._last_failed_run_database = failed_database
+                if not success:
+                    failure = RuntimeError(f"Trung tâm chi phí {label} thất bại: {_friendly_error_message(result)}")
+                    self._run_on_ui_thread(self._finish_pipeline, False, failure)
+                    return
+                if selected_batch:
+                    assert staged_output_root is not None
+                    self._stage_completed_cost_center_output(result, staged_output_root, str(target_cc))
+                final_result = result
+                self.log(f"Hoàn tất {index}/{total}: {label}")
+            if selected_batch:
+                assert staged_output_root is not None
+                final_result = publish_selected_cc_batch(
+                    self._project_paths(fiscal_year).output_dir,
+                    staged_output_root,
+                    tuple(str(target_cc) for target_cc in target_ccs),
+                )
+                self.log("Đã công bố nguyên tử toàn bộ batch Trung tâm chi phí.")
+            self._run_on_ui_thread(self._finish_pipeline, True, final_result)
+        except Exception as exc:
+            self._run_on_ui_thread(self._finish_pipeline, False, exc)
+        finally:
+            self._defer_batch_publication = False
+            if staged_output_root:
+                shutil.rmtree(staged_output_root, ignore_errors=True)
 
     def _pipeline_subprocess_command(
         self,
@@ -4151,6 +4280,8 @@ class MPManagerApp:
         headcount_source: str,
         rate: float,
         target_cc: int | str | None,
+        *,
+        defer_publication: bool = False,
     ) -> list[str]:
         if getattr(sys, "frozen", False):
             cmd = [sys.executable]
@@ -4185,7 +4316,30 @@ class MPManagerApp:
             cmd.extend(["--uniform-policy", str(approved_uniform)])
         if target_cc:
             cmd.extend(["--target-cc", str(target_cc)])
+        if defer_publication:
+            cmd.append("--defer-publication")
         return cmd
+
+    def _stage_completed_cost_center_output(
+        self,
+        source_output: str | os.PathLike[str],
+        staged_output_root: str | os.PathLike[str],
+        target_cc: str,
+    ) -> None:
+        """Copy one verified private run result into the not-yet-public batch stage."""
+        source = os.fspath(source_output)
+        workbook_name = f"MP_CC_{target_cc}.xlsx"
+        workbook = os.path.join(source, workbook_name)
+        if not os.path.isfile(workbook):
+            raise FileNotFoundError(f"Không tìm thấy workbook đã hoàn tất cho CC {target_cc}: {workbook}")
+        destination = os.fspath(staged_output_root)
+        shutil.copy2(workbook, os.path.join(destination, workbook_name))
+        reports = os.path.join(source, "BAO_CAO_KIEM_TRA")
+        if os.path.isdir(reports):
+            staged_reports = os.path.join(destination, "BAO_CAO_KIEM_TRA")
+            if os.path.isdir(staged_reports):
+                shutil.rmtree(staged_reports)
+            shutil.copytree(reports, staged_reports)
 
     def _missing_baseline_context(self, result):
         if not _is_missing_baseline_error(result):
