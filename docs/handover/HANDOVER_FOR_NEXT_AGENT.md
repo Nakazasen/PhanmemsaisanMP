@@ -16,9 +16,9 @@ Ngày cập nhật: `2026-08-10`
 - Không thêm backlog nghiệp vụ suy đoán hoặc source HTTPS giả.
 - Setup nền tảng `0.1.1` mở nhánh version mới để xóa bỏ ràng buộc khóa khỏi cơ
   chế nâng cấp; nhánh có khóa `0.1.9/0.1.10` đã kết thúc.
-- Update hiện tại là `0.1.2`, yêu cầu máy đích đã cài nền tảng `0.1.1`.
-- `latest.json` đã cutover từ nhánh lịch sử `0.1.9` sang nhánh không khóa `0.1.2`.
-- Gói `0.1.2` đã build, health-check và publish lên LAN ngày 2026-08-10.
+- Update hiện tại là `0.1.3`, yêu cầu máy đích đã cài nền tảng `0.1.1`.
+- `latest.json` đã được nâng từ `0.1.2` lên `0.1.3` trong nhánh không khóa.
+- Gói `0.1.3` đã build, health-check và publish lên LAN ngày 2026-08-10.
 
 ## Đường dẫn đã duyệt
 
@@ -56,7 +56,7 @@ từ nhánh lịch sử sang `0.1.2` đã hoàn tất sau khi xác nhận:
 2. Máy pilot đã cài Setup `0.1.1` và chạy được.
 3. User đã yêu cầu “đóng gói theo tiêu chuẩn update” hoặc “phát hành update”.
 
-Các update tiếp theo tăng tuần tự từ `0.1.2`; version kế tiếp là `0.1.3`. Máy còn
+Các update tiếp theo tăng tuần tự từ `0.1.3`; version kế tiếp là `0.1.4`. Máy còn
 ở `0.1.9/0.1.10` sẽ bỏ qua catalog thấp hơn và phải được cài Setup nền tảng thủ
 công.
 
@@ -66,32 +66,32 @@ Trước khi publish, kiểm tra package cùng tên ở local và LAN. Nếu cù
 SHA-256 khác, dừng và không ghi đè; user phải chọn version mới hoặc phương án lưu
 trữ. Nếu hash giống, publish lặp được xem là idempotent.
 
-## Candidate 0.1.2 đã kiểm tra local
+## Bản phát hành 0.1.3
 
-- Source: commit `1d3aec1`.
+- Source: commit `8fb29e9`, đã push lên `origin/main`.
 - Artifact:
-  `release_artifacts/staging/MP2027_Manager-0.1.2.mpupdate`.
-- Kích thước: `82.707.051` byte.
+  `release_artifacts/staging/MP2027_Manager-0.1.3.mpupdate`.
+- Kích thước: `82.708.725` byte.
 - SHA-256:
-  `92a32cf04eedf479ed477bff097e58fa06b91bf44fdc9362b4d42ca80a951db6`.
+  `9517ba144277aedae5e764830afe6903989f6721b0947f83128a5fe5d7aab032`.
 - Manifest: `1.859` file; entrypoint `MP2027_Portable.exe`.
 - Bundle và staged package health-check: đạt.
-- Test release mở rộng: `69 passed`.
+- Test release mở rộng: `82 passed`; quét mojibake toàn kho đạt.
 - Đường dẫn LAN:
-  `release_update/MP2027_Manager-0.1.2.mpupdate`.
+  `release_update/MP2027_Manager-0.1.3.mpupdate`.
 - Hash/kích thước package LAN và `latest.json` đã đối chiếu khớp; không còn file
   `.part`.
-- Setup LAN: `MP2027_Manager_Setup_0.1.2.exe`, kích thước `68.214.593` byte,
-  SHA-256 `170a1af97d172029935353d298a72d38111f21f6e1e038bc2aca85610e1a89b9`.
+- Setup LAN: `MP2027_Manager_Setup_0.1.3.exe`, kích thước `68.212.785` byte,
+  SHA-256 `d8175e082a747ff5376ae89b4547dd18fbbeb0b1e13896b211ed5e1ae0a2e0a1`.
 - Hash/kích thước Setup local/LAN đã đối chiếu khớp; không còn file `.part`.
 - Pilot cục bộ `0.1.1` trả health-check `status: ok` trước cutover.
-- Trạng thái: đã publish; chưa nghiệm thu cài update qua GUI; chưa commit/push.
+- Trạng thái: đã publish và push; chưa nghiệm thu cài update qua GUI.
 
 ## Prompt cho Agent tiếp theo
 
 Đọc toàn bộ `release_update_playbook.md`. Nếu user yêu cầu “đóng gói theo tiêu
 chuẩn update”, đọc `latest.json`, chọn version lớn hơn trong nhánh không khóa
-(sau `0.1.2` là `0.1.3`), kiểm tra va chạm artifact, build/copy Setup vào thư mục
+(sau `0.1.3` là `0.1.4`), kiểm tra va chạm artifact, build/copy Setup vào thư mục
 phần mềm LAN rồi publish `.mpupdate/latest.json` vào `release_update`. Xác minh
 hash/size của cả Setup và package LAN, rồi cập nhật release note. Không hỏi lại
 endpoint đã duyệt. Không tạo khóa. Không tự commit/push.
