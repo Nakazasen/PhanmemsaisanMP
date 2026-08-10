@@ -3,7 +3,7 @@
 ; Cài bộ ứng dụng onedir theo phiên bản; máy đích không cần cài Python.
 
 #define AppName "MP2027 Manager"
-#define AppVersion "0.1.1"
+#define AppVersion "0.1.3"
 #define AppPublisher "MP2027"
 #define LauncherExe "MP2027_Launcher.exe"
 #define BundleDir "..\\release_artifacts\\install_bundle"

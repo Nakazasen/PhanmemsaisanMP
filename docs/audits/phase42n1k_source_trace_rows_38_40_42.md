@@ -6,15 +6,15 @@
 - `docs/audits/phase42n1i_strict_diff_classification.md`
 - `docs/audits/phase42n1j_form_template_check_rows_38_42.md`
 - `dist/phase42n1g2r2_identity_disambiguation/strict_compare/MP2027_primary_reference_compare.json`
-- `raw/蝗ｺ螳夊ｳ・肇諠・ｱ_Fixed_Assets_Information_2025.11 - Nov.xlsx`
-- `raw/譁ｽ險ｭ隱ｲ縲MPFY2027.xlsx`
+- `raw/固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx`
+- `raw/施設課　MPFY2027.xlsx`
 - `dist/phase42n1b3_row5_template_parity_20260607_065031/generated/MP_CC_1412000040.xlsx`
-- `reference_outputs/primary/16.KDTVN 髮ｻ豌苓｣ｽ騾謚陦楢ｪｲ_MP FY2027_蜷・ｺ亥ｮ・Ver01).xlsx`
+- `reference_outputs/primary/16.KDTVN 電気製造技術課_MP FY2027_各予定(Ver01).xlsx`
 
 ## Source workbook paths found
 
-- Fixed Assets: `raw/蝗ｺ螳夊ｳ・肇諠・ｱ_Fixed_Assets_Information_2025.11 - Nov.xlsx`
-- Facility: `raw/譁ｽ險ｭ隱ｲ縲MPFY2027.xlsx`
+- Fixed Assets: `raw/固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx`
+- Facility: `raw/施設課　MPFY2027.xlsx`
 
 ## Sheet/header detection summary
 
@@ -52,9 +52,9 @@ Cost center `1412000040` was found in Fixed Assets source:
 
 Sheets:
 
-- `貂帑ｾ｡蜆溷唆雋ｻ・・epreciation・荏
-- `蝗ｺ螳夊ｳ・肇驥大茜・・nterest・荏
-- `豌ｴ驕灘・辭ｱ雋ｻ・・lectric & Water・荏
+- `減価償却費（Depreciation）`
+- `固定資産金利（Interest）`
+- `水道光熱費（Electric & Water）`
 - `B&L`
 - `E&W`
 
@@ -63,7 +63,7 @@ Relevant headers:
 - `B&L` row 6 includes Cost Center, Cost Center name, Japanese name,
   monthly ratio columns, building allocation, land allocation,
   building interest, and land interest.
-- `貂帑ｾ｡蜆溷唆雋ｻ・・epreciation・荏 rows 65/66 expose building and land
+- `減価償却費（Depreciation）` rows 65/66 expose building and land
   depreciation for cost center `1412000040` through `B&L` VLOOKUPs.
 - `固定資産金利（Interest）` rows 65/66 expose building and land
   interest for cost center `1412000040` through `B&L` VLOOKUPs.
@@ -82,32 +82,32 @@ Relevant headers:
 
 | Sheet | Source row | Evidence |
 |---|---:|---|
-| `貂帑ｾ｡蜆溷唆雋ｻ・・epreciation・荏 | 65 | Building depreciation for 髮ｻ豌苓｣ｽ騾謚陦楢ｪｲ uses `VLOOKUP(B66,'B&L'...)`. |
-| `貂帑ｾ｡蜆溷唆雋ｻ・・epreciation・荏 | 66 | Land depreciation for cost center `1412000040` uses `VLOOKUP(B66,'B&L'...)`. |
-| `蝗ｺ螳夊ｳ・肇驥大茜・・nterest・荏 | 65 | Building interest for 髮ｻ豌苓｣ｽ騾謚陦楢ｪｲ uses `VLOOKUP(B66,'B&L'...)`. |
-| `蝗ｺ螳夊ｳ・肇驥大茜・・nterest・荏 | 66 | Land interest for cost center `1412000040` uses `VLOOKUP(B66,'B&L'...)`. |
+| `減価償却費（Depreciation）` | 65 | Building depreciation for 電気製造技術課 uses `VLOOKUP(B66,'B&L'...)`. |
+| `減価償却費（Depreciation）` | 66 | Land depreciation for cost center `1412000040` uses `VLOOKUP(B66,'B&L'...)`. |
+| `固定資産金利（Interest）` | 65 | Building interest for 電気製造技術課 uses `VLOOKUP(B66,'B&L'...)`. |
+| `固定資産金利（Interest）` | 66 | Land interest for cost center `1412000040` uses `VLOOKUP(B66,'B&L'...)`. |
 | `B&L` | 23 | Cost center `1412000040`; monthly building/land depreciation and interest values are allocated by ratio. |
 
 ## Business confirmation: file-order output mode
 
 User/business confirmation after this trace:
 
-- For groups without a clear fixed-row requirement, output should run by source-file order from `H蘯｡ng m盻･c c蘯ｧn c蘯｣i ti蘯ｿn`.
+- For groups without a clear fixed-row requirement, output should run by source-file order from `Hạng mục cần cải tiến`.
 - After finishing one source file, leave one blank row before the next file group.
 - The cost order inside each source file comes from the corresponding adjacent sheet / linked guidance.
 - Do not use primary same-row or fixed-row comparison to conclude a bug while file-order mode is under consideration.
 
 Relevant source-file order from the requirement image:
 
-1. `譁ｽ險ｭ隱ｲ縲MPFY2027.xlsx`
-2. `蝗ｺ螳夊ｳ・肇諠・ｱ_Fixed_Assets_Information_2025.11 - Nov.xlsx`
-3. `繧ｷ繧ｹ繝・Β隱ｲ驥鷹≡鬘・Simulation)_FY2027_Apr.2026 ~ June.2026.xls`
-4. `邱丞漁隱ｲ FY2027 MP 謖ｯ譖ｿ莠亥ｮ・xlsx`
-5. `Sinh nh蘯ｭt MP FY2027.xlsx`
-6. `FY2027驟崎ｳｦ鬘堺ｸ隕ｧ (2025.12.29).xlsx`
-7. `D盻ｱ tﾃｭnh chi phﾃｭ lﾃm gi蘯･y t盻・cho NNN FY2027.xlsx`
+1. `施設課　MPFY2027.xlsx`
+2. `固定資産情報_Fixed_Assets_Information_2025.11 - Nov.xlsx`
+3. `システム課金金額(Simulation)_FY2027_Apr.2026 ~ June.2026.xls`
+4. `総務課 FY2027 MP 振替予定.xlsx`
+5. `Sinh nhật MP FY2027.xlsx`
+6. `FY2027配賦額一覧 (2025.12.29).xlsx`
+7. `Dự tính chi phí làm giấy tờ cho NNN FY2027.xlsx`
 
-The image also has a `6 chi phﾃｭ` link near Facility and `g盻冪 thﾃnh 1 dﾃｲng chi phﾃｭ` near System Cost.
+The image also has a `6 chi phí` link near Facility and `gộp thành 1 dòng chi phí` near System Cost.
 
 ## Row-fixed vs file-order decision needed
 

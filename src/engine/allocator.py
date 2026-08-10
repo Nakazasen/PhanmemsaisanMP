@@ -127,7 +127,6 @@ SEPARATE_COUNT_PLACEHOLDER_TOKENS = (
 )
 FISCAL_YEAR_KICKOFF_TOKENS = (
     "決起コンパ",
-    "豎ｺ襍ｷ繧ｳ",
     "khuay dong nam tai chinh",
     "khuấy động năm tài chính",
 )

@@ -191,7 +191,7 @@ class TestPostingMonthLogic(unittest.TestCase):
         _seed_hc(conn, cc, [4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3])
         rid = _insert_rule(
             conn,
-            "豈取怦",
+            "毎月",
             "headcount_all",
             unit_price=100,
             rid_label="uniform monthly issue",

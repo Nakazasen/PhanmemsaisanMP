@@ -59,7 +59,32 @@ def test_release_playbook_does_not_describe_online_delivery_as_unimplemented():
     text = Path("docs/handover/release_update_playbook.md").read_text(encoding="utf-8")
 
     assert "trước khi thêm luồng online tùy chọn" not in text
-    assert "Xác minh endpoint LAN đã cấu hình" in text
+    assert "Trước khi build, xác minh hai endpoint đọc được" in text
+
+
+def test_release_playbook_defines_full_update_publish_intent_and_stop_conditions():
+    text = Path("docs/handover/release_update_playbook.md").read_text(encoding="utf-8")
+
+    assert "đóng gói theo tiêu chuẩn update" in text
+    assert "toàn bộ luồng update" in text
+    assert "Đây được xem là quyền publish rõ ràng" in text
+    assert "không được dừng ở\nartifact local" in text
+    assert "Package cùng tên tồn tại nhưng hash khác" in text
+    assert "Cutover `0.1.9/0.1.10 → 0.1.1 → 0.1.2`" in text
+    assert "không bao gồm commit, push, xóa hoặc di chuyển" in text
+    assert "xóa bỏ toàn bộ ràng buộc về khóa" in text
+    assert "bắt buộc phải có cả Setup" in text
+    assert "publish Setup vào thư mục phần mềm LAN" in text
+
+
+def test_current_handover_has_no_active_signing_instructions():
+    text = Path("docs/handover/HANDOVER_FOR_NEXT_AGENT.md").read_text(encoding="utf-8")
+
+    assert "mọi ghi chú lịch sử về public/private key" in text
+    assert "Không tạo khóa" in text
+    assert "đã publish" in text
+    assert "latest.json" in text
+    assert "0.1.9/0.1.10" in text
 
 
 def test_default_update_source_is_the_approved_lan_folder_only():

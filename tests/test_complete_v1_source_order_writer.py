@@ -1102,8 +1102,8 @@ def test_complete_v1_writer_drops_account_only_template_rows(tmp_path):
     ws.cell(36, 19).value = "facility building depreciation"
     for row in (61, 62, 63):
         ws.cell(row, 2).value = 5004086291
-        ws.cell(row, 3).value = f'=IFERROR(VLOOKUP($B{row},蜍伜ｮ夂ｧ醍岼!$A:$E,2,0),"")'
-        ws.cell(row, 4).value = f'=IF(C{row}="","",VLOOKUP($B{row},蜍伜ｮ夂ｧ醍岼!$A:$E,4,0))'
+        ws.cell(row, 3).value = f'=IFERROR(VLOOKUP($B{row},勘定科目!$A:$E,2,0),"")'
+        ws.cell(row, 4).value = f'=IF(C{row}="","",VLOOKUP($B{row},勘定科目!$A:$E,4,0))'
     wb.save(path)
     wb.close()
 

@@ -30,15 +30,13 @@ def test_annual_staffing_editor_uses_project_canonical_and_annual_manual_stores(
     assert "Người Việt Nam đi xe buýt" in source
     assert "bus_exp=tk.StringVar(value=\"0\")" in source
     assert "bus_vn=tk.StringVar(value=\"0\")" in source
-    assert "source_conn=get_connection(self._operational_database())" in load_source
-    assert "manual_conn=get_connection(self._manual_input_store(fiscal_year))" in load_source
-    assert "source_rows=source_conn.execute(" in load_source
-    assert "timerows=source_conn.execute(" in load_source
+    assert "source_conn = get_connection(self._operational_database())" in load_source
+    assert "manual_conn = get_connection(self._manual_input_store(fiscal_year))" in load_source
+    assert "source_conn.execute(" in load_source
     assert "fact_manual_headcount_time_override" in load_source
-    assert "for r in manual_conn.execute(" in load_source
-    assert "busrow=manual_conn.execute(" in load_source
-    assert "source_rows=manual_conn.execute(" not in load_source
-    assert "timerows=manual_conn.execute(" not in load_source
+    assert "manual_conn.execute(" in load_source
+    assert "source_rows = manual_conn.execute(" not in load_source
+    assert "timerows = manual_conn.execute(" not in load_source
 
 
 

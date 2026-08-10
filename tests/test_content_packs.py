@@ -599,6 +599,6 @@ def test_gui_content_install_uses_runtime_trust_without_key_prompt(monkeypatch, 
     assert calls["install"] == (str(package_path), universal_app.BASE_DIR, 2027)
     assert calls["preflight"] == {"force_refresh": True}
     assert calls["file_dialog"]["filetypes"] == [("Gói quy tắc MP2027", "*.mpcontent")]
-    assert "FY2027" in calls["showinfo"][1]
+    assert "năm tài chính 2027" in calls["showinfo"][1]
     assert "showerror" not in calls
     assert any("đã xác minh" in message.lower() for message in logs)

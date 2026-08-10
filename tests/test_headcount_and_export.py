@@ -5141,7 +5141,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_export_preserves_qlnn_rows_and_clears_unused_generated_accounts(self):
         conn = _mk_conn()
-        cc_code = _seed_export_ready_cc(conn, code=1412000006, cost_type="陬ｽ騾")
+        cc_code = _seed_export_ready_cc(conn, code=1412000006, cost_type="製造")
         period = get_fy_months(2027)[0]
         conn.executemany(
             """
@@ -5291,7 +5291,7 @@ class TestHubBuilderExport(unittest.TestCase):
 
     def test_export_rebuilds_accounts_when_template_column_b_is_blank_from_row_30(self):
         conn = _mk_conn()
-        cc_code = _seed_export_ready_cc(conn, code=1412000006, cost_type="陬ｽ騾")
+        cc_code = _seed_export_ready_cc(conn, code=1412000006, cost_type="製造")
         period = get_fy_months(2027)[0]
         conn.executemany(
             """
