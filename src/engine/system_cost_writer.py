@@ -6,17 +6,19 @@ from src.engine.column_s_normalizer import normalize_output_description_column_s
 from src.engine.system_cost_preview import preview_system_cost_file_order
 from src.utils import excel_helpers as helpers
 
-ITEM_ID_COL=5
-MONTH_START_COL=6
-DESCRIPTION_COL=19
-NOTE_COL=20
+ITEM_ID_COL = 5
+MONTH_START_COL = 6
+DESCRIPTION_COL = 19
+NOTE_COL = 20
 
-def _clear_row(ws, row:int):
-    ws.cell(row=row,column=ITEM_ID_COL).value=None
-    ws.cell(row=row,column=DESCRIPTION_COL).value=None
-    ws.cell(row=row,column=NOTE_COL).value=None
-    for c in range(MONTH_START_COL, MONTH_START_COL+12):
-        ws.cell(row=row,column=c).value=None
+
+def _clear_row(ws, row: int):
+    ws.cell(row=row, column=ITEM_ID_COL).value = None
+    ws.cell(row=row, column=DESCRIPTION_COL).value = None
+    ws.cell(row=row, column=NOTE_COL).value = None
+    for c in range(MONTH_START_COL, MONTH_START_COL + 12):
+        ws.cell(row=row, column=c).value = None
+
 
 def apply_system_cost_to_open_workbook(
     wb,
@@ -40,9 +42,9 @@ def apply_system_cost_to_open_workbook(
     ws.cell(
         row=item.planned_row,
         column=NOTE_COL,
-        value=item.formula_policy if item.confidence == 'HIGH' else item.note,
+        value=item.formula_policy if item.confidence == "HIGH" else item.note,
     )
-    if item.confidence == 'HIGH':
+    if item.confidence == "HIGH":
         for offset, value in enumerate(item.month_values):
             if value is not None:
                 ws.cell(row=item.planned_row, column=MONTH_START_COL + offset, value=value)
@@ -66,7 +68,7 @@ def apply_system_cost_to_workbook(
     workbook_file = Path(workbook_path)
     for src in system_source_paths:
         if workbook_file.resolve() == Path(src).resolve():
-            raise ValueError('workbook_path must not overwrite a System Cost source workbook')
+            raise ValueError("Đường dẫn tệp kết quả không được ghi đè lên tệp nguồn Chi phí hệ thống.")
     wb = load_workbook(workbook_file)
     try:
         apply_system_cost_to_open_workbook(

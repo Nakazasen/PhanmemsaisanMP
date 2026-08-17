@@ -172,7 +172,7 @@ def test_parse_fixed_assets_does_not_substitute_l_when_terminal_q_is_missing(tmp
     wb.save(workbook)
     conn = _mk_conn()
     try:
-        with pytest.raises(ValueError, match="Missing Q/last-month depreciation"):
+        with pytest.raises(ValueError, match="Thiếu số tiền khấu hao tháng cuối"):
             parse_fixed_assets(conn, fa_path=str(workbook))
     finally:
         conn.close()
@@ -248,7 +248,7 @@ def test_parse_fixed_assets_fails_closed_for_formula_without_cached_value(tmp_pa
     wb.save(workbook)
     conn = _mk_conn()
     try:
-        with pytest.raises(ValueError, match="Missing cached formula value"):
+        with pytest.raises(ValueError, match="Thiếu giá trị công thức đã tính sẵn"):
             parse_fixed_assets(conn, fa_path=str(workbook))
     finally:
         conn.close()

@@ -473,15 +473,15 @@ class AllocationEngine:
             return
         self._missing_input_keys.add(key)
 
-        missing_text = ",".join(missing_parts) if missing_parts else "unknown"
+        missing_text = ",".join(missing_parts) if missing_parts else "không xác định"
         message = (
-            "Missing complete monthly headcount driver for event-delta allocation: "
-            f"cc={cc_key}, month={period}, previous_month={prev_text}, "
-            f"category={driver_type}, missing={missing_text}"
+            "Thiếu dữ liệu số người theo tháng để tính phân bổ theo chênh lệch sự kiện: "
+            f"trung tâm chi phí={cc_key}, tháng={period}, tháng_trước={prev_text}, "
+            f"nhóm={driver_type}, phần_thiếu={missing_text}"
         )
         action = (
-            "Provide monthly headcount for both the event month and previous month "
-            "before using event-delta allocation."
+            "Nhập đầy đủ số người của cả tháng sự kiện và tháng trước "
+            "trong headcount_manual.csv hoặc trên giao diện trước khi tính phân bổ."
         )
         self.conn.execute(
             """
@@ -508,13 +508,13 @@ class AllocationEngine:
         self._missing_input_keys.add(key)
         item_name = str(rule["item_name"] or "").replace("\n", " ").strip() if rule is not None else ""
         message = (
-            "Missing canonical monthly headcount driver for allocation: "
-            f"cc={cc_key}, period={period}, category={driver_type}, "
-            f"rule_id={rule_id}, item={item_name}, reason={error}"
+            "Thiếu dữ liệu số người chuẩn theo tháng để phân bổ: "
+            f"trung tâm chi phí={cc_key}, kỳ={period}, nhóm={driver_type}, "
+            f"mã_quy_tắc={rule_id}, khoản_mục={item_name}, nguyên_nhân={error}"
         )
         action = (
-            "Provide the selected fiscal year's canonical monthly headcount for this cost center and period. "
-            "Static staff/worker counts in the cost-center master are not used as a monthly fallback."
+            "Nhập số người chuẩn theo tháng cho năm tài chính được chọn tại trung tâm chi phí và kỳ này. "
+            "Số lượng nhân sự cố định trong danh mục trung tâm chi phí không được dùng để thay thế."
         )
         self.conn.execute(
             """
@@ -551,9 +551,9 @@ class AllocationEngine:
 
         spec = BUS_RULE_SPECS.get(driver_key, {})
         rule_id = int(rule["id"]) if rule is not None and rule["id"] is not None else None
-        message = f"Missing bus allocation input: cc={cc_key}, driver_type={driver_key}, missing={missing_input}"
+        message = f"Thiếu dữ liệu phân bổ xe đưa đón: trung tâm chi phí={cc_key}, loại_xe={driver_key}, phần_thiếu={missing_input}"
         action = (
-            f"Provide {missing_input} for {spec.get('label', driver_key)} before bus allocation can be generated."
+            f"Bổ sung {missing_input} cho {spec.get('label', driver_key)} trước khi tạo dữ liệu phân bổ xe đưa đón."
         )
         self.conn.execute(
             """
@@ -582,13 +582,12 @@ class AllocationEngine:
 
         item_name = str(rule["item_name"] or "").replace("\n", " ").strip() if rule is not None else ""
         message = (
-            "Missing manual event/distribution driver for allocation rule: "
-            f"cc={cc_key}, period={period_text}, rule_id={rule_id}, item={item_name}, reason={reason}"
+            "Thiếu dữ liệu sự kiện/phân phối thủ công cho quy tắc phân bổ: "
+            f"trung tâm chi phí={cc_key}, kỳ={period_text}, mã_quy_tắc={rule_id}, khoản_mục={item_name}, nguyên_nhân={reason}"
         )
         action = (
-            "Provide an explicit event/distribution count or amount in event_drivers_manual.csv "
-            "for this cost center and target month. The allocator does not infer actual "
-            "participant/distribution counts from total headcount."
+            "Nhập số lượng sự kiện/phân phối hoặc số tiền rõ ràng trong event_drivers_manual.csv "
+            "hoặc trên giao diện cho trung tâm chi phí và tháng đích này. Hệ thống không tự suy diễn số người tham gia từ tổng nhân sự."
         )
         self.conn.execute(
             """
@@ -1232,7 +1231,7 @@ class AllocationEngine:
             self._record_rule_missing_for_all_cost_centers(
                 rule,
                 area="manual_event_driver",
-                reason="separate-count event has no unit price for placeholder formula",
+                reason="sự kiện cần số lượng riêng biệt nhưng thiếu đơn giá để tạo công thức giữ chỗ",
                 periods=target_periods or None,
             )
             return
@@ -1374,7 +1373,7 @@ class AllocationEngine:
                     self._record_rule_missing_for_all_cost_centers(
                         rule,
                         area="manual_event_driver",
-                        reason="posting month is blank/dash or cannot be resolved from source",
+                        reason="tháng hạch toán bị trống/gạch ngang hoặc không xác định được từ nguồn",
                     )
                     continue
                 self._insert_separate_count_placeholders(cursor, rule, target_periods)
@@ -1384,7 +1383,7 @@ class AllocationEngine:
                 self._record_rule_missing_for_all_cost_centers(
                     rule,
                     area="manual_event_driver",
-                    reason="event requires explicit actual count/amount input",
+                    reason="sự kiện yêu cầu nhập số lượng thực tế hoặc số tiền cụ thể",
                     periods=target_periods or None,
                 )
                 continue
@@ -1393,7 +1392,7 @@ class AllocationEngine:
                 self._record_rule_missing_for_all_cost_centers(
                     rule,
                     area="manual_distribution_driver",
-                    reason="actual participant/distribution count cannot be inferred from headcount",
+                    reason="số lượng người tham gia/phân phối thực tế không thể suy diễn từ tổng nhân sự",
                     periods=target_periods or None,
                 )
                 continue
@@ -1408,9 +1407,8 @@ class AllocationEngine:
                         staff_new, worker_new = self._recruitment_health_new_hires(cc["code"], source_period, rule)
                         total_new = staff_new + worker_new
                         # A recruitment-health cost exists only when the source
-                        # month has at least one new hire.  Do not emit 0*price
-                        # formulas for every month: they obscure the actual
-                        # posting months and make the output look fully populated.
+                        # month actually had new hires. A zero driver produces
+                        # neither cost nor placeholder row in the output.
                         if total_new <= 0:
                             continue
                         target_acc = self._get_account_for_cc(
@@ -1574,7 +1572,7 @@ class AllocationEngine:
                     continue
 
                 if rule is None:
-                    self._record_bus_missing(cc_code, driver_key, "account mapping", rule=None)
+                    self._record_bus_missing(cc_code, driver_key, "ánh xạ tài khoản kế toán", rule=None)
                     continue
 
                 target_acc = self._get_account_for_cc(
@@ -1584,7 +1582,7 @@ class AllocationEngine:
                     rule["sales_account"],
                 )
                 if not target_acc:
-                    self._record_bus_missing(cc_code, driver_key, "account mapping", rule=rule)
+                    self._record_bus_missing(cc_code, driver_key, "ánh xạ tài khoản kế toán", rule=rule)
                     continue
 
                 rows_to_insert = []
@@ -1592,9 +1590,9 @@ class AllocationEngine:
                     unit_price, source_kind = self._bus_unit_price_for_period(driver_key, period, rule)
                     if unit_price <= 0:
                         missing_name = (
-                            "expat bus unit_price"
+                            "đơn giá xe chuyên gia"
                             if driver_key == "bus_expat_count"
-                            else "Vietnamese bus unit_price"
+                            else "đơn giá xe đưa đón người Việt"
                         )
                         self._record_bus_missing(cc_code, driver_key, missing_name, rule=rule)
                         continue

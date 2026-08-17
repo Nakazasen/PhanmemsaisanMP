@@ -10,5 +10,5 @@ def require_cost_center(cost_center: Any, *, context: str) -> str:
     if text.endswith(".0") and text[:-2].isdigit():
         text = text[:-2]
     if not text:
-        raise ValueError(f"{context} requires an explicit cost_center from the export context.")
+        raise ValueError(f"{context} yêu cầu chỉ định rõ mã Trung tâm chi phí (Cost Center) từ ngữ cảnh xuất dữ liệu.")
     return text

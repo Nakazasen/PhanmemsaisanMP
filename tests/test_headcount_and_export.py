@@ -1663,8 +1663,8 @@ class TestEventDeltaHeadcountFailClosed(unittest.TestCase):
         rows = self._alloc_rows(conn, rule_id)
         self.assertEqual(rows, [])
         missing_messages = [row["message"] for row in self._missing_rows(conn)]
-        self.assertTrue(any(f"cc={cc_code}, month={periods[9]}, previous_month={periods[8]}" in msg for msg in missing_messages))
-        self.assertTrue(any("category=headcount_all" in msg for msg in missing_messages))
+        self.assertTrue(any(f"trung tâm chi phí={cc_code}, tháng={periods[9]}, tháng_trước={periods[8]}" in msg for msg in missing_messages))
+        self.assertTrue(any("nhóm=headcount_all" in msg for msg in missing_messages))
         self.assertFalse(any("amount_vnd" in str(row) and str(28 * 9100) in str(row) for row in rows))
         conn.close()
 
@@ -1688,8 +1688,8 @@ class TestEventDeltaHeadcountFailClosed(unittest.TestCase):
 
         self.assertEqual(self._alloc_rows(conn, rule_id), [])
         missing_messages = [row["message"] for row in self._missing_rows(conn)]
-        self.assertTrue(any(f"month={periods[2]}, previous_month={periods[1]}" in msg for msg in missing_messages))
-        self.assertTrue(any("missing=previous" in msg for msg in missing_messages))
+        self.assertTrue(any(f"tháng={periods[2]}, tháng_trước={periods[1]}" in msg for msg in missing_messages))
+        self.assertTrue(any("phần_thiếu=previous" in msg for msg in missing_messages))
         conn.close()
 
     def test_missing_all_monthly_headcount_records_missing_input_without_amount(self):
@@ -1701,8 +1701,8 @@ class TestEventDeltaHeadcountFailClosed(unittest.TestCase):
 
         self.assertEqual(self._alloc_rows(conn, rule_id), [])
         missing_messages = [row["message"] for row in self._missing_rows(conn)]
-        self.assertTrue(any(f"cc={cc_code}" in msg for msg in missing_messages))
-        self.assertTrue(any("Missing complete monthly headcount driver" in msg for msg in missing_messages))
+        self.assertTrue(any(f"trung tâm chi phí={cc_code}" in msg for msg in missing_messages))
+        self.assertTrue(any("Thiếu dữ liệu số người theo tháng để tính phân bổ theo chênh lệch sự kiện" in msg for msg in missing_messages))
         conn.close()
 
     def test_non_event_headcount_allocation_does_not_use_master_fallback(self):
@@ -1726,8 +1726,8 @@ class TestEventDeltaHeadcountFailClosed(unittest.TestCase):
         self.assertEqual(self._alloc_rows(conn, rule_id), [])
         missing_rows = self._missing_rows(conn)
         self.assertEqual([row["period"] for row in missing_rows], periods)
-        self.assertTrue(all("Missing canonical monthly headcount driver" in row["message"] for row in missing_rows))
-        self.assertTrue(all("category=headcount_all" in row["message"] for row in missing_rows))
+        self.assertTrue(all("Thiếu dữ liệu số người chuẩn theo tháng để phân bổ" in row["message"] for row in missing_rows))
+        self.assertTrue(all("nhóm=headcount_all" in row["message"] for row in missing_rows))
         conn.close()
 
     def test_non_event_explicit_zero_monthly_headcount_is_not_missing(self):

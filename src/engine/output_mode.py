@@ -136,7 +136,7 @@ def get_group_spec(group_id: str) -> OutputGroupSpec:
     for spec in _DEFAULT_OUTPUT_GROUP_SPECS:
         if spec.group_id == group_id:
             return spec
-    raise KeyError(f"Unknown output group: {group_id}")
+    raise KeyError(f"Nhóm xuất không xác định: {group_id}")
 
 
 def requires_blank_row_after_group(spec: OutputGroupSpec) -> bool:

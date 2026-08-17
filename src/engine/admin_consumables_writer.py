@@ -74,9 +74,9 @@ def apply_admin_consumables_to_workbook(
     workbook_file = Path(workbook_path)
     admin_source = Path(admin_source_path)
     if workbook_file.resolve() == admin_source.resolve():
-        raise ValueError("workbook_path must not overwrite the Admin source workbook")
+        raise ValueError("Đường dẫn tệp kết quả không được ghi đè lên tệp nguồn Tổng vụ.")
     if allocation_source_path and workbook_file.resolve() == Path(allocation_source_path).resolve():
-        raise ValueError("workbook_path must not overwrite the allocation source workbook")
+        raise ValueError("Đường dẫn tệp kết quả không được ghi đè lên tệp nguồn phân bổ.")
 
     workbook = load_workbook(workbook_file)
     try:

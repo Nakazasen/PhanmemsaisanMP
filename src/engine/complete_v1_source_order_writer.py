@@ -568,7 +568,6 @@ def _collect_preserved_unmanaged_rows(
     return preserved
 
 
-
 def _collect_dynamic_allocation_rows(
     dynamic_allocation_rows: Iterable[dict[str, object]] | None,
     fiscal_periods: Iterable[str] | None,
@@ -581,7 +580,7 @@ def _collect_dynamic_allocation_rows(
     for index, row in enumerate(dynamic_allocation_rows, start=1):
         source_group_index = int(row.get("source_group_index", 5))
         if not 0 <= source_group_index < len(source_file_order):
-            raise ValueError(f"Dynamic source group index ngoài manifest: {source_group_index}")
+            raise ValueError(f"Chỉ số nhóm nguồn động nằm ngoài danh mục manifest: {source_group_index}")
         source_file = str(row.get("source_file") or source_file_order[source_group_index])
         synthetic_row = 10000 + index
         values: dict[int, object] = {
@@ -614,9 +613,9 @@ def _collect_dynamic_allocation_rows(
         has_month_payload = any(col in values for col in MONTH_COLS)
         if source_group_index == 6 and has_month_payload:
             if not _norm(values.get(ACCOUNT_COL)):
-                raise ValueError("NNN paperwork có chi phí nhưng thiếu account code; dừng xuất để tránh 経費➝NG.")
+                raise ValueError("Chi phí NNN paperwork có số tiền nhưng thiếu mã tài khoản kế toán; dừng xuất để tránh lỗi hạch toán.")
             if not _norm(values.get(DESCRIPTION_COL)):
-                raise ValueError("NNN paperwork có chi phí nhưng thiếu mô tả nguồn; dừng xuất.")
+                raise ValueError("Chi phí NNN paperwork có số tiền nhưng thiếu mô tả nguồn chi phí; dừng xuất.")
         if not _norm(values.get(DESCRIPTION_COL)) or not _norm(values.get(ACCOUNT_COL)):
             continue
         staged.append(
@@ -775,6 +774,7 @@ def _ordered_source_group(
     return sorted(group, key=_source_block_sort_key)
 
 
+
 def _duplicate_identity(row: StagedWorkbookRow) -> tuple[str, str]:
     return (_norm(row.values.get(ACCOUNT_COL)), _norm(_display_description(row.values.get(DESCRIPTION_COL))))
 
@@ -843,15 +843,6 @@ def apply_complete_v1_source_order_to_workbook(
             if is_qlnn_layout
             else {}
         )
-        # Rows 30–37 belong to the QLLN-owned layout in the current FORM.  This
-        # writer only manages generated cost rows from row 38 onward.  Capture
-        # their values/formulas now so any future regression fails safely before
-        # the workbook is saved.
-        # HubBuilder appends generated facts after the last occupied business
-        # row.  The number differs by cost center, so a fixed cleanup boundary
-        # (historically row 199) can leave duplicate allocations below it.
-        # Structural lookup formulas in otherwise blank template rows do not
-        # expand the heavy cleanup range; they are removed in a light pass.
         sheet_last_row = int(ws.max_row or (start_row - 1))
         effective_clear_until_row = max(
             int(clear_until_row or (start_row - 1)),
@@ -876,9 +867,6 @@ def apply_complete_v1_source_order_to_workbook(
             if (row.source_file, row.original_row) not in existing_source_origins:
                 staged.append(row)
                 existing_source_origins.add((row.source_file, row.original_row))
-        # Do not let a recovered row also be emitted as an unmanaged row after
-        # the source blocks.  The full range is cleared before rewrite, but this
-        # exclusion decides which logical bucket owns the row.
         source_rows_to_clear.update(row.source_row for row in unmarked_facility_depreciation)
         dynamic_staged = _collect_dynamic_allocation_rows(dynamic_allocation_rows, fiscal_periods, resolved_source_order)
         has_dynamic_fixed_assets = any(
@@ -914,8 +902,8 @@ def apply_complete_v1_source_order_to_workbook(
         if invalid_nnn_rows:
             original_rows = ", ".join(str(row.original_row) for row in invalid_nnn_rows)
             raise ValueError(
-                "NNN paperwork có chi phí nhưng thiếu account code "
-                f"(original_row={original_rows}); dừng xuất để tránh 経費➝NG."
+                "Chi phí NNN paperwork có số tiền nhưng thiếu mã tài khoản kế toán "
+                f"(original_row={original_rows}); dừng xuất để tránh lỗi hạch toán."
             )
         preserved = _collect_preserved_unmanaged_rows(
             ws,

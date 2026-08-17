@@ -12,13 +12,22 @@ from pathlib import Path
 import re
 from typing import Iterable
 
+
 def _validate_fiscal_year(fiscal_year: int) -> int:
     try:
         year = int(fiscal_year)
     except (TypeError, ValueError) as exc:
-        raise ValueError("Năm tài chính phải là số nguyên") from exc
+        raise ValueError(
+            "Năm tài chính phải là số nguyên. "
+            "Nguyên nhân: Giá trị năm tài chính nhập vào không thể chuyển đổi thành số nguyên. "
+            "Cách xử lý: Nhập năm tài chính gồm 4 chữ số (ví dụ: 2027)."
+        ) from exc
     if year < 1900:
-        raise ValueError("Năm tài chính phải lớn hơn hoặc bằng 1900")
+        raise ValueError(
+            "Năm tài chính phải lớn hơn hoặc bằng 1900. "
+            "Nguyên nhân: Năm tài chính nhỏ hơn 1900 không hợp lệ trong hệ thống. "
+            "Cách xử lý: Nhập năm tài chính từ 1900 trở lên."
+        )
     return year
 
 
@@ -35,9 +44,17 @@ def fiscal_period_for_month(fiscal_year: int, month: int) -> str:
     try:
         calendar_month = int(month)
     except (TypeError, ValueError) as exc:
-        raise ValueError("Tháng phải là số nguyên") from exc
+        raise ValueError(
+            "Tháng phải là số nguyên. "
+            "Nguyên nhân: Giá trị tháng cung cấp không phải là số nguyên. "
+            "Cách xử lý: Nhập tháng từ 1 đến 12."
+        ) from exc
     if calendar_month < 1 or calendar_month > 12:
-        raise ValueError("Tháng phải nằm trong khoảng từ 1 đến 12")
+        raise ValueError(
+            "Tháng phải nằm trong khoảng từ 1 đến 12. "
+            "Nguyên nhân: Giá trị tháng vượt ngoài khoảng 1 đến 12. "
+            "Cách xử lý: Nhập tháng hợp lệ trong khoảng 1-12."
+        )
     calendar_year = year - 1 if calendar_month >= start else year
     return f"{calendar_year}{calendar_month:02d}"
 
@@ -118,7 +135,9 @@ def _expand_system_period_range(start: str, end: str, *, path: str) -> tuple[str
     if _system_period_key(start) > _system_period_key(end):
         raise SystemSourcePeriodError(
             "SYSTEM_PERIOD_REVERSED",
-            f"Khoảng kỳ trong tên file bị đảo ngược: {Path(path).name} ({start} -> {end}).",
+            f"Khoảng kỳ trong tên file bị đảo ngược: {Path(path).name} ({start} -> {end}). "
+            f"Nguyên nhân: Mốc kỳ bắt đầu ({start}) lớn hơn mốc kỳ kết thúc ({end}). "
+            "Cách xử lý: Đổi tên file sao cho kỳ bắt đầu đứng trước kỳ kết thúc (ví dụ: 202604 ~ 202609).",
             paths=(path,),
             periods=(start, end),
         )
@@ -150,13 +169,17 @@ def system_source_periods_for_file(path: str | Path, fiscal_year: int) -> tuple[
     if not markers:
         raise SystemSourcePeriodError(
             "SYSTEM_PERIOD_UNRECOGNIZED",
-            f"Không xác định được kỳ từ tên file System Cost: {filename}.",
+            f"Không xác định được kỳ từ tên file System Cost: {filename}. "
+            "Nguyên nhân: Tên file không chứa định dạng kỳ YYYYMM (ví dụ 202604) hoặc tên tháng tiếng Anh kèm năm. "
+            f"Cách xử lý: Đổi tên file System Cost có chứa mốc kỳ hợp lệ trong năm tài chính FY{fiscal_year}.",
             paths=(path_text,),
         )
     if len(markers) > 2:
         raise SystemSourcePeriodError(
             "SYSTEM_PERIOD_AMBIGUOUS",
-            f"Tên file System Cost chứa nhiều hơn hai mốc kỳ: {filename} ({', '.join(markers)}).",
+            f"Tên file System Cost chứa nhiều hơn hai mốc kỳ: {filename} ({', '.join(markers)}). "
+            "Nguyên nhân: Tên file chứa quá nhiều mốc thời gian gây nhầm lẫn. "
+            "Cách xử lý: Đổi tên file chỉ chứa 1 mốc kỳ đơn hoặc 2 mốc kỳ giới hạn khoảng thời gian.",
             paths=(path_text,),
             periods=markers,
         )
@@ -171,7 +194,9 @@ def system_source_periods_for_file(path: str | Path, fiscal_year: int) -> tuple[
     if outside:
         raise SystemSourcePeriodError(
             "SYSTEM_PERIOD_OUTSIDE_FY",
-            f"Tên file {filename} chứa kỳ ngoài FY{int(fiscal_year)}: {', '.join(outside)}.",
+            f"Tên file {filename} chứa kỳ ngoài FY{int(fiscal_year)}: {', '.join(outside)}. "
+            f"Nguyên nhân: Mốc kỳ trong tên file không thuộc 12 kỳ của năm tài chính FY{int(fiscal_year)}. "
+            f"Cách xử lý: Kiểm tra lại tệp System Cost đúng cho năm tài chính FY{int(fiscal_year)}.",
             paths=(path_text,),
             periods=outside,
         )
@@ -198,7 +223,9 @@ def map_system_source_periods(
             conflicting = tuple(dict.fromkeys((*(owners[period] for period in duplicates), path)))
             raise SystemSourcePeriodError(
                 "SYSTEM_PERIOD_OVERLAP",
-                "Các file System Cost bị trùng kỳ: " + ", ".join(duplicates) + ".",
+                f"Các file System Cost bị trùng kỳ: {', '.join(duplicates)}. "
+                "Nguyên nhân: Có nhiều hơn một tệp nguồn System Cost cùng chứa dữ liệu của một kỳ tài chính. "
+                "Cách xử lý: Kiểm tra và loại bỏ các tệp System Cost trùng lặp.",
                 paths=conflicting,
                 periods=duplicates,
             )
@@ -211,7 +238,9 @@ def map_system_source_periods(
         if missing:
             raise SystemSourcePeriodError(
                 "SYSTEM_PERIOD_MISSING",
-                "Nguồn System Cost chưa bao phủ đủ 12 kỳ; còn thiếu: " + ", ".join(missing) + ".",
+                f"Nguồn System Cost chưa bao phủ đủ 12 kỳ; còn thiếu: {', '.join(missing)}. "
+                "Nguyên nhân: Danh sách các tệp System Cost không đủ 12 tháng từ tháng 4 đến tháng 3. "
+                f"Cách xử lý: Bổ sung các tệp System Cost cho các kỳ còn thiếu: {', '.join(missing)}.",
                 paths=(assignment.path for assignment in assignments),
                 periods=missing,
             )

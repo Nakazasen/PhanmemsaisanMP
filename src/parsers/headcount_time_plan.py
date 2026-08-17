@@ -1,15 +1,16 @@
-"""Đọc sổ kế hoạch nhân sự và thời gian FY của các phòng ban làm dữ liệu nguồn."""
+"""Trình phân tích cú pháp cho tệp kế hoạch nhân sự và thời gian dạng bảng."""
+
 from __future__ import annotations
 
 import os
 import re
 from dataclasses import dataclass, field
 from typing import Any
-
-import xlrd
 from openpyxl import load_workbook
-
-from src.utils.excel_helpers import get_fy_months, normalize_cc_code
+import xlrd
+import unicodedata
+from src.utils.excel_helpers import normalize_cc_code
+from src.utils.fiscal_periods import fiscal_periods as get_fy_months
 
 HEADCOUNT_SOURCE = "department_plan"
 
@@ -18,64 +19,68 @@ HEADCOUNT_SOURCE = "department_plan"
 class PlanParseResult:
     path: str
     status: str
+    fiscal_year: int
+    department_no: str = ""
     cc_code: str = ""
     department_name: str = ""
-    fiscal_year: int = 0
-    sheet_name: str = ""
-    department_no: str = ""
-    rows: list[dict[str, Any]] = field(default_factory=list)
-    errors: list[str] = field(default_factory=list)
     department_name_jp: str = ""
     department_name_vn: str = ""
-    lookup_status: str = "not_applicable"
-    verification_method: str = ""
+    sheet_name: str = ""
+    lookup_status: str = "missing"
+    verification_method: str = "unverified"
+    errors: list[str] = field(default_factory=list)
+    rows: list[dict[str, Any]] = field(default_factory=list)
 
 
-def _number(value: Any) -> float | None:
-    if value in (None, ""):
-        return 0.0
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
+def _norm_text(value: Any) -> str:
+    if value is None:
+        return ""
+    return unicodedata.normalize("NFKC", str(value)).strip()
 
 
 def _cc_text(value: Any) -> str:
-    if isinstance(value, float) and value.is_integer():
-        return str(int(value))
-    return str(value or "").strip()
+    if value is None:
+        return ""
+    text = str(value).strip()
+    return text[:-2] if text.endswith(".0") else text
 
 
-def _normalized_text(value: Any) -> str:
-    import unicodedata
-    return unicodedata.normalize("NFKC", str(value or "")).strip()
+def _number(value: Any) -> float | None:
+    if value is None or value == "":
+        return 0.0
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return None
 
 
 def _resolve_lookup_identity(
     cc_code: str,
-    displayed_name: str,
+    department_name: str,
     lookup_rows: list[tuple[str, str, str]],
 ) -> tuple[str, str, str]:
-    """Return lookup status and the JP/VN pair relevant to CC + displayed B5."""
-    cc_matches = [row for row in lookup_rows if row[0] == cc_code]
-    if not cc_matches:
+    if not lookup_rows:
         return "missing", "", ""
-    displayed = _normalized_text(displayed_name)
-    name_matches = [
-        row for row in cc_matches
-        if displayed in {_normalized_text(row[1]), _normalized_text(row[2])}
+    cc_text = _norm_text(cc_code)
+    cc_norm = normalize_cc_code(cc_text) or cc_text
+    dept_norm = _norm_text(department_name)
+    exact_matches = [
+        row for row in lookup_rows
+        if (normalize_cc_code(_norm_text(row[0])) or _norm_text(row[0])) == cc_norm and (
+            _norm_text(row[1]) == dept_norm or _norm_text(row[2]) == dept_norm
+        )
     ]
-    matching_pairs = {(row[1], row[2]) for row in name_matches}
-    if len(matching_pairs) == 1:
-        name_jp, name_vn = next(iter(matching_pairs))
-        return "matched", name_jp, name_vn
-    if len(matching_pairs) > 1:
-        return "ambiguous", "", ""
-    cc_pairs = {(row[1], row[2]) for row in cc_matches}
-    if len(cc_pairs) == 1:
-        name_jp, name_vn = next(iter(cc_pairs))
-        return "mismatch", name_jp, name_vn
-    return "mismatch", "", ""
+    if len(exact_matches) == 1:
+        return "matched", str(exact_matches[0][1] or "").strip(), str(exact_matches[0][2] or "").strip()
+    if len(exact_matches) > 1:
+        return "ambiguous", str(exact_matches[0][1] or "").strip(), str(exact_matches[0][2] or "").strip()
+    cc_matches = [
+        row for row in lookup_rows
+        if (normalize_cc_code(_norm_text(row[0])) or _norm_text(row[0])) == cc_norm
+    ]
+    if cc_matches:
+        return "mismatch", str(cc_matches[0][1] or "").strip(), str(cc_matches[0][2] or "").strip()
+    return "missing", "", ""
 
 
 def parse_headcount_time_plan(path: str, fiscal_year: int) -> PlanParseResult:
@@ -110,12 +115,20 @@ def parse_headcount_time_plan(path: str, fiscal_year: int) -> PlanParseResult:
                         name_vn = _cc_text(candidate.cell_value(row_index, 2)) if candidate.ncols > 2 else ""
                         lookup_rows.append((code, name_jp, name_vn))
     except Exception as exc:
-        result.errors.append(f"Không mở được file: {type(exc).__name__}: {exc}")
+        result.errors.append(
+            f"Không mở được file: {type(exc).__name__}. "
+            "Nguyên nhân: Tệp Excel bị khóa, không đúng định dạng hoặc bị hỏng. "
+            "Cách xử lý: Kiểm tra lại tệp Excel kế hoạch nhân sự và đóng các ứng dụng đang mở tệp này."
+        )
         return result
     try:
         result.sheet_name = sheet_name
         if nrows < 28 or ncols < 14:
-            result.errors.append(f"Cấu trúc không đủ: {nrows} dòng, {ncols} cột")
+            result.errors.append(
+                f"Cấu trúc không đủ: {nrows} dòng, {ncols} cột. "
+                "Nguyên nhân: Bảng tính kế hoạch nhân sự cần tối thiểu 28 dòng và 14 cột theo định dạng chuẩn. "
+                "Cách xử lý: Sử dụng đúng biểu mẫu kế hoạch nhân sự và thời gian quy định."
+            )
             return result
         raw_cc = _cc_text(cell_value(4, 0))
         result.cc_code = normalize_cc_code(raw_cc) or raw_cc
@@ -131,10 +144,18 @@ def parse_headcount_time_plan(path: str, fiscal_year: int) -> PlanParseResult:
         elif lookup_status == "mismatch":
             result.verification_method = "name_confirmation_required"
         elif lookup_status == "ambiguous":
-            result.errors.append("Lookup nội bộ có nhiều cặp tên cùng khớp CC và B5")
+            result.errors.append(
+                "Lookup nội bộ có nhiều cặp tên cùng khớp CC và B5. "
+                "Nguyên nhân: Có nhiều hơn một phòng ban trùng khớp mã trung tâm chi phí trong sheet tra cứu. "
+                "Cách xử lý: Kiểm tra và chuẩn hóa lại sheet tra cứu nội bộ của tệp."
+            )
         months = [int(_number(cell_value(7, col)) or 0) for col in range(2, 14)]
         if months != [int(period[-2:]) for period in get_fy_months(fiscal_year)]:
-            result.errors.append(f"Thứ tự tháng không đúng FY{fiscal_year}: {months}")
+            result.errors.append(
+                f"Thứ tự tháng không đúng FY{fiscal_year}: {months}. "
+                "Nguyên nhân: Các cột tháng phải theo thứ tự năm tài chính từ tháng 4 đến tháng 3. "
+                "Cách xử lý: Hiệu chỉnh lại dòng tiêu đề tháng (dòng 8) theo đúng thứ tự 4, 5, ..., 12, 1, 2, 3."
+            )
             return result
         row_map = {
             "headcount_expat": 9, "headcount_staff": 10, "headcount_worker": 11,
@@ -148,7 +169,11 @@ def parse_headcount_time_plan(path: str, fiscal_year: int) -> PlanParseResult:
         for metric, row_index in row_map.items():
             parsed = [_number(cell_value(row_index, col)) for col in range(2, 14)]
             if any(value is None for value in parsed):
-                result.errors.append(f"Giá trị không phải số tại dòng {row_index + 1} ({metric})")
+                result.errors.append(
+                    f"Giá trị không phải số tại dòng {row_index + 1} ({metric}). "
+                    "Nguyên nhân: Ô chứa ký tự hoặc giá trị trống không thể quy đổi ra số. "
+                    f"Cách xử lý: Nhập đầy đủ số liệu dạng số tại dòng {row_index + 1} các cột tháng."
+                )
             else:
                 values[metric] = [float(value or 0) for value in parsed]
         if result.errors:
@@ -164,7 +189,11 @@ def parse_headcount_time_plan(path: str, fiscal_year: int) -> PlanParseResult:
             )
             for actual, expected, label in checks:
                 if abs(actual - expected) > 0.01:
-                    result.errors.append(f"{period}: {label} không khớp ({actual} != {expected})")
+                    result.errors.append(
+                        f"{period}: {label} không khớp ({actual} != {expected}). "
+                        "Nguyên nhân: Tổng số thực tế trên bảng tính không khớp với tổng các thành phần chi tiết. "
+                        f"Cách xử lý: Kiểm tra lại công thức hoặc số liệu {label} tại kỳ {period}."
+                    )
             result.rows.append({
                 "period": period,
                 "headcount_expat": values["headcount_expat"][index],

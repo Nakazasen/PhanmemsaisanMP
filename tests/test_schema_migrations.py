@@ -74,7 +74,7 @@ def test_newer_database_schema_is_rejected_without_mutation():
     conn.execute("INSERT INTO schema_migrations VALUES (999, 'future', 'now', 'future')")
     conn.commit()
 
-    with pytest.raises(SchemaCompatibilityError, match="newer than supported"):
+    with pytest.raises(SchemaCompatibilityError, match="mới hơn phiên bản ứng dụng hỗ trợ"):
         create_schema(conn)
 
     assert conn.execute("SELECT version FROM schema_migrations").fetchone()[0] == 999

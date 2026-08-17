@@ -115,7 +115,7 @@ def apply_fixed_assets_reference_skeleton_to_workbook(
     wb = load_workbook(workbook_path)
     try:
         if SHEET_NAME not in wb.sheetnames:
-            raise ValueError(f"Sheet not found: {SHEET_NAME}")
+            raise ValueError(f"Không tìm thấy trang tính: {SHEET_NAME}")
         ws = wb[SHEET_NAME]
         try:
             exchange_rate: float | None = read_exchange_rate_from_form(str(workbook_path))

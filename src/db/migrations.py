@@ -91,7 +91,9 @@ def _rebuild_legacy_cost_centers(conn: sqlite3.Connection) -> None:
     missing = sorted(required_cc - available_cc)
     if missing:
         raise SchemaCompatibilityError(
-            "Legacy dim_cost_centers cannot be migrated safely; missing columns: " + ", ".join(missing)
+            f"Bảng danh mục Trung tâm chi phí (dim_cost_centers) phiên bản cũ không thể chuyển đổi an toàn; thiếu các cột: {', '.join(missing)}. "
+            "Nguyên nhân: Cấu trúc bảng dim_cost_centers cũ không đúng định dạng yêu cầu. "
+            "Cách xử lý: Kiểm tra lại tệp cơ sở dữ liệu SQLite hoặc khởi tạo lại cơ sở dữ liệu mới."
         )
 
     conn.execute("ALTER TABLE dim_cost_centers RENAME TO dim_cost_centers_legacy_v0")
@@ -128,8 +130,9 @@ def _rebuild_legacy_cost_centers(conn: sqlite3.Connection) -> None:
         missing_log = sorted(required_log - available_log)
         if missing_log:
             raise SchemaCompatibilityError(
-                "Legacy fact_allocation_log cannot be migrated safely; missing columns: "
-                + ", ".join(missing_log)
+                f"Bảng nhật ký phân bổ (fact_allocation_log) phiên bản cũ không thể chuyển đổi an toàn; thiếu các cột: {', '.join(missing_log)}. "
+                "Nguyên nhân: Cấu trúc bảng fact_allocation_log cũ không đúng định dạng yêu cầu. "
+                "Cách xử lý: Kiểm tra lại tệp cơ sở dữ liệu SQLite hoặc xóa bản ghi cũ trước khi chuyển đổi."
             )
         conn.execute(
             """
@@ -169,8 +172,9 @@ def run_migrations(
     start_version = current_schema_version(conn)
     if start_version > CURRENT_SCHEMA_VERSION:
         raise SchemaCompatibilityError(
-            f"Database schema v{start_version} is newer than supported v{CURRENT_SCHEMA_VERSION}. "
-            "Install a compatible application version; the database was not modified."
+            f"Phiên bản lược đồ cơ sở dữ liệu (v{start_version}) mới hơn phiên bản ứng dụng hỗ trợ (v{CURRENT_SCHEMA_VERSION}). "
+            "Nguyên nhân: Tệp cơ sở dữ liệu này được tạo bởi phiên bản phần mềm mới hơn. "
+            "Cách xử lý: Cập nhật phần mềm lên phiên bản mới nhất tương thích với cơ sở dữ liệu."
         )
     if start_version == CURRENT_SCHEMA_VERSION:
         return MigrationResult(start_version, start_version)
@@ -199,17 +203,25 @@ def run_migrations(
         conn.commit()
     except Exception as exc:
         conn.rollback()
-        restore_hint = f" Backup: {backup}" if backup else ""
+        restore_hint = f" Bản sao lưu: {backup}." if backup else ""
         if isinstance(exc, SchemaCompatibilityError):
             raise
-        raise SchemaCompatibilityError(f"Schema migration failed; no partial change was committed.{restore_hint}") from exc
+        import logging
+        logging.getLogger(__name__).error("Lỗi khi chuyển đổi lược đồ CSDL: %s", exc, exc_info=True)
+        raise SchemaCompatibilityError(
+            f"Chuyển đổi lược đồ cơ sở dữ liệu thất bại; các thay đổi đã được khôi phục nguyên trạng.{restore_hint} "
+            "Nguyên nhân: Phát sinh lỗi truy xuất hoặc ghi tệp trong quá trình cập nhật cấu trúc cơ sở dữ liệu SQLite. "
+            "Cách xử lý: Kiểm tra quyền ghi và tính toàn vẹn của tệp cơ sở dữ liệu rồi thử lại."
+        ) from exc
     finally:
         conn.execute(f"PRAGMA foreign_keys={'ON' if foreign_keys else 'OFF'}")
 
     violations = conn.execute("PRAGMA foreign_key_check").fetchall()
     if violations:
         raise SchemaCompatibilityError(
-            f"Schema migration completed but foreign-key validation found {len(violations)} violation(s)."
-            + (f" Backup: {backup}" if backup else "")
+            f"Chuyển đổi lược đồ hoàn tất nhưng phát hiện {len(violations)} lỗi vi phạm khóa ngoại (foreign key)."
+            + (f" Bản sao lưu: {backup}." if backup else "")
+            + " Nguyên nhân: Có dữ liệu tham chiếu không tồn tại giữa các bảng. "
+            "Cách xử lý: Kiểm tra và làm sạch dữ liệu trong cơ sở dữ liệu trước khi chuyển đổi."
         )
     return MigrationResult(start_version, CURRENT_SCHEMA_VERSION, str(backup) if backup else None)

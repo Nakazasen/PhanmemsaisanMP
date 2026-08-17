@@ -478,13 +478,13 @@ class HubBuilder:
         try:
             hub_sheet_name = self._validate_template_workbook(workbook, output_path)
         except ExportIntegrityError as exc:
-            raise ExportIntegrityError(f"Exported workbook failed integrity check for CC {cc_code}: {exc}") from exc
+            raise ExportIntegrityError(f"Sổ làm việc xuất ra không đạt kiểm tra tính toàn vẹn cho CC {cc_code}: {exc}") from exc
 
         worksheet = workbook[hub_sheet_name]
         business_rows = self._business_row_count(worksheet)
         if fact_count > 0 and business_rows <= 0:
             raise ExportIntegrityError(
-                "Exported workbook has no business rows although DB facts exist: "
+                "Sổ làm việc xuất ra không có dòng nghiệp vụ nào mặc dù CSDL có dữ liệu: "
                 f"cc={cc_code}, facts={fact_count}, output={output_path}, "
                 f"sheet={hub_sheet_name}, max_row={worksheet.max_row}, max_column={worksheet.max_column}"
             )

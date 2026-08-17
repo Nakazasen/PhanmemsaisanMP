@@ -38,8 +38,8 @@ def _resolve_mp2027_docs_dir() -> str:
         return packaged_docs_dir
 
     raise FileNotFoundError(
-        f"Missing required source directory: {external_docs_dir}. "
-        "Expected docs/MP2027 either next to the app or bundled inside the executable."
+        f"Không tìm thấy thư mục tài liệu nguồn bắt buộc: {external_docs_dir}. "
+        "Yêu cầu có thư mục docs/MP2027 ở cạnh ứng dụng hoặc được đóng gói bên trong tệp thực thi."
     )
 
 
@@ -774,4 +774,3 @@ def load_all(db_path: str = None, template_path: str = None,
 if __name__ == '__main__':
     results = load_all()
     print(f"\nTóm tắt: {results}")
-

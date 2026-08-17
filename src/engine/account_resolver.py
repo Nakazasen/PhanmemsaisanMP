@@ -160,9 +160,17 @@ def _find_account_code_by_keywords(conn: sqlite3.Connection, keywords: tuple[str
 
     unique_matches = sorted(set(matches))
     if not unique_matches:
-        raise AccountResolutionError(f"Account not found for keyword lookup: {keywords}")
+        raise AccountResolutionError(
+            f"Không tìm thấy mã tài khoản theo từ khóa tra cứu: {keywords}. "
+            "Nguyên nhân: Từ khóa không khớp với tên tiếng Nhật/Việt trong dim_accounts. "
+            "Cách xử lý: Kiểm tra lại từ khóa hoặc bổ sung tài khoản vào danh mục dim_accounts."
+        )
     if len(unique_matches) > 1:
-        raise AccountResolutionError(f"Ambiguous account keywords for account lookup: {keywords}")
+        raise AccountResolutionError(
+            f"Từ khóa tra cứu tài khoản bị trùng lặp nhiều kết quả: {keywords}. "
+            "Nguyên nhân: Có nhiều tài khoản cùng khớp từ khóa này. "
+            "Cách xử lý: Sử dụng từ khóa tra cứu cụ thể hơn hoặc cấu hình lại danh mục dim_accounts."
+        )
     return unique_matches[0]
 
 
@@ -225,7 +233,11 @@ def _pick_row_for_cost_type_with_conn(
     if len(valid_rows) == 1:
         return valid_rows[0]
     if len(valid_rows) > 1:
-        raise AccountResolutionError(f"Ambiguous account rows for account lookup: {account_key}")
+        raise AccountResolutionError(
+            f"Tìm thấy nhiều dòng tài khoản trùng khớp khi tra cứu: '{account_key}'. "
+            "Nguyên nhân: Trùng lặp dữ liệu tài khoản trong dim_accounts. "
+            "Cách xử lý: Kiểm tra và chuẩn hóa lại danh mục dim_accounts."
+        )
 
     group_names = sorted({str(row["group_name"] or "").strip() for row in rows if str(row["group_name"] or "").strip()})
     if len(group_names) == 1:
@@ -248,10 +260,18 @@ def _pick_row_for_cost_type_with_conn(
             if len(target_suffix_matches) == 1:
                 return target_suffix_matches[0]
             if len(target_suffix_matches) > 1:
-                raise AccountResolutionError(f"Ambiguous grouped account rows for account lookup: {account_key}")
+                raise AccountResolutionError(
+                    f"Nhóm tài khoản bị trùng lặp nhiều kết quả khi tra cứu: '{account_key}'. "
+                    "Nguyên nhân: Nhiều tài khoản cùng nhóm khớp tiêu chí. "
+                    "Cách xử lý: Kiểm tra lại cấu hình nhóm tài khoản trong dim_accounts."
+                )
             if len(semantic_matches) == 1:
                 return semantic_matches[0]
-            raise AccountResolutionError(f"Ambiguous grouped account rows for account lookup: {account_key}")
+            raise AccountResolutionError(
+                f"Nhóm tài khoản bị trùng lặp khi tra cứu: '{account_key}'. "
+                "Nguyên nhân: Không xác định được duy nhất dòng tài khoản cho loại chi phí. "
+                "Cách xử lý: Kiểm tra lại cột mfg_code/ga_code/sales_code trong dim_accounts."
+            )
 
     return rows[0]
 
@@ -272,17 +292,28 @@ def _find_account_row_by_numeric_key(conn: sqlite3.Connection, account_key: str,
 def _account_column_for_connection(conn: sqlite3.Connection, target_cc: int | str) -> tuple[str, str]:
     cc_text = str(target_cc or "").strip()
     if not cc_text:
-        raise AccountResolutionError("Missing target cost center for account lookup")
+        raise AccountResolutionError(
+            "Thiếu mã Trung tâm chi phí (Cost Center) để tra cứu tài khoản. "
+            "Cách xử lý: Chỉ định mã Trung tâm chi phí hợp lệ trước khi thực hiện tra cứu."
+        )
 
     row = conn.execute(
         "SELECT cost_type FROM dim_cost_centers WHERE code = ?",
         (cc_text,),
     ).fetchone()
     if row is None:
-        raise AccountResolutionError(f"Cost center not found for account lookup: {cc_text}")
+        raise AccountResolutionError(
+            f"Không tìm thấy mã Trung tâm chi phí trong danh mục CC: '{cc_text}'. "
+            "Nguyên nhân: Mã CC chưa được khai báo trong dim_cost_centers. "
+            "Cách xử lý: Thêm mã CC vào bảng danh mục dim_cost_centers."
+        )
     cost_type = str(row["cost_type"] or "").strip()
     if not cost_type:
-        raise AccountResolutionError(f"Cost center has no cost_type for account lookup: {cc_text}")
+        raise AccountResolutionError(
+            f"Trung tâm chi phí chưa được gán loại chi phí (cost_type): '{cc_text}'. "
+            "Nguyên nhân: Cột cost_type trong dim_cost_centers bị trống. "
+            "Cách xử lý: Cập nhật cost_type (ví dụ: 製造/一般/販売) cho CC '{cc_text}' trong dim_cost_centers."
+        )
     return cost_type, resolve_account_column_by_cost_type(cost_type)
 
 
@@ -295,17 +326,26 @@ def _resolve_source_base_account_code(
 ) -> int:
     policy = get_source_account_policy(source)
     if policy is None:
-        raise AccountResolutionError(f"Unsupported source for account policy lookup: {source}")
+        raise AccountResolutionError(
+            f"Loại nguồn chi phí không được hỗ trợ để tra cứu chính sách tài khoản: '{source}'. "
+            "Cách xử lý: Khai báo chính sách tài khoản cho nguồn '{source}' trong SOURCE_ACCOUNT_POLICIES."
+        )
 
     if policy.fixed_base_account_code:
         return int(policy.fixed_base_account_code)
 
     if policy.base_account_by_form_row:
         if form_row is None:
-            raise AccountResolutionError(f"Missing form_row for source account policy: {source}")
+            raise AccountResolutionError(
+                f"Thiếu số dòng FORM (form_row) cho chính sách tài khoản nguồn: '{source}'. "
+                "Cách xử lý: Truyền tham số form_row khi gọi tra cứu tài khoản."
+            )
         account_code = policy.base_account_by_form_row.get(int(form_row))
         if account_code is None:
-            raise AccountResolutionError(f"Unsupported form_row for source account policy: {source}:{form_row}")
+            raise AccountResolutionError(
+                f"Số dòng FORM không được hỗ trợ cho chính sách tài khoản nguồn: {source}:{form_row}. "
+                "Cách xử lý: Kiểm tra cấu hình dòng FORM trong SOURCE_ACCOUNT_POLICIES."
+            )
         return int(account_code)
 
     if policy.base_account_by_description:
@@ -316,9 +356,15 @@ def _resolve_source_base_account_code(
             if isinstance(account_ref, tuple):
                 return _find_account_code_by_keywords(conn, account_ref)
             return int(account_ref)
-        raise AccountResolutionError(f"Unsupported description for source account policy: {source}:{description_text}")
+        raise AccountResolutionError(
+            f"Mô tả chi phí không khớp với quy tắc tra cứu tài khoản nguồn: {source} ('{description_text}'). "
+            "Cách xử lý: Kiểm tra lại mô tả chi phí trong file nguồn hoặc bổ sung từ khóa khớp trong SOURCE_ACCOUNT_POLICIES."
+        )
 
-    raise AccountResolutionError(f"Source account policy has no base-account resolver: {source}")
+    raise AccountResolutionError(
+        f"Chính sách tài khoản nguồn chưa định nghĩa bộ giải quyết tài khoản gốc: '{source}'. "
+        "Cách xử lý: Bổ sung fixed_base_account_code hoặc base_account_by_* trong SOURCE_ACCOUNT_POLICIES."
+    )
 
 
 def resolve_account_column_by_cost_type(cost_type: str) -> str:
@@ -327,7 +373,10 @@ def resolve_account_column_by_cost_type(cost_type: str) -> str:
     for token, column in COST_TYPE_TO_ACCOUNT_COLUMN.items():
         if token in text:
             return column
-    raise AccountResolutionError(f"Unsupported cost type for account lookup: {cost_type!r}")
+    raise AccountResolutionError(
+        f"Loại chi phí không được hỗ trợ để tra cứu cột tài khoản: {cost_type!r}. "
+        "Cách xử lý: Sử dụng loại chi phí hợp lệ (chứa 製造, 一般, hoặc 販売)."
+    )
 
 
 def resolve_cost_type_for_connection(conn: sqlite3.Connection, target_cc: int | str) -> str:
@@ -348,7 +397,10 @@ def resolve_account_code_for_connection(
     """Resolve account_code using an existing SQLite connection."""
     account_key = str(account_key_or_name or "").strip()
     if not account_key:
-        raise AccountResolutionError("Missing account key/name for account lookup")
+        raise AccountResolutionError(
+            "Thiếu mã hoặc tên tài khoản để thực hiện tra cứu. "
+            "Cách xử lý: Cung cấp mã tài khoản hoặc tên tài khoản hợp lệ."
+        )
 
     cost_type, column = _account_column_for_connection(conn, target_cc)
     if account_key.replace(".", "", 1).isdigit():
@@ -365,11 +417,17 @@ def resolve_account_code_for_connection(
         row = _pick_row_for_cost_type_with_conn(conn, rows, column, account_key)
 
     if row is None:
-        raise AccountResolutionError(f"Account not found for account lookup: {account_key}")
+        raise AccountResolutionError(
+            f"Không tìm thấy tài khoản trong danh mục tài khoản (dim_accounts): '{account_key}'. "
+            "Nguyên nhân: Mã/tên tài khoản không tồn tại trong hệ thống. "
+            "Cách xử lý: Kiểm tra lại mã tài khoản trong tệp nguồn hoặc thêm vào dim_accounts."
+        )
     value = row[column]
     if not _is_valid_account_code(value):
         raise AccountResolutionError(
-            f"Account {account_key!r} has no {column} value for cost type {cost_type!r}"
+            f"Tài khoản '{account_key}' không có giá trị cột '{column}' cho loại chi phí '{cost_type}'. "
+            f"Nguyên nhân: Cột '{column}' chưa được cấu hình cho tài khoản này trong dim_accounts. "
+            f"Cách xử lý: Cập nhật mã tài khoản tương ứng trong cột '{column}' của bảng dim_accounts."
         )
     return int(float(value))
 

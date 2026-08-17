@@ -409,21 +409,21 @@ class TestSharedAccountResolver(unittest.TestCase):
         from src.engine.account_resolver import resolve_cost_type_for_cc
         db_path, conn, error_cls = self._mk_file_db()
         conn.close()
-        with self.assertRaisesRegex(error_cls, "Cost center not found"):
+        with self.assertRaisesRegex(error_cls, "Không tìm thấy mã Trung tâm chi phí"):
             resolve_cost_type_for_cc(db_path, 9999999999)
 
     def test_shared_missing_account_fails_clearly(self):
         from src.engine.account_resolver import resolve_account_code
         db_path, conn, error_cls = self._mk_file_db()
         conn.close()
-        with self.assertRaisesRegex(error_cls, "Account not found"):
+        with self.assertRaisesRegex(error_cls, "Không tìm thấy tài khoản trong danh mục tài khoản"):
             resolve_account_code(db_path, 1412000040, "存在しない科目")
 
     def test_shared_resolver_does_not_fallback_to_wrong_column(self):
         from src.engine.account_resolver import resolve_account_code
         db_path, conn, error_cls = self._mk_file_db()
         conn.close()
-        with self.assertRaisesRegex(error_cls, "has no ga_code value"):
+        with self.assertRaisesRegex(error_cls, "không có giá trị cột 'ga_code'"):
             resolve_account_code(db_path, 1412000099, "製造のみ")
 
     def test_shared_numeric_variant_key_resolves_back_to_master_row(self):

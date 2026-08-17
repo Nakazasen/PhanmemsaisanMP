@@ -129,7 +129,7 @@ def test_manual_event_driver_missing_account_reports_clear_error(tmp_path):
     result = parse_manual_event_drivers(conn, source_dir=str(tmp_path))
     assert result["inserted"] == 0
     assert result["errors"] == 1
-    assert "Account not found" in result["error_message"]
+    assert "Không tìm thấy tài khoản" in result["error_message"]
     conn.close()
 
 
@@ -152,7 +152,7 @@ def test_manual_event_driver_does_not_fallback_to_wrong_account_column(tmp_path)
     result = parse_manual_event_drivers(conn, source_dir=str(tmp_path))
     assert result["inserted"] == 0
     assert result["errors"] == 1
-    assert "has no ga_code value" in result["error_message"]
+    assert "không có giá trị cột 'ga_code'" in result["error_message"]
     conn.close()
 
 

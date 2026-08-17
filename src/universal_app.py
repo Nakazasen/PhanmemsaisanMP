@@ -595,45 +595,95 @@ def _friendly_error_message(error) -> str:
     if "unable to locate system cost row" in lower_text or "không tìm thấy dòng system cost" in lower_text:
         return (
             "Không tìm thấy dòng Chi phí hệ thống trong tệp FORM.\n\n"
-            "Nguyên nhân thường gặp: đang dùng FORM.xlsx cũ hoặc FORM không đúng phiên bản.\n"
-            f"Cách xử lý: chọn lại tệp FORM mới nhất tại {external_template}."
+            "Nguyên nhân: Đang dùng FORM.xlsx cũ hoặc FORM không đúng phiên bản.\n"
+            f"Cách xử lý: Chọn lại tệp FORM mới nhất tại {external_template}."
         )
     if "unable to resolve kdc system cost account" in lower_text or "không xác định được tài khoản system cost" in lower_text:
         return (
             "Không xác định được tài khoản Chi phí hệ thống cho một mã bộ phận.\n\n"
-            "Cách xử lý: kiểm tra mã bộ phận trong dữ liệu nguồn và kiểm tra loại chi phí của mã đó trong danh mục CC."
+            "Nguyên nhân: Mã bộ phận trong dữ liệu nguồn chưa được gán loại chi phí trong danh mục CC.\n"
+            "Cách xử lý: Kiểm tra mã bộ phận trong dữ liệu nguồn và cập nhật danh mục Trung tâm chi phí."
         )
     if "form template not found" in lower_text:
         return (
             "Không tìm thấy tệp mẫu FORM.\n\n"
-            f"Cách xử lý: chọn lại tệp FORM mới nhất tại {external_template}."
+            "Nguyên nhân: Đường dẫn tệp FORM không tồn tại hoặc đã bị di chuyển.\n"
+            f"Cách xử lý: Chọn lại tệp FORM mới nhất tại {external_template}."
         )
     if "missing the mp detail sheet" in lower_text or "không có sheet chi tiết mp" in lower_text:
         return (
             "Tệp FORM không có trang tính chi tiết MP đúng định dạng.\n\n"
-            f"Cách xử lý: dùng lại tệp FORM mới nhất tại {external_template}."
+            "Nguyên nhân: Thiếu trang tính '内訳ﾘｽﾄ(4～3月)' trong tệp FORM.\n"
+            f"Cách xử lý: Dùng lại tệp FORM mới nhất tại {external_template}."
         )
     if "malformed or empty" in lower_text:
         return (
             "Tệp FORM sai định dạng hoặc rỗng.\n\n"
-            f"Cách xử lý: thay bằng tệp FORM mới nhất tại {external_template}."
+            "Nguyên nhân: Tệp Excel bị hỏng hoặc không chứa dữ liệu cấu trúc hợp lệ.\n"
+            f"Cách xử lý: Thay bằng tệp FORM mới nhất tại {external_template}."
         )
     if "append rows prepared" in lower_text or "dòng trống để ghi thêm" in lower_text:
         return (
             "Tệp FORM không còn đủ dòng trống để ghi các chi phí phát sinh thêm.\n\n"
-            "Cách xử lý: dùng FORM mới nhất hoặc chuẩn bị thêm vùng dòng trống trong trang tính chi tiết MP."
+            "Nguyên nhân: Số dòng chi phí phát sinh vượt quá vùng trống dự kiến trong mẫu FORM.\n"
+            "Cách xử lý: Dùng FORM mới nhất hoặc chuẩn bị thêm vùng dòng trống trong trang tính chi tiết MP."
+        )
+    if "permission denied" in lower_text or "access is denied" in lower_text or "đang được mở" in lower_text:
+        return (
+            "Không thể ghi hoặc lưu tệp do bị hạn chế quyền truy cập.\n\n"
+            "Nguyên nhân thường gặp: Tệp Excel kết quả đang được mở bằng ứng dụng Microsoft Excel hoặc chương trình khác.\n"
+            "Cách xử lý:\n"
+            "1. Đóng toàn bộ các tệp Excel đang mở liên quan đến chương trình.\n"
+            "2. Kiểm tra quyền ghi tại thư mục lưu tệp.\n"
+            "3. Bấm chạy lại tiến trình."
+        )
+    if "database is locked" in lower_text or "database locked" in lower_text or "sqlite" in lower_text and "locked" in lower_text:
+        return (
+            "Cơ sở dữ liệu SQLite đang bị khóa bởi tiến trình khác.\n\n"
+            "Nguyên nhân: Một cửa sổ khác của chương trình hoặc công cụ quản trị CSDL đang truy cập đồng thời.\n"
+            "Cách xử lý:\n"
+            "1. Đóng các cửa sổ hoặc tiến trình phụ đang mở.\n"
+            "2. Đợi vài giây rồi thực hiện lại thao tác."
+        )
+    if "fixed-assets" in lower_text or "tài sản cố định" in lower_text:
+        if "missing authoritative exchange_rate" in lower_text or "tỷ giá" in lower_text:
+            return (
+                "Thiếu tỷ giá USD/VND hợp lệ để tính khấu hao tài sản cố định.\n\n"
+                "Cách xử lý: Nhập tỷ giá USD/VND trong hồ sơ dự án hoặc kiểm tra tham số tỷ giá trong CSDL."
+            )
+        if "no recognizable current source sheet" in lower_text or "không chứa trang tính nguồn" in lower_text:
+            return (
+                "Tệp Tài sản cố định không chứa trang tính nguồn hợp lệ.\n\n"
+                "Cách xử lý: Kiểm tra lại tệp Excel tài sản cố định trong Thư mục nguồn xem có đúng mẫu không."
+            )
+    if "must not overwrite" in lower_text or "không được ghi đè" in lower_text:
+        return (
+            "Đường dẫn tệp kết quả trùng với tệp dữ liệu nguồn.\n\n"
+            "Nguyên nhân: Để đảm bảo an toàn, hệ thống cấm ghi đè trực tiếp lên tệp nguồn ban đầu.\n"
+            "Cách xử lý: Chọn thư mục lưu kết quả khác với thư mục nguồn."
         )
     if "not found" in lower_text or "no such file" in lower_text:
         return (
             "Không tìm thấy tệp hoặc thư mục cần dùng.\n\n"
-            "Cách xử lý: kiểm tra lại đường dẫn Tệp mẫu FORM và Thư mục nguồn trên màn hình chính."
+            "Nguyên nhân: Đường dẫn tệp/thư mục đã bị xóa, đổi tên hoặc chưa được chọn.\n"
+            "Cách xử lý: Kiểm tra lại đường dẫn Tệp mẫu FORM và Thư mục nguồn trên màn hình chính."
         )
     if text and any(marker in lower_text for marker in vietnamese_markers):
+        if "cách xử lý:" not in lower_text and "hướng dẫn:" not in lower_text:
+            return (
+                f"{text}\n\n"
+                "Cách xử lý:\n"
+                "1. Kiểm tra lại dữ liệu nguồn và cấu hình liên quan đến thông báo lỗi trên.\n"
+                "2. Cập nhật hoặc bổ sung các trường dữ liệu còn thiếu.\n"
+                "3. Chạy lại tiến trình sau khi đã hoàn tất hiệu chỉnh."
+            )
         return text
     return (
-        "Đã xảy ra lỗi khi chạy chương trình.\n\n"
-        "Cách xử lý: kiểm tra lại Tệp mẫu FORM, Thư mục nguồn và chạy lại. "
-        "Nếu lỗi vẫn lặp lại, bật MP2027_DEBUG_TRACEBACK=1 để lấy chi tiết kỹ thuật."
+        f"Đã xảy ra lỗi khi chạy chương trình:\n{text}\n\n"
+        "Cách xử lý:\n"
+        "1. Kiểm tra lại Tệp mẫu FORM và Thư mục nguồn trên màn hình chính.\n"
+        "2. Đảm bảo dữ liệu nguồn đầy đủ và hợp lệ.\n"
+        "3. Nếu lỗi vẫn tiếp tục, hãy liên hệ bộ phận hỗ trợ kỹ thuật."
     )
 
 
@@ -1799,6 +1849,7 @@ class MPManagerApp:
             ("Cài bản cập nhật...", self.install_application_update),
             ("Lịch sử lần chạy", self.open_run_history),
             ("Hướng dẫn trực quan", self.open_user_guide),
+            ("So sánh biến động MP (YoY)", self.open_variance_tab),
         ):
             ttk.Button(actions, text=text, command=command).pack(side="left", padx=(0, 8))
 
@@ -2096,7 +2147,7 @@ class MPManagerApp:
         if path:
             validation_error = _validate_selected_template(path)
             if validation_error:
-                messagebox.showerror("Lỗi", validation_error)
+                messagebox.showerror("Tệp mẫu không hợp lệ", validation_error)
                 return
             self.template_path.set(path)
             self._save_path_preference("template_path", path, "Selected FORM template")
@@ -2110,7 +2161,7 @@ class MPManagerApp:
         if path:
             validation_error = _validate_selected_source_dir(path)
             if validation_error:
-                messagebox.showerror("Lỗi", validation_error)
+                messagebox.showerror("Thư mục nguồn không hợp lệ", validation_error)
                 return
             self.source_dir.set(path)
             self._save_path_preference("cost_source_dir", path, "Selected cost source folder")
@@ -2351,7 +2402,10 @@ class MPManagerApp:
     def open_source_order_editor(self):
         source_dir = self.source_dir.get() or BASE_DIR
         if not os.path.isdir(source_dir):
-            messagebox.showerror("Lỗi", f"Không tìm thấy thư mục nguồn:\n{source_dir}")
+            messagebox.showerror(
+                "Không tìm thấy thư mục",
+                f"Không tìm thấy thư mục nguồn:\n{source_dir}\n\nCách xử lý: Hãy kiểm tra lại đường dẫn Thư mục nguồn trên màn hình chính."
+            )
             return
 
         editor = tk.Toplevel(self.root)
@@ -2893,6 +2947,21 @@ class MPManagerApp:
     def _write_manual_bus_headcount_rows(self, csv_path: str, rows):
         self._write_csv_rows(csv_path, BUS_DRIVER_COLUMNS, rows)
 
+    def open_variance_tab(self):
+        try:
+            from src.ui.tabs.variance_tab import VarianceTab
+        except ImportError as e:
+            from tkinter import messagebox
+            messagebox.showerror("Thiếu thư viện", "Tính năng này cần thư viện pandas/openpyxl. Vui lòng cài đặt đầy đủ dependencies.")
+            return
+
+        editor = tk.Toplevel(self.root)
+        editor.title("So Sánh Biến Động MP (YoY)")
+        width, height = MPManagerApp._initial_window_size(self.root.winfo_screenwidth(), self.root.winfo_screenheight())
+        editor.geometry(f"{width}x{height}")
+        editor.minsize(800, 600)
+        VarianceTab(editor)
+
     def open_user_guide(self):
         guide = tk.Toplevel(self.root)
         guide.title("Hướng dẫn trực quan")
@@ -3256,14 +3325,20 @@ class MPManagerApp:
             worker = worker_var.get().strip() or "0"
             desc = desc_var.get().strip()
             if not cc_code or not period:
-                messagebox.showerror("Lỗi", "Yêu cầu nhập Mã CC và Kỳ.")
+                messagebox.showerror(
+                    "Thiếu thông tin",
+                    "Vui lòng nhập đầy đủ Mã Trung tâm chi phí (CC) và Kỳ hạch toán (YYYYMM).\n\nCách xử lý: Điền mã CC và chọn kỳ trước khi bấm Lưu."
+                )
                 return
             try:
                 int(float(cc_code))
                 float(staff)
                 float(worker)
             except Exception:
-                messagebox.showerror("Lỗi", "Giá trị số không hợp lệ.")
+                messagebox.showerror(
+                    "Dữ liệu không hợp lệ",
+                    "Mã CC, số lượng nhân viên hoặc công nhân phải là giá trị số hợp lệ.\n\nCách xử lý: Kiểm tra lại các ô nhập liệu và chỉ nhập số."
+                )
                 return
             selected = tree.selection()
             row_values = (cc_code, period, staff, worker, desc)
@@ -4072,14 +4147,14 @@ class MPManagerApp:
             source = self.source_dir.get()
             template_error = _validate_selected_template(template, fiscal_year)
             if template_error:
-                messagebox.showerror("Lỗi", template_error)
+                messagebox.showerror("Tệp mẫu không hợp lệ", template_error)
                 return
             if not self._confirm_selected_form(template, fiscal_year):
                 return
 
             source_error = _validate_selected_source_dir(source, fiscal_year)
             if source_error:
-                messagebox.showerror("Lỗi", source_error)
+                messagebox.showerror("Thư mục nguồn không hợp lệ", source_error)
                 return
 
             if self.syncing_master:

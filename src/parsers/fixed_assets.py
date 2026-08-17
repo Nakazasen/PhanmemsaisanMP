@@ -229,7 +229,10 @@ def find_fixed_assets_file(source_dir: str = None) -> str | None:
         top = [path for score, path in candidates if score == highest_score]
         if len(top) == 1:
             return str(top[0])
-        raise ValueError("Multiple source workbooks contain equally likely fixed-assets ledgers")
+        raise ValueError(
+            "Có nhiều tệp nguồn tài sản cố định cùng thỏa mãn tiêu chí; không thể tự động chọn tệp. "
+            "Cách xử lý: Xóa hoặc di chuyển các file TSCĐ cũ ra khỏi thư mục nguồn để chỉ giữ lại 1 file TSCĐ chính thức."
+        )
     return None
 
 
@@ -260,7 +263,10 @@ def expand_depreciation_schedule(
             continue
         if last_month and period == last_month:
             if last_month_depr is None:
-                raise ValueError("Missing Q/last-month depreciation amount for an in-FY terminal period")
+                raise ValueError(
+                    "Thiếu số tiền khấu hao tháng cuối kỳ (cột Q) cho tài sản kết thúc trong năm tài chính. "
+                    "Cách xử lý: Điền số tiền khấu hao tháng cuối vào cột Q của dòng tài sản này."
+                )
             amount = last_month_depr
         else:
             amount = monthly_depr
@@ -337,11 +343,17 @@ def parse_fixed_assets(conn: sqlite3.Connection, fa_path: str = None, source_dir
 
     rate_row = conn.execute("SELECT value FROM sys_params WHERE key='exchange_rate_usd_vnd'").fetchone()
     if not rate_row or rate_row[0] in (None, ""):
-        raise ValueError("Missing authoritative exchange_rate_usd_vnd in sys_params")
+        raise ValueError(
+            "Thiếu tham số tỷ giá USD/VND (exchange_rate_usd_vnd) trong cơ sở dữ liệu hệ thống. "
+            "Cách xử lý: Bổ sung tỷ giá USD/VND trong bảng sys_params hoặc tệp cấu hình."
+        )
     rate = float(rate_row[0])
     fy_row = conn.execute("SELECT value FROM sys_params WHERE key='fiscal_year'").fetchone()
     if not fy_row or fy_row[0] in (None, ""):
-        raise ValueError("Missing authoritative fiscal_year in sys_params")
+        raise ValueError(
+            "Thiếu tham số năm tài chính (fiscal_year) trong cơ sở dữ liệu hệ thống. "
+            "Cách xử lý: Thiết lập năm tài chính trong bảng sys_params."
+        )
     fiscal_year = int(str(fy_row[0]).replace("FY", ""))
     fy_months = helpers.get_fy_months(fiscal_year)
     source_snapshot = _source_snapshot(Path(fpath))
@@ -363,7 +375,10 @@ def parse_fixed_assets(conn: sqlite3.Connection, fa_path: str = None, source_dir
     try:
         selected = _selected_worksheets(wb)
         if not selected:
-            raise ValueError("Fixed-assets workbook has no recognizable current source sheet")
+            raise ValueError(
+                "Tệp tài sản cố định không chứa trang tính nguồn hợp lệ. "
+                "Cách xử lý: Đảm bảo file Excel có sheet dữ liệu TSCĐ của năm tài chính tương ứng."
+            )
         for ws in selected:
             formula_ws = formula_wb[ws.title]
             start_row, mapping, mode = _sheet_plan(ws)
@@ -388,8 +403,10 @@ def parse_fixed_assets(conn: sqlite3.Connection, fa_path: str = None, source_dir
                 ]
                 if cache_gap_fields:
                     raise ValueError(
-                        f"Missing cached formula value at {ws.title}!{row_number} for "
+                        f"Thiếu giá trị công thức đã tính sẵn (cached formula value) tại {ws.title}!{row_number} cho các cột: "
                         + ", ".join(cache_gap_fields)
+                        + ". Nguyên nhân: File Excel chưa được lưu đầy đủ giá trị công thức. "
+                        "Cách xử lý: Mở file Excel này bằng Microsoft Excel, nhấn Save để cập nhật toàn bộ giá trị công thức rồi thử lại."
                     )
                 formula_fields = [
                     field
@@ -452,7 +469,11 @@ def parse_fixed_assets(conn: sqlite3.Connection, fa_path: str = None, source_dir
                     continue
                 if category_key is None:
                     raw_category = str(category_value or "<blank>").strip()
-                    raise ValueError(f"Unknown fixed-assets Category at {ws.title}!{row_number}: {raw_category}")
+                    raise ValueError(
+                        f"Không nhận diện được loại tài sản (Category) tại {ws.title}!{row_number}: '{raw_category}'. "
+                        "Nguyên nhân: Loại tài sản này không nằm trong danh mục TSCĐ được hỗ trợ. "
+                        "Cách xử lý: Kiểm tra lại cột phân loại tài sản (Category) tại dòng này và chuẩn hóa tên loại tài sản."
+                    )
 
                 asset_tag = _asset_tag(_value(row, mapping, "asset_no"), _value(row, mapping, "asset_text"), ws.title, row_number)
                 source_rows += 1
@@ -463,8 +484,9 @@ def parse_fixed_assets(conn: sqlite3.Connection, fa_path: str = None, source_dir
                 by_category[category_key] += 1
                 if last_month in fy_months and last_month_depr is None:
                     raise ValueError(
-                        f"Missing Q/last-month depreciation at {ws.title}!{row_number}; "
-                        "the parser must not substitute the monthly L value"
+                        f"Thiếu số tiền khấu hao tháng cuối (cột Q) tại {ws.title}!{row_number}. "
+                        "Nguyên nhân: Tài sản kết thúc trong năm nhưng cột Q bị trống (hệ thống không tự lấy cột L thay thế). "
+                        "Cách xử lý: Điền số tiền khấu hao tháng cuối vào cột Q của dòng tài sản tương ứng."
                     )
                 audit_pending.append((*audit_base, "INCLUDED", None))
 
