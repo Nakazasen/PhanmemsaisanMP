@@ -90,6 +90,7 @@ from src.services.manual_staffing_overrides import (
     apply_manual_baseline_overrides,
     apply_manual_time_overrides,
     copy_annual_manual_inputs,
+    has_valid_manual_baseline,
     migrate_legacy_fy2027_manual_inputs,
 )
 from src.services.fiscal_run import (
@@ -478,10 +479,7 @@ def _staffing_preflight(
                 (cc_code,),
             )
         }
-        baseline_available = conn.execute(
-            "SELECT 1 FROM fact_monthly_headcount WHERE CAST(cc_code AS TEXT)=? AND period=? AND source='manual' LIMIT 1",
-            (cc_code, baseline),
-        ).fetchone() is not None
+        baseline_available = has_valid_manual_baseline(conn, fiscal_year, cc_code)
         time_periods = {
             str(row[0]) for row in conn.execute(
                 "SELECT period FROM fact_headcount_time_source WHERE CAST(cc_code AS TEXT)=?",

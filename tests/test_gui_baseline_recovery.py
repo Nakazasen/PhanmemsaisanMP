@@ -7,6 +7,8 @@ from src.services.manual_staffing_overrides import (
     apply_manual_baseline_overrides,
     apply_manual_time_overrides,
     copy_missing_baselines_from_april,
+    find_missing_baseline_ccs,
+    has_valid_manual_baseline,
     normalize_manual_time_rows,
     save_manual_time_overrides,
 )
@@ -109,6 +111,96 @@ def test_user_approved_t4_copy_is_persistent_and_does_not_overwrite_t3(tmp_path)
             (baseline,),
         ).fetchone()
         assert restored[0] == "USER_APPROVED_BASELINE_T3_FROM_T4"
+    finally:
+        conn.close()
+
+
+def test_missing_baseline_check_uses_selected_scope_and_saved_overrides(tmp_path):
+    conn = make_conn(tmp_path)
+    try:
+        baseline = fiscal_baseline_period(2027)
+        conn.execute(
+            """INSERT INTO fact_manual_headcount_baseline_override
+               (period,cc_code,fiscal_year,headcount_all,headcount_expat,
+                headcount_staff,headcount_worker,headcount_local_total,description)
+               VALUES(?,?,2027,15,1,10,4,14,'USER_APPROVED_BASELINE_T3_FROM_T4')""",
+            (baseline, "101"),
+        )
+        conn.commit()
+
+        assert find_missing_baseline_ccs(
+            conn,
+            2027,
+            scope_ccs=("101", "102"),
+        ) == ["102"]
+    finally:
+        conn.close()
+
+
+def test_legacy_blank_zero_baseline_does_not_unlock_calculation(tmp_path):
+    conn = make_conn(tmp_path)
+    try:
+        baseline = fiscal_baseline_period(2027)
+        conn.execute(
+            """INSERT INTO fact_manual_headcount_baseline_override
+               (period,cc_code,fiscal_year,headcount_all,headcount_expat,
+                headcount_staff,headcount_worker,headcount_local_total,
+                description,source_file)
+               VALUES(?,?,2027,0,0,0,0,0,'MANUAL_BASELINE_T3','MANUAL_GUI')""",
+            (baseline, "101"),
+        )
+        conn.commit()
+
+        assert not has_valid_manual_baseline(conn, 2027, "101")
+        assert find_missing_baseline_ccs(
+            conn,
+            2027,
+            scope_ccs=("101",),
+        ) == ["101"]
+    finally:
+        conn.close()
+
+
+def test_explicit_zero_baseline_is_valid_after_user_confirms_it(tmp_path):
+    conn = make_conn(tmp_path)
+    try:
+        from src.services.manual_staffing_overrides import save_manual_baseline_override
+
+        save_manual_baseline_override(conn, 2027, "101", 0, 0, 0)
+        conn.commit()
+
+        assert has_valid_manual_baseline(conn, 2027, "101")
+        assert find_missing_baseline_ccs(
+            conn,
+            2027,
+            scope_ccs=("101",),
+        ) == []
+    finally:
+        conn.close()
+
+
+def test_pipeline_staffing_preflight_rejects_legacy_blank_zero_baseline(tmp_path):
+    conn = make_conn(tmp_path)
+    try:
+        insert_plan_series(conn)
+        save_manual_time_overrides(conn, 2027, "101", {})
+        baseline = fiscal_baseline_period(2027)
+        conn.execute(
+            """INSERT INTO fact_monthly_headcount
+               (period,cc_code,headcount_all,headcount_expat,headcount_staff,
+                headcount_worker,headcount_local_total,source,split_status,
+                description,source_file)
+               VALUES(?,?,0,0,0,0,0,'manual','READY',
+                      'MANUAL_BASELINE_T3','MANUAL_GUI')""",
+            (baseline, "101"),
+        )
+        conn.commit()
+
+        issues = _staffing_preflight(conn, 2027, target_cc="101")
+
+        assert issues
+        assert "202603" not in issues[0]
+        assert "03/2026" in issues[0]
     finally:
         conn.close()
 

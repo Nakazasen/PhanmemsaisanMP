@@ -249,3 +249,39 @@ def test_security_uses_only_security_specific_items(tmp_path):
         "SELECT COUNT(*) FROM audit_uniform_cup_calculation WHERE item_key='short_sleeve'"
     ).fetchone()[0] == 0
     conn.close()
+
+
+def test_cc_1412000019_splits_new_hire_hats_by_staff_and_worker(tmp_path):
+    cc_code = "1412000019"
+    conn = _connection(tmp_path, cc_code=cc_code)
+    _rule(conn, "帽子（白） Mũ trắng", 33_500)
+    _rule(conn, "帽子（カラー） Mũ màu", 39_000)
+    # The official entitlement source currently marks only the color-hat cell.
+    # For this CC that mark means workers receive color hats and staff receive white hats.
+    _entitlement(conn, "color_hat", "Mũ màu", cc_code=cc_code, cell="S46")
+    conn.commit()
+
+    engine = AllocationEngine(conn, target_cc=cc_code)
+    _headcount_cache(
+        engine,
+        {"202604": (1, 2), "202605": (1, 0), "202606": (0, 1)},
+        cc_code=cc_code,
+    )
+    engine.run_allocation()
+
+    rows = conn.execute(
+        """
+        SELECT period,item_key,new_staff,new_worker,total_new_hires,
+               issue_quantity,unit_price,amount_vnd,formula_expr,entitlement_source_cell
+        FROM audit_uniform_cup_calculation
+        WHERE item_key IN ('color_hat','white_hat')
+        ORDER BY period,item_key
+        """
+    ).fetchall()
+    assert [tuple(row) for row in rows] == [
+        ("202604", "color_hat", 1, 2, 3, 4, 39_000, 156_000, "2*39000*2", "S46"),
+        ("202604", "white_hat", 1, 2, 3, 2, 33_500, 67_000, "1*33500*2", "S46"),
+        ("202605", "white_hat", 1, 0, 1, 2, 33_500, 67_000, "1*33500*2", "S46"),
+        ("202606", "color_hat", 0, 1, 1, 2, 39_000, 78_000, "1*39000*2", "S46"),
+    ]
+    conn.close()

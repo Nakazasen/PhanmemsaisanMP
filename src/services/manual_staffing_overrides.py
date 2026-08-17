@@ -21,6 +21,9 @@ _FY_SCOPED_MANUAL_TABLES = (
     "fact_bus_headcount_drivers",
 )
 
+EXPLICIT_BASELINE_SOURCE = "MANUAL_GUI_EXPLICIT_BASELINE_T3"
+APPROVED_APRIL_BASELINE_DESCRIPTION = "USER_APPROVED_BASELINE_T3_FROM_T4"
+
 # Authoritative tables written by the manual-staffing screen that must cross
 # the annual-store -> immutable-run boundary.  Keep this contract explicit so
 # a saved input cannot silently disappear merely because its table was absent
@@ -330,6 +333,58 @@ def apply_manual_baseline_overrides(conn: sqlite3.Connection, fiscal_year: int, 
     return len(rows)
 
 
+def _baseline_row_is_explicit(row: sqlite3.Row | Sequence[object] | None) -> bool:
+    """Reject legacy blank GUI saves while preserving confirmed zero baselines."""
+    if row is None:
+        return False
+    total, expat, staff, worker, local_total, description, source_file = row
+    values = (total, expat, staff, worker, local_total)
+    if any(value is None for value in values):
+        return False
+    total, expat, staff, worker, local_total = (float(value) for value in values)
+    if any(value < 0 for value in (total, expat, staff, worker, local_total)):
+        return False
+    if abs(local_total - (staff + worker)) > 1e-6:
+        return False
+    if abs(total - (expat + local_total)) > 1e-6:
+        return False
+    if any(value > 0 for value in (total, expat, staff, worker, local_total)):
+        return True
+    return (
+        str(source_file or "") == EXPLICIT_BASELINE_SOURCE
+        or str(description or "") == APPROVED_APRIL_BASELINE_DESCRIPTION
+    )
+
+
+def has_valid_manual_baseline(
+    conn: sqlite3.Connection,
+    fiscal_year: int,
+    cc_code: object,
+) -> bool:
+    """Return whether T3 is complete and was explicitly entered or approved."""
+    baseline = fiscal_baseline_period(fiscal_year)
+    cc = str(cc_code).strip()
+    applied = conn.execute(
+        """SELECT headcount_all,headcount_expat,headcount_staff,headcount_worker,
+                  headcount_local_total,description,source_file
+           FROM fact_monthly_headcount
+           WHERE CAST(cc_code AS TEXT)=? AND period=? AND source='manual'
+           LIMIT 1""",
+        (cc, baseline),
+    ).fetchone()
+    if _baseline_row_is_explicit(applied):
+        return True
+    saved = conn.execute(
+        """SELECT headcount_all,headcount_expat,headcount_staff,headcount_worker,
+                  headcount_local_total,description,source_file
+           FROM fact_manual_headcount_baseline_override
+           WHERE fiscal_year=? AND period=? AND CAST(cc_code AS TEXT)=?
+           LIMIT 1""",
+        (int(fiscal_year), baseline, cc),
+    ).fetchone()
+    return _baseline_row_is_explicit(saved)
+
+
 def save_manual_baseline_override(conn: sqlite3.Connection, fiscal_year: int, cc_code: object, expat: float, staff: float, worker: float, description: str = "") -> None:
     """Persist a user-entered T3 baseline and apply it immediately."""
     baseline = fiscal_baseline_period(fiscal_year)
@@ -341,14 +396,17 @@ def save_manual_baseline_override(conn: sqlite3.Connection, fiscal_year: int, cc
            (period,cc_code,fiscal_year,headcount_all,headcount_expat,headcount_staff,
             headcount_worker,headcount_male,headcount_female,split_status,
             headcount_local_total,description,source_file,source_sheet,updated_at)
-           VALUES(?,?,?,?,?,?,?,0,0,'READY',?,?,'MANUAL_GUI','Nhập nhân sự thủ công',CURRENT_TIMESTAMP)
+           VALUES(?,?,?,?,?,?,?,0,0,'READY',?,?,?,'Nhập nhân sự thủ công',CURRENT_TIMESTAMP)
            ON CONFLICT(period,cc_code) DO UPDATE SET
              headcount_all=excluded.headcount_all, headcount_expat=excluded.headcount_expat,
              headcount_staff=excluded.headcount_staff, headcount_worker=excluded.headcount_worker,
              split_status='READY', headcount_local_total=excluded.headcount_local_total,
              description=excluded.description, source_file=excluded.source_file,
              source_sheet=excluded.source_sheet, updated_at=CURRENT_TIMESTAMP""",
-        (baseline, cc, int(fiscal_year), total, expat, staff, worker, local_total, description or "MANUAL_BASELINE_T3"),
+        (
+            baseline, cc, int(fiscal_year), total, expat, staff, worker,
+            local_total, description or "MANUAL_BASELINE_T3", EXPLICIT_BASELINE_SOURCE,
+        ),
     )
     conn.execute(
         "DELETE FROM fact_monthly_headcount WHERE period=? AND CAST(cc_code AS TEXT)=? AND source='manual'",
@@ -440,16 +498,25 @@ def copy_missing_baselines_from_april(
     return copied
 
 
-def find_missing_baseline_ccs(conn: sqlite3.Connection, fiscal_year: int, target_cc: object | None = None) -> list[str]:
+def find_missing_baseline_ccs(
+    conn: sqlite3.Connection,
+    fiscal_year: int,
+    target_cc: object | None = None,
+    *,
+    scope_ccs: Sequence[object] | None = None,
+) -> list[str]:
     """Return calculation-scope CCs that do not have canonical manual T3."""
     baseline = fiscal_baseline_period(fiscal_year)
-    if target_cc is not None:
+    if scope_ccs is not None:
+        scope = list(dict.fromkeys(str(cc).strip() for cc in scope_ccs if str(cc or "").strip()))
+    elif target_cc is not None:
         scope = [str(target_cc).strip()]
     else:
         scope = [str(row[0]) for row in conn.execute(
             "SELECT DISTINCT CAST(cc_code AS TEXT) FROM fact_input_data WHERE account_code > 0 ORDER BY 1"
         ).fetchall()]
-    return [cc for cc in scope if conn.execute(
-        """SELECT 1 FROM fact_monthly_headcount
-           WHERE CAST(cc_code AS TEXT)=? AND period=? AND source='manual' LIMIT 1""", (cc, baseline)
-    ).fetchone() is None]
+    missing: list[str] = []
+    for cc in scope:
+        if not has_valid_manual_baseline(conn, fiscal_year, cc):
+            missing.append(cc)
+    return missing

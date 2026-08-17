@@ -42,30 +42,26 @@ trên thư mục LAN do công ty kiểm soát và các kiểm tra sau:
 4. Bản mới phải qua `--health-check`; dữ liệu runtime được backup trước khi kích
    hoạt và bản cũ được giữ để rollback.
 
-## Nhánh version và lần chuyển nền tảng 0.1.1
+## Quy tắc chọn version hiện hành
 
-Setup `0.1.1` là nền tảng chuyển từ cơ chế cũ sang `HASH_ONLY_LAN`. Việc mở nhánh
-version mới từ `0.1.1` là quyết định có chủ ý để xóa bỏ toàn bộ ràng buộc về khóa
-trong cơ chế nâng cấp của project; đây không phải rollback chức năng. Nhánh
-`0.1.9/0.1.10` là nhánh cũ có ràng buộc khóa và đã kết thúc.
+Nhánh phát hành hiện hành chỉ dùng `HASH_ONLY_LAN`. Nguồn sự thật duy nhất để
+chọn phiên bản là file `release_update\latest.json` trên LAN đã duyệt.
 
-Máy đang ở `0.1.9` hoặc `0.1.10` không thể tự cập nhật xuống `0.1.1`; phải cài
-Setup `0.1.1` thủ công một lần. Sau đó nhánh update không khóa tăng từ `0.1.2`,
-`0.1.3`, ...
+Trước mọi thao tác version, build hoặc publish:
 
-Đây là lần chuyển nhánh có chủ ý duy nhất. Trước khi publish `latest.json` từ giá
-trị lịch sử như `0.1.9` sang `0.1.2`, Agent phải xác nhận và ghi vào release note:
+1. Đọc và kiểm tra schema, version, tên package, kích thước và SHA-256 trong
+   `latest.json`.
+2. Chọn patch kế tiếp lớn hơn version trong catalog. Ví dụ catalog đang là
+   `0.1.4` thì bản kế tiếp mặc định là `0.1.5`, trừ khi chủ sở hữu chỉ định rõ
+   một version hợp lệ khác.
+3. Không suy luận version từ tên file, thư mục `release_artifacts`, release note
+   lịch sử, commit hoặc nhánh cũ.
+4. Các artifact không thuộc chuỗi đang được catalog dẫn tới là dữ liệu legacy;
+   không dùng chúng làm căn cứ. Chỉ xóa artifact legacy khi chủ sở hữu yêu cầu
+   rõ, và không xóa artifact đang được catalog hoặc artifact lịch sử hợp lệ khác.
 
-1. Setup `0.1.1` đã có trong thư mục phần mềm LAN và hash khớp release note.
-2. Ít nhất máy pilot mục tiêu đã cài `0.1.1` và chạy được.
-3. Chủ sở hữu đã yêu cầu “đóng gói theo tiêu chuẩn update” hoặc “phát hành update”;
-   yêu cầu đó là phê duyệt cutover catalog cho lần chuyển này.
-
-Máy cũ còn ở `0.1.9/0.1.10` sẽ bỏ qua catalog `0.1.2`; đây không phải cơ chế
-downgrade. Không dùng `latest.json` để ép máy cũ hạ version.
-
-Ngoài lần cutover được mô tả trên, version mới phải lớn hơn version trong
-`release_update\latest.json`. Nếu không thỏa, dừng và báo rõ.
+Nếu không đọc được catalog, version không tăng đúng patch kế tiếp, hoặc dữ liệu
+catalog không nhất quán, phải dừng trước khi build/publish và báo rõ nguyên nhân.
 
 ## Quy tắc chống ghi đè artifact
 
@@ -95,7 +91,7 @@ Worktree phải không có thay đổi không liên quan. Kiểm tra `release.js
 chứa đúng thư mục `release_update` đã duyệt.
 
 Đọc `latest.json` trên LAN, liệt kê Setup/package cùng version dự kiến và ghi lại
-hash trước khi thay đổi gì. Chọn version theo phần “Nhánh version” và quy tắc chống
+hash trước khi thay đổi gì. Chọn version theo phần “Quy tắc chọn version hiện hành” và quy tắc chống
 ghi đè ở trên.
 
 ## Luồng Setup nền tảng
@@ -113,7 +109,7 @@ copy Setup vào `release_update`. Đọc lại file LAN và xác nhận hash kh�
 
 ## Luồng auto-update đầy đủ
 
-Ví dụ phát hành `0.1.2` từ nền tảng `0.1.1`:
+Ví dụ phát hành patch kế tiếp (catalog `0.1.4` thì phát hành `0.1.5`):
 
 1. Cập nhật cùng version tại `release.json` và
    `installer/MP2027_Manager.iss`; tạo/cập nhật
@@ -166,8 +162,7 @@ Dừng trước khi ghi LAN nếu có một trong các trường hợp:
 - Hai file version không đồng nhất.
 - Endpoint LAN không đọc/ghi được.
 - Package cùng tên tồn tại nhưng hash khác.
-- Version không hợp lệ theo nhánh đang hoạt động.
-- Cutover `0.1.9/0.1.10 → 0.1.1 → 0.1.2` chưa đạt đủ ba điều kiện.
+- Version không đúng patch kế tiếp từ `latest.json` hoặc catalog không đọc được.
 
 Thiếu commit/push không cản trở đóng gói hoặc publish; không tự commit/push nếu
 người dùng chưa yêu cầu.

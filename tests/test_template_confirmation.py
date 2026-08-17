@@ -64,28 +64,61 @@ def test_project_persists_form_confirmation(tmp_path):
     assert restored.form_confirmations(2027)[record["checksum"]] == record
 
 
-def test_ui_confirms_new_form_once_then_recognizes_it(monkeypatch, tmp_path):
+def test_ui_allows_new_valid_form_without_confirmation(monkeypatch, tmp_path):
     form = tmp_path / "FORM.xlsx"
     shutil.copy2(FORM, form)
     project = ProjectConfig.create_legacy_compatible(str(tmp_path))
     app = object.__new__(MPManagerApp)
     app.project = project
-    messages = []
-    app.log = messages.append
-    prompts = []
     monkeypatch.setattr(
         "src.universal_app.messagebox.askyesno",
-        lambda title, message: prompts.append((title, message)) or True,
+        lambda *_args: (_ for _ in ()).throw(AssertionError("Valid FORM must not prompt")),
     )
 
     assert app._confirm_selected_form(str(form), 2027)
-    assert prompts == [
-        ("Xác nhận FORM", "FORM này chưa được dùng trước đây.\nVui lòng kiểm tra lại biểu mẫu trước khi chạy.")
+    assert project.form_confirmations(2027) == {}
+
+
+def test_ui_allows_changed_valid_form_without_confirmation(monkeypatch, tmp_path):
+    form = tmp_path / "FORM.xlsx"
+    shutil.copy2(FORM, form)
+    project = ProjectConfig.create_legacy_compatible(str(tmp_path))
+    project.confirm_form(2027, inspect_form(form).as_confirmation())
+    hub_sheet_name = inspect_form(form).hub_sheet_name
+    workbook = openpyxl.load_workbook(form)
+    workbook[hub_sheet_name]["B2"] = "changed"
+    workbook.save(form)
+    workbook.close()
+    app = object.__new__(MPManagerApp)
+    app.project = project
+    monkeypatch.setattr(
+        "src.universal_app.messagebox.askyesno",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("Valid FORM must not prompt")),
+    )
+
+    assert app._confirm_selected_form(str(form), 2027)
+
+
+def test_ui_reports_invalid_form_and_stops(monkeypatch, tmp_path):
+    form = tmp_path / "FORM.xlsx"
+    shutil.copy2(FORM, form)
+    hub_sheet_name = inspect_form(form).hub_sheet_name
+    workbook = openpyxl.load_workbook(form)
+    workbook[hub_sheet_name]["B5"] = 1412000004
+    workbook.save(form)
+    workbook.close()
+    app = object.__new__(MPManagerApp)
+    errors = []
+    monkeypatch.setattr(
+        "src.universal_app.messagebox.showerror",
+        lambda title, message: errors.append((title, message)),
+    )
+
+    assert not app._confirm_selected_form(str(form), 2027)
+    assert errors == [
+        (
+            "FORM không đúng cấu trúc",
+            "FORM không đúng cấu trúc.\n"
+            "Vui lòng chọn lại tệp hoặc kiểm tra các trang tính bắt buộc.",
+        )
     ]
-    assert messages == ["Đã xác nhận FORM cho lần chạy này."]
-
-    monkeypatch.setattr(
-        "src.universal_app.messagebox.askyesno",
-        lambda *_args: (_ for _ in ()).throw(AssertionError("FORM unchanged must not prompt")),
-    )
-    assert app._confirm_selected_form(str(form), 2027)

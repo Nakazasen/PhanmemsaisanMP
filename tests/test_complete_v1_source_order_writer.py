@@ -804,6 +804,140 @@ def test_complete_v1_writer_keeps_explicit_zero_distinct_from_post_terminal_blan
         wb.close()
 
 
+def test_complete_v1_writer_orders_welfare_rows_by_fiscal_month_and_business_sequence(tmp_path):
+    path = tmp_path / "out_welfare_chronological.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    wb.save(path)
+    wb.close()
+
+    periods = [
+        "202604", "202605", "202606", "202607", "202608", "202609",
+        "202610", "202611", "202612", "202701", "202702", "202703",
+    ]
+    expected = [
+        ("202604", "FY2027部門方針発表会後の決起コンパ"),
+        ("202605", "Tiệc khuấy động năm tài chính決起コンパ"),
+        ("202605", "社員旅行 Du lịch công ty"),
+        ("202606", "社員旅行不参加対象者へのギフト贈呈"),
+        ("202607", "マイエピソード ～フィロソフィの実践～参加賞"),
+        ("202609", "京セラフェスティバル Lễ hội Kyocera"),
+        ("202609", "月餅 Bánh Trung Thu"),
+        ("202610", "10年勤続記念コンパ"),
+        ("202610", "10年勤続記念品"),
+        ("202610", "会社設立記念 感謝イベント"),
+        ("202611", "運動会 Đại hội thể thao"),
+        ("202612", "健康診断 Khám sức khỏe"),
+        ("202702", "お年玉 Tiền lì xì"),
+        ("202702", "忘年会補助金 Hỗ trợ tiệc tất niên"),
+    ]
+    dynamic_rows = [
+        {
+            "account_code": 5004086291,
+            "description": description,
+            "terms": {period: [f"{index + 1}*1000"]},
+        }
+        for index, (period, description) in enumerate(reversed(expected))
+    ]
+
+    result = apply_complete_v1_source_order_to_workbook(
+        path,
+        start_row=30,
+        clear_until_row=90,
+        dynamic_allocation_rows=dynamic_rows,
+        fiscal_periods=periods,
+    )
+
+    assert result["rows_written"] == len(expected)
+    wb = load_workbook(path, data_only=False)
+    try:
+        ws = wb[SHEET]
+        descriptions = [ws.cell(row, 19).value for row in range(30, 30 + len(expected))]
+        assert descriptions == [description for _period, description in expected]
+        for offset, (period, _description) in enumerate(expected):
+            month_column = 6 + periods.index(period)
+            assert ws.cell(30 + offset, month_column).data_type == "f"
+    finally:
+        wb.close()
+
+
+def test_complete_v1_writer_groups_new_hire_costs_below_welfare_events(tmp_path):
+    path = tmp_path / "out_new_hire_cost_group.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = SHEET
+    wb.save(path)
+    wb.close()
+
+    periods = [
+        "202604", "202605", "202606", "202607", "202608", "202609",
+        "202610", "202611", "202612", "202701", "202702", "202703",
+    ]
+    expected = [
+        "社員旅行 Du lịch công ty",
+        "忘年会補助金 Hỗ trợ tiệc tất niên",
+        "制服（冬） Đồng phục dài tay",
+        "制服（夏） Đồng phục ngắn tay",
+        "折りたたみコップ Cốc xếp - công nhân mới",
+        "折りたたみコップ Cốc xếp định kỳ - chưa nhập số lượng",
+        "採用の健康診断費 Chi phí khám sức khỏe tuyển dụng",
+        "フィロソフィ手帳1 Sổ tay philosophy quyển 1",
+        "フィロソフィ手帳2 Sổ tay philosophy quyển 2",
+        "社員証（新入社員用・再発行時、写真含む） Thẻ từ chấm công + ảnh",
+        "新入社員：ノート (G7社員用）/Người mới: Sổ tay (Dùng cho công nhân)",
+        "新入社員：ノート（スタッフ用）/Người mới: Sổ tay (Dùng cho nhân viên)",
+        "ペン Bút cho người mới",
+        "新入社員：名札ケース/Người mới: Vỏ thẻ+móc thẻ",
+        "ポケットカレンダー Lịch bỏ túi",
+        "Unrelated office supply",
+    ]
+    dynamic_rows = [
+        {"account_code": 5005246288, "description": "Unrelated office supply", "terms": {"202604": ["1*1"]}},
+        {"account_code": 5004086291, "description": "Alloc: 折りたたみコップ Cốc xếp định kỳ - chưa nhập số lượng", "terms": {"202608": ["0*8500*1"]}, "highlight_periods": {"202608"}},
+        {"account_code": 5005246281, "description": "ポケットカレンダー Lịch bỏ túi", "terms": {"202611": ["5*100"]}},
+        {"account_code": 5004086291, "description": "制服（冬） Đồng phục dài tay", "terms": {"202604": ["2*175000"], "202610": ["3*175000"]}},
+        {"account_code": 5005246288, "description": "新入社員：名札ケース/Người mới: Vỏ thẻ+móc thẻ", "terms": {"202606": ["1*5000"]}},
+        {"account_code": 5005246288, "description": "ペン Bút cho người mới", "terms": {"202605": ["1*2200"]}},
+        {"account_code": 5005246288, "description": "新入社員：ノート (G7社員用）/Người mới: Sổ tay (Dùng cho công nhân)", "terms": {"202605": ["1*4000"]}},
+        {"account_code": 5005246288, "description": "新入社員：ノート（スタッフ用）/Người mới: Sổ tay (Dùng cho nhân viên)", "terms": {"202605": ["1*9100"]}},
+        {"account_code": 5005246281, "description": "社員証（新入社員用・再発行時、写真含む） Thẻ từ chấm công + ảnh", "terms": {"202605": ["1*12000"]}},
+        {"account_code": 5005246288, "description": "フィロソフィ手帳2 Sổ tay philosophy quyển 2", "terms": {"202605": ["1*15000"]}},
+        {"account_code": 5005246288, "description": "フィロソフィ手帳1 Sổ tay philosophy quyển 1", "terms": {"202605": ["1*15000"]}},
+        {"account_code": 5004086291, "description": "採用の健康診断費 Chi phí khám sức khỏe tuyển dụng", "terms": {"202606": ["1*156600"]}},
+        {"account_code": 5004086291, "description": "制服（夏） Đồng phục ngắn tay", "terms": {"202604": ["2*165000"], "202702": ["1*165000"]}},
+        {"account_code": 5004086291, "description": "Alloc: 折りたたみコップ Cốc xếp - công nhân mới", "terms": {"202607": ["2*8500*1"]}},
+        {"account_code": 5004086291, "description": "忘年会補助金 Hỗ trợ tiệc tất niên", "terms": {"202702": ["10*200000"]}},
+        {"account_code": 5004086291, "description": "社員旅行 Du lịch công ty", "terms": {"202605": ["10*2061000"]}},
+    ]
+
+    result = apply_complete_v1_source_order_to_workbook(
+        path,
+        start_row=30,
+        clear_until_row=90,
+        dynamic_allocation_rows=dynamic_rows,
+        fiscal_periods=periods,
+    )
+
+    assert result["rows_written"] == len(expected)
+    wb = load_workbook(path, data_only=False)
+    try:
+        ws = wb[SHEET]
+        assert [ws.cell(row, 19).value for row in range(30, 30 + len(expected))] == expected
+        winter_row = 32
+        summer_row = 33
+        new_hire_cup_row = 34
+        periodic_cup_row = 35
+        assert ws.cell(summer_row, 6).value == "=2*165000"
+        assert ws.cell(summer_row, 16).value == "=1*165000"
+        assert ws.cell(winter_row, 6).value == "=2*175000"
+        assert ws.cell(winter_row, 12).value == "=3*175000"
+        assert ws.cell(new_hire_cup_row, 9).value == "=2*8500*1"
+        assert ws.cell(periodic_cup_row, 10).value == "=0*8500*1"
+    finally:
+        wb.close()
+
+
 def test_complete_v1_writer_does_not_leak_legacy_row_58_red_fill(tmp_path):
     workbook = tmp_path / "out_row_58_style_leak.xlsx"
     wb = Workbook()

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 from typing import Iterable
+import unicodedata
 
 from openpyxl import load_workbook
 from openpyxl.formula.translate import Translator
@@ -20,6 +21,7 @@ from openpyxl.utils import get_column_letter
 
 from src.engine.column_s_normalizer import worksheet_row_has_cost
 from src.engine.source_order_output import CANONICAL_SOURCE_FILE_ORDER
+from src.engine.uniform_cup_rules import uniform_item_key_for_rule
 from src.utils import excel_helpers as helpers
 
 ACCOUNT_COL = 2
@@ -50,6 +52,49 @@ GENERATED_FILE_ORDER_POLICIES = (
     "COPY_SUMMARY_VND_TOTAL_BY_PERIOD",
     "COPY_SOURCE_MONTH_SAMPLE",
     "UNKNOWN",
+)
+WELFARE_ACCOUNT_CODES = frozenset({"5004086291", "6004086651", "6004086551"})
+WELFARE_ITEM_ORDER_TOKENS = (
+    ("部門方針発表会後", "phuong cham bo phan"),
+    ("khuay dong nam tai chinh", "決起コンパ"),
+    ("社員旅行", "du lich cong ty"),
+    ("社員旅行不参加", "khong the tham gia du lich"),
+    ("マイエピソード", "cam nghi ve triet ly kinh doanh"),
+    ("京セラフェスティバル", "le hoi kyocera"),
+    ("月餅", "banh trung thu"),
+    ("10年勤続記念コンパ", "tiec ky niem 10 nam"),
+    ("10年勤続記念品", "qua ky niem"),
+    ("会社設立記念", "su kien tri an"),
+    ("運動会", "dai hoi the thao"),
+    ("健康診断", "kham suc khoe"),
+    ("お年玉", "tien li xi"),
+    ("忘年会補助金", "ho tro tiec tat nien"),
+)
+NEW_HIRE_UNIFORM_ITEM_KEYS = frozenset(
+    {
+        "pants", "security_pants", "long_sleeve", "short_sleeve",
+        "security_long_sleeve", "security_short_sleeve", "polo", "coat",
+        "security_coat", "mens_shoes", "safety_shoes_type_2",
+        "security_shoes", "white_hat", "color_hat", "security_hat",
+    }
+)
+CUP_PERIODIC_TOKENS = ("định kỳ", "dinh ky", "periodic", "定期")
+NEW_HIRE_ITEM_ORDER_TOKENS = (
+    ("採用の健康診断費", "採用時健診", "kham suc khoe tuyen dung", "kham suc khoe khi tuyen dung"),
+    (
+        "\uff8c\uff68\uff9b\uff7f\uff8c\uff681,2",
+        "フィロソフィ1,2",
+        "フィロソフィ手帳1",
+        "triet ly 1,2",
+        "so tay philosophy quyen 1",
+        "philosophy 1,2",
+    ),
+    ("フィロソフィ手帳2", "so tay philosophy quyen 2"),
+    ("社員証（新入社員用", "the tu cham cong", "time card"),
+    ("ノート", "nguoi moi: so", "notebook"),
+    ("ペン", "but cho nguoi moi", "new hire pen"),
+    ("名札ケース", "vo the", "moc the", "the+kep", "card holder", "lanyard"),
+    ("ポケットカレンダー", "lich bo tui", "pocket calendar"),
 )
 
 
@@ -613,6 +658,101 @@ def _source_block_sort_key(row: StagedWorkbookRow) -> tuple[str, int, str]:
     )
 
 
+def _search_text(value: object) -> str:
+    normalized = unicodedata.normalize("NFKC", _norm(value)).casefold()
+    decomposed = unicodedata.normalize("NFD", normalized)
+    searchable: list[str] = []
+    previous_base_is_latin = False
+    for character in decomposed:
+        if unicodedata.combining(character):
+            if previous_base_is_latin:
+                continue
+            searchable.append(character)
+            continue
+        searchable.append(character)
+        previous_base_is_latin = "LATIN" in unicodedata.name(character, "")
+    return unicodedata.normalize("NFC", "".join(searchable))
+
+
+def _first_cost_month_index(row: StagedWorkbookRow) -> int:
+    for index, column in enumerate(MONTH_COLS):
+        if _norm(row.values.get(column)):
+            return index
+    return len(MONTH_COLS)
+
+
+def _welfare_item_priority(row: StagedWorkbookRow) -> int:
+    description = _search_text(_display_description(row.values.get(DESCRIPTION_COL)))
+    for priority, tokens in enumerate(WELFARE_ITEM_ORDER_TOKENS):
+        if any(_search_text(token) in description for token in tokens):
+            return priority
+    return len(WELFARE_ITEM_ORDER_TOKENS)
+
+
+def _welfare_chronological_sort_key(row: StagedWorkbookRow) -> tuple[int, int, int, str]:
+    return (
+        _first_cost_month_index(row),
+        _welfare_item_priority(row),
+        int(row.original_row),
+        _norm(_display_description(row.values.get(DESCRIPTION_COL))),
+    )
+
+
+def _new_hire_item_priority(row: StagedWorkbookRow) -> int | None:
+    description = _display_description(row.values.get(DESCRIPTION_COL))
+    uniform_key = uniform_item_key_for_rule(description)
+    if uniform_key in NEW_HIRE_UNIFORM_ITEM_KEYS:
+        return 0
+    if uniform_key == "collapsible_cup":
+        # Keep the new-worker and periodic cup rows as one adjacent pair,
+        # immediately after the other new-hire uniform items.
+        return 1
+    searchable = _search_text(description)
+    for priority, tokens in enumerate(NEW_HIRE_ITEM_ORDER_TOKENS, start=2):
+        if any(_search_text(token) in searchable for token in tokens):
+            return priority
+    return None
+
+
+def _cup_release_priority(row: StagedWorkbookRow) -> int:
+    description = _display_description(row.values.get(DESCRIPTION_COL))
+    if uniform_item_key_for_rule(description) != "collapsible_cup":
+        return 0
+    searchable = _search_text(description)
+    return 1 if any(_search_text(token) in searchable for token in CUP_PERIODIC_TOKENS) else 0
+
+
+def _new_hire_sort_key(row: StagedWorkbookRow) -> tuple[int, int, int, str]:
+    priority = _new_hire_item_priority(row)
+    return (
+        priority if priority is not None else len(NEW_HIRE_ITEM_ORDER_TOKENS) + 2,
+        _cup_release_priority(row),
+        int(row.original_row),
+        _norm(_display_description(row.values.get(DESCRIPTION_COL))),
+    )
+
+
+def _ordered_allocation_source_group(group: list[StagedWorkbookRow]) -> list[StagedWorkbookRow]:
+    ordered = sorted(group, key=_source_block_sort_key) if _has_split_accounts(group) else list(group)
+    new_hire_rows = [row for row in ordered if _new_hire_item_priority(row) is not None]
+    remaining = [row for row in ordered if _new_hire_item_priority(row) is None]
+    welfare_rows = [
+        row
+        for row in remaining
+        if _norm(row.values.get(ACCOUNT_COL)) in WELFARE_ACCOUNT_CODES
+    ]
+    other_rows = [
+        row
+        for row in remaining
+        if _norm(row.values.get(ACCOUNT_COL)) not in WELFARE_ACCOUNT_CODES
+    ]
+    return (
+        sorted(welfare_rows, key=_welfare_chronological_sort_key)
+        + sorted(new_hire_rows, key=_new_hire_sort_key)
+        + other_rows
+    )
+
+
 def _ordered_source_group(
     group: list[StagedWorkbookRow], *, source_index: int | None = None
 ) -> list[StagedWorkbookRow]:
@@ -628,6 +768,8 @@ def _ordered_source_group(
                 int(row.source_row),
             ),
         )
+    if source_index == 5:
+        return _ordered_allocation_source_group(group)
     if not _has_split_accounts(group):
         return group
     return sorted(group, key=_source_block_sort_key)
@@ -691,7 +833,8 @@ def apply_complete_v1_source_order_to_workbook(
             ws = wb[helpers.find_hub_sheet_name(wb)]
         except ValueError:
             ws = wb.active
-        is_qlnn_layout = _norm(ws.cell(31, ACCOUNT_COL).value) == "9114120018"
+        form_contract = helpers.normalize_form_output_contract(wb)
+        is_qlnn_layout = bool(form_contract["form_contract_detected"])
         protected_qlnn_rows = (
             {
                 row: tuple(ws.cell(row, column).value for column in MANAGED_CLEAR_COLS)

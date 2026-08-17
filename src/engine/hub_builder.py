@@ -1852,6 +1852,11 @@ class HubBuilder:
                 hub_sheet_name = sheet_name if sheet_name and sheet_name in workbook.sheetnames else helpers.find_hub_sheet_name(workbook)
                 worksheet = workbook[hub_sheet_name]
 
+                # Normalize FORM-owned structural data on the copied output.
+                # This removes behavioral differences between renamed/local
+                # copies of the two FORM variants seen in production.
+                helpers.normalize_form_output_contract(workbook)
+
                 worksheet.cell(
                     row=5,
                     column=ACCOUNT_COL,

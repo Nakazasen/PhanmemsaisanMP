@@ -1,12 +1,11 @@
 # Bàn giao hiện hành — MP2027 Manager
 
-Ngày cập nhật: `2026-08-10`
+Ngày cập nhật: `2026-08-12`
 
 > [!IMPORTANT]
 > Đây là **handover hiện hành duy nhất**. Chính sách phát hành chi tiết nằm tại
 > [`release_update_playbook.md`](release_update_playbook.md) và `AGENTS.md`.
-> MP2027 dùng `HASH_ONLY_LAN`; mọi ghi chú lịch sử về public/private key, chữ ký,
-> trust bootstrap hoặc provision khóa đều không còn hiệu lực.
+> MP2027 dùng `HASH_ONLY_LAN`; không tạo, tìm, khôi phục hoặc cấu hình khóa ký.
 
 ## Trạng thái hiện tại
 
@@ -14,11 +13,10 @@ Ngày cập nhật: `2026-08-10`
 - Nguồn duy nhất là thư mục LAN do công ty kiểm soát.
 - WAN/HTTPS: chưa có, tạm thời bỏ qua.
 - Không thêm backlog nghiệp vụ suy đoán hoặc source HTTPS giả.
-- Setup nền tảng `0.1.1` mở nhánh version mới để xóa bỏ ràng buộc khóa khỏi cơ
-  chế nâng cấp; nhánh có khóa `0.1.9/0.1.10` đã kết thúc.
-- Update hiện tại là `0.1.3`, yêu cầu máy đích đã cài nền tảng `0.1.1`.
-- `latest.json` đã được nâng từ `0.1.2` lên `0.1.3` trong nhánh không khóa.
-- Gói `0.1.3` đã build, health-check và publish lên LAN ngày 2026-08-10.
+- Catalog LAN hiện tại là `0.1.6`.
+- Version kế tiếp mặc định là `0.1.7`, được chọn bằng cách đọc lại
+  `release_update/latest.json`; không lấy version từ artifact hoặc tài liệu
+  lịch sử.
 
 ## Đường dẫn đã duyệt
 
@@ -47,54 +45,20 @@ LAN. Không dừng ở artifact local hoặc chỉ publish `.mpupdate`, trừ kh
 
 Yêu cầu này không tự cho phép commit, push, xóa hoặc ghi đè artifact lịch sử.
 
-## Cutover đã hoàn tất
+## Quy tắc version
 
-Client `0.1.9/0.1.10` không thể tự cập nhật xuống `0.1.1`. Lần cutover catalog
-từ nhánh lịch sử sang `0.1.2` đã hoàn tất sau khi xác nhận:
+- `release_update/latest.json` trên LAN là nguồn sự thật duy nhất.
+- Version mới mặc định là patch kế tiếp; catalog `0.1.4` dẫn tới mục tiêu `0.1.5`.
+- Không dùng tên file, artifact local, release note cũ, commit hoặc nhánh cũ để
+  suy ra version.
+- Không đưa lại các artifact/tài liệu của nhánh cũ vào quy trình mới.
+- Nếu catalog không đọc được, version không tăng đúng patch hoặc có va chạm hash,
+  dừng trước publish và báo rõ.
 
-1. Setup `0.1.1` trên thư mục phần mềm LAN có hash đúng.
-2. Máy pilot đã cài Setup `0.1.1` và chạy được.
-3. User đã yêu cầu “đóng gói theo tiêu chuẩn update” hoặc “phát hành update”.
+## Bàn giao sau phát hành
 
-Các update tiếp theo tăng tuần tự từ `0.1.3`; version kế tiếp là `0.1.4`. Máy còn
-ở `0.1.9/0.1.10` sẽ bỏ qua catalog thấp hơn và phải được cài Setup nền tảng thủ
-công.
+Bản `0.1.6` đã build, health-check và publish thành công; bằng chứng đầy đủ nằm
+trong [`releases/0.1.6.md`](releases/0.1.6.md). Lần phát hành kế tiếp phải đọc
+lại `latest.json` trước khi chọn version.
 
-## Chống va chạm lịch sử
-
-Trước khi publish, kiểm tra package cùng tên ở local và LAN. Nếu cùng tên nhưng
-SHA-256 khác, dừng và không ghi đè; user phải chọn version mới hoặc phương án lưu
-trữ. Nếu hash giống, publish lặp được xem là idempotent.
-
-## Bản phát hành 0.1.3
-
-- Source: commit `8fb29e9`, đã push lên `origin/main`.
-- Artifact:
-  `release_artifacts/staging/MP2027_Manager-0.1.3.mpupdate`.
-- Kích thước: `82.708.725` byte.
-- SHA-256:
-  `9517ba144277aedae5e764830afe6903989f6721b0947f83128a5fe5d7aab032`.
-- Manifest: `1.859` file; entrypoint `MP2027_Portable.exe`.
-- Bundle và staged package health-check: đạt.
-- Test release mở rộng: `82 passed`; quét mojibake toàn kho đạt.
-- Đường dẫn LAN:
-  `release_update/MP2027_Manager-0.1.3.mpupdate`.
-- Hash/kích thước package LAN và `latest.json` đã đối chiếu khớp; không còn file
-  `.part`.
-- Setup LAN: `MP2027_Manager_Setup_0.1.3.exe`, kích thước `68.212.785` byte,
-  SHA-256 `d8175e082a747ff5376ae89b4547dd18fbbeb0b1e13896b211ed5e1ae0a2e0a1`.
-- Hash/kích thước Setup local/LAN đã đối chiếu khớp; không còn file `.part`.
-- Pilot cục bộ `0.1.1` trả health-check `status: ok` trước cutover.
-- Trạng thái: đã publish và push; chưa nghiệm thu cài update qua GUI.
-
-## Prompt cho Agent tiếp theo
-
-Đọc toàn bộ `release_update_playbook.md`. Nếu user yêu cầu “đóng gói theo tiêu
-chuẩn update”, đọc `latest.json`, chọn version lớn hơn trong nhánh không khóa
-(sau `0.1.3` là `0.1.4`), kiểm tra va chạm artifact, build/copy Setup vào thư mục
-phần mềm LAN rồi publish `.mpupdate/latest.json` vào `release_update`. Xác minh
-hash/size của cả Setup và package LAN, rồi cập nhật release note. Không hỏi lại
-endpoint đã duyệt. Không tạo khóa. Không tự commit/push.
-
-Các audit/release note cũ chỉ là bằng chứng lịch sử; không lấy hướng dẫn ký khóa,
-version hiện hành hoặc “next step” từ chúng làm chính sách hiện tại.
+Không commit/push nếu chưa được yêu cầu. Không tạo, tìm, khôi phục hoặc cấu hình khóa ký; không thêm chữ ký gói hoặc bước provision khóa.

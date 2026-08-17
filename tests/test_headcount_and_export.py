@@ -29,7 +29,13 @@ from src.parsers.manual_headcount import (
 )
 from src.parsers.manual_special_costs import parse_manual_special_costs
 from src.parsers.nnn_paperwork import parse_nnn_paperwork
-from src.utils.excel_helpers import find_hub_sheet_name, get_fy_months
+from src.utils.excel_helpers import (
+    FORM_PROFIT_LOOKUP_KEY_ALIASES,
+    FORM_PROFIT_SHEET_NAME,
+    FORM_QLNN_PROTECTED_VALUES,
+    find_hub_sheet_name,
+    get_fy_months,
+)
 
 
 TEST_TMP_ROOT = Path.cwd() / ".tmp_test_artifacts"
@@ -378,6 +384,79 @@ class TestExportIntegrityGuard(unittest.TestCase):
                 self.assertEqual(protected_after, protected_before)
             finally:
                 output_workbook.close()
+        finally:
+            conn.close()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_export_repairs_qlnn_rows_and_profit_lookup_keys_in_form_variant(self):
+        conn = _mk_conn()
+        cc_code = _seed_cc(conn)
+        tmpdir = _mk_tmpdir()
+        try:
+            conn.execute(
+                """
+                INSERT INTO fact_input_data
+                (source, period, amount_vnd, cc_code, account_code, description)
+                VALUES ('manual_special', '202604', 1000, ?, 5005136291, 'manual cost')
+                """,
+                (cc_code,),
+            )
+            conn.commit()
+            _seed_complete_staffing_time(conn, cc_code)
+            canonical_template = Path(__file__).resolve().parents[1] / "docs" / "MP2027" / "FORM.xlsx"
+            variant_template = tmpdir / "FORM copied and renamed.xlsx"
+            output_path = tmpdir / "MP_CC_repaired.xlsx"
+            shutil.copy2(canonical_template, variant_template)
+
+            workbook = openpyxl.load_workbook(variant_template)
+            try:
+                worksheet = workbook[find_hub_sheet_name(workbook)]
+                for row, *_values in FORM_QLNN_PROTECTED_VALUES:
+                    for column in range(2, 5):
+                        worksheet.cell(row=row, column=column).value = None
+                profit_sheet = workbook[FORM_PROFIT_SHEET_NAME]
+                aliases_by_canonical = {
+                    canonical: alias
+                    for alias, canonical in FORM_PROFIT_LOOKUP_KEY_ALIASES.items()
+                }
+                for row in range(1, profit_sheet.max_row + 1):
+                    cell = profit_sheet.cell(row=row, column=2)
+                    if cell.value in aliases_by_canonical:
+                        cell.value = aliases_by_canonical[cell.value]
+                workbook.save(variant_template)
+            finally:
+                workbook.close()
+
+            self.assertTrue(
+                HubBuilder(conn, fiscal_year=2027).export_to_template(
+                    str(variant_template), str(output_path), cc_code=cc_code
+                )
+            )
+
+            workbook = openpyxl.load_workbook(output_path, data_only=False)
+            try:
+                worksheet = workbook[find_hub_sheet_name(workbook)]
+                actual_qlnn = tuple(
+                    (
+                        row,
+                        worksheet.cell(row=row, column=2).value,
+                        worksheet.cell(row=row, column=3).value,
+                        worksheet.cell(row=row, column=4).value,
+                    )
+                    for row, *_values in FORM_QLNN_PROTECTED_VALUES
+                )
+                self.assertEqual(actual_qlnn, FORM_QLNN_PROTECTED_VALUES)
+                profit_keys = {
+                    workbook[FORM_PROFIT_SHEET_NAME].cell(row=row, column=2).value
+                    for row in range(1, workbook[FORM_PROFIT_SHEET_NAME].max_row + 1)
+                }
+                self.assertTrue(set(FORM_PROFIT_LOOKUP_KEY_ALIASES.values()).issubset(profit_keys))
+                self.assertTrue(set(FORM_PROFIT_LOOKUP_KEY_ALIASES).isdisjoint(profit_keys))
+                self.assertEqual(workbook.calculation.calcMode, "auto")
+                self.assertTrue(workbook.calculation.fullCalcOnLoad)
+                self.assertTrue(workbook.calculation.forceFullCalc)
+            finally:
+                workbook.close()
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
@@ -2382,14 +2461,14 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
         self.assertEqual(apply_audited_fy2027_reference_price("運動会 Đại hội thể thao", 0), 107000.0)
         self.assertEqual(apply_audited_fy2027_reference_price("運動会 Đại hội thể thao", 123), 123.0)
 
-    def test_company_trip_and_mooncake_use_total_headcount_of_their_posting_month(self):
+    def test_company_trip_uses_april_headcount_while_mooncake_uses_posting_month(self):
         conn = _mk_conn()
         cc_code = _seed_cc(conn)
         _seed_complete_staffing_time(
             conn,
             cc_code,
-            staff_values={"202605": 3, "202609": 4},
-            worker_values={"202605": 7, "202609": 8},
+            staff_values={"202604": 2, "202605": 3, "202609": 4},
+            worker_values={"202604": 6, "202605": 7, "202609": 8},
         )
         rules = [
             (
@@ -2431,9 +2510,10 @@ class TestRuleLoaderAndManualEventSafeguard(unittest.TestCase):
             (cc_code,),
         ).fetchall()
         self.assertEqual([row["period"] for row in rows], ["202605", "202609"])
-        self.assertEqual(float(rows[0]["amount_vnd"]), 10 * 2061000)
+        self.assertEqual(float(rows[0]["amount_vnd"]), 8 * 2061000)
         self.assertEqual(float(rows[1]["amount_vnd"]), 12 * 56000)
-        self.assertIn("driver_value=10", rows[0]["description"])
+        self.assertIn("source_month=202604", rows[0]["description"])
+        self.assertIn("driver_value=8", rows[0]["description"])
         self.assertIn("driver_value=12", rows[1]["description"])
         self.assertTrue(all("missing_separate_count=1" not in row["description"] for row in rows))
         conn.close()

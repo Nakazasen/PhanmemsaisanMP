@@ -77,7 +77,7 @@ def test_headcount_save_requires_full_13_period_series_before_write():
     assert rows[0]["period"] == "202603"
 
 
-def test_headcount_save_blank_baseline_is_saved_as_zero_and_no_old_defaulting_source():
+def test_headcount_save_partially_blank_baseline_keeps_explicit_zero_and_no_old_defaulting_source():
     periods = get_required_headcount_periods(2027)
     values = _full_period_values()
     values["202603"]["staff"] = ""
@@ -94,6 +94,26 @@ def test_headcount_save_blank_baseline_is_saved_as_zero_and_no_old_defaulting_so
     assert "save_manual_baseline_override(conn,fiscal_year,cc" in source
     assert "save_manual_time_overrides(conn,fiscal_year,cc" in source
     assert "staff_text = month_vars[period][\"staff\"].get().strip() or \"0\"" not in source
+
+
+def test_headcount_save_rejects_completely_unentered_baseline():
+    periods = get_required_headcount_periods(2027)
+    values = _full_period_values()
+    values["202603"].update({"expat": "", "staff": "", "worker": ""})
+
+    rows, errors = validate_headcount_save_period_rows(
+        periods,
+        values,
+        {period: period for period in periods},
+    )
+
+    assert not any(row["period"] == "202603" for row in rows)
+    assert any(
+        error["period"] == "202603"
+        and error["field"] == "baseline_t3"
+        and error["validation_rule"] == "REQUIRED"
+        for error in errors
+    )
 
 
 def test_headcount_save_blank_worker_is_zero_and_invalid_numbers_are_exact_errors():

@@ -70,9 +70,9 @@ def test_release_playbook_defines_full_update_publish_intent_and_stop_conditions
     assert "Đây được xem là quyền publish rõ ràng" in text
     assert "không được dừng ở\nartifact local" in text
     assert "Package cùng tên tồn tại nhưng hash khác" in text
-    assert "Cutover `0.1.9/0.1.10 → 0.1.1 → 0.1.2`" in text
     assert "không bao gồm commit, push, xóa hoặc di chuyển" in text
-    assert "xóa bỏ toàn bộ ràng buộc về khóa" in text
+    assert "release_update\\latest.json" in text
+    assert "patch kế tiếp" in text
     assert "bắt buộc phải có cả Setup" in text
     assert "publish Setup vào thư mục phần mềm LAN" in text
 
@@ -80,11 +80,12 @@ def test_release_playbook_defines_full_update_publish_intent_and_stop_conditions
 def test_current_handover_has_no_active_signing_instructions():
     text = Path("docs/handover/HANDOVER_FOR_NEXT_AGENT.md").read_text(encoding="utf-8")
 
-    assert "mọi ghi chú lịch sử về public/private key" in text
-    assert "Không tạo khóa" in text
-    assert "đã publish" in text
+    assert "HASH_ONLY_LAN" in text
+    assert "Không tạo, tìm, khôi phục hoặc cấu hình khóa ký" in text
+    assert "Catalog LAN hiện tại là `0.1.6`" in text
     assert "latest.json" in text
-    assert "0.1.9/0.1.10" in text
+    assert "0.1.9" not in text
+    assert "0.1.10" not in text
 
 
 def test_default_update_source_is_the_approved_lan_folder_only():

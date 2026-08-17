@@ -59,11 +59,14 @@ def tracked_text_paths(root: Path) -> list[Path]:
     output = subprocess.check_output(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"], cwd=root
     ).decode("utf-8")
-    return [
-        root / name
-        for name in output.split("\0")
-        if name and Path(name).suffix.casefold() in TEXT_SUFFIXES
-    ]
+    paths: list[Path] = []
+    for name in output.split("\0"):
+        if not name or Path(name).suffix.casefold() not in TEXT_SUFFIXES:
+            continue
+        path = root / name
+        if path.exists():
+            paths.append(path)
+    return paths
 
 
 def _decode_text(path: Path) -> str:
@@ -91,6 +94,8 @@ def scan_repository(root: Path | str = ".") -> list[MojibakeIssue]:
         relative = path.relative_to(root_path).as_posix()
         try:
             text = _decode_text(path)
+        except FileNotFoundError:
+            continue
         except UnicodeDecodeError as exc:
             issues.append(MojibakeIssue(relative, 0, "invalid_text_encoding", str(exc)))
             continue

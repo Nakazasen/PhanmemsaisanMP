@@ -475,7 +475,7 @@ class TestPostingMonthLogic(unittest.TestCase):
         self.assertEqual(_missing_areas(conn, cc), {})
         conn.close()
 
-    def test_company_trip_uses_total_may_headcount(self):
+    def test_company_trip_posts_in_may_using_total_april_headcount(self):
         conn = _mk_conn()
         cc = _seed_cc(conn)
         _seed_hc(conn, cc, [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
@@ -493,7 +493,15 @@ class TestPostingMonthLogic(unittest.TestCase):
 
         AllocationEngine(conn)._process_allocation_rules()
 
-        self.assertEqual(_alloc_periods(conn, rid), {"202605": 11 * 2061000.0})
+        self.assertEqual(_alloc_periods(conn, rid), {"202605": 10 * 2061000.0})
+        row = conn.execute(
+            "SELECT description FROM fact_input_data WHERE source=?",
+            (f"alloc_{rid}",),
+        ).fetchone()
+        self.assertIn("source_month=202604", row["description"])
+        self.assertIn("driver_month=2026-04", row["description"])
+        self.assertIn("driver_value=10", row["description"])
+        self.assertIn("formula_expr=10*2061000", row["description"])
         self.assertEqual(_missing_areas(conn, cc), {})
         conn.close()
 

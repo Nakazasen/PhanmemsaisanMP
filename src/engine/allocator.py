@@ -166,11 +166,12 @@ COMPANY_TRIP_TOKENS = (
     "du lịch công ty",
     "du lich cong ty",
 )
+ROLE_SPLIT_HAT_CC_CODES = frozenset({"1412000019"})
 FIXED_HEADCOUNT_RULE_SPECS = (
     (MOONCAKE_TOKENS, 9, 9),
     (COMPANY_FOUNDING_THANKS_EVENT_TOKENS, 10, 10),
     (LUCKY_MONEY_TOKENS, 2, 2),
-    (COMPANY_TRIP_TOKENS, 5, 5),
+    (COMPANY_TRIP_TOKENS, 5, 4),
 )
 BUS_RULE_SPECS = {
     "bus_expat_count": {
@@ -678,6 +679,40 @@ class AllocationEngine:
             (str(cc_code).strip(),),
         ).fetchall()
 
+    @staticmethod
+    def _effective_uniform_entitlements(cc_code: str, entitlements) -> list[object]:
+        """Expand the hat entitlement for CCs whose staff and workers use different hats."""
+        effective = list(entitlements)
+        if cc_code not in ROLE_SPLIT_HAT_CC_CODES:
+            return effective
+        by_key = {str(row["item_key"]): row for row in effective}
+        hat_entitlement = by_key.get("color_hat") or by_key.get("white_hat")
+        if hat_entitlement is None:
+            return effective
+        for item_key in ("color_hat", "white_hat"):
+            if item_key in by_key:
+                continue
+            synthetic = dict(hat_entitlement)
+            synthetic["item_key"] = item_key
+            synthetic["item_name"] = UNIFORM_ITEM_SPEC_BY_KEY[item_key].header
+            effective.append(synthetic)
+        return effective
+
+    @staticmethod
+    def _uniform_item_driver(
+        cc_code: str,
+        item_key: str,
+        staff_new: float,
+        worker_new: float,
+        total_new: float,
+    ) -> float:
+        if cc_code in ROLE_SPLIT_HAT_CC_CODES:
+            if item_key == "color_hat":
+                return worker_new
+            if item_key == "white_hat":
+                return staff_new
+        return total_new
+
     def _uniform_audit_insert(
         self,
         *,
@@ -808,7 +843,9 @@ class AllocationEngine:
 
         for cc in self.cost_centers:
             cc_code = str(cc["code"]).strip()
-            entitlements = self._uniform_entitlements_for_cc(cc_code)
+            entitlements = self._effective_uniform_entitlements(
+                cc_code, self._uniform_entitlements_for_cc(cc_code)
+            )
             entitlement_by_key = {row["item_key"]: row for row in entitlements}
             summer_selected = sorted(set(entitlement_by_key) & set(SUMMER_SHIRT_KEYS))
             if len(summer_selected) > 1:
@@ -943,10 +980,30 @@ class AllocationEngine:
                     else:
                         staff, worker, total = self._uniform_new_hires(cc_code, period, rule)
                         components = [(period, staff, worker, total, "new_hire_month")]
-                    active = [component for component in components if component[3] > 0]
+                    active = [
+                        component
+                        for component in components
+                        if self._uniform_item_driver(
+                            cc_code,
+                            item_key,
+                            component[1],
+                            component[2],
+                            component[3],
+                        )
+                        > 0
+                    ]
                     if not active:
                         continue
-                    driver_total = sum(component[3] for component in active)
+                    driver_total = sum(
+                        self._uniform_item_driver(
+                            cc_code,
+                            item_key,
+                            component[1],
+                            component[2],
+                            component[3],
+                        )
+                        for component in active
+                    )
                     staff_total = sum(component[1] for component in active)
                     worker_total = sum(component[2] for component in active)
                     issue_quantity = driver_total * spec.quantity_per_hire
@@ -964,7 +1021,8 @@ class AllocationEngine:
                     self._uniform_audit_insert(
                         cc_code=cc_code, period=period, item_key=item_key, item_name=str(rule["item_name"]),
                         release_type=release_type, source_periods=[component[0] for component in active],
-                        staff_new=staff_total, worker_new=worker_total, total_new=driver_total,
+                        staff_new=staff_total, worker_new=worker_total,
+                        total_new=staff_total + worker_total,
                         issue_quantity=issue_quantity, unit_price=unit_price, amount_vnd=amount,
                         account_code=int(target_acc), rule=rule, entitlement=entitlement, formula_expr=formula,
                     )
@@ -1110,7 +1168,7 @@ class AllocationEngine:
     def _is_fixed_headcount_override_rule(self, rule) -> bool:
         return self._fixed_headcount_rule_spec(rule) is not None
 
-    def _uses_posting_month_total_headcount(self, rule) -> bool:
+    def _uses_fixed_total_headcount_rule(self, rule) -> bool:
         normalized_item_name = self._normalize_text(rule["item_name"] or "")
         return any(
             self._normalize_text(token) in normalized_item_name
@@ -1224,12 +1282,12 @@ class AllocationEngine:
         # computed from monthly headcount deltas plus fixed-month headcount.
         if self._is_mixed_event_and_fixed_month_rule(rule["posting_month"]):
             return False
-        # These audited annual rules intentionally use the total headcount of
-        # their posting month (company trip: May, mooncake: September, company
-        # founding thanks event: October).
+        # These audited annual rules intentionally use a fixed total-headcount
+        # source (company trip: April for May posting; mooncake: September;
+        # company founding thanks event: October).
         # That explicit rule takes precedence over generic wording such as
         # "actual participants" or "distribution count" in the source note.
-        if self._uses_posting_month_total_headcount(rule):
+        if self._uses_fixed_total_headcount_rule(rule):
             return False
         driver_raw = str(rule["driver_raw"] or "")
         normalized_driver = self._normalize_text(driver_raw)

@@ -63,6 +63,70 @@ FORM_TEMPLATE_PAYLOAD_COLUMNS = (2, 19, 20)  # B, S, T
 FORM_SHARED_COST_START_ROW = 38
 FORM_TEMPLATE_PAYLOAD_START_ROW = FORM_SHARED_COST_START_ROW
 
+# Rows 31:36 are an output contract owned by QLLN.  Two FORM variants have
+# circulated in production: one contains these values and one contains blank
+# account cells plus lookup formulas.  Generated MP workbooks must be identical
+# regardless of which filename or local copy was selected.
+FORM_QLNN_PROTECTED_VALUES = (
+    (31, 9114120018, "部内間接経費", "部内間接経費"),
+    (32, 9114120029, "部外間接経費1", "部外間接経費1"),
+    (33, 9114120030, "部外間接経費2", "部外間接経費2"),
+    (34, 9114120021, "工場間接経費", "工場間接経費"),
+    (35, "\u00a0", "\u00a0", "\u00a0"),
+    (36, 9114120009, "社内金利（在庫）", "在庫金利"),
+)
+FORM_PROFIT_SHEET_NAME = "採算表(VND)"
+FORM_PROFIT_LOOKUP_KEY_ALIASES = {
+    "部外間接経費1": "部外間接1経費",
+    "部外間接経費2": "部外間接2経費",
+}
+
+
+def normalize_form_output_contract(workbook: openpyxl.Workbook) -> dict[str, int | bool]:
+    """Repair stable FORM-owned cells on a copied output workbook.
+
+    This intentionally runs only for a real MP FORM with its supporting master
+    sheets.  It never mutates the selected template itself; callers invoke it
+    after copying the template to the temporary output path.
+    """
+    required_sheets = {FORM_PROFIT_SHEET_NAME, "勘定科目", "原価センタ"}
+    if not required_sheets.issubset(workbook.sheetnames):
+        return {
+            "form_contract_detected": False,
+            "qlnn_cells_repaired": 0,
+            "profit_lookup_keys_repaired": 0,
+        }
+
+    worksheet = workbook[find_hub_sheet_name(workbook)]
+    qlnn_cells_repaired = 0
+    for row, account, name, group in FORM_QLNN_PROTECTED_VALUES:
+        for column, expected in ((2, account), (3, name), (4, group)):
+            cell = worksheet.cell(row=row, column=column)
+            if cell.value != expected:
+                cell.value = expected
+                qlnn_cells_repaired += 1
+
+    profit_sheet = workbook[FORM_PROFIT_SHEET_NAME]
+    profit_lookup_keys_repaired = 0
+    for row in range(1, int(profit_sheet.max_row or 0) + 1):
+        cell = profit_sheet.cell(row=row, column=2)
+        replacement = FORM_PROFIT_LOOKUP_KEY_ALIASES.get(cell.value)
+        if replacement is not None:
+            cell.value = replacement
+            profit_lookup_keys_repaired += 1
+
+    calculation = getattr(workbook, "calculation", None)
+    if calculation is not None:
+        calculation.calcMode = "auto"
+        calculation.fullCalcOnLoad = True
+        calculation.forceFullCalc = True
+
+    return {
+        "form_contract_detected": True,
+        "qlnn_cells_repaired": qlnn_cells_repaired,
+        "profit_lookup_keys_repaired": profit_lookup_keys_repaired,
+    }
+
 
 def is_form_template_payload_value(cell: Any) -> bool:
     """Return whether a cell contains a concrete value rather than a formula."""

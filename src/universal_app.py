@@ -133,7 +133,7 @@ from src.services.project_config import (
     remember_last_project,
 )
 from src.services.run_history import filter_runs
-from src.services.template_confirmation import confirmation_status, inspect_form
+from src.services.template_confirmation import inspect_form
 from src.services.batch_publication import publish_selected_cc_batch
 from src.parsers.manual_event_drivers import TEMPLATE_COLUMNS, ensure_manual_event_drivers_template
 from src.parsers.manual_headcount import (
@@ -200,12 +200,29 @@ def _parse_optional_save_int(period: str, field: str, raw_value: str, label: str
 def validate_headcount_save_period_rows(periods, month_values, label_by_period=None):
     """Validate GUI headcount inputs for an atomic full-series save."""
     label_by_period = label_by_period or {}
+    periods = tuple(periods)
+    baseline_period = periods[0] if periods else None
     rows = []
     errors = []
     for period in periods:
         values = month_values.get(period, {})
         label = label_by_period.get(period, period)
         row_error_count = len(errors)
+
+        if period == baseline_period and not any(
+            str(values.get(field, "") or "").strip()
+            for field in ("expat", "staff", "worker")
+        ):
+            errors.append(
+                _headcount_save_error(
+                    period,
+                    "baseline_t3",
+                    "",
+                    "REQUIRED",
+                    "Phải nhập baseline tháng 3 trước khi lưu và tính chi phí",
+                )
+            )
+            continue
 
         expat, expat_error = _parse_blank_zero_save_int(
             period,
@@ -287,6 +304,7 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
 
 def format_headcount_save_errors(errors) -> str:
     field_labels = {
+        "baseline_t3": "baseline tháng 3",
         "headcount_staff": "số nhân viên",
         "headcount_worker": "số công nhân",
         "headcount_male": "số nam",
@@ -297,6 +315,7 @@ def format_headcount_save_errors(errors) -> str:
         "bus_vietnamese_count": "số người Việt Nam đi xe đưa đón",
     }
     rule_labels = {
+        "REQUIRED": "bắt buộc nhập",
         "INTEGER_GTE_0": "số nguyên lớn hơn hoặc bằng 0",
         "SUM_LE_TOTAL": "tổng nam và nữ không vượt quá tổng số người",
         "VALID_CC": "mã trung tâm chi phí hợp lệ",
@@ -4030,7 +4049,7 @@ class MPManagerApp:
 
 
     def _confirm_selected_form(self, template: str, fiscal_year: int) -> bool:
-        """Ask once for a usable new or changed FORM and retain that decision locally."""
+        """Allow a usable FORM silently and report only a FORM that cannot run."""
         inspection = inspect_form(template)
         if not inspection.is_valid:
             messagebox.showerror(
@@ -4038,18 +4057,6 @@ class MPManagerApp:
                 "FORM không đúng cấu trúc.\nVui lòng chọn lại tệp hoặc kiểm tra các trang tính bắt buộc.",
             )
             return False
-        status = confirmation_status(self.project.form_confirmations(fiscal_year), inspection)
-        if status == "known":
-            return True
-        if status == "changed":
-            message = "FORM đã thay đổi so với lần dùng trước.\nVui lòng kiểm tra lại trước khi chạy."
-        else:
-            message = "FORM này chưa được dùng trước đây.\nVui lòng kiểm tra lại biểu mẫu trước khi chạy."
-        if not messagebox.askyesno("Xác nhận FORM", message):
-            return False
-        self.project.confirm_form(fiscal_year, inspection.as_confirmation())
-        self.project.save()
-        self.log("Đã xác nhận FORM cho lần chạy này.")
         return True
 
     def start_pipeline(self):
@@ -4096,6 +4103,22 @@ class MPManagerApp:
                 self.log(message)
                 messagebox.showerror("Thiếu nguồn nhân sự & thời gian", message)
                 self._mark_preflight_stale(force_refresh=True)
+                return
+            missing_baselines = self._missing_baseline_ccs_for_selection(
+                fiscal_year,
+                selected_ccs,
+            )
+            if missing_baselines:
+                self.log(
+                    "Thiếu baseline T3 trước khi tính chi phí cho: "
+                    + ", ".join(missing_baselines)
+                )
+                target_cc = selected_ccs[0] if len(selected_ccs) == 1 else None
+                self._open_baseline_recovery_dialog(
+                    fiscal_year,
+                    target_cc,
+                    missing_baselines,
+                )
                 return
             signature = (
                 fiscal_year,
@@ -4372,26 +4395,93 @@ class MPManagerApp:
         finally: conn.close()
         return (fiscal_year,target_cc,missing,run_database) if missing else None
 
-    def _open_baseline_recovery_dialog(self, fiscal_year, target_cc, missing_ccs, run_database):
+    def _missing_baseline_ccs_for_selection(self, fiscal_year, selected_ccs):
+        conn=get_connection(self._manual_input_store(fiscal_year)); create_schema(conn)
+        try:
+            return find_missing_baseline_ccs(
+                conn,
+                fiscal_year,
+                scope_ccs=selected_ccs,
+            )
+        finally:
+            conn.close()
+
+    def _copy_missing_baselines_from_selected_headcount_source(self, fiscal_year, missing_ccs):
+        source_conn=sqlite3.connect(":memory:")
+        source_conn.row_factory=sqlite3.Row
+        create_schema(source_conn)
+        try:
+            template=self.template_path.get().strip()
+            if os.path.isfile(template):
+                load_cost_centers(source_conn, template)
+            result=import_headcount_time_sources(
+                source_conn,
+                self.headcount_source_dir.get().strip(),
+                fiscal_year,
+                required_cc_codes=tuple(missing_ccs),
+            )
+            unresolved=tuple(result.get("missing_required_cc_codes") or ())
+            if unresolved:
+                raise ValueError(
+                    "Không có dữ liệu T4 hợp lệ để tạo baseline T3 cho: "
+                    + ", ".join(unresolved)
+                )
+            conn=get_connection(self._manual_input_store(fiscal_year)); create_schema(conn)
+            try:
+                copied=[]
+                with conn:
+                    for cc in missing_ccs:
+                        copied.extend(copy_missing_baselines_from_april(
+                            conn,
+                            fiscal_year,
+                            target_cc=cc,
+                            source_conn=source_conn,
+                        ))
+                return list(dict.fromkeys(copied))
+            finally:
+                conn.close()
+        finally:
+            source_conn.close()
+
+    def _copy_missing_baselines_from_failed_run(self, fiscal_year, missing_ccs, run_database):
+        source_uri="file:"+os.path.realpath(run_database).replace("\\","/")+"?mode=ro"
+        source_conn=sqlite3.connect(source_uri,uri=True)
+        conn=get_connection(self._manual_input_store(fiscal_year)); create_schema(conn)
+        try:
+            copied=[]
+            with conn:
+                for cc in missing_ccs:
+                    copied.extend(copy_missing_baselines_from_april(
+                        conn,
+                        fiscal_year,
+                        target_cc=cc,
+                        source_conn=source_conn,
+                    ))
+            return list(dict.fromkeys(copied))
+        finally:
+            source_conn.close()
+            conn.close()
+
+    def _open_baseline_recovery_dialog(self, fiscal_year, target_cc, missing_ccs, run_database=None):
         dialog=tk.Toplevel(self.root); dialog.title("Thiếu dữ liệu mốc tháng 3"); dialog.geometry("680x300"); dialog.transient(self.root); dialog.grab_set()
         ttk.Label(dialog,text="Thiếu dữ liệu mốc tháng 3",font=("Segoe UI",15,"bold")).pack(anchor="w",padx=18,pady=(18,6))
         preview=", ".join(missing_ccs[:12])+("…" if len(missing_ccs)>12 else "")
         ttk.Label(dialog,text=f"CC cần xử lý: {preview}\n\nChọn một hành động. Chương trình sẽ không tiếp tục tính toán nếu bạn đóng hộp thoại.",wraplength=640,justify="left").pack(anchor="w",padx=18)
         def use_april():
-            conn=get_connection(self._manual_input_store(fiscal_year)); create_schema(conn)
-            source_conn=None
             try:
-                source_uri="file:"+os.path.realpath(run_database).replace("\\","/")+"?mode=ro"
-                source_conn=sqlite3.connect(source_uri,uri=True)
-                with conn:
-                    copied=copy_missing_baselines_from_april(
-                        conn,fiscal_year,target_cc=target_cc,source_conn=source_conn
+                if run_database:
+                    copied=self._copy_missing_baselines_from_failed_run(
+                        fiscal_year,
+                        missing_ccs,
+                        run_database,
+                    )
+                else:
+                    copied=self._copy_missing_baselines_from_selected_headcount_source(
+                        fiscal_year,
+                        missing_ccs,
                     )
             except Exception as exc:
                 messagebox.showerror("Không thể dùng T4",_friendly_error_message(exc),parent=dialog); return
-            finally:
-                if source_conn is not None:source_conn.close()
-                conn.close()
             unresolved=[cc for cc in missing_ccs if cc not in copied]
             if unresolved:
                 messagebox.showerror("Không thể dùng T4",f"Không có dữ liệu T4 hợp lệ để điền dữ liệu mốc cho: {', '.join(unresolved)}",parent=dialog); return

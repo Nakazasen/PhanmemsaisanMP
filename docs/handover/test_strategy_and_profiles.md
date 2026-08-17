@@ -2,7 +2,7 @@
 
 ## Danh mục hiện tại
 
-Số lượng chính thức được sinh lại bằng quality baseline tĩnh và quá trình collection của pytest thay vì duy trì thủ công. Bộ test bao gồm hồi quy source/bộ đọc, hành vi bộ máy, test có xử lý Excel, migration, sức khỏe runtime, hợp đồng đóng gói và test an toàn cho gói cập nhật/nội dung có chữ ký.
+Số lượng chính thức được sinh lại bằng quality baseline tĩnh và quá trình collection của pytest thay vì duy trì thủ công. Bộ test bao gồm hồi quy source/bộ đọc, hành vi bộ máy, test có xử lý Excel, migration, sức khỏe runtime, hợp đồng đóng gói và test an toàn cho gói cập nhật/nội dung dựa trên hash.
 
 ## Các profile test
 
@@ -35,7 +35,7 @@ Các hành vi sau được bảo vệ ở cấp phát hành:
 - thiếu dữ liệu nguồn phải từ chối an toàn và tạo kết quả đầu vào thiếu có thể kiểm toán;
 - kiểm tra sức khỏe hằng năm và các quy tắc phân bổ khác dùng driver thực, không dùng số dòng;
 - việc tạo schema không phá dữ liệu và cơ sở dữ liệu cũ được migration an toàn;
-- artifact có chữ ký từ chối chữ ký sai, đường dẫn không an toàn, file ngoài dự kiến và kích thước không khớp;
+- artifact có hash sai, đường dẫn không an toàn, file ngoài dự kiến và kích thước không khớp;
 - xác minh gói bắt buộc có tài nguyên và chạy `--health-check` của bản đóng gói.
 
 ## Ma trận đặc trưng hóa quy tắc nghiệp vụ
@@ -54,7 +54,7 @@ Ma trận này ghi nhận lớp bảo vệ có thể thực thi, không khẳng 
 | Tài sản cố định | Làm tròn theo từng tài sản, tháng kết thúc, số 0 rõ ràng và bỏ qua sau tháng kết thúc là các hợp đồng ngữ nghĩa | `test_fixed_assets_output.py`, `test_fixed_assets_parser_coverage.py` | Được bảo vệ; nghiệm thu cuối bằng bộ so sánh nghiệp vụ vẫn còn mở |
 | Chi phí NNN, IT, cơ sở vật chất và hệ thống | Hợp đồng bộ đọc/bộ ghi bao phủ các bố cục được hỗ trợ và hành vi lỗi rõ ràng | các test `test_*parser.py`, `test_*writer.py`, bản xem trước và cờ xuất tương ứng | Được bảo vệ cho các bố cục đã ghi nhận; bố cục nhà cung cấp mới cần fixture mới |
 | Kết quả/thứ tự nguồn | Snapshot ngữ nghĩa bảo vệ vị trí dòng, dòng phân cách, fallback nguồn không rõ và thứ tự chuẩn mà không phụ thuộc so sánh Excel từng byte dễ vỡ | `test_release_contracts.py`, `test_complete_v1_source_order_writer.py` | Được bảo vệ |
-| An toàn schema và cập nhật | Tính tương thích migration, chữ ký, đường dẫn tệp nén, hash, chuẩn bị, kích hoạt và rollback đều từ chối an toàn | `test_schema_migrations.py`, `test_update_security.py`, `test_app_updates.py` | Được bảo vệ |
+| An toàn schema và cập nhật | Tính tương thích migration, hash, đường dẫn tệp nén, chuẩn bị, kích hoạt và rollback đều từ chối an toàn | `test_schema_migrations.py`, `test_update_security.py`, `test_app_updates.py` | Được bảo vệ |
 | Đường dẫn bản phát hành đóng gói | Dữ liệu runtime nằm ngoài binary có phiên bản; sức khỏe ứng dụng và trình khởi chạy phải đạt trong khi đóng gói onedir | `test_packaged_raw_resolution.py`, `test_packaging_entrypoint.py`, test nhanh gói | Được bảo vệ trên máy build; cần nghiệm thu máy sạch |
 
 Khi một quy tắc thay đổi, hãy cập nhật test đặc trưng hóa hẹp nhất được liệt kê và ma trận này. Không thay assertion ngữ nghĩa bằng snapshot Excel nhị phân toàn phần: cách đó chậm, dễ vỡ giữa các phiên bản thư viện và khó giải thích lỗi nghiệp vụ.

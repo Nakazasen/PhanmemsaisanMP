@@ -1,0 +1,158 @@
+{
+  "generated_at": "2026-08-12T10:09:25.515829+00:00",
+  "nodes": {
+    "scripts_run_e2e": {
+      "code_fingerprint": "5158821c3e713ffec677e8b9ac10c61498f4341e5ed24a3f20f0a938b65d26ac",
+      "label": "run_e2e.py",
+      "last": "2026-08-12T10:06:32.407534+00:00",
+      "neg": 1,
+      "provenance": [
+        {
+          "date": "2026-08-12T10:06:32.407534+00:00",
+          "outcome": "useful",
+          "q": "người dùng đang claim dù không nhập baselinet3 thì khi chạy tính toán, chương trình vẫn cho chạy bình thường, không check, vẫn xuất kết quả như bình thường"
+        },
+        {
+          "date": "2026-08-11T11:15:49.966890+00:00",
+          "outcome": "corrected",
+          "q": "Compare five random cost centers between current worktree and latest repository commit and verify requested improvements"
+        }
+      ],
+      "score": 0.021752008,
+      "source_file": "scripts/run_e2e.py",
+      "status": "contested",
+      "uses": 1,
+      "verdict": "useful"
+    },
+    "src_engine_complete_v1_source_order_writer": {
+      "code_fingerprint": "d090c4c70bcf0c7979b87796c0573e10c974e2249d3ca9f1f22b07e05c0e7d97",
+      "label": "complete_v1_source_order_writer.py",
+      "last": "2026-08-12T07:26:46.203312+00:00",
+      "neg": 1,
+      "provenance": [
+        {
+          "date": "2026-08-12T07:26:46.203312+00:00",
+          "outcome": "useful",
+          "q": "những file đã sửa check mojibake lại cho tôi"
+        },
+        {
+          "date": "2026-08-11T11:15:49.966890+00:00",
+          "outcome": "corrected",
+          "q": "Compare five random cost centers between current worktree and latest repository commit and verify requested improvements"
+        },
+        {
+          "date": "2026-08-11T10:18:40.537586+00:00",
+          "outcome": "useful",
+          "q": "FORM rows B31:D36 and row 3 #N/A differ by machine or renamed file"
+        }
+      ],
+      "score": 0.996496899,
+      "source_file": "src/engine/complete_v1_source_order_writer.py",
+      "status": "contested",
+      "uses": 2,
+      "verdict": "useful"
+    },
+    "src_engine_complete_v1_source_order_writer_collect_preserved_unmanaged_rows": {
+      "code_fingerprint": "d090c4c70bcf0c7979b87796c0573e10c974e2249d3ca9f1f22b07e05c0e7d97",
+      "label": "_collect_preserved_unmanaged_rows()",
+      "last": "2026-08-11T10:18:40.537586+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-11T10:18:40.537586+00:00",
+          "outcome": "useful",
+          "q": "FORM rows B31:D36 and row 3 #N/A differ by machine or renamed file"
+        }
+      ],
+      "score": 0.977305012,
+      "source_file": "src/engine/complete_v1_source_order_writer.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_engine_hub_builder_hubbuilder_write_fixed_rows": {
+      "code_fingerprint": "d936719195bb08a5e300a65ac57bae47b71160129ca66d3344fd1a6cb5e18f3e",
+      "label": "._write_fixed_rows()",
+      "last": "2026-08-11T10:18:40.537586+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-11T10:18:40.537586+00:00",
+          "outcome": "useful",
+          "q": "FORM rows B31:D36 and row 3 #N/A differ by machine or renamed file"
+        }
+      ],
+      "score": 0.977305012,
+      "source_file": "src/engine/hub_builder.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_services_manual_staffing_overrides": {
+      "code_fingerprint": "309efaa24810d40836d71dfa5b38a57432ce4edeeed617cbcf3ed47c086ab781",
+      "label": "manual_staffing_overrides.py",
+      "last": "2026-08-12T10:06:32.407534+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-12T10:06:32.407534+00:00",
+          "outcome": "useful",
+          "q": "người dùng đang claim dù không nhập baselinet3 thì khi chạy tính toán, chương trình vẫn cho chạy bình thường, không check, vẫn xuất kết quả như bình thường"
+        }
+      ],
+      "score": 0.999953709,
+      "source_file": "src/services/manual_staffing_overrides.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_universal_app": {
+      "code_fingerprint": "78dd39a8879e14e0829f11e324fa120fad2161f3be365ca7695ff6abf4089131",
+      "label": "universal_app.py",
+      "last": "2026-08-12T10:06:32.407534+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-12T10:06:32.407534+00:00",
+          "outcome": "useful",
+          "q": "người dùng đang claim dù không nhập baselinet3 thì khi chạy tính toán, chương trình vẫn cho chạy bình thường, không check, vẫn xuất kết quả như bình thường"
+        },
+        {
+          "date": "2026-08-12T07:26:46.203312+00:00",
+          "outcome": "useful",
+          "q": "những file đã sửa check mojibake lại cho tôi"
+        }
+      ],
+      "score": 1.997347297,
+      "source_file": "src/universal_app.py",
+      "status": "preferred",
+      "uses": 2
+    },
+    "src_utils_cli_rationale_94": {
+      "code_fingerprint": "5f109c9f4dd7907bc8e8d9a340341d704ee09fba5624b926129b3c97d25603fc",
+      "label": "In Unicode mà không làm hỏng luồng vận hành nếu console có encoding cũ.",
+      "last": "2026-08-12T07:26:46.203312+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-12T07:26:46.203312+00:00",
+          "outcome": "useful",
+          "q": "những file đã sửa check mojibake lại cho tôi"
+        }
+      ],
+      "score": 0.997393588,
+      "source_file": "src/utils/cli.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_utils_excel_helpers": {
+      "code_fingerprint": "78e77cc6eb93534f0ebb376133a915189a8dad0216bf11f55d92edcb8525daca",
+      "label": "excel_helpers.py",
+      "last": "2026-08-12T07:26:46.203312+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-12T07:26:46.203312+00:00",
+          "outcome": "useful",
+          "q": "những file đã sửa check mojibake lại cho tôi"
+        }
+      ],
+      "score": 0.997393588,
+      "source_file": "src/utils/excel_helpers.py",
+      "status": "tentative",
+      "uses": 1
+    }
+  },
+  "version": 1
+}
