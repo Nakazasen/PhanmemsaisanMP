@@ -495,6 +495,34 @@ class TestSharedAccountResolver(unittest.TestCase):
         finally:
             conn.close()
 
+    def test_shared_numeric_variant_matches_abbreviated_sales_marker_inside_account_name(self):
+        """Danh mục thực tế dùng （販）; phải ghép đúng hạng mục Sales cùng tên."""
+        from src.engine.account_resolver import resolve_account_code_for_connection
+
+        db_path, conn, _ = self._mk_file_db()
+        try:
+            conn.executemany(
+                """
+                INSERT INTO dim_accounts
+                (code, name_jp, name_vn, group_name, group_vn, mfg_code, ga_code, sales_code)
+                VALUES (?, ?, NULL, '減価償却費', NULL, ?, ?, ?)
+                """,
+                [
+                    (5006016260, '減価償却費配賦（製）　建物', 5006016260, None, None),
+                    (5006016261, '減価償却費配賦（製）　土地使用権', 5006016261, None, None),
+                    (6006016539, '減価償却費配賦（販）　建物', None, None, 6006016539),
+                    (6006016540, '減価償却費配賦（販）　土地使用権', None, None, 6006016540),
+                ],
+            )
+            conn.commit()
+
+            self.assertEqual(
+                resolve_account_code_for_connection(conn, '1412000100', 5006016260),
+                6006016539,
+            )
+        finally:
+            conn.close()
+
     def test_manual_event_driver_uses_shared_connection_resolver(self):
         from unittest.mock import patch
         from src.parsers import manual_event_drivers

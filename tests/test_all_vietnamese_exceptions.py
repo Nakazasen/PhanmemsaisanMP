@@ -84,6 +84,14 @@ def test_writers_and_contexts_exceptions_are_vietnamese():
     assert "Exported workbook has no business rows although DB facts exist" not in hub_builder
 
 
+def test_hub_account_resolution_error_uses_non_technical_vietnamese_labels():
+    hub_builder = Path("src/engine/hub_builder.py").read_text(encoding="utf-8")
+    assert "Không thể chuẩn hóa account cố định theo cost type" not in hub_builder
+    assert "Không thể chuẩn hóa account NNN theo cost type" not in hub_builder
+    assert "Không thể xác định tài khoản phù hợp cho khoản chi cố định của Trung tâm chi phí" in hub_builder
+    assert "Không thể xác định tài khoản phù hợp cho khoản chi từ nguồn NNN của Trung tâm chi phí" in hub_builder
+
+
 def test_allocator_missing_inputs_are_vietnamese():
     src = Path("src/engine/allocator.py").read_text(encoding="utf-8")
     forbidden = (

@@ -1422,8 +1422,8 @@ class HubBuilder:
                 return resolve_account_code_for_connection(self.conn, cc_code, raw_account_code)
             except AccountResolutionError as exc:
                 raise ExportIntegrityError(
-                    "Không thể chuẩn hóa account cố định theo cost type của Cost Center "
-                    f"{cc_code}: raw_account={raw_account_code}. {exc}"
+                    "Không thể xác định tài khoản phù hợp cho khoản chi cố định của Trung tâm chi phí "
+                    f"{cc_code}, từ mã chi phí {raw_account_code}. {exc}"
                 ) from exc
 
         def _set_fixed_row(row_index: int, description: str | None = None) -> None:
@@ -1762,8 +1762,8 @@ class HubBuilder:
                 account_code = resolve_account_code_for_connection(self.conn, cc_code, raw_account_code)
             except AccountResolutionError as exc:
                 raise ExportIntegrityError(
-                    "Không thể chuẩn hóa account NNN theo cost type của Cost Center "
-                    f"{cc_code}: raw_account={raw_account_code}. {exc}"
+                    "Không thể xác định tài khoản phù hợp cho khoản chi từ nguồn NNN của Trung tâm chi phí "
+                    f"{cc_code}, từ mã chi phí {raw_account_code}. {exc}"
                 ) from exc
             key = (account_code, clean_description)
             bucket = grouped.setdefault(

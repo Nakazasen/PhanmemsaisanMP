@@ -178,10 +178,12 @@ _ACCOUNT_NAME_COST_TYPE_SUFFIXES = (
     "（製造）",
     "（一般）",
     "（販売）",
+    "（販）",
     "（製）",
     "(製造)",
     "(一般)",
     "(販売)",
+    "(販)",
     "(製)",
 )
 
@@ -201,7 +203,7 @@ def _account_name_stem(value: Any) -> str:
 _ACCOUNT_SUFFIXES_BY_COLUMN = {
     "mfg_code": ("（製造）", "（製）", "(製造)", "(製)"),
     "ga_code": ("（一般）", "(一般)"),
-    "sales_code": ("（販売）", "(販売)"),
+    "sales_code": ("（販売）", "（販）", "(販売)", "(販)"),
 }
 
 
@@ -270,7 +272,9 @@ def _pick_row_for_cost_type_with_conn(
             raise AccountResolutionError(
                 f"Nhóm tài khoản bị trùng lặp khi tra cứu: '{account_key}'. "
                 "Nguyên nhân: Không xác định được duy nhất dòng tài khoản cho loại chi phí. "
-                "Cách xử lý: Kiểm tra lại cột mfg_code/ga_code/sales_code trong dim_accounts."
+                "Cách xử lý: Kiểm tra danh mục tài khoản; mỗi khoản mục phải có đúng một mã "
+                "tương ứng với loại phòng ban. Nếu bạn không quản lý danh mục, hãy gửi mã tài khoản "
+                "này cho người quản trị."
             )
 
     return rows[0]
