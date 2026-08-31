@@ -19,7 +19,7 @@ from typing import Callable, Iterable
 
 import openpyxl
 
-from src.engine.uniform_cup_rules import UNIFORM_ITEM_SPECS, normalize_uniform_text
+from src.engine.uniform_cup_rules import SOURCE_BACKED_UNIFORM_ITEM_SPECS, normalize_uniform_text
 from src.utils import excel_helpers
 from src.utils.fiscal_periods import (
     SystemSourcePeriodError,
@@ -440,7 +440,10 @@ def _is_uniform_policy_cached(path: str, _mtime_ns: int, _size: int) -> bool:
             normalize_uniform_text(sheet.cell(1, column).value)
             for column in range(1, sheet.max_column + 1)
         }
-        return all(normalize_uniform_text(spec.header) in headers for spec in UNIFORM_ITEM_SPECS)
+        return all(
+            normalize_uniform_text(spec.header) in headers
+            for spec in SOURCE_BACKED_UNIFORM_ITEM_SPECS
+        )
     finally:
         workbook.close()
 

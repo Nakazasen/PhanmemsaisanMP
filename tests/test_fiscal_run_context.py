@@ -8,6 +8,7 @@ from src.parsers.manual_event_drivers import _default_period_for_fiscal_year
 from src.parsers.nnn_paperwork import month_map_for_fiscal_year
 from src.services.fiscal_run import (
     _filename_period_coverage,
+    _is_uniform_policy,
     annual_default_paths,
     create_fiscal_run_context,
     inspect_fiscal_year_evidence,
@@ -354,6 +355,40 @@ def _write_minimal_uniform_policy(path: Path) -> None:
         sheet.cell(1, column, spec.header)
     workbook.save(path)
     workbook.close()
+
+
+def test_uniform_policy_accepts_source_backed_columns_without_internal_amendment_columns(tmp_path):
+    from openpyxl import Workbook
+    from src.engine.uniform_cup_rules import SOURCE_BACKED_UNIFORM_ITEM_SPECS
+
+    policy = tmp_path / "source_backed_only.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "原価センタ"
+    sheet.cell(1, 1, "原価センタ")
+    for column, spec in enumerate(SOURCE_BACKED_UNIFORM_ITEM_SPECS, start=2):
+        sheet.cell(1, column, spec.header)
+    workbook.save(policy)
+    workbook.close()
+
+    assert _is_uniform_policy(policy)
+
+
+def test_uniform_policy_still_rejects_a_missing_source_backed_column(tmp_path):
+    from openpyxl import Workbook
+    from src.engine.uniform_cup_rules import SOURCE_BACKED_UNIFORM_ITEM_SPECS
+
+    policy = tmp_path / "missing_source_backed_column.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "原価センタ"
+    sheet.cell(1, 1, "原価センタ")
+    for column, spec in enumerate(SOURCE_BACKED_UNIFORM_ITEM_SPECS[:-1], start=2):
+        sheet.cell(1, column, spec.header)
+    workbook.save(policy)
+    workbook.close()
+
+    assert not _is_uniform_policy(policy)
 
 
 def test_new_project_leaves_uniform_policy_unset_for_annual_discovery(tmp_path):
