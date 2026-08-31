@@ -7,6 +7,7 @@ import shutil
 import uuid
 
 import openpyxl
+import pandas as pd
 
 from src.audit.pipeline_audit import write_pipeline_audit_report
 from src.db.fy2027_compat import apply_audited_fy2027_reference_price
@@ -17,6 +18,7 @@ from src.engine.complete_v1_source_order_writer import apply_complete_v1_source_
 from src.engine.hub_builder import ExportIntegrityError, HubBuilder
 from src.parsers.birthday import parse_birthday_workbook
 from src.parsers.fixed_assets import parse_fixed_assets
+from src.parsers.facility import SHEET_CONFIG, parse_facility_sheet
 from src.parsers.ga import parse_ga
 from src.parsers.manual_event_drivers import parse_manual_event_drivers
 from src.parsers.manual_headcount import (
@@ -5794,6 +5796,29 @@ class TestHubBuilderExport(unittest.TestCase):
         finally:
             conn.close()
             shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+class TestFacilityParserSummaryRows(unittest.TestCase):
+    def test_summary_rows_do_not_inherit_the_last_cost_center(self):
+        fy_months = get_fy_months(2027)
+        for config in SHEET_CONFIG.values():
+            first_label, first_key = next(iter(config["items"].items()))
+            second_label, second_key = tuple(config["items"].items())[1]
+            rows = [[None] * 15 for _ in range(config["data_start"])] + [
+                [63, "Information System", first_label] + [11.0] * 12,
+                [None, 1412000086, second_label] + [22.0] * 12,
+                ["合計", None, first_label] + [999.0] * 12,
+                [None, None, second_label] + [888.0] * 12,
+            ]
+
+            records = parse_facility_sheet(pd.DataFrame(rows), config, fy_months)
+
+            self.assertEqual(len(records), 24)
+            self.assertEqual(
+                {(row["item_type"], row["amount"]) for row in records},
+                {(first_key, 11.0), (second_key, 22.0)},
+            )
+            self.assertEqual({row["cc_code"] for row in records}, {"1412000086"})
 
 
 if __name__ == "__main__":

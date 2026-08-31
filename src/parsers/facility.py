@@ -61,7 +61,20 @@ def parse_facility_sheet(df: pd.DataFrame, config: dict, fy_months: list) -> lis
     month_start = config['month_start_col']
     currency = config['currency']
 
-    current_cc = None
+    def _row_cc_code(row: pd.Series, row_index: int) -> str | None:
+        direct_code = extract_cc_code(row.iloc[config['cc_code_col']])
+        if direct_code:
+            return direct_code
+
+        sequence = row.iloc[0]
+        try:
+            float(sequence)
+        except (TypeError, ValueError):
+            return None
+        if row_index + 1 >= len(df):
+            return None
+        return extract_cc_code(df.iloc[row_index + 1].iloc[config['cc_code_col']])
+
     i = data_start
     while i < len(df):
         row = df.iloc[i]
@@ -76,26 +89,8 @@ def parse_facility_sheet(df: pd.DataFrame, config: dict, fy_months: list) -> lis
             i += 1
             continue
 
-        cc_code = None
-        seq = row.iloc[0]
-        if not pd.isna(seq):
-            try:
-                float(seq)
-                if i + 1 < len(df):
-                    next_row = df.iloc[i + 1]
-                    cc_val = next_row.iloc[config['cc_code_col']]
-                    cc_code = extract_cc_code(cc_val)
-                    if cc_code:
-                        current_cc = cc_code
-            except (ValueError, TypeError):
-                pass
-        else:
-            cc_val = row.iloc[config['cc_code_col']]
-            cc_code = extract_cc_code(cc_val)
-            if cc_code:
-                current_cc = cc_code
-
-        if not current_cc:
+        cc_code = _row_cc_code(row, i)
+        if not cc_code:
             i += 1
             continue
 
@@ -107,7 +102,7 @@ def parse_facility_sheet(df: pd.DataFrame, config: dict, fy_months: list) -> lis
             if amount == 0.0:
                 continue
             records.append({
-                'cc_code': current_cc,
+                'cc_code': cc_code,
                 'period': fy_months[m],
                 'amount': amount,
                 'currency': currency,
