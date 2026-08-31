@@ -475,6 +475,44 @@ def test_complete_v1_writer_reorders_existing_source_order_rows_idempotently(tmp
         wb.close()
 
 
+def test_complete_v1_writer_uses_display_order_without_reclassifying_source_groups(tmp_path):
+    workbook = _workbook(tmp_path / "display_order.xlsx")
+    mapping_order = tuple(CANONICAL_SOURCE_FILE_ORDER)
+    display_order = (
+        mapping_order[4],  # birthday
+        mapping_order[3],  # GA
+        mapping_order[1],  # fixed assets
+        mapping_order[0],  # facility
+        mapping_order[2],  # IT
+        mapping_order[6],  # NNN
+    )
+
+    result = apply_complete_v1_source_order_to_workbook(
+        workbook,
+        start_row=168,
+        clear_until_row=190,
+        source_file_order=mapping_order,
+        output_source_file_order=display_order,
+    )
+
+    assert result["source_block_order"] == display_order
+    wb = load_workbook(workbook)
+    try:
+        ws = wb[SHEET]
+        assert [ws.cell(row, 19).value for row in (168, 170, 172, 173, 175, 177, 179)] == [
+            "birthday",
+            "admin toilet paper",
+            "fixed asset depreciation",
+            "fixed asset interest",
+            "facility building depreciation",
+            "system cost",
+            "NNN paperwork",
+        ]
+        assert _note_text(ws.cell(175, 20)).find(mapping_order[0]) >= 0
+    finally:
+        wb.close()
+
+
 def test_complete_v1_writer_groups_split_accounts_inside_source_block(tmp_path):
     path = tmp_path / "out_split_accounts.xlsx"
     wb = Workbook()

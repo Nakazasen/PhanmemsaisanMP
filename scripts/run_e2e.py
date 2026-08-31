@@ -268,7 +268,8 @@ def _apply_complete_v1_source_order(
     dynamic_allocation_rows=None,
     fiscal_periods=None,
     source_file_order=None,
-) -> dict[str, int]:
+    output_source_file_order=None,
+) -> dict[str, object]:
     kwargs = {
         "start_row": COMPLETE_V1_SOURCE_ORDER_START_ROW,
         # The writer resolves the cleanup boundary from the actual sheet
@@ -280,6 +281,8 @@ def _apply_complete_v1_source_order(
         kwargs["fiscal_periods"] = fiscal_periods
     if source_file_order:
         kwargs["source_file_order"] = source_file_order
+    if output_source_file_order:
+        kwargs["output_source_file_order"] = output_source_file_order
     result = apply_complete_v1_source_order_to_workbook(workbook_path, **kwargs)
     log_callback(
         "Đã áp dụng ghi kết quả hoàn chỉnh theo thứ tự nguồn ({phase}): {summary}".format(
@@ -303,6 +306,41 @@ def _annual_complete_v1_source_order(run_context) -> list[str]:
         else:
             names.append(os.path.basename(paths[0]))
     return names
+
+
+def _annual_complete_v1_output_source_order(run_context) -> list[str]:
+    """Resolve the saved global manifest order for output blocks only.
+
+    ``source_file_order`` remains the stable mapping of workbook source groups.
+    This separate value controls physical block placement after fiscal preflight
+    has already decided which inputs are eligible.
+    """
+    resolved_paths = {
+        os.path.normcase(os.path.abspath(str(path)))
+        for paths in run_context.resolved_sources.values()
+        for path in paths
+        if path
+    }
+    eligible_names = {os.path.basename(path) for path in resolved_paths}
+    ordered_names: list[str] = []
+    seen: set[str] = set()
+
+    for entry in run_context.ordered_sources:
+        path = str(entry.get("path", "") or "")
+        normalized_path = os.path.normcase(os.path.abspath(path)) if path else ""
+        name = os.path.basename(path) if path else str(entry.get("filename", "") or "")
+        if normalized_path not in resolved_paths or not name or name in seen:
+            continue
+        ordered_names.append(name)
+        seen.add(name)
+
+    # Keep an eligible source from an incomplete legacy manifest, but only as
+    # a deterministic fallback after the operator's saved display sequence.
+    for name in _annual_complete_v1_source_order(run_context):
+        if name in eligible_names and name not in seen:
+            ordered_names.append(name)
+            seen.add(name)
+    return ordered_names
 
 
 def _load_complete_v1_dynamic_allocation_rows(builder, target_cc) -> list[dict[str, object]]:
@@ -1206,6 +1244,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 _apply_complete_v1_source_order(
                     out_path, log_callback, phase="pre-reference",
                     source_file_order=_annual_complete_v1_source_order(run_context),
+                    output_source_file_order=_annual_complete_v1_output_source_order(run_context),
                 )
             if primary_reference_fill:
                 primary_path = _resolve_primary_reference_path(
@@ -1262,6 +1301,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     dynamic_allocation_rows=complete_v1_dynamic_allocation_rows,
                     fiscal_periods=complete_v1_fiscal_periods,
                     source_file_order=_annual_complete_v1_source_order(run_context),
+                    output_source_file_order=_annual_complete_v1_output_source_order(run_context),
                 )
             log_callback(f"Hoàn tất: {output_dir}")
         else:
@@ -1349,6 +1389,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             _apply_complete_v1_source_order(
                                 out_path, log_callback, phase="pre-reference",
                                 source_file_order=_annual_complete_v1_source_order(run_context),
+                                output_source_file_order=_annual_complete_v1_output_source_order(run_context),
                             )
                             complete_result = apply_mp_saisan_complete_v1(
                                 workbook_path=out_path,
@@ -1371,6 +1412,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             dynamic_allocation_rows=complete_v1_dynamic_rows,
                             fiscal_periods=complete_v1_periods,
                             source_file_order=_annual_complete_v1_source_order(run_context),
+                            output_source_file_order=_annual_complete_v1_output_source_order(run_context),
                         )
                     count += 1
             

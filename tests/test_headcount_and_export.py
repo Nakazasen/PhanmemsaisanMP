@@ -1964,7 +1964,9 @@ class TestBusHeadcountAllocation(unittest.TestCase):
             ORDER BY id
             """
         ).fetchall()
-        self.assertTrue(any("missing=expat bus unit_price" in row["message"] for row in missing))
+        self.assertTrue(
+            any("phần_thiếu=đơn giá xe chuyên gia" in row["message"] for row in missing)
+        )
         conn.close()
 
 

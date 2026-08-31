@@ -294,10 +294,18 @@ def launcher_config_path(local_app_data: str | None = None) -> str:
 def remember_last_project(config_path: str, *, local_app_data: str | None = None) -> str:
     target = launcher_config_path(local_app_data)
     os.makedirs(os.path.dirname(target), exist_ok=True)
+    existing: dict[str, Any] = {}
+    try:
+        if os.path.isfile(target):
+            with open(target, "r", encoding="utf-8") as handle:
+                existing = json.load(handle) or {}
+    except Exception:
+        existing = {}
+    existing["last_project_file"] = os.path.abspath(config_path)
     fd, temporary = tempfile.mkstemp(prefix=".launcher.", suffix=".json.tmp", dir=os.path.dirname(target), text=True)
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
-            json.dump({"last_project_file": os.path.abspath(config_path)}, handle, indent=2)
+            json.dump(existing, handle, indent=2)
             handle.write("\n")
         os.replace(temporary, target)
     except Exception:
@@ -317,6 +325,42 @@ def read_last_project(*, local_app_data: str | None = None) -> str | None:
         return None
     path = str(payload.get("last_project_file", "") or "").strip()
     return os.path.abspath(path) if path and os.path.isfile(path) else None
+
+
+def remember_ui_language(language: str, *, local_app_data: str | None = None) -> str:
+    target = launcher_config_path(local_app_data)
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    existing: dict[str, Any] = {}
+    try:
+        if os.path.isfile(target):
+            with open(target, "r", encoding="utf-8") as handle:
+                existing = json.load(handle) or {}
+    except Exception:
+        existing = {}
+    existing["ui_language"] = str(language or "").strip()
+    fd, temporary = tempfile.mkstemp(prefix=".launcher.", suffix=".json.tmp", dir=os.path.dirname(target), text=True)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(existing, handle, indent=2)
+            handle.write("\n")
+        os.replace(temporary, target)
+    except Exception:
+        try:
+            os.unlink(temporary)
+        except OSError:
+            pass
+        raise
+    return target
+
+
+def read_ui_language(*, local_app_data: str | None = None) -> str:
+    try:
+        with open(launcher_config_path(local_app_data), "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, ValueError, TypeError):
+        return "vi"
+    lang = str(payload.get("ui_language", "") or "").strip().lower()
+    return lang if lang in ("vi", "ja", "en") else "vi"
 
 
 def discover_or_create_project(

@@ -131,6 +131,22 @@ from src.services.project_config import (
     ProjectConfig,
     discover_or_create_project,
     remember_last_project,
+    remember_ui_language,
+    read_ui_language,
+)
+from src.services.i18n import (
+    t,
+    get_current_language,
+    set_current_language,
+    get_supported_languages,
+    get_language_name,
+    get_language_code,
+    translation_key_for_text,
+)
+from src.services.user_guide_content import (
+    get_user_guide_text,
+    get_user_guide_search_suggestions,
+    USER_GUIDE_VI,
 )
 from src.services.run_history import filter_runs
 from src.services.template_confirmation import inspect_form
@@ -178,7 +194,7 @@ def _parse_blank_zero_save_int(period: str, field: str, raw_value: str, label: s
     if text == "":
         return "0", None
     if not text.isdecimal():
-        return None, _headcount_save_error(period, field, text, "INTEGER_GTE_0", f"{label.capitalize()} phải là số nguyên lớn hơn hoặc bằng 0")
+        return None, _headcount_save_error(period, field, text, "INTEGER_GTE_0", t("hc_err_integer_gte_0", label=label.capitalize()))
     return str(int(text)), None
 
 
@@ -192,7 +208,7 @@ def _parse_optional_save_int(period: str, field: str, raw_value: str, label: str
             field,
             text,
             "INTEGER_GTE_0",
-            f"{label.capitalize()} phải là số nguyên lớn hơn hoặc bằng 0",
+            t("hc_err_integer_gte_0", label=label.capitalize()),
         )
     return str(int(text)), None
 
@@ -219,7 +235,7 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
                     "baseline_t3",
                     "",
                     "REQUIRED",
-                    "Phải nhập baseline tháng 3 trước khi lưu và tính chi phí",
+                    t("hc_err_baseline_required"),
                 )
             )
             continue
@@ -228,19 +244,19 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
             period,
             "headcount_expat",
             values.get("expat", ""),
-            "số JP tại " + str(label),
+            t("hc_err_expat_at", label=str(label)),
         )
         staff, staff_error = _parse_blank_zero_save_int(
             period,
             "headcount_staff",
             values.get("staff", ""),
-            "số nhân viên tại " + str(label),
+            t("hc_err_staff_at", label=str(label)),
         )
         worker, worker_error = _parse_blank_zero_save_int(
             period,
             "headcount_worker",
             values.get("worker", ""),
-            "số công nhân tại " + str(label),
+            t("hc_err_worker_at", label=str(label)),
         )
         if expat_error:
             errors.append(expat_error)
@@ -256,13 +272,13 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
                 period,
                 "headcount_male",
                 values.get("male", ""),
-                "số nam tại " + str(label),
+                t("hc_err_male_at", label=str(label)),
             )
             female, female_error = _parse_optional_save_int(
                 period,
                 "headcount_female",
                 values.get("female", ""),
-                "số nữ tại " + str(label),
+                t("hc_err_female_at", label=str(label)),
             )
             if male_error:
                 errors.append(male_error)
@@ -284,7 +300,7 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
                     "headcount_male/headcount_female",
                     f"{values.get('male', '')}/{values.get('female', '')}",
                     "SUM_LE_TOTAL",
-                    f"Tổng số nam và nữ vượt quá tổng số người tại {label}",
+                    t("hc_err_gender_sum_exceeded", label=label),
                 )
             )
             continue
@@ -304,24 +320,24 @@ def validate_headcount_save_period_rows(periods, month_values, label_by_period=N
 
 def format_headcount_save_errors(errors) -> str:
     field_labels = {
-        "baseline_t3": "baseline tháng 3",
-        "headcount_staff": "số nhân viên",
-        "headcount_worker": "số công nhân",
-        "headcount_male": "số nam",
-        "headcount_female": "số nữ",
-        "headcount_male/headcount_female": "số nam/số nữ",
-        "cc_code": "mã trung tâm chi phí",
-        "bus_expat_count": "số người nước ngoài đi xe đưa đón",
-        "bus_vietnamese_count": "số người Việt Nam đi xe đưa đón",
+        "baseline_t3": t("hc_field_baseline_t3"),
+        "headcount_staff": t("hc_field_headcount_staff"),
+        "headcount_worker": t("hc_field_headcount_worker"),
+        "headcount_male": t("hc_field_headcount_male"),
+        "headcount_female": t("hc_field_headcount_female"),
+        "headcount_male/headcount_female": t("hc_field_gender_split"),
+        "cc_code": t("hc_field_cc_code"),
+        "bus_expat_count": t("hc_field_bus_expat"),
+        "bus_vietnamese_count": t("hc_field_bus_vn"),
     }
     rule_labels = {
-        "REQUIRED": "bắt buộc nhập",
-        "INTEGER_GTE_0": "số nguyên lớn hơn hoặc bằng 0",
-        "SUM_LE_TOTAL": "tổng nam và nữ không vượt quá tổng số người",
-        "VALID_CC": "mã trung tâm chi phí hợp lệ",
-        "UNIQUE_CC": "mã trung tâm chi phí không trùng lặp",
+        "REQUIRED": t("hc_rule_required"),
+        "INTEGER_GTE_0": t("hc_rule_integer_gte_0"),
+        "SUM_LE_TOTAL": t("hc_rule_sum_le_total"),
+        "VALID_CC": t("hc_rule_valid_cc"),
+        "UNIQUE_CC": t("hc_rule_unique_cc"),
     }
-    period_labels = {"bus": "xe đưa đón"}
+    period_labels = {"bus": t("hc_period_bus")}
     lines = []
     for error in errors:
         raw_period = str(error.get("period", "") or "-")
@@ -331,14 +347,14 @@ def format_headcount_save_errors(errors) -> str:
             str(error.get("field", "") or "-").replace("_", " "),
         )
         raw_value = str(error.get("raw_value", ""))
-        raw_display = "trống" if raw_value == "" else raw_value
+        raw_display = t("hc_val_empty") if raw_value == "" else raw_value
         raw_rule = str(error.get("validation_rule", "") or "-")
         rule = rule_labels.get(raw_rule, raw_rule.replace("_", " "))
         reason = str(error.get("reason", "") or "-")
-        csv_written = "có" if error.get("csv_row_written", False) else "không"
-        db_inserted = "có" if error.get("db_row_inserted", False) else "không"
+        csv_written = t("hc_val_yes") if error.get("csv_row_written", False) else t("hc_val_no")
+        db_inserted = t("hc_val_yes") if error.get("db_row_inserted", False) else t("hc_val_no")
         lines.append(
-            f"{period} | {field} | {raw_display} | {rule} | {reason} | đã ghi tệp dữ liệu={csv_written} | đã nạp vào dữ liệu={db_inserted}"
+            f"{period} | {field} | {raw_display} | {rule} | {reason} | {csv_written} | {db_inserted}"
         )
     return "\n".join(lines)
 
@@ -354,12 +370,12 @@ def validate_bus_headcount_save_rows(rows, valid_cc_codes) -> list[dict]:
         if not any([cc_code, expat_count, vietnamese_count, description]):
             continue
         if not cc_code or cc_code not in valid_cc_codes:
-            error = _headcount_save_error("bus", "cc_code", cc_code, "VALID_CC", "Mã trung tâm chi phí của xe đưa đón không hợp lệ")
+            error = _headcount_save_error("bus", "cc_code", cc_code, "VALID_CC", t("hc_err_bus_invalid_cc"))
             error["csv_row"] = row_number
             errors.append(error)
             continue
         if cc_code in seen_cc:
-            error = _headcount_save_error("bus", "cc_code", cc_code, "UNIQUE_CC", "Mã trung tâm chi phí của xe đưa đón bị trùng")
+            error = _headcount_save_error("bus", "cc_code", cc_code, "UNIQUE_CC", t("hc_err_bus_duplicate_cc"))
             error["csv_row"] = row_number
             errors.append(error)
             continue
@@ -369,7 +385,7 @@ def validate_bus_headcount_save_rows(rows, valid_cc_codes) -> list[dict]:
                 "bus_expat_count",
                 expat_count,
                 "INTEGER_GTE_0",
-                "Số người nước ngoài đi xe đưa đón phải là số nguyên lớn hơn hoặc bằng 0",
+                t("hc_err_bus_expat_int"),
             )
             error["csv_row"] = row_number
             errors.append(error)
@@ -380,7 +396,7 @@ def validate_bus_headcount_save_rows(rows, valid_cc_codes) -> list[dict]:
                 "bus_vietnamese_count",
                 vietnamese_count,
                 "INTEGER_GTE_0",
-                "Số người Việt Nam đi xe đưa đón phải là số nguyên lớn hơn hoặc bằng 0",
+                t("hc_err_bus_vn_int"),
             )
             error["csv_row"] = row_number
             errors.append(error)
@@ -452,21 +468,20 @@ def _is_under_internal(path: str) -> bool:
 def _validate_selected_template(path: str, fiscal_year: int = 2027) -> str | None:
     external_template = _external_template_path(fiscal_year)
     if not os.path.isfile(path):
-        return "Không tìm thấy tệp mẫu FORM.\n\n" + f"Hãy chọn tệp: {external_template}"
+        return t("err_template_not_found", template=external_template)
     if _is_legacy_root_template(path):
-        return "Không được dùng FORM.xlsx ở thư mục gốc vì tệp này còn công thức mẫu cũ.\n\n" + f"Hãy chọn tệp FORM mới nhất: {external_template}"
+        return t("err_template_legacy_root", template=external_template)
     if _is_under_internal(path) and os.path.exists(external_template):
-        return "Đường dẫn tệp mẫu đang trỏ vào thư mục _internal của chương trình.\n\nNgười dùng không cần và không nên quản lý dữ liệu trong _internal.\n" + f"Hãy chọn tệp FORM bên ngoài: {external_template}"
+        return t("err_template_in_internal", template=external_template)
     try:
         workbook = openpyxl.load_workbook(path, read_only=True, data_only=False)
     except Exception:
-        return "Không mở được tệp FORM. Tệp có thể không phải Excel .xlsx hợp lệ hoặc đang bị hỏng.\n\n" + f"Hãy dùng tệp FORM mới nhất: {external_template}"
+        return t("err_template_open_failed", template=external_template)
     try:
         try:
             sheet_name = find_hub_sheet_name(workbook)
         except Exception:
-            return "Tệp FORM không có trang tính chi tiết MP đúng định dạng.\n\n" + f"Hãy dùng tệp FORM mới nhất: {external_template}"
-
+            return t("err_template_no_hub_sheet", template=external_template)
     finally:
         workbook.close()
     return None
@@ -474,16 +489,9 @@ def _validate_selected_template(path: str, fiscal_year: int = 2027) -> str | Non
 def _validate_selected_source_dir(path: str, fiscal_year: int = 2027) -> str | None:
     external_source = _external_source_dir(fiscal_year)
     if not os.path.isdir(path):
-        return (
-            "Không tìm thấy thư mục nguồn.\n\n"
-            f"Hãy chọn thư mục chứa dữ liệu nguồn, ví dụ: {external_source}"
-        )
+        return t("err_source_dir_not_found", source=external_source)
     if _is_under_internal(path) and os.path.isdir(external_source):
-        return (
-            "Thư mục nguồn đang trỏ vào _internal của chương trình.\n\n"
-            "Đây là thư mục đóng gói nội bộ, không phải nơi người dùng quản lý dữ liệu.\n"
-            f"Hãy chọn thư mục bên ngoài cạnh tệp chạy: {external_source}"
-        )
+        return t("err_source_dir_in_internal", source=external_source)
     return None
 
 
@@ -516,20 +524,19 @@ def _pipeline_failure_summary(output_lines: list[str], return_code: int) -> str:
         text = line.strip()
         if text and "chi tiết kỹ thuật đã được ẩn" not in text.lower():
             return text
-    return f"Tiến trình tính toán đã kết thúc với mã lỗi {return_code}"
+    return t("pipeline_terminated_log", code=return_code)
 
 
 def _headcount_coverage_error_message(fiscal_year: int, coverage: dict) -> str:
     """Make a selected-CC staffing coverage gap clear to a non-technical user."""
-    missing = ", ".join(coverage.get("missing_cc_codes", ())) or "không xác định"
+    missing = ", ".join(coverage.get("missing_cc_codes", ())) or t("hc_val_unknown")
     available_codes = tuple(coverage.get("available_cc_codes", ()))
-    available = ", ".join(available_codes) if available_codes else "chưa có trung tâm nào"
-    return (
-        f"Nguồn Nhân sự & thời gian năm tài chính {fiscal_year} chưa đủ cho các Trung tâm chi phí đã chọn.\n\n"
-        f"Thiếu dữ liệu cho: {missing}.\n"
-        f"Hệ thống hiện chỉ đọc được nguồn hợp lệ cho: {available}.\n\n"
-        "Hãy bổ sung hoặc chọn đúng tệp nguồn của các trung tâm còn thiếu, rồi bấm “Kiểm tra thay đổi nhanh”. "
-        "Chương trình sẽ không chạy và không xuất FORM khi còn thiếu dữ liệu này."
+    available = ", ".join(available_codes) if available_codes else t("hc_val_none")
+    return t(
+        "err_headcount_coverage",
+        fiscal_year=fiscal_year,
+        missing=missing,
+        available=available,
     )
 
 
@@ -559,132 +566,63 @@ def _friendly_error_message(error) -> str:
     text = str(error or "").strip()
     lower_text = text.lower()
     external_template = _external_template_path()
-    vietnamese_markers = (
-        "không",
-        "hãy",
-        "cần",
-        "phải",
-        "vui lòng",
-        "tệp",
-        "thư mục",
-        "dữ liệu",
-        "đường dẫn",
-        "lỗi",
-        "mẫu",
-    )
 
-    if "chưa có tổng số người tháng" in lower_text:
+    if "chưa có tổng số người tháng" in lower_text or "missing total headcount for month" in lower_text:
         issue_lines = [
             line[2:].strip()
             for line in text.splitlines()
-            if line.strip().startswith("- ") and "chưa có Tổng số người tháng" in line
+            if line.strip().startswith("- ") and ("chưa có tổng số người tháng" in line.lower() or "missing total headcount" in line.lower())
         ]
         details = "\n".join(f"• {line}" for line in issue_lines)
         if not details:
             details = text
-        return (
-            "Thiếu dữ liệu nhân sự để xuất báo cáo.\n\n"
-            f"{details}\n\n"
-            "Cách xử lý:\n"
-            "1. Đóng thông báo này.\n"
-            "2. Chọn “Nhập nhân sự thủ công”.\n"
-            "3. Nhập Tổng số người của tháng được thông báo cho đúng phòng.\n"
-            "4. Lưu dữ liệu rồi bấm “CHẠY TÍNH TOÁN” lại."
-        )
+        return t("err_missing_headcount_for_report", details=details)
 
-    if "unable to locate system cost row" in lower_text or "không tìm thấy dòng system cost" in lower_text:
-        return (
-            "Không tìm thấy dòng Chi phí hệ thống trong tệp FORM.\n\n"
-            "Nguyên nhân: Đang dùng FORM.xlsx cũ hoặc FORM không đúng phiên bản.\n"
-            f"Cách xử lý: Chọn lại tệp FORM mới nhất tại {external_template}."
-        )
+    if "unable to locate system cost row" in lower_text or "không tìm thấy dòng system cost" in lower_text or "chi phí hệ thống" in lower_text:
+        return t("err_system_cost_row_not_found", template=external_template)
+
     if "unable to resolve kdc system cost account" in lower_text or "không xác định được tài khoản system cost" in lower_text:
-        return (
-            "Không xác định được tài khoản Chi phí hệ thống cho một mã bộ phận.\n\n"
-            "Nguyên nhân: Mã bộ phận trong dữ liệu nguồn chưa được gán loại chi phí trong danh mục CC.\n"
-            "Cách xử lý: Kiểm tra mã bộ phận trong dữ liệu nguồn và cập nhật danh mục Trung tâm chi phí."
-        )
-    if "form template not found" in lower_text:
-        return (
-            "Không tìm thấy tệp mẫu FORM.\n\n"
-            "Nguyên nhân: Đường dẫn tệp FORM không tồn tại hoặc đã bị di chuyển.\n"
-            f"Cách xử lý: Chọn lại tệp FORM mới nhất tại {external_template}."
-        )
-    if "missing the mp detail sheet" in lower_text or "không có sheet chi tiết mp" in lower_text:
-        return (
-            "Tệp FORM không có trang tính chi tiết MP đúng định dạng.\n\n"
-            "Nguyên nhân: Thiếu trang tính '内訳ﾘｽﾄ(4～3月)' trong tệp FORM.\n"
-            f"Cách xử lý: Dùng lại tệp FORM mới nhất tại {external_template}."
-        )
-    if "malformed or empty" in lower_text:
-        return (
-            "Tệp FORM sai định dạng hoặc rỗng.\n\n"
-            "Nguyên nhân: Tệp Excel bị hỏng hoặc không chứa dữ liệu cấu trúc hợp lệ.\n"
-            f"Cách xử lý: Thay bằng tệp FORM mới nhất tại {external_template}."
-        )
-    if "append rows prepared" in lower_text or "dòng trống để ghi thêm" in lower_text:
-        return (
-            "Tệp FORM không còn đủ dòng trống để ghi các chi phí phát sinh thêm.\n\n"
-            "Nguyên nhân: Số dòng chi phí phát sinh vượt quá vùng trống dự kiến trong mẫu FORM.\n"
-            "Cách xử lý: Dùng FORM mới nhất hoặc chuẩn bị thêm vùng dòng trống trong trang tính chi tiết MP."
-        )
-    if "permission denied" in lower_text or "access is denied" in lower_text or "đang được mở" in lower_text:
-        return (
-            "Không thể ghi hoặc lưu tệp do bị hạn chế quyền truy cập.\n\n"
-            "Nguyên nhân thường gặp: Tệp Excel kết quả đang được mở bằng ứng dụng Microsoft Excel hoặc chương trình khác.\n"
-            "Cách xử lý:\n"
-            "1. Đóng toàn bộ các tệp Excel đang mở liên quan đến chương trình.\n"
-            "2. Kiểm tra quyền ghi tại thư mục lưu tệp.\n"
-            "3. Bấm chạy lại tiến trình."
-        )
-    if "database is locked" in lower_text or "database locked" in lower_text or "sqlite" in lower_text and "locked" in lower_text:
-        return (
-            "Cơ sở dữ liệu SQLite đang bị khóa bởi tiến trình khác.\n\n"
-            "Nguyên nhân: Một cửa sổ khác của chương trình hoặc công cụ quản trị CSDL đang truy cập đồng thời.\n"
-            "Cách xử lý:\n"
-            "1. Đóng các cửa sổ hoặc tiến trình phụ đang mở.\n"
-            "2. Đợi vài giây rồi thực hiện lại thao tác."
-        )
+        return t("err_system_cost_account_unresolved")
+
+    if "form template not found" in lower_text or "không tìm thấy tệp mẫu form" in lower_text:
+        return t("err_form_template_not_found", template=external_template)
+
+    if "missing the mp detail sheet" in lower_text or "không có sheet chi tiết mp" in lower_text or "không có trang tính chi tiết mp" in lower_text:
+        return t("err_missing_mp_detail_sheet", template=external_template)
+
+    if "malformed or empty" in lower_text or "sai định dạng hoặc rỗng" in lower_text:
+        return t("err_form_malformed_or_empty", template=external_template)
+
+    if "append rows prepared" in lower_text or "dòng trống để ghi thêm" in lower_text or "không còn đủ dòng trống" in lower_text:
+        return t("err_form_no_append_rows")
+
+    if "permission denied" in lower_text or "access is denied" in lower_text or "đang được mở" in lower_text or "bị hạn chế quyền truy cập" in lower_text:
+        return t("err_permission_denied")
+
+    if "database is locked" in lower_text or "database locked" in lower_text or ("sqlite" in lower_text and "locked" in lower_text) or "đang bị khóa" in lower_text:
+        return t("err_database_locked")
+
     if "fixed-assets" in lower_text or "tài sản cố định" in lower_text:
-        if "missing authoritative exchange_rate" in lower_text or "tỷ giá" in lower_text:
-            return (
-                "Thiếu tỷ giá USD/VND hợp lệ để tính khấu hao tài sản cố định.\n\n"
-                "Cách xử lý: Nhập tỷ giá USD/VND trong hồ sơ dự án hoặc kiểm tra tham số tỷ giá trong CSDL."
-            )
+        if "missing authoritative exchange_rate" in lower_text or "tỷ giá" in lower_text or "thiếu tỷ giá" in lower_text:
+            return t("err_fa_missing_rate")
         if "no recognizable current source sheet" in lower_text or "không chứa trang tính nguồn" in lower_text:
-            return (
-                "Tệp Tài sản cố định không chứa trang tính nguồn hợp lệ.\n\n"
-                "Cách xử lý: Kiểm tra lại tệp Excel tài sản cố định trong Thư mục nguồn xem có đúng mẫu không."
-            )
-    if "must not overwrite" in lower_text or "không được ghi đè" in lower_text:
-        return (
-            "Đường dẫn tệp kết quả trùng với tệp dữ liệu nguồn.\n\n"
-            "Nguyên nhân: Để đảm bảo an toàn, hệ thống cấm ghi đè trực tiếp lên tệp nguồn ban đầu.\n"
-            "Cách xử lý: Chọn thư mục lưu kết quả khác với thư mục nguồn."
-        )
-    if "not found" in lower_text or "no such file" in lower_text:
-        return (
-            "Không tìm thấy tệp hoặc thư mục cần dùng.\n\n"
-            "Nguyên nhân: Đường dẫn tệp/thư mục đã bị xóa, đổi tên hoặc chưa được chọn.\n"
-            "Cách xử lý: Kiểm tra lại đường dẫn Tệp mẫu FORM và Thư mục nguồn trên màn hình chính."
-        )
-    if text and any(marker in lower_text for marker in vietnamese_markers):
-        if "cách xử lý:" not in lower_text and "hướng dẫn:" not in lower_text:
-            return (
-                f"{text}\n\n"
-                "Cách xử lý:\n"
-                "1. Kiểm tra lại dữ liệu nguồn và cấu hình liên quan đến thông báo lỗi trên.\n"
-                "2. Cập nhật hoặc bổ sung các trường dữ liệu còn thiếu.\n"
-                "3. Chạy lại tiến trình sau khi đã hoàn tất hiệu chỉnh."
-            )
+            return t("err_fa_no_sheet")
+
+    if "must not overwrite" in lower_text or "không được ghi đè" in lower_text or "trùng với tệp dữ liệu nguồn" in lower_text:
+        return t("err_must_not_overwrite")
+
+    if "not found" in lower_text or "no such file" in lower_text or "không tìm thấy tệp hoặc thư mục" in lower_text:
+        return t("err_file_or_dir_not_found")
+
+    action_keywords = ("cách xử lý:", "hướng dẫn:", "対処方法:", "action:")
+    if any(k in lower_text for k in action_keywords):
         return text
-    return (
-        f"Đã xảy ra lỗi khi chạy chương trình:\n{text}\n\n"
-        "Cách xử lý:\n"
-        "1. Kiểm tra lại Tệp mẫu FORM và Thư mục nguồn trên màn hình chính.\n"
-        "2. Đảm bảo dữ liệu nguồn đầy đủ và hợp lệ.\n"
-        "3. Nếu lỗi vẫn tiếp tục, hãy liên hệ bộ phận hỗ trợ kỹ thuật."
-    )
+
+    if text:
+        custom_action = t("err_custom_action")
+        return f"{text}\n\n{custom_action}"
+
+    return t("err_general_prefix", text=text) + "\n\n" + t("err_general_action")
 
 
 def _is_legacy_root_template(path: str) -> bool:
@@ -720,354 +658,8 @@ def _default_source_dir(fiscal_year: int = 2027) -> str:
     packaged_source = resource_path(os.path.join("docs", "MP2027"))
     return packaged_source if os.path.isdir(packaged_source) else external_source
 
-USER_GUIDE_TEXT = """
-HƯỚNG DẪN SỬ DỤNG CHI TIẾT - MP2027 MANAGER
-
-1. MỤC ĐÍCH
-- Ứng dụng dùng để nạp dữ liệu nguồn, tính toán ngân sách MP và xuất tệp Excel theo từng CC.
-- Chương trình giúp giảm nhập tay, nhưng không tự bịa số. Khoản nào thiếu dữ liệu thật sẽ được báo để người dùng nhập/chốt.
-
-2. CÁC TRƯỜNG TRÊN MÀN HÌNH CHÍNH
-- Năm tài chính:
-  Nhập năm cần chạy, ví dụ 2027.
-- Trung tâm chi phí:
-  Để trống nếu muốn xuất toàn bộ.
-  Chọn 1 dòng trong danh sách nếu chỉ muốn chạy cho một CC.
-- Tệp mẫu:
-  Đường dẫn đến FORM của năm đang chọn: docs/MP<YYYY>/FORM.xlsx.
-- Thư mục nguồn:
-  Thư mục chứa các tệp Excel nguồn và các tệp nhập tay.
-
-3. QUY TRÌNH CHẠY ĐỀ XUẤT
-Bước 1: Chọn năm tài chính cần lập.
-Bước 2: Kiểm tra tệp mẫu là docs/MP<YYYY>/FORM.xlsx, không dùng FORM_old.xlsx.
-Bước 3: Chọn đúng thư mục nguồn docs/MP<YYYY> và raw/FY<YYYY>.
-Bước 4: Chờ trạng thái “Đúng năm và đủ nguồn”; chỉ khi đó nút chạy mới được bật.
-Bước 4: Nếu cần, nhập bổ sung nhân sự bằng nút "Nhập nhân sự thủ công".
-Bước 5: Nếu có khoản chương trình không thể tự biết, bấm "Nhập sự kiện thiếu dữ liệu".
-Bước 6: Nếu chạy riêng, chọn 1 Trung tâm chi phí. Nếu không, để trống.
-Bước 7: Bấm "CHẠY TÍNH TOÁN".
-Bước 8: Xem Nhật ký xử lý và mở báo cáo lần chạy khi cần kiểm tra chi tiết.
-
-4. VÌ SAO CÓ NÚT "NHẬP SỰ KIỆN THIẾU DỮ LIỆU"
-Có những khoản chỉ người làm nghiệp vụ biết số thật, ví dụ:
-- Có bao nhiêu người đi xe buýt Nhật Bản/Việt Nam.
-- Có ai nhận quà vì không đi du lịch hay không.
-- Có chi phí Câu chuyện của tôi, kỷ niệm 10 năm, kỷ niệm công ty hay không.
-- Chi phí thị thực, hộ chiếu, GPLĐ, NNN có phải ghi vào dòng khác dòng 137 hay không.
-
-Nếu chương trình tự đoán các số này thì ngân sách công ty có thể sai. Vì vậy chương trình bắt buộc hỏi người dùng nhập/chốt.
-
-Cách điền rất đơn giản:
-Bước 1: Chọn CC.
-Bước 2: Chọn tháng phát sinh.
-Bước 3: Chọn loại sự kiện.
-Bước 4: Nếu biết "số người" và "đơn giá", điền 2 ô đó. Chương trình sẽ tạo công thức số người nhân đơn giá.
-Bước 5: Nếu chỉ biết tổng tiền cuối cùng, điền "số tiền trực tiếp".
-Bước 6: Điền mã tài khoản. Nếu biết dòng FORM cần ghi, điền thêm dòng FORM. Nếu không chắc, hãy để ghi chú để kiểm toán lại.
-Bước 7: Bấm "Thêm/Cập nhật", rồi bấm "Lưu tệp".
-
-5. HƯỚNG DẪN NHẬP NHÂN SỰ THỦ CÔNG
-- Bấm nút "Nhập nhân sự thủ công".
-- Chọn mã CC trong danh sách.
-- Chọn kỳ tháng trong năm tài chính.
-- Nhập số nhân viên và công nhân.
-- Nếu cần tính khám sức khỏe dòng 57/58, nhập thêm Nam/Nữ tháng 12.
-- Nếu cần, thêm mô tả để ghi chú nguồn điều chỉnh.
-- Bấm "Lưu 12 tháng" để ghi xuống tệp.
-
-6. CÁCH ĐỌC BẢNG ĐIỀU KHIỂN KIỂM TOÁN
-- XANH: CC đã có dữ liệu nền tảng và chưa có cảnh báo cơ bản.
-- VÀNG: CC có dữ liệu nhưng còn điều cần người dùng xem/chốt.
-- ĐỎ: CC chưa có dữ liệu tính toán sau lần chạy gần nhất.
-
-Khi thấy VÀNG hoặc ĐỎ:
-Bước 1: Bấm chọn dòng CC đó.
-Bước 2: Đọc cột "Lý do".
-Bước 3: Xem bảng "Việc cần người dùng chốt".
-Bước 4: Nếu thiếu sự kiện, bấm "Nhập dữ liệu thiếu".
-Bước 5: Mở tệp kết quả CC để đối chiếu công thức.
-
-7. LỖI THƯỜNG GẶP
-- Lỗi không tìm thấy tệp mẫu: kiểm tra lại đường dẫn FORM.xlsx.
-- Báo cáo lần chạy còn cảnh báo: đây không phải lỗi. Nghĩa là có dữ liệu cần người dùng xác nhận trước khi tin kết quả.
-- Nhập xong nhưng chưa áp dụng: kiểm tra đã bấm "Lưu tệp" hoặc "Lưu 12 tháng" trước khi chạy tính toán.
-
-8. KHUYẾN NGHỊ VẬN HÀNH
-- Chạy thử với 1 CC trước khi xuất hàng loạt.
-- Sau khi chạy, luôn mở bảng điều khiển kiểm toán trước khi gửi tệp cho người khác.
-- Không nhập số ước lượng nếu chưa chắc. Hãy để trống và ghi chú để kiểm toán lại.
-""".strip()
-
-USER_GUIDE_TEXT_LATEST = """
-HƯỚNG DẪN SỬ DỤNG CHƯƠNG TRÌNH LẬP NGÂN SÁCH
-
-1. CHƯƠNG TRÌNH DÙNG ĐỂ LÀM GÌ?
-
-Chương trình tổng hợp dữ liệu chi phí, nhân sự và thời gian làm việc để lập tệp ngân sách cho từng Trung tâm chi phí.
-
-Chương trình thực hiện các việc chính:
-- Đọc dữ liệu chi phí từ thư mục nguồn chi phí.
-- Nạp số người, thời gian cố định và thời gian tăng ca từ các tệp kế hoạch của phòng ban.
-- Cho phép nhập các thông tin không có trong tệp nguồn, như số người đi xe buýt, số Nam/Nữ tháng 12 và các khoản phát sinh đặc biệt.
-- Tính toán chi phí và xuất một tệp kết quả cho từng Trung tâm chi phí.
-
-2. Ý NGHĨA CÁC MỤC TRÊN MÀN HÌNH CHÍNH
-
-Năm tài chính:
-- Nhập năm cần lập ngân sách. Chương trình tự tạo 12 kỳ từ tháng 4 đến tháng 3 và chỉ chấp nhận nguồn cùng năm.
-- Năm tài chính bắt đầu từ tháng 4 và kết thúc vào tháng 3 năm sau.
-- Khi thay đổi năm, tiêu đề chương trình và dữ liệu được sử dụng cũng thay đổi theo.
-
-Tỷ giá (USD/VND):
-- Là tỷ giá dùng cho lần tính hiện tại.
-- Chương trình đọc tỷ giá ban đầu từ tệp mẫu. Có thể sửa trước khi chạy nếu nghiệp vụ yêu cầu.
-
-Trung tâm chi phí (Tùy chọn):
-- Để trống nếu muốn chạy tất cả Trung tâm chi phí có dữ liệu.
-- Chọn một mã nếu chỉ muốn kiểm tra hoặc xuất kết quả cho một phòng.
-
-Tệp mẫu FORM:
-- Là tệp Excel mẫu dùng để tạo tệp kết quả.
-- Nhấn "Chọn..." nếu cần đổi tệp.
-- Chương trình ghi nhớ tệp đã chọn cho lần mở sau.
-
-Thư mục nguồn chi phí:
-- Là thư mục chứa các tệp phục vụ tính chi phí và phân bổ ngân sách.
-- Nhấn "Chọn..." nếu cần đổi thư mục.
-- Chương trình ghi nhớ thư mục đã chọn cho lần mở sau.
-
-Nguồn nhân sự & thời gian:
-- Là thư mục chứa các tệp kế hoạch nhân sự và thời gian do các phòng ban nộp.
-- Chương trình chỉ nạp tệp đúng năm tài chính đang chọn.
-- Nhấn "Cập nhật CSDL" để quét thư mục và nạp dữ liệu vào cơ sở dữ liệu.
-- Dòng trạng thái bên dưới cho biết số phòng và số kỳ đã nạp.
-- Chương trình ghi nhớ thư mục đã chọn cho lần mở sau.
-
-3. TRÌNH TỰ SỬ DỤNG KHUYẾN NGHỊ
-
-Bước 1: Chọn đúng Năm tài chính.
-Bước 2: Kiểm tra Tệp mẫu FORM.
-Bước 3: Kiểm tra Thư mục nguồn chi phí.
-Bước 4: Chọn thư mục Nguồn nhân sự & thời gian.
-Bước 5: Nhấn "Cập nhật CSDL" và đọc Nhật ký xử lý.
-Bước 6: Nhấn "Nhập nhân sự thủ công" để kiểm tra số người, thời gian và nhập các phần bổ sung.
-Bước 7: Nhấn "Nhập sự kiện thiếu dữ liệu" nếu có khoản phát sinh chương trình không thể tự xác định.
-Bước 8: Chọn một Trung tâm chi phí để chạy thử; để trống khi muốn chạy tất cả.
-Bước 9: Nhấn "CHẠY TÍNH TOÁN".
-Bước 10: Đọc Nhật ký xử lý và mở tệp kết quả để đối chiếu.
-
-4. CẬP NHẬT NGUỒN NHÂN SỰ VÀ THỜI GIAN
-
-Trước khi cập nhật:
-- Chọn đúng Năm tài chính.
-- Chọn đúng thư mục chứa các tệp kế hoạch của năm đó.
-
-Khi nhấn "Cập nhật CSDL", chương trình sẽ:
-- Tìm các tệp kế hoạch nhân sự và thời gian đúng năm tài chính.
-- Đọc mã Trung tâm chi phí và tên phòng.
-- Đối chiếu với danh mục Trung tâm chi phí hiện hành.
-- Nạp 12 tháng, từ tháng 4 đến tháng 3, cho từng phòng hợp lệ.
-- Ghi lý do vào Nhật ký nếu có tệp không được nạp.
-
-Ví dụ:
-- Chọn năm 2027: chương trình nhận dữ liệu kỳ 202604 đến 202703.
-- Với năm tài chính khác, chương trình đổi kỳ tháng theo lịch (ví dụ năm 2029 là 202804 đến 202903), nhưng không tự đổi tên hoặc tạo sổ làm việc nguồn của năm 2029. Người dùng phải cung cấp và kiểm tra đủ nguồn đúng năm.
-
-5. KIỂM TRA VÀ BỔ SUNG NHÂN SỰ
-
-Nhấn "Nhập nhân sự thủ công", sau đó chọn mã Trung tâm chi phí.
-
-Thẻ "Số người & bổ sung":
-- Biệt phái: số người biệt phái.
-- Nhân viên: số nhân viên người Việt.
-- Công nhân: số công nhân người Việt.
-- Nam (T12), Nữ (T12): chỉ nhập tại tháng 12 khi cần tính các khoản liên quan.
-- Tổng người: chương trình tự tính bằng Biệt phái + Nhân viên + Công nhân.
-- Ghi chú: dùng để giải thích dữ liệu bổ sung hoặc điều chỉnh.
-
-Thẻ "Thời gian cố định":
-- Hiển thị giờ cố định của người biệt phái và người Việt theo từng tháng.
-- Dữ liệu lấy từ nguồn nhân sự và thời gian đã nạp vào cơ sở dữ liệu.
-
-Thẻ "Thời gian tăng ca":
-- Hiển thị giờ tăng ca của người biệt phái và người Việt theo từng tháng.
-- Dữ liệu lấy từ nguồn nhân sự và thời gian đã nạp vào cơ sở dữ liệu.
-
-Thông tin xe buýt:
-- Nhập riêng số người biệt phái đi xe buýt.
-- Nhập riêng số người Việt Nam đi xe buýt.
-- Các số này không có trong tệp nguồn nên người dùng phải nhập và xác nhận.
-
-Lưu ý quan trọng:
-- Cửa sổ chỉ hiển thị dữ liệu thuộc Năm tài chính đang chọn trên màn hình chính.
-- Nếu năm đang chọn chưa có dữ liệu, các bảng thời gian sẽ để trống và chương trình báo chưa có dữ liệu nguồn cho năm đó.
-- Sau khi nhập bổ sung, nhấn "Lưu 12 tháng".
-
-6. DỮ LIỆU ĐƯỢC GHI VÀO TỆP KẾT QUẢ NHƯ THẾ NÀO?
-
-Khi xuất kết quả, chương trình ghi dữ liệu từ tháng 4 đến tháng 3 vào các cột F đến Q của tệp FORM:
-- Dòng 8: thời gian cố định của người biệt phái.
-- Dòng 9: thời gian cố định của người Việt.
-- Dòng 16: thời gian tăng ca của người biệt phái.
-- Dòng 17: thời gian tăng ca của người Việt.
-- Dòng 24: số người biệt phái.
-- Dòng 25: tổng số người Việt, bằng Nhân viên + Công nhân.
-
-Ví dụ:
-- Tháng 4 được ghi vào cột F.
-- Tháng 3 được ghi vào cột Q.
-
-Chương trình chỉ xuất khi Trung tâm chi phí có đủ dữ liệu nguồn của 12 tháng trong năm tài chính đã chọn. Nếu thiếu, chương trình dừng xuất Trung tâm chi phí đó và thông báo rõ các kỳ còn thiếu. Quy tắc này ngăn việc dùng nhầm dữ liệu của năm cũ.
-
-7. NHẬP CÁC KHOẢN PHÁT SINH CÒN THIẾU
-
-Nhấn "Nhập sự kiện thiếu dữ liệu" khi có khoản chỉ người làm nghiệp vụ mới biết, chẳng hạn:
-- Quà cho người không tham gia du lịch.
-- Khoản kỷ niệm hoặc sự kiện đặc biệt.
-- Chi phí hộ chiếu, thị thực, giấy phép lao động hoặc nghiệp vụ người nước ngoài cần tách riêng.
-
-Cách thực hiện:
-Bước 1: Chọn Trung tâm chi phí.
-Bước 2: Chọn kỳ phát sinh.
-Bước 3: Chọn loại sự kiện.
-Bước 4: Nhập số lượng và đơn giá nếu biết từng thành phần.
-Bước 5: Nếu chỉ biết tổng tiền, nhập số tiền trực tiếp.
-Bước 6: Nhập mã tài khoản và dòng FORM nếu đã được nghiệp vụ xác nhận.
-Bước 7: Ghi chú rõ nguồn số liệu.
-Bước 8: Nhấn "Thêm/Cập nhật", sau đó nhấn "Lưu tệp".
-
-Không tự chọn dòng FORM hoặc mã tài khoản khi chưa được nghiệp vụ xác nhận.
-
-8. THỨ TỰ TỆP NGUỒN CHI PHÍ
-
-Nút "Thứ tự tệp nguồn" dùng để chọn các tệp chi phí được đọc và sắp xếp thứ tự xử lý.
-
-Cách sử dụng:
-Bước 1: Nhấn "Thứ tự tệp nguồn".
-Bước 2: Chọn một dòng.
-Bước 3: Nhấn "Chọn tệp..." nếu cần thay tệp.
-Bước 4: Dùng "Lên" hoặc "Xuống" để đổi thứ tự.
-Bước 5: Bỏ chọn "Dùng dòng này" nếu muốn tạm thời không đọc tệp đó.
-Bước 6: Nhấn "Lưu".
-
-9. CHẠY TÍNH TOÁN VÀ KIỂM TRA KẾT QUẢ
-
-Trước khi nhấn "CHẠY TÍNH TOÁN", cần kiểm tra:
-- Năm tài chính đã đúng chưa.
-- Tỷ giá đã đúng chưa.
-- Tệp mẫu và các thư mục nguồn đã đúng chưa.
-- Nguồn nhân sự và thời gian đã được cập nhật chưa.
-- Các dữ liệu bổ sung đã được lưu chưa.
-
-Sau khi chạy:
-- Đọc Nhật ký xử lý từ đầu đến cuối.
-- Không bỏ qua các dòng báo thiếu dữ liệu hoặc không xuất được tệp.
-- Mở tệp kết quả của Trung tâm chi phí đã chạy thử.
-- Đối chiếu số người, thời gian cố định và thời gian tăng ca từ tháng 4 đến tháng 3.
-- Kiểm tra các công thức và khoản chi phí trước khi gửi chính thức.
-
-10. CÁC TÌNH HUỐNG THƯỜNG GẶP
-
-Không thấy số người hoặc thời gian sau khi chọn mã Trung tâm chi phí:
-- Kiểm tra Năm tài chính trên màn hình chính.
-- Kiểm tra đã nhấn "Cập nhật CSDL" chưa.
-- Kiểm tra Nhật ký xem tệp của phòng có bị bỏ qua không.
-
-Chọn năm tương lai nhưng bảng thời gian trống:
-- Đây là hành vi đúng nếu chưa có tệp nguồn của năm đó.
-- Chương trình không dùng dữ liệu của năm cũ để thay thế.
-
-Không xuất được tệp kết quả vì thiếu nguồn sự thật:
-- Đọc thông báo để biết Trung tâm chi phí và các kỳ còn thiếu.
-- Chọn đúng thư mục nguồn, cập nhật lại cơ sở dữ liệu rồi chạy lại.
-
-Đã nhập bổ sung nhưng kết quả chưa thay đổi:
-- Kiểm tra đã nhấn "Lưu 12 tháng" hoặc "Lưu tệp" chưa.
-- Chạy tính toán lại sau khi lưu.
-
-Đường dẫn trở về mặc định:
-- Trường hợp này xảy ra khi tệp hoặc thư mục đã lưu không còn tồn tại.
-- Chọn lại đường dẫn hợp lệ; chương trình sẽ ghi nhớ cho lần sau.
-
-11. NGUYÊN TẮC AN TOÀN
-
-- Luôn chạy thử một Trung tâm chi phí trước khi chạy tất cả.
-- Không dùng dữ liệu của năm tài chính khác để bù cho năm đang thiếu.
-- Không nhập số ước lượng nếu chưa được người phụ trách nghiệp vụ xác nhận.
-- Không bỏ qua cảnh báo trong Nhật ký xử lý.
-- Luôn mở và kiểm tra tệp Excel kết quả trước khi gửi chính thức.
-""".strip()
-
-# Current-code corrections kept next to the visible guide so the in-app help
-# remains accurate while older explanatory paragraphs are retained for history.
-USER_GUIDE_TEXT_LATEST += """
-
-ĐÍNH CHÍNH THEO CHƯƠNG TRÌNH HIỆN TẠI
-
-- Năm tài chính 2027 là bộ dữ liệu đã nghiệm thu. Với năm 2028 trở đi, phải chuẩn bị đầy đủ bộ nguồn cùng năm; chương trình
-  không tự dùng tệp, đơn giá, dấu chọn hoặc kết quả tham khảo của năm trước.
-- Nút "Cập nhật CSDL" chỉ đồng bộ nguồn nhân sự và thời gian. Các sổ làm việc chi phí (Cơ sở vật chất, tài sản
-  cố định, IT, Tổng vụ, sinh nhật, NNN) được đọc lại khi bấm "CHẠY TÍNH TOÁN".
-- Khi mở `.exe`, chương trình tự tìm và đọc `project.json`: ưu tiên hồ sơ dự án gần nhất đã ghi nhớ trong thư mục dữ liệu cục bộ,
-  sau đó mới tìm tệp cạnh thư mục ứng dụng. Vì vậy không cần chọn lại FORM, nguồn, CSDL nhập tay, kết quả hoặc lịch sử
-  mỗi lần khởi động. Dùng nút "Mở/đổi dự án..." khi chuyển sang bộ dữ liệu khác hoặc khi đã di chuyển dự án
-  sang nơi có đường dẫn tuyệt đối mới.
-- `project.json` là hồ sơ cấu hình đường dẫn, không phải dữ liệu nguồn và không phải tệp chạy chương trình.
-  Dữ liệu chỉnh sửa thủ công vẫn nằm trong kho riêng theo năm; không trộn năm 2027 với năm 2028.
-- Sau khi chạy, mở thư mục kết quả cấu hình của năm tài chính và thư mục BAO_CAO_KIEM_TRA. Tên báo cáo hiện hành là
-  BAO_CAO_LAN_CHAY.xlsx, DU_LIEU_CON_THIEU.xlsx và KIEM_TRA_TY_GIA.xlsx; không tìm các tên .md/.csv
-  cũ trong tài liệu lịch sử.
-
-- Tài sản cố định được xuất theo thứ tự nguồn/danh mục động của phiên bản hoàn chỉnh. Không coi dòng FORM 38/42
-  là vị trí đích cố định.
-- Khi cần giải thích chênh lệch tài sản cố định, chạy riêng bộ audit:
-  py scripts\\audit_fixed_assets_cross_trace.py
-  py scripts\\classify_fixed_assets_mismatches.py
-  py scripts\\build_fixed_assets_business_decision_pack.py
-  Lịch sử từng lần chạy nằm trong docs\\audits\\history\\fixed_assets và trong mp2027.db.
-
-CHI PHÍ ĐỒNG PHỤC VÀ CỐC XẾP
-
-- Chương trình đọc dấu chọn của từng phòng từ trang tính 原価センタ, cột F đến U, trong tệp yêu cầu
-  Cải tiến nhập dữ liệu chung vào tệp MPnew 10.07.2026.xlsx. Phòng không được đánh dấu sẽ không bị tính.
-- Số người mới của từng tháng là phần tăng riêng của Nhân viên và Công nhân so với tháng trước;
-  tổng người mới bằng hai phần tăng này cộng lại. Tháng 4 cần dữ liệu tháng 3 của năm tài chính trước.
-- Quần, mũ và áo được cấp 2 cái/người; giày và áo khoác được cấp 1 cái/người.
-- Phòng được đánh dấu áo ngắn tay thì toàn bộ người mới dùng áo ngắn tay. Phòng được đánh dấu áo polo
-  thì toàn bộ người mới dùng áo polo. Phòng an ninh dùng cột áo riêng. Nếu nguồn đánh dấu trùng nhiều
-  loại áo, chương trình không tự chọn và sẽ báo người dùng sửa nguồn.
-- Người vào tháng 5 đến tháng 9 nhận áo ngắn tay/polo ngay tháng vào và nhận áo dài tay bổ sung tháng 10.
-  Người vào tháng 1 nhận áo dài tay tháng 1 và áo ngắn tay/polo bổ sung tháng 2. Người vào các tháng
-  2, 3, 4, 10, 11, 12 nhận cả hai nhóm áo trong tháng vào.
-- Cốc cho người mới chỉ tính theo phần tăng Công nhân. Cốc định kỳ chỉ áp dụng tháng 2 và tháng 8 cho
-  phòng được đánh dấu cốc xếp.
-- Để nhập cốc định kỳ: mở "Nhập sự kiện thiếu dữ liệu", chọn "Cốc xếp định kỳ", chọn tháng 2 hoặc
-  tháng 8 và nhập số lượng nguyên từ 0 trở lên. Nhập 0 nghĩa là đã xác nhận không phát. Để trống thì
-  kết quả bằng 0 và báo thiếu dữ liệu.
-- Chi phí cấp đổi đồng phục do hỏng/mất vẫn là số phát thực tế và không được chương trình suy ra từ
-  chênh lệch nhân sự.
-
-CHUẨN BỊ NĂM TÀI CHÍNH MỚI
-
-1. Tạo riêng các thư mục docs/MP<năm>, raw/FY<năm>, OUTPUT_FY<năm>.
-2. Đặt FORM, các tệp chi phí và source_file_order vào docs/MP<năm>.
-3. Đặt nguồn nhân sự/thời gian, bảng dấu đồng phục/cốc xếp và manual_inputs.db vào raw/FY<năm>.
-4. Mỗi tệp nguồn bắt buộc phải có dấu hiệu cùng năm trong tên tệp, tên trang hoặc tiêu đề. Không dùng
-   tệp cũ rồi chỉ đổi tên.
-5. Chọn năm trên màn hình, chờ kiểm tra nguồn đạt, rồi chạy thử một phòng trước. Nếu thiếu hoặc sai năm,
-   chương trình dừng trước khi tính và tạo báo cáo trong RUN_HISTORY/FY<năm>/<mã lần chạy>/reports.
-6. Kết quả chỉ được công bố khi chạy thành công. Lần chạy cũ và dữ liệu nhập tay của năm khác được giữ
-   riêng, không tham gia tính toán của năm mới.
-
-CẬP NHẬT CHƯƠNG TRÌNH
-
-- Khi bấm "Cài bản cập nhật...", chương trình tự quét nguồn cập nhật đã cấu hình của công ty và chọn
-  phiên bản mới nhất cao hơn phiên bản đang chạy. Người dùng không cần tự tìm hoặc chọn tệp `.mpupdate`.
-- Trước khi cài, chương trình hiển thị số phiên bản và nội dung thay đổi để người dùng xác nhận.
-- Gói vẫn phải vượt qua kiểm tra hash, schema và health-check. Sau khi thành công, phiên bản cũ
-  tự đóng và phiên bản mới tự mở.
-""".strip()
+USER_GUIDE_TEXT = USER_GUIDE_VI
+USER_GUIDE_TEXT_LATEST = USER_GUIDE_VI
 
 
 def _normalize_guide_search(value: object) -> str:
@@ -1086,12 +678,12 @@ def filter_user_guide_text(text: str, query: str) -> tuple[str, int]:
         if all(term in _normalize_guide_search(block) for term in terms)
     ]
     if not matches:
+        examples = t("user_guide_search_examples")
         return (
-            "Không tìm thấy nội dung phù hợp. Hãy thử từ khóa ngắn hơn, "
-            "ví dụ: cập nhật, Nam Nữ, nguồn, tỷ giá hoặc kết quả.",
+            t("user_guide_search_not_found", examples=examples),
             0,
         )
-    return "KẾT QUẢ TÌM KIẾM NHANH\n\n" + "\n\n".join(matches), len(matches)
+    return t("user_guide_search_results_header") + "\n\n" + "\n\n".join(matches), len(matches)
 
 
 class MPManagerApp:
@@ -1103,11 +695,12 @@ class MPManagerApp:
         try:
             return current_release_version()
         except Exception:
-            return "không xác định"
+            return t("app_version_unknown")
 
     @classmethod
     def _window_title(cls, fiscal_year: str, version: str) -> str:
-        return f"MP{fiscal_year} Manager v{version} - Quản lý Ngân sách | {cls.TITLE_OWNER}"
+        owner = t("owner_title")
+        return t("window_title", fiscal_year=fiscal_year, version=version, owner=owner)
 
     @staticmethod
     def _initial_window_size(screen_width: int, screen_height: int) -> tuple[int, int]:
@@ -1119,6 +712,9 @@ class MPManagerApp:
 
     def __init__(self, root: tk.Tk):
         self.root = root
+        initial_lang = read_ui_language()
+        set_current_language(initial_lang)
+        self.language_var = tk.StringVar(value=get_language_name(initial_lang))
         width, height = self._initial_window_size(root.winfo_screenwidth(), root.winfo_screenheight())
         self.root.geometry(f"{width}x{height}")
         self.root.minsize(480, 360)
@@ -1132,15 +728,19 @@ class MPManagerApp:
         template_path = initial_paths.template_path
         self.fiscal_year = tk.StringVar(value=str(initial_fiscal_year))
         self.exchange_rate = tk.StringVar(value=self._initial_exchange_rate(template_path))
-        self.cc_code_filter = tk.StringVar(value="Chưa chọn Trung tâm chi phí")
+        self.cc_code_filter = tk.StringVar(value=t("all_cc_filter_label"))
         self._available_cc_choices: list[str] = []
         self._selected_cc_values: list[str] = []
         self.template_path = tk.StringVar(value=template_path)
         self.source_dir = tk.StringVar(value=initial_paths.source_dir)
         self.headcount_source_dir = tk.StringVar(value=initial_paths.headcount_source_dir)
         self._auto_path_fiscal_year = initial_fiscal_year
+        # Keep semantic state for dynamic labels so a language change renders
+        # the current state instead of retaining text from the old language.
+        self._headcount_source_status_state = {"kind": "database"}
+        self._preflight_status_state = {"kind": "key", "key": "preflight_untested_label", "params": {}}
         self.headcount_source_status = tk.StringVar(value=self._initial_headcount_source_status())
-        self.preflight_status = tk.StringVar(value="Chưa kiểm tra nguồn cho năm tài chính đang chọn")
+        self.preflight_status = tk.StringVar(value=t("preflight_untested_label"))
         self._preflight_token = 0
         self._approved_preflight_signature = None
         self._approved_preflight_report = None
@@ -1160,8 +760,8 @@ class MPManagerApp:
         self._refresh_fiscal_year_labels()
         self.set_icon()
         self.root.after(0, lambda: self.log(
-             (f"Đã tạo hồ sơ dự án tương thích: {self.project.config_path}" if project_created
-              else f"Đang dùng hồ sơ dự án: {self.project.config_path}")
+             (t("project_profile_created", path=self.project.config_path) if project_created
+              else t("project_profile_using", path=self.project.config_path))
         ))
         self.root.after(0, self._update_workflow_guide)
         self._startup_update_prompted = False
@@ -1186,7 +786,7 @@ class MPManagerApp:
         self.exchange_rate.set(self._initial_exchange_rate(paths.template_path))
         self._auto_path_fiscal_year = fiscal_year
         if hasattr(self, "headcount_source_status"):
-            self.headcount_source_status.set(self._initial_headcount_source_status())
+            self._set_headcount_source_status_from_database()
         self._mark_preflight_stale()
 
     def _on_source_selection_changed(self, *_args):
@@ -1203,10 +803,8 @@ class MPManagerApp:
         self._accepted_missing_categories = ()
         token = self._preflight_token
         self.start_btn.configure(state=tk.DISABLED)
-        self.preflight_status.set(
-            "Đang kiểm tra lại toàn bộ nguồn..."
-            if force_refresh else
-            "Đang đối chiếu nguồn đã chọn..."
+        self._set_preflight_status(
+            "preflight_refreshing_all" if force_refresh else "preflight_checking_selected"
         )
         self.root.after(350, lambda: self._start_preflight_check(token, force_refresh=force_refresh))
 
@@ -1221,19 +819,15 @@ class MPManagerApp:
             exchange_rate = validate_exchange_rate(self.exchange_rate.get())
             selected_ccs = self._parse_selected_cc_codes()
         except Exception as exc:
-            self.preflight_status.set(f"Chưa thể kiểm tra: {_friendly_error_message(exc)}")
+            self._set_preflight_error_status(exc)
             return
 
         def worker():
             started_at = time.perf_counter()
             try:
                 self._run_on_ui_thread(
-                    self.preflight_status.set,
-                    (
-                        "Đang quét kỹ FORM và toàn bộ nguồn..."
-                        if force_refresh else
-                        "Đang kiểm tra metadata thay đổi..."
-                    ),
+                    self._set_preflight_status,
+                    "preflight_scanning_form" if force_refresh else "preflight_checking_metadata",
                 )
                 paths = self._project_paths(fiscal_year)
                 context = create_fiscal_run_context(
@@ -1298,26 +892,7 @@ class MPManagerApp:
                         time.perf_counter() - started_at,
                     )
                     return
-                if report.ok:
-                    summary = "Đủ nguồn đã chọn và đúng năm"
-                elif report.can_run:
-                    issue_lines = []
-                    for issue in report.skipped_issues:
-                        label = CATEGORY_DISPLAY_NAMES.get(issue.category, issue.category)
-                        filename = os.path.basename(issue.path) if issue.path else "(không có tệp)"
-                        issue_lines.append(
-                            f"{label} — {filename}: {issue.reason}. Tác động: {issue.impact}"
-                        )
-                    summary = "Kết quả chưa đầy đủ; " + " | ".join(issue_lines)
-                else:
-                    issue_lines = []
-                    for issue in report.blocking_issues:
-                        label = CATEGORY_DISPLAY_NAMES.get(issue.category, issue.category)
-                        filename = os.path.basename(issue.path) if issue.path else "(không có tệp)"
-                        issue_lines.append(
-                            f"{label} — {filename}: {issue.reason}. Cần làm: {issue.action}"
-                        )
-                    summary = " | ".join(issue_lines) or "Có điều kiện nền tảng chưa đạt"
+                summary = self._localized_preflight_summary(report)
 
                 signature = (
                     fiscal_year,
@@ -1375,7 +950,77 @@ class MPManagerApp:
 
     def _update_preflight_progress(self, token: int, message: str) -> None:
         if token == self._preflight_token:
-            self.preflight_status.set(message)
+            # Progress from the worker is legacy free text. Keep the visible
+            # status in the active language instead of retaining that text.
+            self._set_preflight_status("preflight_checking_metadata")
+
+    def _localized_preflight_summary(self, report) -> str:
+        if report.ok:
+            return t("preflight_summary_ready")
+        if report.can_run:
+            issue_lines = []
+            for issue in report.skipped_issues:
+                label = CATEGORY_DISPLAY_NAMES.get(issue.category, issue.category)
+                filename = os.path.basename(issue.path) if issue.path else t("preflight_no_file")
+                issue_lines.append(
+                    t("preflight_issue_impact_format", label=label, filename=filename, reason=issue.reason, impact=issue.impact)
+                )
+            return t("preflight_summary_incomplete") + " | ".join(issue_lines)
+        issue_lines = []
+        for issue in report.blocking_issues:
+            label = CATEGORY_DISPLAY_NAMES.get(issue.category, issue.category)
+            filename = os.path.basename(issue.path) if issue.path else t("preflight_no_file")
+            issue_lines.append(
+                t("preflight_issue_action_format", label=label, filename=filename, reason=issue.reason, action=issue.action)
+            )
+        return " | ".join(issue_lines) or t("preflight_summary_unmet")
+
+    def _set_preflight_status(self, key: str, **params) -> None:
+        self._preflight_status_state = {"kind": "key", "key": key, "params": dict(params)}
+        self.preflight_status.set(t(key, **params))
+
+    def _set_preflight_error_status(self, error) -> None:
+        error_key = translation_key_for_text(
+            str(error),
+            keys=("err_select_at_least_one_cc",),
+        )
+        if error_key:
+            self._preflight_status_state = {
+                "kind": "error_key",
+                "key": "preflight_cannot_check",
+                "error_key": error_key,
+            }
+            self.preflight_status.set(t("preflight_cannot_check", error=t(error_key)))
+            return
+        self._set_preflight_status("preflight_cannot_check", error=_friendly_error_message(error))
+
+    def _set_preflight_completed_status(self, ok: bool, summary: str, report, cache_hit: bool, elapsed_seconds: float) -> None:
+        self._preflight_status_state = {
+            "kind": "completed",
+            "ok": ok,
+            "summary": summary,
+            "report": report,
+            "cache_hit": cache_hit,
+            "elapsed_seconds": elapsed_seconds,
+        }
+        self._refresh_preflight_status()
+
+    def _refresh_preflight_status(self) -> None:
+        state = getattr(self, "_preflight_status_state", {"kind": "key", "key": "preflight_untested_label", "params": {}})
+        if state["kind"] == "error_key":
+            self.preflight_status.set(t(state["key"], error=t(state["error_key"])))
+            return
+        if state["kind"] == "completed":
+            report = state.get("report")
+            summary = self._localized_preflight_summary(report) if report is not None else state["summary"]
+            if bool(getattr(report, "can_run", False)):
+                prefix = t("preflight_warning_partial") if getattr(report, "skipped_issues", ()) else t("preflight_ready")
+                mode = t("preflight_mode_cache") if state["cache_hit"] else t("preflight_mode_scan")
+                self.preflight_status.set(t("preflight_done", prefix=prefix, mode=mode, elapsed=state["elapsed_seconds"]))
+            else:
+                self.preflight_status.set(t("preflight_blocked", summary=summary, elapsed=state["elapsed_seconds"]))
+            return
+        self.preflight_status.set(t(state["key"], **state.get("params", {})))
 
     def _finish_preflight_check(
         self,
@@ -1395,19 +1040,10 @@ class MPManagerApp:
             self._approved_preflight_signature = signature
             self._approved_preflight_report = report
             self._approved_uniform_policy_path = getattr(context, "uniform_policy_path", None)
-            if getattr(report, "skipped_issues", ()):
-                prefix = "Cảnh báo: kết quả chưa đầy đủ; các nguồn lỗi đã được cách ly"
-            else:
-                prefix = "Đúng năm và đủ các nguồn đã chọn: có thể chạy tính toán"
-            mode = "cache hợp lệ" if cache_hit else "quét nội dung mới"
-            self.preflight_status.set(
-                f"{prefix} — {mode}, hoàn tất trong {elapsed_seconds:.1f} giây"
-            )
+            self._set_preflight_completed_status(ok, summary, report, cache_hit, elapsed_seconds)
             self.start_btn.configure(state=tk.NORMAL)
         else:
-            self.preflight_status.set(
-                f"Chưa thể chạy: {summary} — hoàn tất kiểm tra trong {elapsed_seconds:.1f} giây"
-            )
+            self._set_preflight_completed_status(ok, summary, report, cache_hit, elapsed_seconds)
             self.start_btn.configure(state=tk.DISABLED)
 
     def _project_paths(self, fiscal_year: int | None = None):
@@ -1437,25 +1073,40 @@ class MPManagerApp:
             }
             updated = values.get("headcount_source_updated_at", "")
             if not updated:
-                return "Chưa cập nhật CSDL"
+                return t("db_status_unimported")
             imported = values.get("headcount_source_imported_files", "?")
             total = values.get("headcount_source_files", "?")
             skipped = values.get("headcount_source_skipped_files", "?")
             errors = values.get("headcount_source_error_files", "?")
             fy = values.get("headcount_source_fiscal_year", "?")
-            return f"Đã cập nhật năm tài chính {fy}: {imported}/{total} tệp • bỏ qua {skipped} • lỗi {errors} • {updated[:16]}"
+            return t("db_status_imported_summary", fy=fy, imported=imported, total=total, skipped=skipped, errors=errors, time=updated[:16])
         except Exception:
-            return "Chưa đọc được trạng thái cập nhật CSDL"
+            return t("db_status_read_error")
         finally:
             if conn is not None:
                 conn.close()
+
+    def _set_headcount_source_status(self, key: str, **params) -> None:
+        self._headcount_source_status_state = {"kind": "key", "key": key, "params": dict(params)}
+        self.headcount_source_status.set(t(key, **params))
+
+    def _set_headcount_source_status_from_database(self) -> None:
+        self._headcount_source_status_state = {"kind": "database"}
+        self.headcount_source_status.set(self._initial_headcount_source_status())
+
+    def _refresh_headcount_source_status(self) -> None:
+        state = getattr(self, "_headcount_source_status_state", {"kind": "database"})
+        if state["kind"] == "database":
+            self.headcount_source_status.set(self._initial_headcount_source_status())
+            return
+        self.headcount_source_status.set(t(state["key"], **state.get("params", {})))
 
     def _refresh_fiscal_year_labels(self, *_args):
         raw = self.fiscal_year.get().strip()
         label = raw if raw.isdigit() and len(raw) == 4 else "—"
         self.root.title(self._window_title(label, self.application_version))
         if hasattr(self, "main_heading"):
-            self.main_heading.configure(text=f"Tính toán Ngân sách MP{label}")
+            self.main_heading.configure(text=t("main_heading", fiscal_year=label))
 
     @staticmethod
     def _initial_exchange_rate(template_path: str) -> str:
@@ -1477,26 +1128,26 @@ class MPManagerApp:
         self._selected_cc_values = []
         self._available_cc_choices = []
         self._update_cc_selection_summary()
-        self.headcount_source_status.set(self._initial_headcount_source_status())
+        self._set_headcount_source_status_from_database()
         self.load_cc_list()
         self._mark_preflight_stale()
-        self.log(f"Đang dùng hồ sơ dự án: {project.config_path}")
+        self.log(t("project_profile_using", path=project.config_path))
 
     def open_project(self) -> None:
         path = filedialog.askopenfilename(
-            title="Mở hồ sơ dự án",
+            title=t("open_project_dialog_title"),
             initialdir=self.project.root_dir,
-            filetypes=[("Hồ sơ dự án MP Manager", "project.json"), ("Tệp JSON", "*.json")],
+            filetypes=[(t("project_file_type"), "project.json"), (t("json_file_type"), "*.json")],
         )
         if not path:
             return
         try:
             self._activate_project(ProjectConfig.load(path))
         except Exception as exc:
-            messagebox.showerror("Không mở được hồ sơ dự án", _friendly_error_message(exc))
+            messagebox.showerror(t("cannot_open_project_title"), _friendly_error_message(exc))
 
     def create_project(self) -> None:
-        root_dir = filedialog.askdirectory(title="Chọn thư mục chứa dữ liệu dự án")
+        root_dir = filedialog.askdirectory(title=t("choose_project_dir_title"))
         if not root_dir:
             return
         config_path = os.path.join(root_dir, "project.json")
@@ -1510,58 +1161,57 @@ class MPManagerApp:
                 project.save()
             self._activate_project(project)
         except Exception as exc:
-            messagebox.showerror("Không tạo được hồ sơ dự án", _friendly_error_message(exc))
+            messagebox.showerror(t("cannot_create_project_title"), _friendly_error_message(exc))
 
     def configure_project_storage(self) -> None:
         """Edit shared and selected-FY storage paths without touching their data."""
         fiscal_year = self._current_fiscal_year()
         paths = self._project_paths(fiscal_year)
         dialog = tk.Toplevel(self.root)
-        dialog.title(f"Cấu hình dự án năm tài chính {fiscal_year}")
+        dialog.title(t("config_project_storage_title", fiscal_year=fiscal_year))
         dialog.geometry("820x430")
         dialog.transient(self.root)
         dialog.grab_set()
         dialog.columnconfigure(1, weight=1)
 
         fields = [
-            ("CSDL vận hành", self.project.operational_database, "file"),
-            ("Quy định đồng phục", paths.uniform_policy_path or "", "file"),
-            ("Kho nhập tay theo năm", paths.manual_input_store, "file"),
-            ("Thư mục kết quả", paths.output_dir, "dir"),
-            ("Thư mục lịch sử chạy", paths.history_root, "dir"),
+            (t("storage_op_db"), "operational_database", self.project.operational_database, "file"),
+            (t("storage_uniform_policy"), "uniform_policy", paths.uniform_policy_path or "", "file"),
+            (t("storage_manual_input"), "manual_input", paths.manual_input_store, "file"),
+            (t("storage_output_dir"), "output_dir", paths.output_dir, "dir"),
+            (t("storage_history_dir"), "history_dir", paths.history_root, "dir"),
         ]
         variables = {}
-        for row, (label, value, kind) in enumerate(fields):
+        for row, (label, key_name, value, kind) in enumerate(fields):
             ttk.Label(dialog, text=label).grid(row=row, column=0, sticky="w", padx=12, pady=8)
             variable = tk.StringVar(value=value)
-            variables[label] = variable
+            variables[key_name] = variable
             ttk.Entry(dialog, textvariable=variable).grid(row=row, column=1, sticky="ew", padx=8, pady=8)
             if kind == "dir":
                 command = lambda var=variable, title=label: self._choose_project_directory(var, title)
             else:
                 command = lambda var=variable, title=label: self._choose_project_file(var, title)
-            ttk.Button(dialog, text="Chọn…", command=command).grid(row=row, column=2, padx=(0, 12), pady=8)
+            ttk.Button(dialog, text=t("btn_choose"), command=command).grid(row=row, column=2, padx=(0, 12), pady=8)
 
         ttk.Label(
             dialog,
-            text=("Các đường dẫn tương đối sẽ được lưu theo thư mục chứa project.json. "
-                  "Kho nhập tay phải riêng cho từng năm tài chính."),
+            text=t("storage_paths_hint"),
             wraplength=760,
         ).grid(row=len(fields), column=0, columnspan=3, sticky="w", padx=12, pady=(8, 16))
 
         button_bar = ttk.Frame(dialog)
         button_bar.grid(row=len(fields) + 1, column=0, columnspan=3, sticky="e", padx=12, pady=12)
-        ttk.Button(button_bar, text="Hủy", command=dialog.destroy).pack(side="right")
+        ttk.Button(button_bar, text=t("btn_cancel"), command=dialog.destroy).pack(side="right")
 
         def save_configuration():
             try:
                 self.project.update_storage_paths(
                     fiscal_year,
-                    operational_database=variables["CSDL vận hành"].get().strip(),
-                    uniform_policy_path=variables["Quy định đồng phục"].get().strip(),
-                    manual_input_store=variables["Kho nhập tay theo năm"].get().strip(),
-                    output_dir=variables["Thư mục kết quả"].get().strip(),
-                    history_root=variables["Thư mục lịch sử chạy"].get().strip(),
+                    operational_database=variables["operational_database"].get().strip(),
+                    uniform_policy_path=variables["uniform_policy"].get().strip(),
+                    manual_input_store=variables["manual_input"].get().strip(),
+                    output_dir=variables["output_dir"].get().strip(),
+                    history_root=variables["history_dir"].get().strip(),
                 )
                 self.project.save()
                 refreshed = self._project_paths(fiscal_year)
@@ -1569,26 +1219,26 @@ class MPManagerApp:
                 self.source_dir.set(refreshed.source_dir)
                 self.headcount_source_dir.set(refreshed.headcount_source_dir)
                 self._mark_preflight_stale()
-                self.log(f"Đã lưu cấu hình lưu trữ của dự án năm tài chính {fiscal_year}")
+                self.log(t("project_profile_saved_storage", fy=fiscal_year))
                 dialog.destroy()
             except Exception as exc:
                 messagebox.showerror(
-                    "Cấu hình không hợp lệ", _friendly_error_message(exc), parent=dialog
+                    t("invalid_config_title"), _friendly_error_message(exc), parent=dialog
                 )
 
-        ttk.Button(button_bar, text="Lưu cấu hình", style="Primary.TButton", command=save_configuration).pack(
+        ttk.Button(button_bar, text=t("btn_save_config"), style="Primary.TButton", command=save_configuration).pack(
             side="right", padx=(0, 8)
         )
 
     @staticmethod
     def _choose_project_file(variable: tk.StringVar, title: str) -> None:
-        path = filedialog.askopenfilename(title=f"Chọn {title}")
+        path = filedialog.askopenfilename(title=t("choose_path_title", name=title))
         if path:
             variable.set(path)
 
     @staticmethod
     def _choose_project_directory(variable: tk.StringVar, title: str) -> None:
-        path = filedialog.askdirectory(title=f"Chọn {title}")
+        path = filedialog.askdirectory(title=t("choose_path_title", name=title))
         if path:
             variable.set(path)
 
@@ -1600,7 +1250,7 @@ class MPManagerApp:
         }
         argument = aliases.get(key)
         if argument is None:
-            raise KeyError(f"Đường dẫn dự án không được hỗ trợ: {key}")
+            raise KeyError(t("project_profile_unsupported_path", key=key))
         self.project.update_fiscal_paths(self._current_fiscal_year(), **{argument: os.path.abspath(path)})
         self.project.save()
 
@@ -1609,11 +1259,11 @@ class MPManagerApp:
         rate_text = self._initial_exchange_rate(self.template_path.get())
         if rate_text:
             self.exchange_rate.set(rate_text)
-            self.log(f"Đã đọc tỷ giá FORM!B2: {rate_text} USD/VND")
+            self.log(t("fx_read_form_b2", rate=rate_text))
             return True
 
         self.exchange_rate.set("")
-        self.log("FORM đang chọn không có tỷ giá hợp lệ tại B2; hãy nhập tỷ giá trước khi chạy.")
+        self.log(t("fx_form_missing_b2"))
         return False
 
     def set_icon(self):
@@ -1672,15 +1322,15 @@ class MPManagerApp:
             badge.configure(text=marker)
 
         if not fiscal_year_ready:
-            next_action = "Việc cần làm tiếp theo: nhập đúng năm tài chính."
+            next_action = t("workflow_next_fiscal_year")
         elif not source_ready:
-            next_action = "Việc cần làm tiếp theo: chọn đủ FORM, nguồn chi phí và nguồn nhân sự cùng năm."
+            next_action = t("workflow_next_sources")
         elif preflight_warning:
-            next_action = "Việc cần làm tiếp theo: đọc cảnh báo màu vàng; có thể bổ sung dữ liệu hoặc xác nhận chạy kết quả chưa đầy đủ."
+            next_action = t("workflow_next_warning")
         elif not preflight_ready:
-            next_action = "Việc cần làm tiếp theo: chờ kiểm tra nguồn; nếu có lỗi đỏ, sửa nguồn rồi bấm “Kiểm tra lại từ đầu”."
+            next_action = t("workflow_next_wait_check")
         else:
-            next_action = "Việc cần làm tiếp theo: bổ sung dữ liệu nhập tay nếu có, sau đó bấm “CHẠY TÍNH TOÁN”."
+            next_action = t("workflow_next_run")
         self.workflow_next_action.configure(text=next_action)
 
     def setup_styles(self):
@@ -1738,55 +1388,83 @@ class MPManagerApp:
         header_frame.grid(row=0, column=0, sticky="w", pady=(0, 16))
         self.main_heading = ttk.Label(header_frame, text="", style="Header.TLabel")
         self.main_heading.pack(anchor="w")
-        ttk.Label(
+        self.version_lbl = ttk.Label(
             header_frame,
-            text=f"Phiên bản ứng dụng: v{self.application_version}",
+            text=t("app_version", version=self.application_version),
             foreground="#4b5563",
-        ).pack(anchor="w", pady=(2, 0))
+        )
+        self.version_lbl.pack(anchor="w", pady=(2, 0))
         project_bar = ttk.Frame(container)
         project_bar.grid(row=0, column=1, columnspan=2, sticky="e", pady=(0, 16))
-        ttk.Label(project_bar, textvariable=self.project_file, width=44).pack(side="left", padx=(0, 6))
-        ttk.Button(project_bar, text="Mở/đổi dự án...", command=self.open_project).pack(side="left")
-        ttk.Button(project_bar, text="Tạo dự án...", command=self.create_project).pack(side="left", padx=(6, 0))
-        ttk.Button(project_bar, text="Cấu hình dự án...", command=self.configure_project_storage).pack(
+
+        lang_frame = ttk.Frame(project_bar)
+        lang_frame.pack(side="left", padx=(0, 12))
+        self.lang_lbl = ttk.Label(lang_frame, text=t("language_label"))
+        self.lang_lbl.pack(side="left", padx=(0, 4))
+        self.lang_combo = ttk.Combobox(
+            lang_frame,
+            textvariable=self.language_var,
+            values=[name for _, name in get_supported_languages()],
+            state="readonly",
+            width=11,
+        )
+        self.lang_combo.pack(side="left")
+        self.lang_combo.bind("<<ComboboxSelected>>", self._on_language_selected)
+
+        ttk.Label(project_bar, textvariable=self.project_file, width=40).pack(side="left", padx=(0, 6))
+        self.open_proj_btn = ttk.Button(project_bar, text=t("open_project_btn"), command=self.open_project)
+        self.open_proj_btn.pack(side="left")
+        self.create_proj_btn = ttk.Button(project_bar, text=t("create_project_btn"), command=self.create_project)
+        self.create_proj_btn.pack(side="left", padx=(6, 0))
+        self.config_proj_btn = ttk.Button(project_bar, text=t("config_project_btn"), command=self.configure_project_storage)
+        self.config_proj_btn.pack(
             side="left", padx=(6, 0)
         )
 
-        ttk.Label(container, text="Năm tài chính").grid(row=1, column=0, sticky="w", pady=4)
+        self.fiscal_year_lbl = ttk.Label(container, text=t("fiscal_year_label"))
+        self.fiscal_year_lbl.grid(row=1, column=0, sticky="w", pady=4)
         ttk.Entry(container, textvariable=self.fiscal_year, width=20).grid(row=1, column=1, sticky="w")
 
-        ttk.Label(container, text="Tỷ giá (USD/VND)").grid(row=2, column=0, sticky="w", pady=4)
+        # Tỷ giá (USD/VND)
+        self.exchange_rate_lbl = ttk.Label(container, text=t("exchange_rate_label"))
+        self.exchange_rate_lbl.grid(row=2, column=0, sticky="w", pady=4)
         ttk.Entry(container, textvariable=self.exchange_rate, width=20).grid(row=2, column=1, sticky="w")
-        ttk.Label(container, text="Áp dụng cho lần chạy này và ghi vào B2 của tệp kết quả.").grid(
+        self.exchange_rate_hint_lbl = ttk.Label(container, text=t("exchange_rate_hint"))
+        self.exchange_rate_hint_lbl.grid(
             row=2, column=2, sticky="w", padx=(12, 0)
         )
 
-        ttk.Label(container, text="Tệp mẫu FORM").grid(row=3, column=0, sticky="w", pady=(14, 4))
+        self.template_lbl = ttk.Label(container, text=t("template_label"))
+        self.template_lbl.grid(row=3, column=0, sticky="w", pady=(14, 4))
         ttk.Entry(container, textvariable=self.template_path).grid(
             row=3, column=1, columnspan=2, sticky="ew"
         )
 
-        ttk.Label(container, text="Thư mục nguồn chi phí").grid(row=4, column=0, sticky="w", pady=4)
+        self.cost_source_lbl = ttk.Label(container, text=t("cost_source_dir_label"))
+        self.cost_source_lbl.grid(row=4, column=0, sticky="w", pady=4)
         ttk.Entry(container, textvariable=self.source_dir).grid(
             row=4, column=1, columnspan=2, sticky="ew"
         )
 
-        ttk.Label(container, text="Nguồn nhân sự & thời gian").grid(row=5, column=0, sticky="w", pady=4)
+        self.headcount_source_lbl = ttk.Label(container, text=t("headcount_source_dir_label"))
+        self.headcount_source_lbl.grid(row=5, column=0, sticky="w", pady=4)
         ttk.Entry(container, textvariable=self.headcount_source_dir).grid(row=5, column=1, sticky="ew", padx=(0, 8))
         source_buttons = ttk.Frame(container)
         source_buttons.grid(row=5, column=2, sticky="w")
-        ttk.Button(
+        self.update_db_btn = ttk.Button(
             source_buttons,
-            text="Cập nhật CSDL",
+            text=t("update_db_btn"),
             command=self.update_headcount_database,
-        ).pack(side="left")
+        )
+        self.update_db_btn.pack(side="left")
         ttk.Label(
             container,
             textvariable=self.headcount_source_status,
             font=("Segoe UI", 9, "italic"),
         ).grid(row=6, column=1, columnspan=2, sticky="w", pady=(0, 8))
 
-        ttk.Label(container, text="Trung tâm chi phí").grid(row=7, column=0, sticky="w", pady=4)
+        self.cc_lbl = ttk.Label(container, text=t("cost_center_label"))
+        self.cc_lbl.grid(row=7, column=0, sticky="w", pady=4)
         cc_frame = ttk.Frame(container)
         cc_frame.grid(row=7, column=1, sticky="ew")
         cc_frame.columnconfigure(0, weight=1)
@@ -1798,42 +1476,44 @@ class MPManagerApp:
         ).grid(row=0, column=0, sticky="ew")
         self.cc_select_btn = ttk.Button(
             cc_frame,
-            text="Chọn phòng...",
+            text=t("select_room_btn"),
             command=self._open_cc_selection_dialog,
         )
         self.cc_select_btn.grid(row=0, column=1, padx=(6, 0))
         self.refresh_btn = ttk.Button(
             cc_frame,
-            text="Nạp lại CC từ FORM",
+            text=t("reload_cc_btn"),
             command=self.refresh_cost_centers_from_form,
         )
         self.refresh_btn.grid(row=0, column=2, padx=(4, 0))
-        ttk.Label(container, text="Có thể chọn một, nhiều hoặc tất cả phòng").grid(
+        self.cc_hint_lbl = ttk.Label(container, text=t("cc_hint"))
+        self.cc_hint_lbl.grid(
             row=7, column=2, sticky="w", padx=(12, 0)
         )
 
         guide_panel = ttk.Frame(container, padding=(0, 6))
         guide_panel.grid(row=8, column=0, columnspan=3, sticky="ew", pady=(4, 8))
-        ttk.Label(guide_panel, text="Làm theo 5 bước", style="WorkflowTitle.TLabel").pack(anchor="w", pady=(0, 6))
+        self.workflow_guide_lbl = ttk.Label(guide_panel, text=t("workflow_guide_title"), style="WorkflowTitle.TLabel")
+        self.workflow_guide_lbl.pack(anchor="w", pady=(0, 6))
         workflow_row = ttk.Frame(guide_panel)
         workflow_row.pack(fill="x")
         workflow_steps = (
-            ("1", "Chọn năm", "Đúng năm tài chính"),
-            ("2", "Chọn nguồn", "FORM · chi phí · nhân sự"),
-            ("3", "Kiểm tra", "Xanh / vàng / đỏ"),
-            ("4", "Bổ sung", "Chỉ khi nghiệp vụ có"),
-            ("5", "Chạy", "Thử 1 phòng trước"),
+            ("1", "step1_title", "step1_desc"),
+            ("2", "step2_title", "step2_desc"),
+            ("3", "step3_title", "step3_desc"),
+            ("4", "step4_title", "step4_desc"),
+            ("5", "step5_title", "step5_desc"),
         )
         self.workflow_cards = []
-        for column, (number, title_text, detail_text) in enumerate(workflow_steps):
+        for column, (number, title_key, detail_key) in enumerate(workflow_steps):
             workflow_row.columnconfigure(column, weight=1, uniform="workflow")
             card = tk.Frame(workflow_row, bg="#f0f2f5", highlightthickness=1, highlightbackground="#66707a")
             card.grid(row=0, column=column, sticky="nsew", padx=(0 if column == 0 else 4, 0), ipadx=6, ipady=4)
             badge = tk.Label(card, text=number, font=("Segoe UI", 11, "bold"), bg="#f0f2f5", fg="#66707a")
             badge.pack(anchor="w")
-            title = tk.Label(card, text=f"{number}. {title_text}", font=("Segoe UI", 9, "bold"), bg="#f0f2f5", fg="#66707a")
+            title = tk.Label(card, text=f"{number}. {t(title_key)}", font=("Segoe UI", 9, "bold"), bg="#f0f2f5", fg="#66707a")
             title.pack(anchor="w")
-            detail = tk.Label(card, text=detail_text, font=("Segoe UI", 8), bg="#f0f2f5", fg="#66707a")
+            detail = tk.Label(card, text=t(detail_key), font=("Segoe UI", 8), bg="#f0f2f5", fg="#66707a")
             detail.pack(anchor="w")
             self.workflow_cards.append((card, badge, title, detail))
         self.workflow_next_action = ttk.Label(guide_panel, text="", wraplength=900, font=("Segoe UI", 9, "bold"))
@@ -1841,17 +1521,18 @@ class MPManagerApp:
 
         actions = ttk.Frame(container)
         actions.grid(row=9, column=0, columnspan=3, sticky="w", pady=(4, 0))
-        for text, command in (
-            ("Nhập nhân sự thủ công", self.open_headcount_editor_v2),
-            ("Nhập sự kiện thiếu dữ liệu", self.open_event_driver_editor),
-            ("Thứ tự tệp nguồn", self.open_source_order_editor),
-            ("Cài gói quy tắc...", self.install_content_package),
-            ("Cài bản cập nhật...", self.install_application_update),
-            ("Lịch sử lần chạy", self.open_run_history),
-            ("Hướng dẫn trực quan", self.open_user_guide),
-            ("So sánh biến động MP (YoY)", self.open_variance_tab),
+        self.action_buttons = []
+        for key, command in (
+            ("manual_headcount_btn", self.open_headcount_editor_v2),
+            ("event_driver_btn", self.open_event_driver_editor),
+            ("source_order_btn", self.open_source_order_editor),
+            ("install_update_btn", self.install_application_update),
+            ("run_history_btn", self.open_run_history),
+            ("variance_analysis_btn", self.open_variance_tab),
         ):
-            ttk.Button(actions, text=text, command=command).pack(side="left", padx=(0, 8))
+            btn = ttk.Button(actions, text=t(key), command=command)
+            btn.pack(side="left", padx=(0, 8))
+            self.action_buttons.append((btn, key))
 
         ttk.Separator(container, orient=tk.HORIZONTAL).grid(
             row=10, column=0, columnspan=3, sticky="ew", pady=12
@@ -1859,16 +1540,12 @@ class MPManagerApp:
 
         check_actions = ttk.Frame(container)
         check_actions.grid(row=11, column=0, sticky="w")
-        ttk.Button(
+        self.deep_scan_btn = ttk.Button(
             check_actions,
-            text="Kiểm tra thay đổi nhanh",
-            command=lambda: self._mark_preflight_stale(force_refresh=False),
-        ).pack(side="left", padx=(0, 6))
-        ttk.Button(
-            check_actions,
-            text="Quét kỹ lại nội dung",
+            text=t("deep_scan_btn"),
             command=lambda: self._mark_preflight_stale(force_refresh=True),
-        ).pack(side="left")
+        )
+        self.deep_scan_btn.pack(side="left")
         ttk.Label(
             container,
             textvariable=self.preflight_status,
@@ -1877,7 +1554,7 @@ class MPManagerApp:
         ).grid(row=11, column=1, columnspan=2, sticky="w", padx=(8, 0))
         self.start_btn = ttk.Button(
             container,
-            text="CHẠY TÍNH TOÁN",
+            text=t("start_pipeline_btn"),
             style="Primary.TButton",
             command=self.start_pipeline,
         )
@@ -1886,11 +1563,87 @@ class MPManagerApp:
         log_frame = ttk.Frame(shell)
         log_frame.grid(row=1, column=0, sticky="ew", pady=(8, 0))
         log_frame.columnconfigure(0, weight=1)
-        ttk.Label(log_frame, text="Nhật ký xử lý").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        self.log_title_lbl = ttk.Label(log_frame, text=t("process_log_title"))
+        self.log_title_lbl.grid(row=0, column=0, sticky="w", pady=(0, 4))
         self.log_widget = scrolledtext.ScrolledText(
             log_frame, height=5, state=tk.DISABLED, font=("Consolas", 9)
         )
         self.log_widget.grid(row=1, column=0, sticky="ew")
+
+    def _on_language_selected(self, _event=None):
+        selected_name = self.language_var.get()
+        code = get_language_code(selected_name)
+        set_current_language(code)
+        remember_ui_language(code)
+        self._refresh_localized_ui()
+        self.log(t("lang_changed_log", lang_name=selected_name))
+
+    def _refresh_localized_ui(self):
+        self._refresh_fiscal_year_labels()
+        if hasattr(self, "version_lbl"):
+            self.version_lbl.configure(text=t("app_version", version=self.application_version))
+        if hasattr(self, "lang_lbl"):
+            self.lang_lbl.configure(text=t("language_label"))
+        if hasattr(self, "open_proj_btn"):
+            self.open_proj_btn.configure(text=t("open_project_btn"))
+        if hasattr(self, "create_proj_btn"):
+            self.create_proj_btn.configure(text=t("create_project_btn"))
+        if hasattr(self, "config_proj_btn"):
+            self.config_proj_btn.configure(text=t("config_project_btn"))
+        if hasattr(self, "fiscal_year_lbl"):
+            self.fiscal_year_lbl.configure(text=t("fiscal_year_label"))
+        if hasattr(self, "exchange_rate_lbl"):
+            self.exchange_rate_lbl.configure(text=t("exchange_rate_label"))
+        if hasattr(self, "exchange_rate_hint_lbl"):
+            self.exchange_rate_hint_lbl.configure(text=t("exchange_rate_hint"))
+        if hasattr(self, "template_lbl"):
+            self.template_lbl.configure(text=t("template_label"))
+        if hasattr(self, "cost_source_lbl"):
+            self.cost_source_lbl.configure(text=t("cost_source_dir_label"))
+        if hasattr(self, "headcount_source_lbl"):
+            self.headcount_source_lbl.configure(text=t("headcount_source_dir_label"))
+        if hasattr(self, "update_db_btn"):
+            self.update_db_btn.configure(text=t("update_db_btn"))
+        if hasattr(self, "cc_lbl"):
+            self.cc_lbl.configure(text=t("cost_center_label"))
+        if hasattr(self, "cc_select_btn"):
+            self.cc_select_btn.configure(text=t("select_room_btn"))
+        if hasattr(self, "refresh_btn"):
+            self.refresh_btn.configure(text=t("reload_cc_btn"))
+        if hasattr(self, "cc_hint_lbl"):
+            self.cc_hint_lbl.configure(text=t("cc_hint"))
+        if hasattr(self, "workflow_guide_lbl"):
+            self.workflow_guide_lbl.configure(text=t("workflow_guide_title"))
+        if hasattr(self, "workflow_cards") and self.workflow_cards:
+            step_keys = [
+                ("1", "step1_title", "step1_desc"),
+                ("2", "step2_title", "step2_desc"),
+                ("3", "step3_title", "step3_desc"),
+                ("4", "step4_title", "step4_desc"),
+                ("5", "step5_title", "step5_desc"),
+            ]
+            for idx, (_card, _badge, title, detail) in enumerate(self.workflow_cards):
+                if idx < len(step_keys):
+                    num, t_key, d_key = step_keys[idx]
+                    title.configure(text=f"{num}. {t(t_key)}")
+                    detail.configure(text=t(d_key))
+        if hasattr(self, "action_buttons"):
+            for btn, key in self.action_buttons:
+                btn.configure(text=t(key))
+        if hasattr(self, "quick_check_btn"):
+            self.quick_check_btn.configure(text=t("quick_check_btn"))
+        if hasattr(self, "deep_scan_btn"):
+            self.deep_scan_btn.configure(text=t("deep_scan_btn"))
+        if hasattr(self, "start_btn"):
+            self.start_btn.configure(text=t("start_pipeline_btn"))
+        if hasattr(self, "log_title_lbl"):
+            self.log_title_lbl.configure(text=t("process_log_title"))
+        if hasattr(self, "headcount_source_status"):
+            self._refresh_headcount_source_status()
+        if hasattr(self, "preflight_status"):
+            self._refresh_preflight_status()
+        self._update_workflow_guide()
+        self._update_cc_selection_summary()
 
 
     def _run_on_ui_thread(self, callback, *args, **kwargs):
@@ -1921,12 +1674,12 @@ class MPManagerApp:
         try:
             fiscal_year = int(self.fiscal_year.get())
         except (TypeError, ValueError):
-            messagebox.showerror("Năm tài chính không hợp lệ", "Hãy nhập năm tài chính gồm 4 chữ số.")
+            messagebox.showerror(t("invalid_fiscal_year_title"), t("invalid_fiscal_year_msg"))
             return
         package_path = filedialog.askopenfilename(
             initialdir=BASE_DIR,
-            title="Chọn gói quy tắc MP2027",
-            filetypes=[("Gói quy tắc MP2027", "*.mpcontent")],
+            title=t("choose_rule_pack_title"),
+            filetypes=[(t("rule_pack_file_type"), "*.mpcontent")],
         )
         if not package_path:
             return
@@ -1938,19 +1691,19 @@ class MPManagerApp:
             )
         except ContentPackError as exc:
             message = _friendly_error_message(exc)
-            self.log(f"Không cài được gói quy tắc: {message}")
-            messagebox.showerror("Gói quy tắc không hợp lệ", message)
+            self.log(t("update_pkg_install_failed", message=message))
+            messagebox.showerror(t("invalid_rule_pack_title"), message)
             return
         except Exception as exc:
             message = _friendly_error_message(exc)
-            self.log(f"Không cài được gói quy tắc: {message}")
-            messagebox.showerror("Không thể cài gói quy tắc", message)
+            self.log(t("update_pkg_install_failed", message=message))
+            messagebox.showerror(t("cannot_install_rule_pack_title"), message)
             return
         self._mark_preflight_stale(force_refresh=True)
-        self.log(f"Đã xác minh và kích hoạt gói quy tắc năm tài chính {fiscal_year}: {installed_path}")
+        self.log(t("update_pkg_activated", fy=fiscal_year, path=installed_path))
         messagebox.showinfo(
-            "Đã cài gói quy tắc",
-            f"Gói quy tắc năm tài chính {fiscal_year} đã được xác minh và kích hoạt.",
+            t("installed_rule_pack_title"),
+            t("installed_rule_pack_msg", fiscal_year=fiscal_year),
         )
 
     def _start_update_discovery(self):
@@ -1964,7 +1717,7 @@ class MPManagerApp:
             app_root = application_install_root(APP_DIR)
             current_version = current_release_version()
         except Exception as exc:
-            self.log(f"Bỏ qua kiểm tra cập nhật khi khởi động: {_friendly_error_message(exc)}")
+            self.log(t("update_startup_check_skipped", error=_friendly_error_message(exc)))
             return
 
         def worker():
@@ -1980,7 +1733,7 @@ class MPManagerApp:
             except Exception as exc:
                 self._run_on_ui_thread(
                     self.log,
-                    f"Không kiểm tra được nguồn cập nhật: {_friendly_error_message(exc)}",
+                    t("update_check_failed", error=_friendly_error_message(exc)),
                 )
 
         threading.Thread(target=worker, daemon=True).start()
@@ -1989,22 +1742,21 @@ class MPManagerApp:
         if candidate is None or self._startup_update_prompted or getattr(self, "_application_update_running", False):
             return
         self._startup_update_prompted = True
-        message = (
-            f"Đã có MP2027 phiên bản {candidate.version} (hiện tại: {current_version}).\n\n"
-        )
-        if candidate.notes:
-            message += f"Nội dung cập nhật:\n{candidate.notes.strip()}\n\n"
-        message += "Bạn có muốn tải và cài đặt ngay không?"
-        if messagebox.askyesno("Có bản cập nhật MP2027", message):
+        notes = candidate.notes.strip() if candidate.notes else ""
+        if notes:
+            prompt = t("update_new_version_with_notes_prompt", version=candidate.version, current=current_version, notes=notes)
+        else:
+            prompt = t("update_new_version_prompt", version=candidate.version, current=current_version)
+        if messagebox.askyesno(t("update_found_title"), prompt):
             self._install_discovered_update(candidate, app_root)
         else:
-            self.log(f"Đã hoãn cập nhật MP2027 {candidate.version}")
+            self.log(t("update_deferred_log", version=candidate.version))
 
     def _install_discovered_update(self, candidate, app_root):
         if getattr(self, "_application_update_running", False):
             return
         self._application_update_running = True
-        self.log(f"Đang tải bản cập nhật MP2027 {candidate.version}...")
+        self.log(t("update_downloading_log", version=candidate.version))
 
         def worker():
             try:
@@ -2029,16 +1781,16 @@ class MPManagerApp:
             config = load_update_config(BASE_DIR)
             current_version = current_release_version()
         except Exception as exc:
-            messagebox.showerror("Không thể tự cập nhật", _friendly_error_message(exc))
+            messagebox.showerror(t("cannot_auto_update_title"), _friendly_error_message(exc))
             return
         if not config["sources"]:
             messagebox.showerror(
-                "Chưa có nguồn cập nhật",
-                "Chương trình chưa được cấu hình thư mục cập nhật của công ty.",
+                t("no_update_source_title"),
+                t("no_update_source_msg"),
             )
             return
         self._application_update_running = True
-        self.log("Đang quét nguồn cập nhật của công ty để tìm phiên bản mới nhất...")
+        self.log(t("update_scanning_log"))
 
         def worker():
             try:
@@ -2058,7 +1810,7 @@ class MPManagerApp:
                     except Exception as exc:
                         source_errors.append(_friendly_error_message(exc))
                 if not reachable_sources:
-                    detail = source_errors[0] if source_errors else "Không có nguồn cập nhật đang bật."
+                    detail = source_errors[0] if source_errors else t("update_no_source_enabled")
                     raise UpdateDeliveryError(detail)
                 candidate = discover_available_update(
                     reachable_sources,
@@ -2088,52 +1840,49 @@ class MPManagerApp:
         self._application_update_running = False
         if error is not None:
             message = _friendly_error_message(error)
-            self.log(f"Không quét được nguồn cập nhật: {message}")
-            messagebox.showerror("Không kiểm tra được cập nhật", message)
+            self.log(t("update_scan_failed", message=message))
+            messagebox.showerror(t("cannot_auto_update_title"), message)
             return
         if candidate is None:
-            self.log(f"Không có bản cập nhật mới hơn phiên bản {current_version}.")
+            self.log(t("update_already_latest", current=current_version))
             messagebox.showinfo(
-                "Đang dùng phiên bản mới nhất",
-                f"Không tìm thấy bản cập nhật mới hơn MP2027 {current_version} trong nguồn công ty.",
+                t("latest_version_title"),
+                t("latest_version_msg", version=current_version),
             )
             return
-        message = (
-            f"Tìm thấy MP2027 phiên bản {candidate.version} "
-            f"(hiện tại: {current_version}).\n\n"
-        )
-        if candidate.notes:
-            message += f"Nội dung cập nhật:\n{candidate.notes.strip()}\n\n"
-        message += "Bạn có muốn cài đặt ngay không?"
-        if messagebox.askyesno("Có bản cập nhật MP2027", message):
+        notes = candidate.notes.strip() if candidate.notes else ""
+        if notes:
+            prompt = t("update_new_version_with_notes_prompt", version=candidate.version, current=current_version, notes=notes)
+        else:
+            prompt = t("update_new_version_prompt", version=candidate.version, current=current_version)
+        if messagebox.askyesno(t("update_found_title"), prompt):
             self._install_discovered_update(candidate, app_root)
         else:
-            self.log(f"Đã hoãn cập nhật MP2027 {candidate.version}")
+            self.log(t("update_deferred_log", version=candidate.version))
 
     def _finish_application_update(self, state, error):
         self._application_update_running = False
         if error is not None:
-            self.log(f"Cập nhật ứng dụng không thành công: {error}")
+            self.log(t("update_app_failed", error=error))
             messagebox.showerror(
-                "Cập nhật không thành công",
-                "Tệp cập nhật không hợp lệ, bị thay đổi hoặc không dành cho phiên bản này.",
+                t("update_failed_title"),
+                t("update_failed_msg"),
             )
             return
-        version = state.get("version", "mới") if isinstance(state, dict) else "mới"
-        self.log(f"Đã xác minh, kiểm tra và kích hoạt phiên bản {version}.")
+        version = state.get("version", t("update_version_latest_word")) if isinstance(state, dict) else t("update_version_latest_word")
+        self.log(t("update_app_activated", version=version))
         messagebox.showinfo(
-            "Đã cài bản cập nhật",
-            f"Phiên bản {version} đã sẵn sàng. MP2027 sẽ đóng phiên bản cũ và tự khởi động phiên bản mới ngay bây giờ.",
+            t("update_ready_title"),
+            t("update_ready_msg", version=version),
         )
         try:
             app_root = application_install_root(APP_DIR)
             entrypoint = launch_activated_update(app_root, current_pid=os.getpid())
         except Exception as exc:
-            self.log(f"Không thể tự khởi động phiên bản mới: {exc}")
+            self.log(t("update_restart_failed", error=exc))
             messagebox.showerror(
-                "Không thể tự khởi động lại",
-                "Bản cập nhật đã được kích hoạt nhưng không thể tự mở phiên bản mới. "
-                "Ứng dụng hiện tại sẽ tiếp tục chạy để bạn có thể lưu công việc và mở lại MP2027 thủ công.",
+                t("cannot_auto_restart_title"),
+                t("cannot_auto_restart_msg"),
             )
             return
         self.log(f"Đã lên lịch khởi động phiên bản mới: {entrypoint}")
@@ -2143,11 +1892,11 @@ class MPManagerApp:
     def browse_template(self):
         current = self.template_path.get().strip()
         initial_dir = os.path.dirname(current) if os.path.isfile(current) else BASE_DIR
-        path = filedialog.askopenfilename(initialdir=initial_dir, filetypes=[("Tệp Excel", "*.xlsx")])
+        path = filedialog.askopenfilename(initialdir=initial_dir, filetypes=[(t("excel_file_type"), "*.xlsx")])
         if path:
             validation_error = _validate_selected_template(path)
             if validation_error:
-                messagebox.showerror("Tệp mẫu không hợp lệ", validation_error)
+                messagebox.showerror(t("invalid_template_title"), validation_error)
                 return
             self.template_path.set(path)
             self._save_path_preference("template_path", path, "Selected FORM template")
@@ -2161,7 +1910,7 @@ class MPManagerApp:
         if path:
             validation_error = _validate_selected_source_dir(path)
             if validation_error:
-                messagebox.showerror("Thư mục nguồn không hợp lệ", validation_error)
+                messagebox.showerror(t("invalid_cost_source_title"), validation_error)
                 return
             self.source_dir.set(path)
             self._save_path_preference("cost_source_dir", path, "Selected cost source folder")
@@ -2177,7 +1926,7 @@ class MPManagerApp:
                 self._save_path_preference(
                     "headcount_source_dir", path, "Department plan source folder"
                 )
-                self.headcount_source_status.set("Cần đồng bộ cho thư mục mới")
+                self._set_headcount_source_status("hc_source_needs_sync")
             except Exception as exc:
                 self.log(f"Không lưu được thư mục nguồn nhân sự đã chọn: {exc}")
 
@@ -2185,7 +1934,7 @@ class MPManagerApp:
         try:
             fiscal_year = int(self.fiscal_year.get())
         except (TypeError, ValueError):
-            messagebox.showerror("Năm tài chính không hợp lệ", "Hãy nhập năm tài chính gồm 4 chữ số.")
+            messagebox.showerror(t("invalid_fiscal_year_title"), t("invalid_fiscal_year_msg"))
             return
 
         conn = None
@@ -2195,50 +1944,52 @@ class MPManagerApp:
             counts = count_headcount_truth_rows(conn, fiscal_year)
             if counts["total_rows"] == 0:
                 messagebox.showinfo(
-                    "Không có dữ liệu cần dọn",
-                    f"CSDL không có nguồn sự thật thuộc năm tài chính {fiscal_year} "
-                    f"({counts['periods'][0]}–{counts['periods'][-1]}).",
+                    t("no_data_cleanup_title"),
+                    t("no_data_cleanup_msg", fiscal_year=fiscal_year, start=counts['periods'][0] if counts['periods'] else "", end=counts['periods'][-1] if counts['periods'] else ""),
                 )
                 return
 
             confirmed = messagebox.askyesno(
-                "Xác nhận dọn nguồn sự thật",
-                f"Bạn sắp xóa dữ liệu nguồn sự thật của năm tài chính {fiscal_year}\n"
-                f"Phạm vi kỳ: {counts['periods'][0]}–{counts['periods'][-1]}\n\n"
-                f"• Nhân sự kế hoạch phòng ban: {counts['monthly_headcount_rows']} dòng\n"
-                f"• Giờ hành chính và tăng ca: {counts['headcount_time_rows']} dòng\n"
-                f"• Tổng cộng: {counts['total_rows']} dòng\n\n"
-                "Dữ liệu nhập tay, GA, chi phí, danh mục CC và năm tài chính khác sẽ được giữ nguyên.\n"
-                "Bạn có chắc chắn muốn tiếp tục?",
+                t("cleanup_confirm_title"),
+                t(
+                    "cleanup_confirm_msg",
+                    fiscal_year=fiscal_year,
+                    start=counts['periods'][0],
+                    end=counts['periods'][-1],
+                    hc_rows=counts['monthly_headcount_rows'],
+                    time_rows=counts['headcount_time_rows'],
+                    total_rows=counts['total_rows'],
+                ),
                 icon="warning",
             )
             if not confirmed:
-                self.log(f"Đã hủy dọn dữ liệu nguồn sự thật năm tài chính {fiscal_year}.")
+                self.log(t("cleanup_cancelled_log", fiscal_year=fiscal_year))
                 return
 
             result = cleanup_headcount_truth(conn, fiscal_year)
         except Exception as exc:
-            self.log(f"Dọn nguồn sự thật năm tài chính {fiscal_year} thất bại; CSDL đã hoàn nguyên: {exc}")
+            self.log(t("cleanup_failed_log", fiscal_year=fiscal_year, error=str(exc)))
             messagebox.showerror(
-                "Dọn dữ liệu thất bại",
-                f"Không thay đổi dữ liệu trong CSDL.\n\n{exc}",
+                t("cleanup_failed_title"),
+                f"{exc}",
             )
             return
         finally:
             if conn is not None:
                 conn.close()
 
-        status = f"Đã dọn dữ liệu năm tài chính {fiscal_year} • chưa có nguồn sự thật"
-        self.headcount_source_status.set(status)
+        self._set_headcount_source_status("sync_cleaned_data", fy=fiscal_year)
         self.log(
-            f"Đã dọn nguồn sự thật năm tài chính {fiscal_year}: "
-            f"{result['monthly_headcount_rows']} dòng nhân sự + "
-            f"{result['headcount_time_rows']} dòng giờ làm."
+            t(
+                "sync_cleaned_truth",
+                fy=fiscal_year,
+                hc=result['monthly_headcount_rows'],
+                time=result['headcount_time_rows'],
+            )
         )
         messagebox.showinfo(
-            "Dọn dữ liệu thành công",
-            f"Đã xóa {result['total_rows']} dòng nguồn sự thật của năm tài chính {fiscal_year}.\n\n"
-            "Hãy bấm “Cập nhật CSDL” để nhập nguồn đã sửa.",
+            t("cleanup_success_title"),
+            t("cleanup_success_msg", total_rows=result['total_rows'], fiscal_year=fiscal_year),
         )
 
     def _confirm_headcount_source_exceptions(self, review):
@@ -2249,7 +2000,7 @@ class MPManagerApp:
             return set(), set(), set()
 
         dialog = tk.Toplevel(self.root)
-        dialog.title("Xác nhận nguồn nhân sự cần kiểm tra")
+        dialog.title(t("headcount_source_exceptions_title"))
         dialog.geometry("940x640")
         dialog.minsize(760, 480)
         dialog.transient(self.root)
@@ -2260,7 +2011,7 @@ class MPManagerApp:
         outer.pack(fill=tk.BOTH, expand=True)
         ttk.Label(
             outer,
-            text="Các mục dưới đây mặc định KHÔNG được nhập. Chỉ đánh dấu khi bạn đã kiểm tra A5/B5 trong tệp nguồn.",
+            text=t("headcount_source_exceptions_guide"),
             wraplength=880,
             justify=tk.LEFT,
         ).pack(fill=tk.X, pady=(0, 10))
@@ -2302,15 +2053,15 @@ class MPManagerApp:
                 variables.append((kind, os.path.abspath(parsed.path), variable))
 
         add_group(
-            "CC chưa có trong master",
+            t("headcount_source_unknown_cc_group"),
             unknown,
-            "Nếu xác nhận, dữ liệu sẽ được nhập theo nguyên CC trong A5; chương trình không tự tạo master. Sau đó cần đề nghị bổ sung CC vào danh mục.",
+            t("headcount_source_unknown_cc_desc"),
             "unknown",
         )
         add_group(
-            "Tên B5 không xác minh tự động được",
+            t("headcount_source_name_mismatch_group"),
             mismatches,
-            "Chỉ xác nhận nếu CC A5 và tên hiển thị B5 đúng với phòng ban thực tế.",
+            t("headcount_source_name_mismatch_desc"),
             "name",
         )
 
@@ -2324,8 +2075,8 @@ class MPManagerApp:
             outcome["value"] = (approved_unknown, rejected_unknown, approved_names)
             dialog.destroy()
 
-        ttk.Button(buttons, text="Hủy cập nhật", command=dialog.destroy).pack(side=tk.RIGHT, padx=(8, 0))
-        ttk.Button(buttons, text="Tiếp tục với lựa chọn", command=submit).pack(side=tk.RIGHT)
+        ttk.Button(buttons, text=t("btn_cancel"), command=dialog.destroy).pack(side=tk.RIGHT, padx=(8, 0))
+        ttk.Button(buttons, text=t("btn_continue_selection"), command=submit).pack(side=tk.RIGHT)
         dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
         self.root.wait_window(dialog)
         return outcome["value"]
@@ -2333,7 +2084,7 @@ class MPManagerApp:
     def update_headcount_database(self):
         source_dir = self.headcount_source_dir.get().strip()
         if not os.path.isdir(source_dir):
-            messagebox.showerror("Nguồn không hợp lệ", "Hãy chọn thư mục nguồn nhân sự & thời gian.")
+            messagebox.showerror(t("invalid_source_title"), t("invalid_headcount_source_msg"))
             return
         conn = None
         try:
@@ -2343,7 +2094,7 @@ class MPManagerApp:
             review = review_headcount_time_sources(conn, source_dir, fiscal_year)
             approvals = self._confirm_headcount_source_exceptions(review)
             if approvals is None:
-                self.log("Đã hủy cập nhật nguồn nhân sự trước khi ghi CSDL.")
+                self.log(t("sync_cancelled"))
                 return
             approved_unknown, rejected_unknown, approved_names = approvals
             result = import_headcount_time_sources(
@@ -2357,59 +2108,71 @@ class MPManagerApp:
             )
         except Exception as exc:
             message = _friendly_error_message(exc)
-            self.log(f"Cập nhật nguồn nhân sự thất bại: {message}")
-            messagebox.showerror("Cập nhật thất bại", message)
+            self.log(t("sync_failed", message=message))
+            messagebox.showerror(t("update_db_failed_title"), message)
             return
         finally:
             if conn is not None:
                 conn.close()
         for parsed, reason in result["skipped"]:
-            self.log(f"Không nạp {os.path.basename(parsed.path)}: {reason}")
+            self.log(t("sync_not_loaded_file", filename=os.path.basename(parsed.path), reason=reason))
         for parsed in result["errors"]:
-            self.log(f"Lỗi {os.path.basename(parsed.path)}: {'; '.join(parsed.errors)}")
-        text = (
-            f"Đã nạp {result['imported_files']}/{result['files']} phòng • "
-            f"{result['imported_rows']} kỳ • cần bổ sung tách Nhân viên/Công nhân "
-            f"{result.get('split_required_files', 0)} phòng • bỏ qua {len(result['skipped'])} • "
-            f"lỗi {len(result['errors'])} • {datetime.now():%H:%M}"
+            self.log(t("sync_error_file", filename=os.path.basename(parsed.path), error='; '.join(parsed.errors)))
+        self._set_headcount_source_status(
+            "sync_imported_summary",
+            imported=result['imported_files'],
+            total=result['files'],
+            rows=result['imported_rows'],
+            split=result.get('split_required_files', 0),
+            skipped=len(result['skipped']),
+            errors=len(result['errors']),
+            time=f"{datetime.now():%H:%M}",
         )
-        self.headcount_source_status.set(text)
-        self.log(f"Cập nhật nguồn nhân sự: {text}")
+        text = self.headcount_source_status.get()
+        self.log(text)
         detail_lines = []
         for parsed, reason in result["skipped"]:
             detail_lines.append(
-                f"BỎ QUA: {os.path.basename(parsed.path)}\n"
-                f"  CC {parsed.cc_code or 'không đọc được'} - {parsed.department_name or 'không đọc được tên phòng'}\n"
-                f"  Lý do: {reason}"
+                t(
+                    "sync_skip_detail",
+                    filename=os.path.basename(parsed.path),
+                    cc=parsed.cc_code or '?',
+                    dept=parsed.department_name or '?',
+                    reason=reason,
+                )
             )
         for parsed in result["errors"]:
             detail_lines.append(
-                f"LỖI: {os.path.basename(parsed.path)}\n  {'; '.join(parsed.errors) or 'Tệp không hợp lệ'}"
+                t(
+                    "sync_error_detail",
+                    filename=os.path.basename(parsed.path),
+                    errors='; '.join(parsed.errors) or '?',
+                )
             )
         confirmed_unknown = result.get("confirmed_unknown_cost_centers", [])
         if confirmed_unknown:
             detail_lines.append(
-                "KHUYẾN NGHỊ BỔ SUNG MASTER:\n  "
+                t("sync_master_recommendation")
                 + "\n  ".join(
                     f"CC {parsed.cc_code} — {parsed.department_name}" for parsed in confirmed_unknown
                 )
             )
         message = text
         if detail_lines:
-            message += "\n\nCác tệp cần kiểm tra:\n\n" + "\n\n".join(detail_lines)
-        messagebox.showinfo("Đã cập nhật CSDL", message)
+            message += "\n\n" + t("sync_files_to_check") + "\n\n".join(detail_lines)
+        messagebox.showinfo(t("update_db_success_title"), message)
 
     def open_source_order_editor(self):
         source_dir = self.source_dir.get() or BASE_DIR
         if not os.path.isdir(source_dir):
             messagebox.showerror(
-                "Không tìm thấy thư mục",
-                f"Không tìm thấy thư mục nguồn:\n{source_dir}\n\nCách xử lý: Hãy kiểm tra lại đường dẫn Thư mục nguồn trên màn hình chính."
+                t("dir_not_found_title"),
+                t("source_dir_not_found_msg", path=source_dir),
             )
             return
 
         editor = tk.Toplevel(self.root)
-        editor.title("Thứ tự tệp nguồn")
+        editor.title(t("source_order_title"))
         editor.geometry("980x520")
         editor.transient(self.root)
         editor.grab_set()
@@ -2419,10 +2182,7 @@ class MPManagerApp:
 
         ttk.Label(
             frame,
-            text=(
-                "Mọi tệp Excel được phát hiện đều hiển thị tại đây. Hãy xác nhận loại cho dòng cần xem xét "
-                "hoặc bấm Bỏ qua có chủ đích; tệp đã bỏ qua sẽ không được dùng làm nguồn chi phí."
-            ),
+            text=t("source_order_instruction"),
             wraplength=900,
         ).grid(row=0, column=0, columnspan=6, sticky="w", pady=(0, 4))
         summary_var = tk.StringVar()
@@ -2434,17 +2194,17 @@ class MPManagerApp:
         }
         category_codes = {label: code for code, label in category_labels.items()}
         status_labels = {
-            "recognized": "Đã nhận diện",
-            "needs_review": "Cần xác nhận",
-            "ignored": "Đã bỏ qua",
+            "recognized": t("source_status_recognized"),
+            "needs_review": t("source_status_needs_review"),
+            "ignored": t("source_status_ignored"),
         }
         status_codes = {label: code for code, label in status_labels.items()}
         detection_labels = {
-            "manifest": "Theo cấu hình đã lưu",
-            "structure": "Theo cấu trúc tệp Excel",
-            "system_structure": "Theo cấu trúc hệ thống",
-            "manual": "Người dùng xác nhận",
-            "inventory": "Kiểm kê tên tệp",
+            "manifest": t("source_detection_manifest"),
+            "structure": t("source_detection_structure"),
+            "system_structure": t("source_detection_system"),
+            "manual": t("source_detection_manual"),
+            "inventory": t("source_detection_inventory"),
         }
         detection_codes = {label: code for code, label in detection_labels.items()}
 
@@ -2473,9 +2233,9 @@ class MPManagerApp:
         tree_frame.grid(row=2, column=0, columnspan=6, sticky="nsew")
         tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=13)
         headings = {
-            "order": "Thứ tự", "category": "Loại nguồn", "filename": "Tên tệp",
-            "enabled": "Dùng", "description": "Ghi chú", "status": "Trạng thái",
-            "detection_method": "Cách nhận diện", "signature": "Dấu vết", "reason": "Lý do / bằng chứng",
+            "order": t("source_col_order"), "category": t("source_col_category"), "filename": t("source_col_filename"),
+            "enabled": t("source_col_enabled"), "description": t("source_col_description"), "status": t("source_col_status"),
+            "detection_method": t("source_col_detection"), "signature": t("source_col_signature"), "reason": t("source_col_reason"),
         }
         widths = {"order": 55, "category": 145, "filename": 330, "enabled": 50,
                   "description": 180, "status": 105, "detection_method": 165,
@@ -2498,7 +2258,7 @@ class MPManagerApp:
 
         form = ttk.Frame(frame)
         form.grid(row=3, column=0, columnspan=6, sticky="ew", pady=(10, 0))
-        ttk.Label(form, text="Loại nguồn").grid(row=0, column=0, sticky="w")
+        ttk.Label(form, text=t("source_form_category_label")).grid(row=0, column=0, sticky="w")
         category_var = tk.StringVar()
         category_combo = ttk.Combobox(
             form,
@@ -2509,19 +2269,19 @@ class MPManagerApp:
         )
         category_combo.grid(row=1, column=0, sticky="w", padx=(0, 8))
 
-        ttk.Label(form, text="Tên tệp").grid(row=0, column=1, sticky="w")
+        ttk.Label(form, text=t("source_form_filename_label")).grid(row=0, column=1, sticky="w")
         filename_var = tk.StringVar()
         ttk.Entry(form, textvariable=filename_var, width=70).grid(row=1, column=1, sticky="w")
         ttk.Button(
             form,
-            text="Chọn tệp...",
+            text=t("btn_browse_file"),
             command=lambda: browse_manifest_file(),
         ).grid(row=1, column=2, sticky="w", padx=(6, 8))
 
         enabled_var = tk.IntVar(value=1)
-        ttk.Checkbutton(form, text="Dùng dòng này", variable=enabled_var).grid(row=1, column=3, sticky="w")
+        ttk.Checkbutton(form, text=t("source_use_row"), variable=enabled_var).grid(row=1, column=3, sticky="w")
 
-        ttk.Label(form, text="Ghi chú").grid(row=2, column=0, sticky="w", pady=(8, 0))
+        ttk.Label(form, text=t("source_col_description")).grid(row=2, column=0, sticky="w", pady=(8, 0))
         description_var = tk.StringVar()
         ttk.Entry(form, textvariable=description_var, width=96).grid(
             row=3, column=0, columnspan=3, sticky="w", pady=(0, 8)
@@ -2553,8 +2313,8 @@ class MPManagerApp:
                 if status in counts:
                     counts[status] += 1
             summary_var.set(
-                f"Tổng {sum(counts.values())} tệp | Đã nhận diện: {counts['recognized']} | "
-                f"Cần xác nhận: {counts['needs_review']} | Đã bỏ qua: {counts['ignored']}"
+                t("source_summary", total=sum(counts.values()), recognized=counts['recognized'],
+                  needs_review=counts['needs_review'], ignored=counts['ignored'])
             )
 
         def load_rows() -> None:
@@ -2589,7 +2349,7 @@ class MPManagerApp:
         def browse_manifest_file() -> None:
             path = filedialog.askopenfilename(
                 initialdir=source_dir,
-                filetypes=[("Tệp Excel", "*.xlsx *.xls"), ("Tất cả tệp", "*.*")],
+                filetypes=[(t("excel_file_type"), "*.xlsx *.xls"), (t("all_files_type"), "*.*")],
             )
             if not path:
                 return
@@ -2603,7 +2363,7 @@ class MPManagerApp:
             category = category_codes.get(category_label, category_label)
             filename = filename_var.get().strip()
             if not category or not filename:
-                messagebox.showwarning("Thiếu dữ liệu", "Hãy chọn loại nguồn và tên tệp. Muốn bỏ qua hãy bấm nút Bỏ qua.")
+                messagebox.showwarning(t("missing_data_title"), t("source_order_missing_data_msg"))
                 return
             description = description_var.get().strip() or DEFAULT_DESCRIPTIONS.get(category, "")
             enabled = "1" if enabled_var.get() else "0"
@@ -2614,7 +2374,7 @@ class MPManagerApp:
                 values[1:5] = [displayed_category, filename, enabled, description]
                 values[5] = status_labels["recognized"]
                 values[6] = detection_labels["manual"]
-                values[8] = "Người dùng đã xác nhận loại nguồn này."
+                values[8] = t("manifest_user_confirmed_reason")
                 tree.item(item_id, values=values)
             else:
                 tree.insert(
@@ -2623,7 +2383,7 @@ class MPManagerApp:
                     values=(
                         "", displayed_category, filename, enabled, description,
                         status_labels["recognized"], detection_labels["manual"], "",
-                        "Người dùng đã xác nhận loại nguồn này.",
+                        t("manifest_user_confirmed_reason"),
                     ),
                 )
             refresh_order_numbers()
@@ -2632,14 +2392,14 @@ class MPManagerApp:
         def ignore_selected() -> None:
             item_id = selected_item()
             if not item_id:
-                messagebox.showwarning("Chưa chọn tệp", "Chọn một dòng cần bỏ qua trước.")
+                messagebox.showwarning(t("no_file_selected_title"), t("source_order_no_file_selected_msg"))
                 return
             values = list(tree.item(item_id, "values"))
             values[1] = ""
             values[3] = "0"
             values[5] = status_labels["ignored"]
             values[6] = detection_labels["manual"]
-            values[8] = "Người dùng đã chủ động bỏ qua; tệp vẫn được lưu trong danh sách để truy vết."
+            values[8] = t("manifest_user_ignored_reason")
             tree.item(item_id, values=values)
             update_summary()
 
@@ -2666,42 +2426,44 @@ class MPManagerApp:
         def save_manifest() -> None:
             try:
                 saved_path = write_source_manifest_xlsx(source_dir, rows_from_tree())
-                self.log(f"Đã lưu thứ tự tệp nguồn: {saved_path}")
-                messagebox.showinfo("Đã lưu", f"Đã lưu cấu hình:\n{saved_path}")
+                self.log(t("manifest_saved_notification", path=saved_path))
+                messagebox.showinfo(t("manifest_save_success_title"), t("manifest_save_success_msg", path=saved_path))
                 self._mark_preflight_stale(force_refresh=True)
             except Exception as exc:
-                messagebox.showerror("Lỗi", f"Không lưu được thứ tự tệp nguồn:\n{exc}")
+                messagebox.showerror(t("manifest_save_err_title"), t("manifest_save_err_msg", error=str(exc)))
 
         tree.bind("<<TreeviewSelect>>", fill_form_from_selection)
         load_rows()
 
         buttons = ttk.Frame(frame)
         buttons.grid(row=4, column=0, columnspan=6, sticky="w", pady=(10, 0))
-        ttk.Button(buttons, text="Thêm/Cập nhật", command=add_or_update).grid(row=0, column=0, padx=(0, 6))
-        ttk.Button(buttons, text="Xác nhận loại", command=add_or_update).grid(row=0, column=1, padx=(0, 6))
-        ttk.Button(buttons, text="Bỏ qua tệp", command=ignore_selected).grid(row=0, column=2, padx=(0, 6))
-        ttk.Button(buttons, text="Xóa dòng", command=remove_selected).grid(row=0, column=3, padx=(0, 6))
-        ttk.Button(buttons, text="Lên", command=lambda: move_selected(-1)).grid(row=0, column=4, padx=(0, 6))
-        ttk.Button(buttons, text="Xuống", command=lambda: move_selected(1)).grid(row=0, column=5, padx=(0, 6))
-        ttk.Button(buttons, text="Lưu", command=save_manifest).grid(row=0, column=6, padx=(0, 6))
-        ttk.Button(buttons, text="Đóng", command=editor.destroy).grid(row=0, column=7, padx=(0, 6))
+        ttk.Button(buttons, text=t("btn_add_update"), command=add_or_update).grid(row=0, column=0, padx=(0, 6))
+        ttk.Button(buttons, text=t("btn_confirm_type"), command=add_or_update).grid(row=0, column=1, padx=(0, 6))
+        ttk.Button(buttons, text=t("btn_ignore_file"), command=ignore_selected).grid(row=0, column=2, padx=(0, 6))
+        ttk.Button(buttons, text=t("btn_delete_row"), command=remove_selected).grid(row=0, column=3, padx=(0, 6))
+        ttk.Button(buttons, text=t("btn_move_up"), command=lambda: move_selected(-1)).grid(row=0, column=4, padx=(0, 6))
+        ttk.Button(buttons, text=t("btn_move_down"), command=lambda: move_selected(1)).grid(row=0, column=5, padx=(0, 6))
+        ttk.Button(buttons, text=t("btn_save"), command=save_manifest).grid(row=0, column=6, padx=(0, 6))
+        ttk.Button(buttons, text=t("btn_close"), command=editor.destroy).grid(row=0, column=7, padx=(0, 6))
 
         frame.rowconfigure(2, weight=1)
         frame.columnconfigure(2, weight=1)
 
-    ALL_COST_CENTERS_LABEL = "Tất cả Trung tâm chi phí"
+    @property
+    def ALL_COST_CENTERS_LABEL(self) -> str:
+        return t("all_cost_centers_label")
 
     def _update_cc_selection_summary(self) -> None:
         selected = list(getattr(self, "_selected_cc_values", []))
         available = list(getattr(self, "_available_cc_choices", []))
         if not selected:
-            summary = "Chưa chọn Trung tâm chi phí"
+            summary = t("no_cc_selected")
         elif available and len(selected) == len(available):
-            summary = f"{self.ALL_COST_CENTERS_LABEL} ({len(available)})"
+            summary = t("all_cc_selected", count=len(available))
         elif len(selected) == 1:
             summary = selected[0]
         else:
-            summary = f"Đã chọn {len(selected)} Trung tâm chi phí"
+            summary = t("selected_cc_count", count=len(selected))
         self.cc_code_filter.set(summary)
 
     def _set_cc_choices(self, choices) -> None:
@@ -2716,13 +2478,13 @@ class MPManagerApp:
         choices = list(getattr(self, "_available_cc_choices", []))
         if not choices:
             messagebox.showwarning(
-                "Chưa có Trung tâm chi phí",
-                "Danh sách Trung tâm chi phí đang trống. Hãy bấm “Nạp lại CC từ FORM” trước.",
+                t("no_cc_warning_title"),
+                t("no_cc_warning_msg"),
             )
             return
 
         dialog = tk.Toplevel(self.root)
-        dialog.title("Chọn một hoặc nhiều Trung tâm chi phí")
+        dialog.title(t("cc_dialog_title"))
         dialog.geometry("660x600")
         dialog.minsize(520, 420)
         dialog.transient(self.root)
@@ -2730,12 +2492,12 @@ class MPManagerApp:
 
         ttk.Label(
             dialog,
-            text="Chọn phòng cần tính toán",
+            text=t("cc_dialog_heading"),
             font=("Segoe UI", 14, "bold"),
         ).pack(anchor="w", padx=18, pady=(16, 4))
         ttk.Label(
             dialog,
-            text="Có thể chọn nhiều phòng trong cùng một lần chạy.",
+            text=t("cc_dialog_desc"),
         ).pack(anchor="w", padx=18, pady=(0, 10))
 
         list_shell = ttk.Frame(dialog)
@@ -2779,12 +2541,12 @@ class MPManagerApp:
 
         actions = ttk.Frame(dialog)
         actions.pack(fill="x", padx=18, pady=14)
-        ttk.Button(actions, text="Chọn tất cả", command=lambda: set_all(True)).pack(side="left")
-        ttk.Button(actions, text="Bỏ chọn tất cả", command=lambda: set_all(False)).pack(
+        ttk.Button(actions, text=t("btn_select_all"), command=lambda: set_all(True)).pack(side="left")
+        ttk.Button(actions, text=t("btn_deselect_all"), command=lambda: set_all(False)).pack(
             side="left", padx=(6, 0)
         )
-        ttk.Button(actions, text="Hủy", command=dialog.destroy).pack(side="right")
-        ttk.Button(actions, text="Áp dụng", style="Primary.TButton", command=apply_selection).pack(
+        ttk.Button(actions, text=t("btn_cancel"), command=dialog.destroy).pack(side="right")
+        ttk.Button(actions, text=t("btn_apply"), style="Primary.TButton", command=apply_selection).pack(
             side="right", padx=(0, 6)
         )
         dialog.bind("<Escape>", lambda _event: dialog.destroy())
@@ -2795,7 +2557,7 @@ class MPManagerApp:
 
         if not os.path.exists(db_path):
             self._set_cc_choices([])
-            self.log("Chưa có dữ liệu nền. Hãy bấm 'Nạp lại CC từ FORM'.")
+            self.log(t("cc_no_base_data"))
             return
 
         conn = None
@@ -2804,10 +2566,10 @@ class MPManagerApp:
             rows = conn.execute("SELECT code, name_jp FROM dim_cost_centers ORDER BY code").fetchall()
             self._set_cc_choices([f"{row['code']} - {row['name_jp']}" for row in rows])
             if not rows:
-                self.log("Danh sách CC trong CSDL đang trống. Hãy bấm 'Nạp lại CC từ FORM'.")
+                self.log(t("cc_empty_in_db"))
         except Exception as exc:
             self._set_cc_choices([])
-            self.log(f"Lỗi khi nạp danh sách CC: {exc}")
+            self.log(t("cc_load_error", error=exc))
         finally:
             if conn is not None:
                 conn.close()
@@ -2826,7 +2588,7 @@ class MPManagerApp:
                     "SELECT code, name_jp FROM dim_cost_centers ORDER BY code"
                 ).fetchall()
                 self._set_cc_choices([f"{row['code']} - {row['name_jp']}" for row in rows])
-                self.log(f"Đã làm mới danh sách {current_count} Trung tâm chi phí từ CSDL.")
+                self.log(t("cc_refreshed_from_db", count=current_count))
                 return
 
             template = self.template_path.get().strip()
@@ -2836,21 +2598,21 @@ class MPManagerApp:
 
             loaded_count = load_cost_centers(conn, template)
             if loaded_count <= 0:
-                raise RuntimeError("FORM không chứa Trung tâm chi phí hợp lệ để nạp vào CSDL.")
+                raise RuntimeError(t("cc_form_no_valid_cc"))
 
             rows = conn.execute(
                 "SELECT code, name_jp FROM dim_cost_centers ORDER BY code"
             ).fetchall()
             self._set_cc_choices([f"{row['code']} - {row['name_jp']}" for row in rows])
-            self.log(f"Đã nạp {loaded_count} Trung tâm chi phí từ FORM và làm mới danh sách.")
+            self.log(t("cc_loaded_from_form", count=loaded_count))
             messagebox.showinfo(
-                "Nạp Trung tâm chi phí thành công",
-                f"Đã nạp {loaded_count} Trung tâm chi phí từ:\n{template}",
+                t("reload_cc_success_title"),
+                t("reload_cc_success_msg", count=loaded_count),
             )
         except Exception as exc:
             message = _friendly_error_message(exc)
-            self.log(f"Không thể nạp Trung tâm chi phí từ FORM: {message}")
-            messagebox.showerror("Không thể nạp Trung tâm chi phí", message)
+            self.log(t("cc_cannot_load_from_form", message=message))
+            messagebox.showerror(t("reload_cc_failed_title"), message)
         finally:
             if conn is not None:
                 conn.close()
@@ -2867,9 +2629,9 @@ class MPManagerApp:
                 return
 
         self.syncing_master = True
-        self.log("--- TỰ ĐỘNG KHỞI TẠO DỮ LIỆU ---")
-        self.log(f"Tệp mẫu đang dùng: {template}")
-        self.log(f"Thư mục nguồn đang dùng: {self.source_dir.get() or BASE_DIR}")
+        self.log(t("auto_init_heading"))
+        self.log(t("auto_init_template", path=template))
+        self.log(t("auto_init_source", path=self.source_dir.get() or BASE_DIR))
         
         def run_sync():
             try:
@@ -2882,10 +2644,10 @@ class MPManagerApp:
                     fiscal_year=fiscal_year,
                     content_rules=content_rules,
                 )
-                self.log("Tự động nạp dữ liệu gốc THÀNH CÔNG.")
+                self.log(t("auto_init_success"))
                 self._run_on_ui_thread(lambda: self.root.after(100, self.load_cc_list))
             except Exception as e:
-                self.log(f"Tự động nạp dữ liệu thất bại: {e}")
+                self.log(t("auto_init_failed", error=e))
             finally:
                 self._run_on_ui_thread(setattr, self, "syncing_master", False)
 
@@ -2952,11 +2714,11 @@ class MPManagerApp:
             from src.ui.tabs.variance_tab import VarianceTab
         except ImportError as e:
             from tkinter import messagebox
-            messagebox.showerror("Thiếu thư viện", "Tính năng này cần thư viện pandas/openpyxl. Vui lòng cài đặt đầy đủ dependencies.")
+            messagebox.showerror(t("missing_lib_title"), t("missing_lib_msg"))
             return
 
         editor = tk.Toplevel(self.root)
-        editor.title("So Sánh Biến Động MP (YoY)")
+        editor.title(t("variance_analysis_btn"))
         width, height = MPManagerApp._initial_window_size(self.root.winfo_screenwidth(), self.root.winfo_screenheight())
         editor.geometry(f"{width}x{height}")
         editor.minsize(800, 600)
@@ -2964,33 +2726,33 @@ class MPManagerApp:
 
     def open_user_guide(self):
         guide = tk.Toplevel(self.root)
-        guide.title("Hướng dẫn trực quan")
+        guide.title(t("user_guide_title"))
         guide.geometry("920x700")
         guide.minsize(760, 560)
 
         frame = ttk.Frame(guide, padding=14)
         frame.pack(fill=tk.BOTH, expand=True)
-        ttk.Label(frame, text="Hướng dẫn trực quan", style="Header.TLabel").pack(anchor="w")
+        ttk.Label(frame, text=t("user_guide_title"), style="Header.TLabel").pack(anchor="w")
         ttk.Label(
             frame,
-            text="Bắt đầu bằng sơ đồ 5 bước; mở thẻ Tra cứu chi tiết khi cần tìm một nghiệp vụ cụ thể.",
+            text=t("user_guide_subtitle"),
         ).pack(anchor="w", pady=(2, 10))
 
         notebook = ttk.Notebook(frame)
         notebook.pack(fill=tk.BOTH, expand=True)
         quick = ttk.Frame(notebook, padding=14)
         details = ttk.Frame(notebook, padding=8)
-        notebook.add(quick, text="Bắt đầu nhanh 1 → 5")
-        notebook.add(details, text="Tra cứu chi tiết")
+        notebook.add(quick, text=t("user_guide_quick_tab"))
+        notebook.add(details, text=t("user_guide_detail_tab"))
 
         diagram = tk.Canvas(quick, height=210, bg="#f7f9fc", highlightthickness=1, highlightbackground="#d7deea")
         diagram.pack(fill="x")
         steps = (
-            ("1", "CHỌN NĂM", "Ví dụ: năm tài chính 2028"),
-            ("2", "CHỌN NGUỒN", "FORM + 2 thư mục"),
-            ("3", "KIỂM TRA", "Đọc màu trạng thái"),
-            ("4", "BỔ SUNG", "Nếu nghiệp vụ có"),
-            ("5", "CHẠY", "Thử 1 phòng trước"),
+            ("1", t("user_guide_step1"), t("user_guide_step1_hint")),
+            ("2", t("user_guide_step2"), t("user_guide_step2_hint")),
+            ("3", t("user_guide_step3"), t("user_guide_step3_hint")),
+            ("4", t("user_guide_step4"), t("user_guide_step4_hint")),
+            ("5", t("user_guide_step5"), t("user_guide_step5_hint")),
         )
 
         def draw_diagram(_event=None):
@@ -3007,17 +2769,17 @@ class MPManagerApp:
                 diagram.create_text(center, 70, text=number, fill="white", font=("Segoe UI", 16, "bold"))
                 diagram.create_text(center, 125, text=title, fill="#1f344d", font=("Segoe UI", 9, "bold"))
                 diagram.create_text(center, 148, text=subtitle, fill="#556273", font=("Segoe UI", 8))
-            diagram.create_text(width / 2, 185, text="Không cần nhớ mọi thứ: làm từ trái sang phải và đọc dòng “Việc cần làm tiếp theo” trên màn hình chính.", fill="#33455d", font=("Segoe UI", 9, "italic"))
+            diagram.create_text(width / 2, 185, text=t("user_guide_diagram_tip"), fill="#33455d", font=("Segoe UI", 9, "italic"))
 
         diagram.bind("<Configure>", draw_diagram)
 
-        ttk.Label(quick, text="Hiểu màu trước khi bấm chạy", style="WorkflowTitle.TLabel").pack(anchor="w", pady=(14, 8))
+        ttk.Label(quick, text=t("user_guide_color_title"), style="WorkflowTitle.TLabel").pack(anchor="w", pady=(14, 8))
         legend = ttk.Frame(quick)
         legend.pack(fill="x")
         legend_items = (
-            ("#dff4ea", "#176b4d", "XANH — Có thể chạy", "Nguồn đã đủ và đúng năm."),
-            ("#fff1cf", "#855b00", "VÀNG — Có thể cân nhắc chạy", "Thiếu nguồn độc lập; kết quả sẽ được đánh dấu CHƯA ĐẦY ĐỦ."),
-            ("#fde4e1", "#9b2c24", "ĐỎ — Chưa được chạy", "Sai năm, sai FORM, lỗi nguồn bắt buộc hoặc dữ liệu không đọc được."),
+            ("#dff4ea", "#176b4d", t("user_guide_green_title"), t("user_guide_green_desc")),
+            ("#fff1cf", "#855b00", t("user_guide_yellow_title"), t("user_guide_yellow_desc")),
+            ("#fde4e1", "#9b2c24", t("user_guide_red_title"), t("user_guide_red_desc")),
         )
         for column, (background, foreground, title, body) in enumerate(legend_items):
             legend.columnconfigure(column, weight=1, uniform="legend")
@@ -3028,22 +2790,22 @@ class MPManagerApp:
 
         tip = tk.Frame(quick, bg="#e8f1ff", highlightthickness=1, highlightbackground="#6b82a6")
         tip.pack(fill="x", pady=(14, 0), ipady=8)
-        tk.Label(tip, text="MẸO AN TOÀN", bg="#e8f1ff", fg="#2457a6", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=10)
-        tk.Label(tip, text="Chạy thử một Trung tâm chi phí, mở tệp kết quả để đối chiếu, sau đó mới chạy toàn bộ.", bg="#e8f1ff", fg="#2457a6", font=("Segoe UI", 9)).pack(anchor="w", padx=10, pady=(2, 0))
+        tk.Label(tip, text=t("user_guide_safety_tip_title"), bg="#e8f1ff", fg="#2457a6", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=10)
+        tk.Label(tip, text=t("user_guide_safety_tip_body"), bg="#e8f1ff", fg="#2457a6", font=("Segoe UI", 9)).pack(anchor="w", padx=10, pady=(2, 0))
 
         search_bar = ttk.Frame(details)
         search_bar.pack(fill="x", pady=(0, 8))
-        ttk.Label(search_bar, text="Tìm nhanh:").pack(side="left")
+        ttk.Label(search_bar, text=t("user_guide_search_label")).pack(side="left")
         search_var = tk.StringVar()
         search_entry = ttk.Entry(search_bar, textvariable=search_var)
         search_entry.pack(side="left", fill="x", expand=True, padx=(8, 6))
-        search_status = ttk.Label(search_bar, text="Nhập từ khóa để lọc hướng dẫn")
+        search_status = ttk.Label(search_bar, text=t("user_guide_search_hint"))
         search_status.pack(side="right", padx=(8, 0))
 
         suggestions = ttk.Frame(details)
         suggestions.pack(fill="x", pady=(0, 8))
-        ttk.Label(suggestions, text="Từ khóa gợi ý:").pack(side="left")
-        for keyword in ("cập nhật", "Nam Nữ", "nguồn", "tỷ giá", "kết quả"):
+        ttk.Label(suggestions, text=t("user_guide_suggestions_label")).pack(side="left")
+        for keyword in get_user_guide_search_suggestions():
             ttk.Button(
                 suggestions,
                 text=keyword,
@@ -3054,55 +2816,55 @@ class MPManagerApp:
         guide_text.pack(fill=tk.BOTH, expand=True)
 
         def refresh_search(*_args):
-            rendered, count = filter_user_guide_text(USER_GUIDE_TEXT_LATEST, search_var.get())
+            rendered, count = filter_user_guide_text(get_user_guide_text(), search_var.get())
             guide_text.configure(state=tk.NORMAL)
             guide_text.delete("1.0", tk.END)
             guide_text.insert("1.0", rendered)
             guide_text.configure(state=tk.DISABLED)
             guide_text.yview_moveto(0.0)
             if search_var.get().strip():
-                search_status.configure(text=f"{count} mục phù hợp" if count else "Không có kết quả")
+                search_status.configure(text=t("user_guide_search_match", count=count) if count else t("user_guide_search_no_match"))
             else:
-                search_status.configure(text="Nhập từ khóa để lọc hướng dẫn")
+                search_status.configure(text=t("user_guide_search_hint"))
 
         search_var.trace_add("write", refresh_search)
         refresh_search()
 
-        ttk.Button(frame, text="Đã hiểu — Đóng", command=guide.destroy).pack(anchor="e", pady=(10, 0))
+        ttk.Button(frame, text=t("user_guide_close_btn"), command=guide.destroy).pack(anchor="e", pady=(10, 0))
 
     def open_run_history(self):
         history_root = self._project_paths().history_root
         dialog = tk.Toplevel(self.root)
-        dialog.title("Lịch sử các lần chạy")
+        dialog.title(t("run_history_dialog_title"))
         dialog.geometry("1180x620")
         frame = ttk.Frame(dialog, padding=12)
         frame.pack(fill=tk.BOTH, expand=True)
         fiscal_var = tk.StringVar(value=str(self._current_fiscal_year()))
         status_labels = {
-            "": "Tất cả",
-            "PRECHECK_FAILED": "Chưa chạy — nguồn chưa đạt",
-            "RUNNING": "Đang chạy",
-            "SUCCEEDED": "Hoàn tất",
-            "SUCCEEDED_INCOMPLETE": "Hoàn tất — chưa đầy đủ",
-            "FAILED": "Không hoàn tất",
-            "LEGACY_FY2027": "Dữ liệu lịch sử năm tài chính 2027",
+            "": t("history_status_all"),
+            "PRECHECK_FAILED": t("history_status_precheck_failed"),
+            "RUNNING": t("history_status_running"),
+            "SUCCEEDED": t("history_status_succeeded"),
+            "SUCCEEDED_INCOMPLETE": t("history_status_succeeded_incomplete"),
+            "FAILED": t("history_status_failed"),
+            "LEGACY_FY2027": t("history_status_legacy"),
         }
         status_values = {label: code for code, label in status_labels.items()}
-        status_var = tk.StringVar(value="Tất cả")
+        status_var = tk.StringVar(value=t("history_status_all"))
         cc_var = tk.StringVar()
         item_var = tk.StringVar()
         date_var = tk.StringVar()
         filters = ttk.Frame(frame)
         filters.pack(fill=tk.X, pady=(0, 8))
         for index, (label, variable, width) in enumerate((
-            ("Năm tài chính", fiscal_var, 10),
-            ("Trạng thái", status_var, 18),
-            ("Mã phòng", cc_var, 16),
-            ("Hạng mục", item_var, 18),
-            ("Ngày chạy", date_var, 16),
+            (t("history_filter_fiscal_year"), fiscal_var, 10),
+            (t("history_filter_status"), status_var, 18),
+            (t("history_filter_cc"), cc_var, 16),
+            (t("history_filter_item"), item_var, 18),
+            (t("history_filter_date"), date_var, 16),
         )):
             ttk.Label(filters, text=label).grid(row=0, column=index * 2, sticky="w", padx=(0 if index == 0 else 8, 3))
-            if label == "Trạng thái":
+            if label == t("history_filter_status"):
                 widget = ttk.Combobox(
                     filters,
                     textvariable=variable,
@@ -3116,7 +2878,7 @@ class MPManagerApp:
         columns = ("run_id", "status", "started_at", "finished_at", "selected_cost_center", "output_path", "error_summary")
         table = ttk.Treeview(frame, columns=columns, show="headings")
         widths = {"run_id": 170, "status": 170, "started_at": 150, "finished_at": 150, "selected_cost_center": 120, "output_path": 210, "error_summary": 260}
-        labels = {"run_id": "Mã lần chạy", "status": "Trạng thái", "started_at": "Bắt đầu", "finished_at": "Kết thúc", "selected_cost_center": "Mã phòng", "output_path": "Kết quả", "error_summary": "Ghi chú"}
+        labels = {"run_id": t("history_col_run_id"), "status": t("history_col_status"), "started_at": t("history_col_started"), "finished_at": t("history_col_finished"), "selected_cost_center": t("history_col_cc"), "output_path": t("history_col_output"), "error_summary": t("history_col_error")}
         for column in columns:
             table.heading(column, text=labels[column])
             table.column(column, width=widths[column], stretch=True)
@@ -3148,19 +2910,19 @@ class MPManagerApp:
                 render_rows(rows or [])
             else:
                 messagebox.showerror(
-                    "Không đọc được lịch sử",
+                    t("history_read_failed_title"),
                     str(error),
                     parent=dialog,
                 )
             if filter_button is not None:
-                filter_button.configure(state=tk.NORMAL, text="Lọc")
+                filter_button.configure(state=tk.NORMAL, text=t("btn_filter"))
 
         def refresh():
             nonlocal filter_button
             try:
                 fiscal_year = int(fiscal_var.get()) if fiscal_var.get().strip() else None
             except ValueError:
-                messagebox.showerror("Bộ lọc không hợp lệ", "Năm tài chính phải là số.", parent=dialog)
+                messagebox.showerror(t("invalid_filter_title"), t("invalid_fiscal_year_number_msg"), parent=dialog)
                 return
 
             filter_token["value"] += 1
@@ -3172,7 +2934,7 @@ class MPManagerApp:
                 "run_date": date_var.get().strip(),
             }
             if filter_button is not None:
-                filter_button.configure(state=tk.DISABLED, text="Đang lọc…")
+                filter_button.configure(state=tk.DISABLED, text=t("btn_filtering"))
 
             def worker() -> None:
                 try:
@@ -3190,7 +2952,7 @@ class MPManagerApp:
 
         def open_path(path: str):
             if not path or not os.path.exists(path):
-                messagebox.showerror("Không tìm thấy", "Tệp hoặc thư mục của lần chạy này không còn tồn tại.", parent=dialog)
+                messagebox.showerror(t("not_found_title"), t("run_file_not_found_msg"), parent=dialog)
                 return
             os.startfile(path)  # type: ignore[attr-defined]
 
@@ -3207,17 +2969,17 @@ class MPManagerApp:
             workspace = os.path.dirname(database_path) if database_path else ""
             open_path(os.path.join(workspace, relative))
 
-        filter_button = ttk.Button(filters, text="Lọc", command=refresh)
+        filter_button = ttk.Button(filters, text=t("btn_filter"), command=refresh)
         filter_button.grid(row=0, column=10, padx=(12, 0))
         actions = ttk.Frame(frame)
         actions.pack(fill=tk.X, pady=(8, 0))
-        ttk.Button(actions, text="Mở kết quả", command=open_output).pack(side=tk.LEFT)
-        ttk.Button(actions, text="Báo cáo kiểm tra", command=lambda: open_run_file(os.path.join("reports", "preflight_report.md"))).pack(side=tk.LEFT, padx=6)
-        ttk.Button(actions, text="Nhật ký đồng phục", command=lambda: open_run_file("run.db")).pack(side=tk.LEFT)
-        ttk.Button(actions, text="Nhật ký tài sản", command=lambda: open_run_file("run.db")).pack(side=tk.LEFT, padx=6)
-        ttk.Button(actions, text="Mở CSDL lần chạy", command=lambda: open_run_file("run.db")).pack(side=tk.LEFT)
+        ttk.Button(actions, text=t("btn_open_output"), command=open_output).pack(side=tk.LEFT)
+        ttk.Button(actions, text=t("btn_open_preflight"), command=lambda: open_run_file(os.path.join("reports", "preflight_report.md"))).pack(side=tk.LEFT, padx=6)
+        ttk.Button(actions, text=t("btn_open_uniform_log"), command=lambda: open_run_file("run.db")).pack(side=tk.LEFT)
+        ttk.Button(actions, text=t("btn_open_asset_log"), command=lambda: open_run_file("run.db")).pack(side=tk.LEFT, padx=6)
+        ttk.Button(actions, text=t("btn_open_run_db"), command=lambda: open_run_file("run.db")).pack(side=tk.LEFT)
         refresh()
-        ttk.Label(frame, text="Lịch sử chỉ để tra cứu; không thể sửa dữ liệu của lần chạy cũ.").pack(anchor="w", pady=(8, 0))
+        ttk.Label(frame, text=t("history_note")).pack(anchor="w", pady=(8, 0))
 
     def open_headcount_editor(self):
         try:
@@ -3230,13 +2992,13 @@ class MPManagerApp:
         csv_path = ensure_manual_headcount_template(source_dir, fiscal_year)
 
         editor = tk.Toplevel(self.root)
-        editor.title("Nhập liệu nhân sự thủ công")
+        editor.title(t("manual_headcount_title"))
         editor.geometry("1020x600")
 
         frame = ttk.Frame(editor, padding=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Label(frame, text=f"Tệp lưu dữ liệu: {csv_path}", font=("Segoe UI", 9, "italic")).grid(
+        ttk.Label(frame, text=t("data_file_label", path=csv_path), font=("Segoe UI", 9, "italic")).grid(
             row=0, column=0, columnspan=6, sticky="w"
         )
 
@@ -3249,30 +3011,30 @@ class MPManagerApp:
         cc_choices = self._get_cc_choices()
         periods = get_required_headcount_periods(fiscal_year)
 
-        ttk.Label(frame, text="Mã CC").grid(row=1, column=0, sticky="w", pady=5)
+        ttk.Label(frame, text=t("event_label_cc")).grid(row=1, column=0, sticky="w", pady=5)
         cc_combo = ttk.Combobox(frame, textvariable=cc_var, values=cc_choices, width=34)
         cc_combo.grid(row=1, column=1, sticky="w")
 
-        ttk.Label(frame, text="Kỳ (Tháng)").grid(row=1, column=2, sticky="w", pady=5, padx=(8, 0))
+        ttk.Label(frame, text=t("hc_time_header_period")).grid(row=1, column=2, sticky="w", pady=5, padx=(8, 0))
         period_combo = ttk.Combobox(frame, textvariable=period_var, values=periods, width=12)
         period_combo.grid(row=1, column=3, sticky="w")
 
-        ttk.Label(frame, text="Nhân viên").grid(row=2, column=0, sticky="w", pady=5)
+        ttk.Label(frame, text=t("hc_header_staff")).grid(row=2, column=0, sticky="w", pady=5)
         ttk.Entry(frame, textvariable=staff_var, width=14).grid(row=2, column=1, sticky="w")
-        ttk.Label(frame, text="Công nhân").grid(row=2, column=2, sticky="w", pady=5, padx=(8, 0))
+        ttk.Label(frame, text=t("hc_header_worker")).grid(row=2, column=2, sticky="w", pady=5, padx=(8, 0))
         ttk.Entry(frame, textvariable=worker_var, width=14).grid(row=2, column=3, sticky="w")
 
-        ttk.Label(frame, text="Mô tả").grid(row=3, column=0, sticky="w", pady=5)
+        ttk.Label(frame, text=t("event_col_desc")).grid(row=3, column=0, sticky="w", pady=5)
         ttk.Entry(frame, textvariable=desc_var, width=66).grid(row=3, column=1, columnspan=4, sticky="w")
 
         columns = ("cc_code", "period", "headcount_staff", "headcount_worker", "description")
         tree = ttk.Treeview(frame, columns=columns, show="headings", height=18)
         for col, width, anchor, text in [
-            ("cc_code", 130, "w", "Mã CC"),
-            ("period", 100, "w", "Kỳ"),
-            ("headcount_staff", 130, "w", "Nhân viên"),
-            ("headcount_worker", 130, "w", "Công nhân"),
-            ("description", 470, "w", "Mô tả"),
+            ("cc_code", 130, "w", t("event_label_cc")),
+            ("period", 100, "w", t("event_col_period")),
+            ("headcount_staff", 130, "w", t("hc_header_staff")),
+            ("headcount_worker", 130, "w", t("hc_header_worker")),
+            ("description", 470, "w", t("event_col_desc")),
         ]:
             tree.heading(col, text=text)
             tree.column(col, width=width, anchor=anchor)
@@ -3326,8 +3088,8 @@ class MPManagerApp:
             desc = desc_var.get().strip()
             if not cc_code or not period:
                 messagebox.showerror(
-                    "Thiếu thông tin",
-                    "Vui lòng nhập đầy đủ Mã Trung tâm chi phí (CC) và Kỳ hạch toán (YYYYMM).\n\nCách xử lý: Điền mã CC và chọn kỳ trước khi bấm Lưu."
+                    t("missing_info_title"),
+                    t("missing_info_msg")
                 )
                 return
             try:
@@ -3336,8 +3098,8 @@ class MPManagerApp:
                 float(worker)
             except Exception:
                 messagebox.showerror(
-                    "Dữ liệu không hợp lệ",
-                    "Mã CC, số lượng nhân viên hoặc công nhân phải là giá trị số hợp lệ.\n\nCách xử lý: Kiểm tra lại các ô nhập liệu và chỉ nhập số."
+                    t("invalid_numeric_title"),
+                    t("invalid_numeric_msg")
                 )
                 return
             selected = tree.selection()
@@ -3394,7 +3156,8 @@ class MPManagerApp:
             finally:
                 conn.close()
             self.log(
-                "Đã lưu nhân sự thủ công: {rows} hàng -> {path}; đã nạp vào dữ liệu={inserted}, lỗi={errors}".format(
+                t(
+                    "hc_saved_manual_summary",
                     rows=len(rows),
                     path=csv_path,
                     inserted=result.get("inserted", 0),
@@ -3402,20 +3165,16 @@ class MPManagerApp:
                 )
             )
             messagebox.showinfo(
-                "Đã lưu",
-                "Đã lưu {rows} hàng. Đã nạp vào dữ liệu={inserted}, lỗi={errors}.".format(
-                    rows=len(rows),
-                    inserted=result.get("inserted", 0),
-                    errors=result.get("errors", 0),
-                ),
+                t("save_success_title"),
+                t("manual_hc_save_success_msg", rows=len(rows), inserted=result.get("inserted", 0), errors=result.get("errors", 0)),
             )
 
         btn = ttk.Frame(frame)
         btn.grid(row=4, column=0, columnspan=6, sticky="w", pady=(6, 0))
-        ttk.Button(btn, text="Thêm/Cập nhật", command=add_or_update).grid(row=0, column=0, padx=(0, 6))
-        ttk.Button(btn, text="Xóa đã chọn", command=remove_selected).grid(row=0, column=1, padx=(0, 6))
-        ttk.Button(btn, text="Lưu tệp", command=save_file).grid(row=0, column=2, padx=(0, 6))
-        ttk.Button(btn, text="Đóng", command=editor.destroy).grid(row=0, column=3, padx=(0, 6))
+        ttk.Button(btn, text=t("btn_add_update"), command=add_or_update).grid(row=0, column=0, padx=(0, 6))
+        ttk.Button(btn, text=t("btn_delete_selected"), command=remove_selected).grid(row=0, column=1, padx=(0, 6))
+        ttk.Button(btn, text=t("btn_save_file"), command=save_file).grid(row=0, column=2, padx=(0, 6))
+        ttk.Button(btn, text=t("btn_close"), command=editor.destroy).grid(row=0, column=3, padx=(0, 6))
 
         tree.bind("<<TreeviewSelect>>", on_select)
         load_rows()
@@ -3428,34 +3187,34 @@ class MPManagerApp:
         periods = get_required_headcount_periods(fiscal_year)
         fy_periods = set(get_fy_months(fiscal_year))
         editor = tk.Toplevel(self.root)
-        editor.title("Nhập liệu nhân sự 12 tháng")
+        editor.title(t("headcount_editor_title"))
         editor.geometry("1180x800")
         frame = ttk.Frame(editor, padding=10); frame.pack(fill=tk.BOTH, expand=True)
-        ttk.Label(frame, text="Số nhân viên, công nhân và tổng người của 12 tháng trong năm tài chính lấy từ kế hoạch phòng ban. Nam/Nữ là dữ liệu bổ sung. Dữ liệu mốc tháng 3 được nhập riêng để tính chi phí tháng 4.", font=("Segoe UI",9,"italic")).pack(anchor="w")
+        ttk.Label(frame, text=t("hc_v2_instruction"), font=("Segoe UI",9,"italic")).pack(anchor="w")
         top = ttk.Frame(frame); top.pack(fill="x", pady=8)
-        ttk.Label(top,text="Mã CC").pack(side="left")
+        ttk.Label(top,text=t("hc_v2_cc_label")).pack(side="left")
         cc_var=tk.StringVar(); cc_combo=ttk.Combobox(top,textvariable=cc_var,values=self._get_cc_choices(),width=42,state="readonly"); cc_combo.pack(side="left",padx=6)
-        source_status=tk.StringVar(value="Chưa có dữ liệu nguồn"); ttk.Label(top,textvariable=source_status).pack(side="left",padx=8)
+        source_status=tk.StringVar(value=t("hc_v2_no_source")); ttk.Label(top,textvariable=source_status).pack(side="left",padx=8)
         bus_exp=tk.StringVar(value="0"); bus_vn=tk.StringVar(value="0"); bus_note=tk.StringVar()
-        bus=ttk.LabelFrame(frame,text="Thông tin xe buýt — nhập riêng, dùng chung cho 12 tháng"); bus.pack(fill="x",pady=(0,8))
-        for label,var in (("Người biệt phái đi xe buýt",bus_exp),("Người Việt Nam đi xe buýt",bus_vn)):
+        bus=ttk.LabelFrame(frame,text=t("hc_v2_bus_frame")); bus.pack(fill="x",pady=(0,8))
+        for label,var in ((t("hc_v2_bus_expat"),bus_exp),(t("hc_v2_bus_vn"),bus_vn)):
             ttk.Label(bus,text=label).pack(side="left",padx=(8,4)); ttk.Entry(bus,textvariable=var,width=10).pack(side="left")
-        ttk.Label(bus,text="Ghi chú").pack(side="left",padx=(12,4)); ttk.Entry(bus,textvariable=bus_note).pack(side="left",fill="x",expand=True,padx=(0,8))
+        ttk.Label(bus,text=t("hc_v2_note")).pack(side="left",padx=(12,4)); ttk.Entry(bus,textvariable=bus_note).pack(side="left",fill="x",expand=True,padx=(0,8))
         notebook=ttk.Notebook(frame); notebook.pack(fill="both",expand=True)
         people=ttk.Frame(notebook,padding=6); fixed=ttk.Frame(notebook,padding=6); overtime=ttk.Frame(notebook,padding=6)
-        notebook.add(people, text="Số người & bổ sung")
+        notebook.add(people, text=t("hc_v2_people_tab"))
         # Tạm ẩn hai tab nhập giờ; giữ nguyên frame, biến và logic để có thể bật lại khi cần.
         # notebook.add(fixed, text="Thời gian cố định")
         # notebook.add(overtime, text="Thời gian tăng ca")
         fields=("expat","staff","worker","male","female","total","note"); month_vars={p:{f:tk.StringVar() for f in fields} for p in periods}
-        headers=("Kỳ","Biệt phái","Nhân viên","Công nhân","Nam (T12)","Nữ (T12)","Tổng người","Ghi chú")
+        headers=(t("hc_time_header_period"),t("hc_header_expat"),t("hc_header_staff"),t("hc_header_worker"),"Nam (T12)","Nữ (T12)",t("hc_header_total"),t("hc_header_note"))
         for col,label in enumerate(headers): ttk.Label(people,text=label).grid(row=0,column=col,sticky="w",padx=3)
         def update_total(period):
             vals=month_vars[period]
             try: total=sum(float(vals[k].get() or 0) for k in ("expat","staff","worker")); vals["total"].set(f"{total:g}")
             except ValueError: vals["total"].set("?")
         for row,period in enumerate(periods,1):
-            label=f"Tháng {int(period[-2:])}" if period in fy_periods else f"Dữ liệu mốc tháng 3 ({period})"
+            label=t("hc_month_label", month=int(period[-2:])) if period in fy_periods else t("hc_baseline_label", period=period)
             ttk.Label(people,text=label).grid(row=row,column=0,sticky="w",padx=3,pady=2)
             for col,key,width in ((1,"expat",9),(2,"staff",11),(3,"worker",11),(4,"male",10),(5,"female",10)):
                 entry=ttk.Entry(people,textvariable=month_vars[period][key],width=width); entry.grid(row=row,column=col,padx=3,pady=2)
@@ -3465,14 +3224,14 @@ class MPManagerApp:
             total=ttk.Entry(people,textvariable=month_vars[period]["total"],width=11,state="readonly"); total.grid(row=row,column=6,padx=3)
             ttk.Entry(people,textvariable=month_vars[period]["note"],width=42).grid(row=row,column=7,sticky="ew",padx=3)
             if period not in fy_periods:
-                ttk.Label(people,text="Dùng tính 4 chi phí của tháng 4",foreground="#8A4B08").grid(row=row,column=8,sticky="w",padx=4)
+                ttk.Label(people,text=t("hc_baseline_hint"),foreground="#8A4B08").grid(row=row,column=8,sticky="w",padx=4)
         people.columnconfigure(7,weight=1)
         time_fields=("fixed_hours_expat","fixed_hours_local","overtime_hours_expat","overtime_hours_local")
         time_vars={p:{f:tk.StringVar() for f in time_fields} for p in get_fy_months(fiscal_year)}
-        ttk.Label(fixed,text="Có thể để trống; chương trình sẽ lưu 0 giờ.",font=("Segoe UI",9,"italic")).grid(row=0,column=0,columnspan=4,sticky="w",pady=(0,6))
-        ttk.Label(overtime,text="Có thể để trống; chương trình sẽ lưu 0 giờ.",font=("Segoe UI",9,"italic")).grid(row=0,column=0,columnspan=4,sticky="w",pady=(0,6))
+        ttk.Label(fixed,text=t("hc_hours_optional"),font=("Segoe UI",9,"italic")).grid(row=0,column=0,columnspan=4,sticky="w",pady=(0,6))
+        ttk.Label(overtime,text=t("hc_hours_optional"),font=("Segoe UI",9,"italic")).grid(row=0,column=0,columnspan=4,sticky="w",pady=(0,6))
         for tab in (fixed,overtime):
-            for col,label in enumerate(("Kỳ","Biệt phái","Người Việt","Tổng giờ")):
+            for col,label in enumerate((t("hc_time_header_period"),t("hc_time_header_expat"),t("hc_time_header_local"),t("hc_time_header_total"))):
                 ttk.Label(tab,text=label).grid(row=1,column=col,sticky="w",padx=4)
         def update_time_total(period, kind, total_var):
             jp_key=f"{kind}_hours_expat"; local_key=f"{kind}_hours_local"
@@ -3480,7 +3239,7 @@ class MPManagerApp:
             except ValueError: total_var.set("?")
         for row,period in enumerate(get_fy_months(fiscal_year),2):
             for tab,kind in ((fixed,"fixed"),(overtime,"overtime")):
-                ttk.Label(tab,text=f"Tháng {int(period[-2:])} ({period})").grid(row=row,column=0,sticky="w",padx=4,pady=2)
+                ttk.Label(tab,text=t("hc_time_month_label", month=int(period[-2:]), period=period)).grid(row=row,column=0,sticky="w",padx=4,pady=2)
                 jp_key=f"{kind}_hours_expat"; local_key=f"{kind}_hours_local"; total_var=tk.StringVar(value="0")
                 ttk.Entry(tab,textvariable=time_vars[period][jp_key],width=18).grid(row=row,column=1,padx=4,pady=2)
                 ttk.Entry(tab,textvariable=time_vars[period][local_key],width=18).grid(row=row,column=2,padx=4,pady=2)
@@ -3505,10 +3264,10 @@ class MPManagerApp:
             clear()
             cc = cc_code()
             if not cc:
-                source_status.set("Chưa chọn mã CC")
+                source_status.set(t("hc_no_cc_selected"))
                 return
 
-            source_status.set(f"Đang tải dữ liệu cho CC {cc}...")
+            source_status.set(t("hc_loading_cc", cc=cc))
             cc_combo.state(["disabled"])
             load_button.state(["disabled"])
 
@@ -3580,7 +3339,7 @@ class MPManagerApp:
                 cc_combo.state(["!disabled"])
                 load_button.state(["!disabled"])
                 if error is not None:
-                    source_status.set(f"Không tải được CC {cc}: {_friendly_error_message(error)}")
+                    source_status.set(t("hc_load_error", cc=cc, error=_friendly_error_message(error)))
                     return
                 for row in result["source_rows"]:
                     period = row["period"]
@@ -3615,9 +3374,9 @@ class MPManagerApp:
                         for key in time_fields:
                             time_vars[period][key].set(f"{float(row[key] or 0):g}")
                 source_status.set(
-                    f"Đã có {len(result['source_rows'])} kỳ nguồn năm tài chính {fiscal_year} trong CSDL"
+                    t("hc_has_source_data", count=len(result['source_rows']), fy=fiscal_year)
                     if result["source_rows"]
-                    else f"Chưa có dữ liệu nguồn năm tài chính {fiscal_year} cho CC này"
+                    else t("hc_no_source_data", fy=fiscal_year)
                 )
 
             def worker():
@@ -3630,14 +3389,17 @@ class MPManagerApp:
 
             threading.Thread(target=worker, daemon=True).start()
         def nonneg(text,label):
-            value=str(text or "").strip() or "0"
-            if not value.isdecimal(): raise ValueError(f"{label} phải là số nguyên không âm")
+            value = str(text or "").strip() or "0"
+            if not value.isdecimal():
+                raise ValueError(t("hc_err_non_negative_int", label=label))
             return float(value)
         def save():
-            cc=cc_code()
-            if not cc:return
+            cc = cc_code()
+            if not cc:
+                return
             try:
-                be=nonneg(bus_exp.get(),"Xe buýt Nhật Bản"); bv=nonneg(bus_vn.get(),"Xe buýt Việt Nam")
+                be = nonneg(bus_exp.get(), t("event_name_bus_jp"))
+                bv = nonneg(bus_vn.get(), t("event_name_bus_vn"))
                 month_values = {
                     period: {
                         "expat": values["expat"].get(),
@@ -3652,38 +3414,49 @@ class MPManagerApp:
                 _, headcount_errors = validate_headcount_save_period_rows(
                     periods,
                     month_values,
-                    {period: (f"Tháng {int(period[-2:])}" if period in fy_periods else f"Dữ liệu mốc tháng 3 ({period})") for period in periods},
+                    {period: (t("hc_val_month_label", month=int(period[-2:])) if period in fy_periods else t("hc_val_baseline_label", period=period)) for period in periods},
                 )
                 if headcount_errors:
-                    messagebox.showerror("Dữ liệu không hợp lệ", format_headcount_save_errors(headcount_errors))
+                    messagebox.showerror(t("invalid_data_title"), format_headcount_save_errors(headcount_errors))
                     return
-            except ValueError as exc: messagebox.showerror("Dữ liệu không hợp lệ", _friendly_error_message(exc)); return
+            except ValueError as exc:
+                messagebox.showerror(t("invalid_data_title"), _friendly_error_message(exc))
+                return
             conn=get_connection(self._manual_input_store(fiscal_year)); create_schema(conn)
             try:
                 with conn:
                     conn.execute("INSERT INTO fact_bus_headcount_drivers(cc_code,fiscal_year,bus_expat_count,bus_vietnamese_count,source,description) VALUES(?,?,?,?,'manual',?) ON CONFLICT(cc_code) DO UPDATE SET fiscal_year=excluded.fiscal_year,bus_expat_count=excluded.bus_expat_count,bus_vietnamese_count=excluded.bus_vietnamese_count,description=excluded.description",(cc,fiscal_year,be,bv,bus_note.get().strip()))
-                    baseline_period=periods[0]; baseline=month_vars[baseline_period]
-                    expat=nonneg(baseline["expat"].get(),f"Biệt phái {baseline_period}"); staff=nonneg(baseline["staff"].get(),f"Nhân viên {baseline_period}"); worker=nonneg(baseline["worker"].get(),f"Công nhân {baseline_period}")
+                    baseline_period = periods[0]
+                    baseline = month_vars[baseline_period]
+                    expat = nonneg(baseline["expat"].get(), f"{t('hc_field_expat_short')} {baseline_period}")
+                    staff = nonneg(baseline["staff"].get(), f"{t('hc_field_staff_short')} {baseline_period}")
+                    worker = nonneg(baseline["worker"].get(), f"{t('hc_field_worker_short')} {baseline_period}")
                     save_manual_baseline_override(conn,fiscal_year,cc,expat,staff,worker,baseline["note"].get().strip())
-                    for period,v in month_vars.items():
-                        if period not in fy_periods: continue
-                        male=nonneg(v["male"].get(),f"Nam {period}") if period.endswith("12") else 0; female=nonneg(v["female"].get(),f"Nữ {period}") if period.endswith("12") else 0
-                        note=v["note"].get().strip()
+                    for period, v in month_vars.items():
+                        if period not in fy_periods:
+                            continue
+                        male = nonneg(v["male"].get(), f"{t('hc_field_male_short')} {period}") if period.endswith("12") else 0
+                        female = nonneg(v["female"].get(), f"{t('hc_field_female_short')} {period}") if period.endswith("12") else 0
+                        note = v["note"].get().strip()
                         conn.execute("DELETE FROM fact_monthly_headcount WHERE cc_code=? AND period=? AND source='manual'",(cc,period))
                         if male or female or note:
                             conn.execute("INSERT INTO fact_monthly_headcount(period,cc_code,headcount_all,headcount_expat,headcount_staff,headcount_worker,headcount_male,headcount_female,source,description) VALUES(?,?,0,0,0,0,?,?,'manual',?)",(period,cc,male,female,note))
-                    save_manual_time_overrides(conn,fiscal_year,cc,{p:{f:v[f].get() for f in time_fields} for p,v in time_vars.items()})
-            except ValueError as exc: conn.rollback(); messagebox.showerror("Dữ liệu không hợp lệ", _friendly_error_message(exc)); return
-            finally: conn.close()
-            messagebox.showinfo("Đã lưu","Đã lưu dữ liệu mốc tháng 3, dữ liệu bổ sung, xe buýt và 12 tháng thời gian (ô trống = 0).")
+                    save_manual_time_overrides(conn,fiscal_year,cc,{p: {f: v[f].get() for f in time_fields} for p, v in time_vars.items()})
+            except ValueError as exc:
+                conn.rollback()
+                messagebox.showerror(t("invalid_data_title"), _friendly_error_message(exc))
+                return
+            finally:
+                conn.close()
+            messagebox.showinfo(t("save_success_title"), t("headcount_save_success_msg"))
         buttons = ttk.Frame(frame)
         buttons.pack(fill="x", pady=(8, 0))
-        load_button = ttk.Button(buttons, text="Tải dữ liệu CC", command=load_cc)
+        load_button = ttk.Button(buttons, text=t("hc_v2_load_cc"), command=load_cc)
         load_button.pack(side="left")
         ttk.Button(
-            buttons, text="Lưu nhân sự & thời gian", style="Primary.TButton", command=save
+            buttons, text=t("hc_v2_save_btn"), style="Primary.TButton", command=save
         ).pack(side="left", padx=6)
-        ttk.Button(buttons, text="Đóng", command=editor.destroy).pack(side="left")
+        ttk.Button(buttons, text=t("btn_close"), command=editor.destroy).pack(side="left")
         cc_combo.bind("<<ComboboxSelected>>",load_cc)
         if cc_combo["values"]:
             initial=selected_cc if selected_cc in cc_combo["values"] else cc_combo["values"][0]
@@ -3701,42 +3474,31 @@ class MPManagerApp:
         periods = get_fy_months(fiscal_year)
 
         editor = tk.Toplevel(self.root)
-        editor.title("Nhập sự kiện thiếu dữ liệu")
+        editor.title(t("event_driver_title"))
         editor.geometry("1260x760")
 
         frame = ttk.Frame(editor, padding=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Label(frame, text=f"Tệp lưu dữ liệu: {csv_path}", font=("Segoe UI", 9, "italic")).grid(
+        ttk.Label(frame, text=t("event_file_path_label", path=csv_path), font=("Segoe UI", 9, "italic")).grid(
             row=0, column=0, columnspan=8, sticky="w"
         )
         ttk.Label(
             frame,
-            text=(
-                "Mục này dùng cho khoản tiền mà chương trình không thể tự biết. "
-                "Ví dụ: số người đi xe buýt, quà không đi du lịch, kỷ niệm 10 năm, thị thực hoặc hộ chiếu ở dòng biểu mẫu khác. "
-                "Có thể nhập tên tài khoản tiếng Nhật để tự xác định mã tài khoản và khóa tra cứu đơn giá để lấy đơn giá từ tệp phân bổ của năm đang chạy. "
-                "Nếu không có số thật, hãy để trống; chương trình sẽ không tự bịa số."
-            ),
+            text=t("event_instruction"),
             wraplength=1180,
         ).grid(row=1, column=0, columnspan=8, sticky="w", pady=(4, 6))
 
-        guide = ttk.LabelFrame(frame, text="Cách điền: đọc từ trái sang phải")
+        guide = ttk.LabelFrame(frame, text=t("event_guide_frame_title"))
         guide.grid(row=2, column=0, columnspan=8, sticky="ew", pady=(0, 10))
         guide.columnconfigure(0, weight=1)
         ttk.Label(
             guide,
-            text=(
-                "Tháng ghi chi phí, ví dụ 202805, là tháng 5 của năm tài chính 2028.  "
-                "Chọn cách nhập phù hợp: theo số lượng và đơn giá, theo số tiền trực tiếp hoặc theo tháng riêng.  "
-                "Nếu nhập đơn giá thì giá nhập tay được ưu tiên; nếu bỏ trống, nhập khóa tra cứu để tự lấy đơn giá từ tệp phân bổ của năm đang chạy.  "
-                "Có thể bỏ trống mã tài khoản nếu nhập tên tài khoản tiếng Nhật, ví dụ 福利厚生費.  "
-                "Dòng biểu mẫu là dòng cần ghi, ví dụ 66 cho 社員旅行."
-            ),
+            text=t("event_guide_text"),
             wraplength=1160,
         ).grid(row=0, column=0, sticky="w", padx=8, pady=(6, 2))
         event_help_var = tk.StringVar(
-            value="Gợi ý: hãy nhập số thật từ người phụ trách nghiệp vụ. Không nhập số ước lượng nếu chưa được chốt."
+            value=t("event_default_help")
         )
         ttk.Label(
             guide,
@@ -3748,7 +3510,7 @@ class MPManagerApp:
         cc_var = tk.StringVar()
         period_var = tk.StringVar()
         event_var = tk.StringVar()
-        event_type_var = tk.StringVar(value="Theo tháng riêng")
+        event_type_var = tk.StringVar(value=t("event_type_month_specific"))
         count_var = tk.StringVar()
         unit_price_var = tk.StringVar()
         unit_price_key_var = tk.StringVar()
@@ -3763,46 +3525,50 @@ class MPManagerApp:
         cc_choices = self._get_cc_choices()
         event_display_to_value = {
             "Câu chuyện của tôi": "My Episode",
-            "Xe buýt Nhật Bản": "Xe bus JP",
-            "Xe buýt Việt Nam": "Xe bus VN",
-            "Thị thực/hộ chiếu ở dòng khác 137": "VISA/Passport dòng khác 137",
+            t("event_name_my_episode"): "My Episode",
+            t("event_name_bus_jp"): "Xe bus JP",
+            t("event_name_bus_vn"): "Xe bus VN",
+            t("event_name_visa"): "VISA/Passport dòng khác 137",
         }
         event_value_to_display = {value: key for key, value in event_display_to_value.items()}
         event_type_display_to_value = {
             "Theo số lượng và đơn giá": "manual_count_unit_price",
             "Theo số tiền trực tiếp": "manual_amount",
             "Theo tháng riêng": "month_specific_driver",
+            t("event_type_count_unit"): "manual_count_unit_price",
+            t("event_type_direct_amount"): "manual_amount",
+            t("event_type_month_specific"): "month_specific_driver",
         }
         event_type_value_to_display = {value: key for key, value in event_type_display_to_value.items()}
         event_help = {
-            "Cốc xếp định kỳ": "Chỉ dùng cho phòng được đánh dấu cốc xếp; nhập số lượng phát thực tế vào tháng 2 hoặc tháng 8. Nhập 0 nếu xác nhận không phát.",
-            "Du lịch công ty": "Dùng khi cần nhập số người/số tiền cho chuyến du lịch công ty.",
-            "Quà không đi du lịch": "Dùng cho người không tham gia du lịch nhưng có quà hoặc khoản hỗ trợ riêng.",
-            "Câu chuyện của tôi": "Dùng khi có khoản Câu chuyện của tôi thật trong tháng đó.",
-            "Tiệc kỷ niệm 10 năm": "Dùng khi có số người hoặc tổng tiền cho tiệc kỷ niệm 10 năm.",
-            "Quà kỷ niệm 10 năm": "Dùng khi có quà kỷ niệm 10 năm theo số người hoặc tổng tiền.",
-            "Kỷ niệm công ty": "Dùng cho kỷ niệm công ty khi sổ làm việc chưa đủ dữ liệu tự tính.",
-            "Xe buýt Nhật Bản": "Dùng khi biết số người hoặc số chuyến xe buýt Nhật Bản.",
-            "Xe buýt Việt Nam": "Dùng khi biết số người hoặc số chuyến xe buýt Việt Nam.",
-            "Triết lý tháng 3 năm trước": "Dùng cho khoản phát sinh tháng 3 của năm tài chính cũ nhưng cần đưa vào kế hoạch hiện tại.",
-            "Sự kiện tháng 4": "Dùng cho sự kiện riêng phát sinh tháng 4 cần người dùng chốt.",
-            "Thị thực/hộ chiếu ở dòng khác 137": "Dùng khi chi phí giấy tờ không đi vào dòng 137 theo cách ánh xạ hiện tại.",
-            "Khác": "Dùng khi khoản cần nhập chưa có trong danh sách. Hãy ghi chú rõ nguồn số liệu.",
+            t("event_name_cup"): t("event_help_cup"),
+            t("event_name_travel"): t("event_help_travel"),
+            t("event_name_no_travel_gift"): t("event_help_no_travel_gift"),
+            t("event_name_my_episode"): t("event_help_my_episode"),
+            t("event_name_10yr_party"): t("event_help_10yr_party"),
+            t("event_name_10yr_gift"): t("event_help_10yr_gift"),
+            t("event_name_anniversary"): t("event_help_anniversary"),
+            t("event_name_bus_jp"): t("event_help_bus_jp"),
+            t("event_name_bus_vn"): t("event_help_bus_vn"),
+            t("event_name_mar_prev"): t("event_help_mar_prev"),
+            t("event_name_apr_event"): t("event_help_apr_event"),
+            t("event_name_visa"): t("event_help_visa"),
+            t("event_name_other"): t("event_help_other"),
         }
         event_choices = [
-            "Cốc xếp định kỳ",
-            "Du lịch công ty",
-            "Quà không đi du lịch",
-            "Câu chuyện của tôi",
-            "Tiệc kỷ niệm 10 năm",
-            "Quà kỷ niệm 10 năm",
-            "Kỷ niệm công ty",
-            "Xe buýt Nhật Bản",
-            "Xe buýt Việt Nam",
-            "Triết lý tháng 3 năm trước",
-            "Sự kiện tháng 4",
-            "Thị thực/hộ chiếu ở dòng khác 137",
-            "Khác",
+            t("event_name_cup"),
+            t("event_name_travel"),
+            t("event_name_no_travel_gift"),
+            t("event_name_my_episode"),
+            t("event_name_10yr_party"),
+            t("event_name_10yr_gift"),
+            t("event_name_anniversary"),
+            t("event_name_bus_jp"),
+            t("event_name_bus_vn"),
+            t("event_name_mar_prev"),
+            t("event_name_apr_event"),
+            t("event_name_visa"),
+            t("event_name_other"),
         ]
 
         def add_label_entry(row, column, label, variable, width=18, values=None):
@@ -3814,54 +3580,54 @@ class MPManagerApp:
             widget.grid(row=row, column=column + 1, sticky="w", padx=(0, 12), pady=3)
             return widget
 
-        add_label_entry(3, 0, "Mã CC", cc_var, width=38, values=cc_choices)
-        add_label_entry(3, 2, "Tháng ghi chi phí", period_var, width=12, values=periods)
-        event_combo = add_label_entry(3, 4, "Sự kiện", event_var, width=28, values=event_choices)
+        add_label_entry(3, 0, t("event_label_cc"), cc_var, width=38, values=cc_choices)
+        add_label_entry(3, 2, t("event_label_period"), period_var, width=12, values=periods)
+        event_combo = add_label_entry(3, 4, t("event_label_event"), event_var, width=28, values=event_choices)
         add_label_entry(
             3,
             6,
-            "Cách nhập",
+            t("event_label_input_method"),
             event_type_var,
             width=24,
             values=list(event_type_display_to_value),
         )
-        add_label_entry(4, 0, "Số lượng", count_var, width=16)
-        add_label_entry(4, 2, "Đơn giá nhập tay", unit_price_var, width=16)
-        add_label_entry(4, 4, "Khóa tra cứu đơn giá", unit_price_key_var, width=24)
-        add_label_entry(4, 6, "Số tiền trực tiếp", amount_var, width=18)
-        add_label_entry(5, 0, "Người biệt phái đi xe bus", bus_expat_people_var, width=16)
-        add_label_entry(5, 2, "Người Việt Nam đi xe bus", bus_vietnamese_people_var, width=16)
-        add_label_entry(6, 0, "Mã tài khoản", account_var, width=16)
-        add_label_entry(6, 2, "Tên TK Nhật", account_jp_name_var, width=18)
-        add_label_entry(6, 4, "Dòng FORM", form_row_var, width=12)
-        ttk.Label(frame, text="Ghi chú").grid(row=6, column=6, sticky="w", padx=(0, 4), pady=3)
+        add_label_entry(4, 0, t("event_label_count"), count_var, width=16)
+        add_label_entry(4, 2, t("event_label_unit_price"), unit_price_var, width=16)
+        add_label_entry(4, 4, t("event_label_unit_price_key"), unit_price_key_var, width=24)
+        add_label_entry(4, 6, t("event_label_direct_amount"), amount_var, width=18)
+        add_label_entry(5, 0, t("event_label_bus_expat"), bus_expat_people_var, width=16)
+        add_label_entry(5, 2, t("event_label_bus_vn"), bus_vietnamese_people_var, width=16)
+        add_label_entry(6, 0, t("event_label_account"), account_var, width=16)
+        add_label_entry(6, 2, t("event_label_account_jp"), account_jp_name_var, width=18)
+        add_label_entry(6, 4, t("event_label_form_row"), form_row_var, width=12)
+        ttk.Label(frame, text=t("event_label_note")).grid(row=6, column=6, sticky="w", padx=(0, 4), pady=3)
         ttk.Entry(frame, textvariable=desc_var, width=32).grid(row=6, column=7, sticky="w", pady=3)
 
         columns = tuple(TEMPLATE_COLUMNS)
         tree = ttk.Treeview(frame, columns=columns, show="headings", height=20)
         headings = [
-            ("cc_code", 105, "Mã CC"),
-            ("period", 80, "Kỳ"),
-            ("target_month", 90, "Tháng"),
-            ("event_name", 170, "Sự kiện"),
-            ("event_type", 150, "Cách nhập"),
-            ("count", 70, "Số lượng"),
-            ("unit_price", 100, "Đơn giá"),
-            ("unit_price_key", 120, "Khóa tra cứu đơn giá"),
-            ("allocation_content", 130, "Nội dung phân bổ"),
-            ("amount_vnd", 115, "Số tiền"),
-            ("bus_expat_people", 115, "Bus biệt phái"),
-            ("bus_vietnamese_people", 115, "Bus Việt Nam"),
-            ("account_code", 95, "Mã TK"),
-            ("account_jp_name", 120, "Tên TK Nhật"),
-            ("account_name", 120, "Tên thay thế TK"),
-            ("account_group", 100, "Nhóm TK"),
-            ("form_row", 75, "Dòng biểu mẫu"),
-            ("row", 65, "Dòng"),
-            ("source_month", 100, "Tháng nguồn"),
-            ("headcount_basis", 120, "Cơ sở số người"),
-            ("description", 180, "Mô tả"),
-            ("note", 220, "Ghi chú"),
+            ("cc_code", 105, t("event_col_cc")),
+            ("period", 80, t("event_col_period")),
+            ("target_month", 90, t("event_col_month")),
+            ("event_name", 170, t("event_col_event")),
+            ("event_type", 150, t("event_col_input_method")),
+            ("count", 70, t("event_col_count")),
+            ("unit_price", 100, t("event_col_unit_price")),
+            ("unit_price_key", 120, t("event_col_unit_price_key")),
+            ("allocation_content", 130, t("event_col_allocation")),
+            ("amount_vnd", 115, t("event_col_amount")),
+            ("bus_expat_people", 115, t("event_col_bus_expat")),
+            ("bus_vietnamese_people", 115, t("event_col_bus_vn")),
+            ("account_code", 95, t("event_col_account_code")),
+            ("account_jp_name", 120, t("event_col_account_jp")),
+            ("account_name", 120, t("event_col_account_alt")),
+            ("account_group", 100, t("event_col_account_group")),
+            ("form_row", 75, t("event_col_form_row")),
+            ("row", 65, t("event_col_row")),
+            ("source_month", 100, t("event_col_source_month")),
+            ("headcount_basis", 120, t("event_col_hc_basis")),
+            ("description", 180, t("event_col_desc")),
+            ("note", 220, t("event_col_note")),
         ]
         for col, width, text in headings:
             tree.heading(col, text=text)
@@ -3897,7 +3663,7 @@ class MPManagerApp:
                 desc_var,
             ):
                 variable.set("")
-            event_type_var.set("Theo tháng riêng")
+            event_type_var.set(t("event_type_month_specific"))
             bus_expat_people_var.set("0")
             bus_vietnamese_people_var.set("0")
 
@@ -3925,7 +3691,7 @@ class MPManagerApp:
             text = str(raw or "").strip()
             if not text:
                 if required:
-                    raise ValueError(f"Thiếu {label}.")
+                    raise ValueError(t("event_err_missing_field", label=label))
                 return ""
             float(text)
             return text
@@ -3935,7 +3701,7 @@ class MPManagerApp:
             if not text:
                 return "0"
             if not text.isdecimal():
-                raise ValueError(f"{label} phải là số nguyên không âm.")
+                raise ValueError(t("hc_err_non_negative_int", label=label))
             return str(int(text))
 
         def add_or_update():
@@ -3944,30 +3710,30 @@ class MPManagerApp:
             event_name = event_var.get().strip()
             try:
                 if not cc_code or not period or not event_name:
-                    raise ValueError("Cần nhập Mã CC, Tháng ghi chi phí và Sự kiện.")
-                count = validate_numeric(count_var.get(), "số lượng")
-                if event_name == "Cốc xếp định kỳ":
-                    count = validate_non_negative_int(count_var.get(), "Số lượng cốc xếp định kỳ")
+                    raise ValueError(t("event_err_required_fields"))
+                count = validate_numeric(count_var.get(), t("field_quantity"))
+                if event_name in (t("event_name_cup"), "Cốc xếp định kỳ"):
+                    count = validate_non_negative_int(count_var.get(), t("event_name_cup"))
                     if int(period[-2:]) not in {2, 8}:
-                        raise ValueError("Cốc xếp định kỳ chỉ được nhập cho tháng 2 hoặc tháng 8.")
-                unit_price = validate_numeric(unit_price_var.get(), "đơn giá")
+                        raise ValueError(t("event_err_cup_month"))
+                unit_price = validate_numeric(unit_price_var.get(), t("field_unit_price"))
                 unit_price_key = unit_price_key_var.get().strip()
-                amount_vnd = validate_numeric(amount_var.get(), "số tiền")
+                amount_vnd = validate_numeric(amount_var.get(), t("field_amount"))
                 bus_expat_people = validate_non_negative_int(
-                    bus_expat_people_var.get(), "Người biệt phái đi xe bus"
+                    bus_expat_people_var.get(), t("field_bus_expat")  # Người biệt phái đi xe bus
                 )
                 bus_vietnamese_people = validate_non_negative_int(
-                    bus_vietnamese_people_var.get(), "Người Việt Nam đi xe bus"
+                    bus_vietnamese_people_var.get(), t("field_bus_vn")  # Người Việt Nam đi xe bus
                 )
-                account_code = validate_numeric(account_var.get(), "mã tài khoản")
+                account_code = validate_numeric(account_var.get(), t("field_account_code"))
                 account_jp_name = account_jp_name_var.get().strip()
-                form_row = validate_numeric(form_row_var.get(), "dòng FORM")
+                form_row = validate_numeric(form_row_var.get(), t("field_form_row"))
                 if not account_code and not account_jp_name:
-                    raise ValueError("Cần nhập mã tài khoản hoặc tên tài khoản tiếng Nhật để chương trình tự xác định mã tài khoản.")
+                    raise ValueError(t("event_err_account_required"))
                 if not ((count and (unit_price or unit_price_key)) or amount_vnd):
-                    raise ValueError("Cần nhập số lượng kèm đơn giá, số lượng kèm khóa tra cứu đơn giá hoặc số tiền trực tiếp.")
+                    raise ValueError(t("event_err_pricing_required"))
             except Exception as exc:
-                messagebox.showerror("Lỗi dữ liệu", _friendly_error_message(exc))
+                messagebox.showerror(t("invalid_data_title"), _friendly_error_message(exc))
                 return
 
             row_data = {col: "" for col in columns}
@@ -3977,7 +3743,7 @@ class MPManagerApp:
                     "period": period,
                     "target_month": period,
                     "event_name": event_name,
-                    "event_type": event_type_var.get().strip() or "Theo tháng riêng",
+                    "event_type": event_type_var.get().strip() or t("event_type_month_specific"),
                     "count": count,
                     "unit_price": unit_price,
                     "unit_price_key": unit_price_key,
@@ -4015,7 +3781,7 @@ class MPManagerApp:
             cc_var.set(row_data.get("cc_code", ""))
             period_var.set(row_data.get("target_month") or row_data.get("period", ""))
             event_var.set(row_data.get("event_name", ""))
-            event_type_var.set(row_data.get("event_type", "") or "Theo tháng riêng")
+            event_type_var.set(row_data.get("event_type", "") or t("event_type_month_specific"))
             count_var.set(row_data.get("count", ""))
             unit_price_var.set(row_data.get("unit_price", ""))
             unit_price_key_var.set(row_data.get("unit_price_key") or row_data.get("allocation_content", ""))
@@ -4036,21 +3802,21 @@ class MPManagerApp:
                 row["event_type"] = event_type_display_to_value.get(row["event_type"], row["event_type"])
                 rows.append(row)
             self._write_csv_rows(csv_path, columns, rows)
-            self.log(f"Lưu sự kiện thiếu dữ liệu: số dòng={len(rows)}, tệp={csv_path}")
-            messagebox.showinfo("Đã lưu", f"Đã lưu {len(rows)} dòng sự kiện.")
+            self.log(t("event_saved_log", count=len(rows), path=csv_path))
+            messagebox.showinfo(t("save_success_title"), t("event_save_success_msg", count=len(rows)))
 
         button_row = ttk.Frame(frame)
         button_row.grid(row=9, column=0, columnspan=8, sticky="w", pady=(10, 0))
-        ttk.Button(button_row, text="Thêm/Cập nhật", command=add_or_update).grid(row=0, column=0, padx=(0, 6))
-        ttk.Button(button_row, text="Xóa đã chọn", command=remove_selected).grid(row=0, column=1, padx=(0, 6))
-        ttk.Button(button_row, text="Lưu tệp", command=save_file).grid(row=0, column=2, padx=(0, 6))
-        ttk.Button(button_row, text="Đóng", command=editor.destroy).grid(row=0, column=3, padx=(0, 6))
+        ttk.Button(button_row, text=t("btn_add_update"), command=add_or_update).grid(row=0, column=0, padx=(0, 6))
+        ttk.Button(button_row, text=t("btn_delete_selected"), command=remove_selected).grid(row=0, column=1, padx=(0, 6))
+        ttk.Button(button_row, text=t("btn_save_file"), command=save_file).grid(row=0, column=2, padx=(0, 6))
+        ttk.Button(button_row, text=t("btn_close"), command=editor.destroy).grid(row=0, column=3, padx=(0, 6))
 
         def refresh_event_help(*_args):
             selected = event_var.get().strip()
-            event_help_var.set(event_help.get(selected, "Gợi ý: hãy nhập số thật từ người phụ trách nghiệp vụ. Không nhập số ước lượng nếu chưa được chốt."))
-            if selected == "Cốc xếp định kỳ":
-                event_type_var.set("Theo số lượng và đơn giá")
+            event_help_var.set(event_help.get(selected, t("event_default_help")))
+            if selected == t("event_name_cup"):
+                event_type_var.set(t("event_type_count_unit"))
                 unit_price_var.set("")
                 unit_price_key_var.set("折りたたみコップ Cốc xếp")
                 account_var.set("")
@@ -4066,7 +3832,7 @@ class MPManagerApp:
         available = set(getattr(self, "_available_cc_choices", []))
         selected = [choice for choice in selected if choice in available]
         if not selected:
-            raise ValueError("Hãy chọn ít nhất một Trung tâm chi phí.")
+            raise ValueError(t("err_select_at_least_one_cc"))
         return tuple(
             choice.split(" - ")[0].strip() if " - " in choice else choice.strip()
             for choice in selected
@@ -4076,12 +3842,6 @@ class MPManagerApp:
         available = list(getattr(self, "_available_cc_choices", []))
         selected = list(getattr(self, "_selected_cc_values", []))
         return bool(available) and len(selected) == len(available) and set(selected) == set(available)
-
-    def _open_path(self, path: str):
-        if not path or not os.path.exists(path):
-            messagebox.showwarning("Chưa có tệp", f"Không tìm thấy tệp:\n{path}")
-            return
-        os.startfile(os.path.abspath(path))
 
     def _audit_output_dir(self) -> str:
         return self._project_paths().output_dir
@@ -4128,8 +3888,8 @@ class MPManagerApp:
         inspection = inspect_form(template)
         if not inspection.is_valid:
             messagebox.showerror(
-                "FORM không đúng cấu trúc",
-                "FORM không đúng cấu trúc.\nVui lòng chọn lại tệp hoặc kiểm tra các trang tính bắt buộc.",
+                t("invalid_form_structure_title"),
+                t("invalid_form_structure_msg"),
             )
             return False
         return True
@@ -4147,26 +3907,26 @@ class MPManagerApp:
             source = self.source_dir.get()
             template_error = _validate_selected_template(template, fiscal_year)
             if template_error:
-                messagebox.showerror("Tệp mẫu không hợp lệ", template_error)
+                messagebox.showerror(t("invalid_template_title"), template_error)
                 return
             if not self._confirm_selected_form(template, fiscal_year):
                 return
 
             source_error = _validate_selected_source_dir(source, fiscal_year)
             if source_error:
-                messagebox.showerror("Thư mục nguồn không hợp lệ", source_error)
+                messagebox.showerror(t("invalid_cost_source_title"), source_error)
                 return
 
             if self.syncing_master:
                 messagebox.showinfo(
-                    "Đang nạp dữ liệu",
-                    "Chương trình đang tự động nạp dữ liệu gốc. Hãy đợi hoàn tất rồi chạy tính toán.",
+                    t("syncing_data_title"),
+                    t("syncing_data_msg"),
                 )
                 return
 
             headcount_source = self.headcount_source_dir.get().strip()
             if not os.path.isdir(headcount_source):
-                messagebox.showerror("Lỗi", "Hãy nhập thư mục nguồn nhân sự & thời gian hợp lệ.")
+                messagebox.showerror(t("error_title"), t("invalid_headcount_dir_msg"))
                 return
             coverage = self._selected_headcount_source_coverage(
                 fiscal_year,
@@ -4176,7 +3936,7 @@ class MPManagerApp:
             if coverage["missing_cc_codes"]:
                 message = _headcount_coverage_error_message(fiscal_year, coverage)
                 self.log(message)
-                messagebox.showerror("Thiếu nguồn nhân sự & thời gian", message)
+                messagebox.showerror(t("missing_headcount_title"), message)
                 self._mark_preflight_stale(force_refresh=True)
                 return
             missing_baselines = self._missing_baseline_ccs_for_selection(
@@ -4184,10 +3944,7 @@ class MPManagerApp:
                 selected_ccs,
             )
             if missing_baselines:
-                self.log(
-                    "Thiếu baseline T3 trước khi tính chi phí cho: "
-                    + ", ".join(missing_baselines)
-                )
+                self.log(t("hc_baseline_missing_before_calc", cc=", ".join(missing_baselines)))
                 target_cc = selected_ccs[0] if len(selected_ccs) == 1 else None
                 self._open_baseline_recovery_dialog(
                     fiscal_year,
@@ -4208,9 +3965,8 @@ class MPManagerApp:
                 or not getattr(approved_report, "can_run", False)
             ):
                 messagebox.showerror(
-                    "Nguồn chưa được xác nhận",
-                    "Bộ nguồn hiện tại còn điều kiện nền tảng chưa đạt. "
-                    "Hãy chờ đối chiếu xong hoặc bấm “Kiểm tra lại từ đầu”.",
+                    t("source_not_verified_title"),
+                    t("source_not_verified_msg"),
                 )
                 self._mark_preflight_stale()
                 return
@@ -4223,11 +3979,8 @@ class MPManagerApp:
                     for issue in approved_report.skipped_issues
                 )
                 proceed_incomplete = messagebox.askyesno(
-                    "Xác nhận chạy với phạm vi nguồn đã chọn",
-                    "Một số nguồn sẽ được bỏ qua độc lập:\n\n"
-                    + warning_lines
-                    + "\n\nKết quả sẽ được đánh dấu CHƯA ĐẦY ĐỦ; các phần bị ảnh hưởng "
-                    "sẽ để trống và không lấy dữ liệu từ lần chạy cũ. Bạn có muốn tiếp tục không?",
+                    t("confirm_incomplete_run_title"),
+                    t("confirm_incomplete_run_msg", warnings=warning_lines),
                 )
                 if not proceed_incomplete:
                     return
@@ -4235,10 +3988,8 @@ class MPManagerApp:
 
             if all_cost_centers:
                 proceed = messagebox.askokcancel(
-                    "Xuất toàn bộ Trung tâm chi phí",
-                    f"Bạn đã chọn toàn bộ {len(selected_ccs)} Trung tâm chi phí.\n\n"
-                    "Chương trình sẽ tự đồng bộ nguồn nhân sự, kiểm tra toàn bộ CC dự kiến xuất "
-                    "và dừng trước khi xuất nếu có bất kỳ CC nào thiếu dữ liệu.\n\nTiếp tục?",
+                    t("export_all_cc_title"),
+                    t("export_all_cc_msg", count=len(selected_ccs)),
                 )
                 if not proceed:
                     return
@@ -4246,15 +3997,15 @@ class MPManagerApp:
             self.start_btn.configure(state=tk.DISABLED)
             if hasattr(self, "cc_select_btn"):
                 self.cc_select_btn.configure(state=tk.DISABLED)
-            self.log("--- BẮT ĐẦU TÍNH TOÁN ---")
-            self.log(f"Tệp mẫu xác nhận chạy: {template}")
-            self.log(f"Thư mục nguồn xác nhận chạy: {source}")
-            self.log(f"Nguồn nhân sự & thời gian xác nhận chạy: {headcount_source}")
-            self.log(f"Tỷ giá hiệu lực cho lần chạy này: {exchange_rate:,.0f} USD/VND")
+            self.log(t("pipeline_start_heading"))
+            self.log(t("pipeline_template_log", path=template))
+            self.log(t("pipeline_source_log", path=source))
+            self.log(t("pipeline_headcount_log", path=headcount_source))
+            self.log(t("pipeline_fx_log", rate=exchange_rate))
             if all_cost_centers:
-                self.log(f"Phạm vi chạy: toàn bộ {len(selected_ccs)} Trung tâm chi phí")
+                self.log(t("pipeline_scope_all_log", count=len(selected_ccs)))
             else:
-                self.log(f"Phạm vi chạy: {len(selected_ccs)} Trung tâm chi phí")
+                self.log(t("pipeline_scope_count_log", count=len(selected_ccs)))
             threading.Thread(
                 target=self.run_process,
                 args=(
@@ -4268,7 +4019,7 @@ class MPManagerApp:
                 daemon=True,
             ).start()
         except Exception as exc:
-            messagebox.showerror("Lỗi nhập liệu", _friendly_error_message(exc))
+            messagebox.showerror(t("input_error_title"), _friendly_error_message(exc))
 
     def _run_pipeline_process(
         self,
@@ -4350,7 +4101,7 @@ class MPManagerApp:
         try:
             for index, target_cc in enumerate(target_ccs, start=1):
                 label = target_cc or self.ALL_COST_CENTERS_LABEL
-                self.log(f"--- PHẠM VI {index}/{total}: {label} ---")
+                self.log(t("pipeline_scope_log", index=index, total=total, label=label))
                 self._last_pipeline_args = (
                     fiscal_year,
                     template,
@@ -4365,14 +4116,14 @@ class MPManagerApp:
                 )
                 self._last_failed_run_database = failed_database
                 if not success:
-                    failure = RuntimeError(f"Trung tâm chi phí {label} thất bại: {_friendly_error_message(result)}")
+                    failure = RuntimeError(t("pipeline_cc_failed", label=label, error=_friendly_error_message(result)))
                     self._run_on_ui_thread(self._finish_pipeline, False, failure)
                     return
                 if selected_batch:
                     assert staged_output_root is not None
                     self._stage_completed_cost_center_output(result, staged_output_root, str(target_cc))
                 final_result = result
-                self.log(f"Hoàn tất {index}/{total}: {label}")
+                self.log(t("pipeline_scope_done", index=index, total=total, label=label))
             if selected_batch:
                 assert staged_output_root is not None
                 final_result = publish_selected_cc_batch(
@@ -4380,7 +4131,7 @@ class MPManagerApp:
                     staged_output_root,
                     tuple(str(target_cc) for target_cc in target_ccs),
                 )
-                self.log("Đã công bố nguyên tử toàn bộ loạt Trung tâm chi phí.")
+                self.log(t("pipeline_batch_published"))
             self._run_on_ui_thread(self._finish_pipeline, True, final_result)
         except Exception as exc:
             self._run_on_ui_thread(self._finish_pipeline, False, exc)
@@ -4497,10 +4248,7 @@ class MPManagerApp:
             )
             unresolved=tuple(result.get("missing_required_cc_codes") or ())
             if unresolved:
-                raise ValueError(
-                    "Không có dữ liệu T4 hợp lệ để tạo baseline T3 cho: "
-                    + ", ".join(unresolved)
-                )
+                raise ValueError(t("hc_baseline_missing_no_april", cc=", ".join(unresolved)))
             conn=get_connection(self._manual_input_store(fiscal_year)); create_schema(conn)
             try:
                 copied=[]
@@ -4538,10 +4286,10 @@ class MPManagerApp:
             conn.close()
 
     def _open_baseline_recovery_dialog(self, fiscal_year, target_cc, missing_ccs, run_database=None):
-        dialog=tk.Toplevel(self.root); dialog.title("Thiếu dữ liệu mốc tháng 3"); dialog.geometry("680x300"); dialog.transient(self.root); dialog.grab_set()
-        ttk.Label(dialog,text="Thiếu dữ liệu mốc tháng 3",font=("Segoe UI",15,"bold")).pack(anchor="w",padx=18,pady=(18,6))
+        dialog=tk.Toplevel(self.root); dialog.title(t("baseline_missing_title")); dialog.geometry("680x300"); dialog.transient(self.root); dialog.grab_set()
+        ttk.Label(dialog,text=t("baseline_missing_title"),font=("Segoe UI",15,"bold")).pack(anchor="w",padx=18,pady=(18,6))
         preview=", ".join(missing_ccs[:12])+("…" if len(missing_ccs)>12 else "")
-        ttk.Label(dialog,text=f"CC cần xử lý: {preview}\n\nChọn một hành động. Chương trình sẽ không tiếp tục tính toán nếu bạn đóng hộp thoại.",wraplength=640,justify="left").pack(anchor="w",padx=18)
+        ttk.Label(dialog,text=t("baseline_missing_desc", ccs=preview),wraplength=640,justify="left").pack(anchor="w",padx=18)
         def use_april():
             try:
                 if run_database:
@@ -4556,11 +4304,13 @@ class MPManagerApp:
                         missing_ccs,
                     )
             except Exception as exc:
-                messagebox.showerror("Không thể dùng T4",_friendly_error_message(exc),parent=dialog); return
+                messagebox.showerror(t("baseline_cannot_use_t4_title"),_friendly_error_message(exc),parent=dialog); return
             unresolved=[cc for cc in missing_ccs if cc not in copied]
             if unresolved:
-                messagebox.showerror("Không thể dùng T4",f"Không có dữ liệu T4 hợp lệ để điền dữ liệu mốc cho: {', '.join(unresolved)}",parent=dialog); return
-            dialog.destroy(); self.log(f"Người dùng chấp thuận dùng T4 làm dữ liệu mốc T3 cho: {', '.join(copied)}"); self.start_pipeline()
+                messagebox.showerror(t("baseline_cannot_use_t4_title"),t("baseline_cannot_use_t4_msg", ccs=", ".join(unresolved)),parent=dialog); return
+            dialog.destroy()
+            self.log(t("t4_copy_approved_log", cc=", ".join(copied)))
+            self.start_pipeline()
         def manual():
             dialog.destroy()
             if target_cc:
@@ -4570,19 +4320,24 @@ class MPManagerApp:
                 else:self.open_headcount_editor_v2()
             else:self.open_headcount_editor_v2()
         buttons=ttk.Frame(dialog); buttons.pack(fill="x",padx=18,pady=22)
-        ttk.Button(buttons,text="1. Dùng dữ liệu T4 làm dữ liệu mốc T3",command=use_april).pack(fill="x",pady=3)
-        ttk.Button(buttons,text="2. Mở nhập nhân sự thủ công",command=manual).pack(fill="x",pady=3)
-        ttk.Button(buttons,text="3. Thoát — không tiếp tục tính toán",command=dialog.destroy).pack(fill="x",pady=3)
+        ttk.Button(buttons,text=t("baseline_option_use_april"),command=use_april).pack(fill="x",pady=3)
+        ttk.Button(buttons,text=t("baseline_option_manual"),command=manual).pack(fill="x",pady=3)
+        ttk.Button(buttons,text=t("baseline_option_cancel"),command=dialog.destroy).pack(fill="x",pady=3)
         dialog.protocol("WM_DELETE_WINDOW",dialog.destroy)
+
+    def _open_path(self, path: str) -> None:
+        if not path or not os.path.exists(path):
+            messagebox.showwarning(t("no_file_warning_title"), t("file_not_found_msg", path=path))
+            return
+        os.startfile(os.path.abspath(path))
 
     def _finish_pipeline(self, success: bool, result):
         if success:
-            self.log(f"THÀNH CÔNG. Kết quả: {result}")
+            self.log(t("pipeline_success_log", result=result))
             self.root.after(100, self.load_cc_list)
             open_output = messagebox.askyesno(
-                "Hoàn tất",
-                f"Quá trình xuất dữ liệu hoàn tất.\n\nKết quả: {result}\n\n"
-                "Bạn có muốn mở thư mục kết quả ngay không?",
+                t("pipeline_complete_title"),
+                t("pipeline_complete_msg", result=result),
             )
             if open_output:
                 result_path = os.path.abspath(str(result))
@@ -4591,11 +4346,11 @@ class MPManagerApp:
         else:
             recovery=self._missing_baseline_context(result)
             message = _friendly_error_message(result)
-            self.log(f"THẤT BẠI: {message}")
+            self.log(t("pipeline_failed_log", message=message))
             if recovery:
                 self._open_baseline_recovery_dialog(*recovery)
             else:
-                messagebox.showerror("Thất bại", message)
+                messagebox.showerror(t("pipeline_failed_title"), message)
         if hasattr(self, "cc_select_btn"):
             self.cc_select_btn.configure(state=tk.NORMAL)
         # Source paths may have changed while the subprocess was running; do

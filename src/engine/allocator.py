@@ -243,6 +243,10 @@ class AllocationEngine:
             key: {
                 "headcount_all": row.headcount_all,
                 "headcount_expat": row.headcount_expat,
+                # The canonical source defines total headcount as expat + local.
+                # Lucky money is for Vietnamese employees only, so it must use
+                # the local portion rather than the total.
+                "headcount_vietnamese": row.headcount_all - row.headcount_expat,
                 "headcount_staff": row.headcount_staff,
                 "headcount_worker": row.headcount_worker,
                 "headcount_male": row.headcount_male,
@@ -1167,6 +1171,13 @@ class AllocationEngine:
     def _is_fixed_headcount_override_rule(self, rule) -> bool:
         return self._fixed_headcount_rule_spec(rule) is not None
 
+    def _is_lucky_money_rule(self, rule) -> bool:
+        normalized_item_name = self._normalize_text(rule["item_name"] or "")
+        return any(
+            self._normalize_text(token) in normalized_item_name
+            for token in LUCKY_MONEY_TOKENS
+        )
+
     def _uses_fixed_total_headcount_rule(self, rule) -> bool:
         normalized_item_name = self._normalize_text(rule["item_name"] or "")
         return any(
@@ -1465,7 +1476,11 @@ class AllocationEngine:
 
             driver_type = self._resolve_rule_driver_type(rule)
             if fixed_month_override:
-                driver_type = "headcount_all"
+                driver_type = (
+                    "headcount_vietnamese"
+                    if self._is_lucky_money_rule(rule)
+                    else "headcount_all"
+                )
             new_hire_driven = self._is_new_hire_driven_rule(rule, posting_month)
             if fixed_month_override:
                 new_hire_driven = False

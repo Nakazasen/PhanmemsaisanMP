@@ -452,6 +452,15 @@ class TestPostingMonthLogic(unittest.TestCase):
         conn = _mk_conn()
         cc = _seed_cc(conn)
         _seed_hc(conn, cc, [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21])
+        conn.execute(
+            """
+            UPDATE fact_monthly_headcount
+            SET headcount_expat=3, headcount_staff=17, headcount_local_total=17
+            WHERE period='202702' AND cc_code=? AND source='department_plan'
+            """,
+            (cc,),
+        )
+        conn.commit()
         rid = _insert_rule(
             conn,
             "2月",
@@ -463,14 +472,15 @@ class TestPostingMonthLogic(unittest.TestCase):
 
         AllocationEngine(conn)._process_allocation_rules()
 
-        self.assertEqual(_alloc_periods(conn, rid), {"202702": 20 * 50000.0})
+        self.assertEqual(_alloc_periods(conn, rid), {"202702": 17 * 50000.0})
         row = conn.execute(
             "SELECT description FROM fact_input_data WHERE source=?",
             (f"alloc_{rid}",),
         ).fetchone()
         self.assertIn("source_month=202702", row["description"])
-        self.assertIn("driver_value=20", row["description"])
-        self.assertIn("formula_expr=20*50000", row["description"])
+        self.assertIn("driver_type=headcount_vietnamese", row["description"])
+        self.assertIn("driver_value=17", row["description"])
+        self.assertIn("formula_expr=17*50000", row["description"])
         self.assertNotIn("missing_separate_count=1", row["description"])
         self.assertEqual(_missing_areas(conn, cc), {})
         conn.close()

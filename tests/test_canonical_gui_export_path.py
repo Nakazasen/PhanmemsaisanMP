@@ -1,5 +1,6 @@
 import ast
 from pathlib import Path
+from types import SimpleNamespace
 
 from src.services.fiscal_run import RunPreflightReport, SourceIssue
 
@@ -58,6 +59,51 @@ def test_source_order_writers_are_enabled_by_canonical_default():
     assert '"clear_until_row": None' in source
     assert 'phase="final"' in source
     assert "source_file_order=_annual_complete_v1_source_order(run_context)" in source
+
+
+def test_complete_v1_output_order_uses_only_eligible_saved_manifest_entries():
+    import scripts.run_e2e as run_e2e
+
+    context = SimpleNamespace(
+        resolved_sources={
+            "facility": (r"C:\\raw\\facility.xlsx",),
+            "ga": (r"C:\\raw\\ga.xlsx",),
+            "birthday": (r"C:\\raw\\birthday.xlsx",),
+        },
+        ordered_sources=(
+            {"path": r"C:\\raw\\birthday.xlsx", "filename": "birthday.xlsx"},
+            {"path": r"C:\\raw\\disabled.xlsx", "filename": "disabled.xlsx"},
+            {"path": r"C:\\raw\\ga.xlsx", "filename": "ga.xlsx"},
+            {"path": r"C:\\raw\\facility.xlsx", "filename": "facility.xlsx"},
+        ),
+    )
+
+    assert run_e2e._annual_complete_v1_output_source_order(context) == [
+        "birthday.xlsx",
+        "ga.xlsx",
+        "facility.xlsx",
+    ]
+
+
+def test_complete_v1_output_order_appends_eligible_legacy_fallbacks():
+    import scripts.run_e2e as run_e2e
+
+    context = SimpleNamespace(
+        resolved_sources={
+            "facility": (r"C:\\raw\\facility.xlsx",),
+            "ga": (r"C:\\raw\\ga.xlsx",),
+            "birthday": (r"C:\\raw\\birthday.xlsx",),
+        },
+        ordered_sources=(
+            {"path": r"C:\\raw\\ga.xlsx", "filename": "ga.xlsx"},
+        ),
+    )
+
+    assert run_e2e._annual_complete_v1_output_source_order(context) == [
+        "ga.xlsx",
+        "facility.xlsx",
+        "birthday.xlsx",
+    ]
 
 
 def test_complete_v1_single_export_finalizes_source_order_after_reference_layer(monkeypatch, tmp_path):

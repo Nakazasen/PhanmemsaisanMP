@@ -25,9 +25,9 @@ def test_annual_staffing_editor_uses_project_canonical_and_annual_manual_stores(
     save_start = source.index("        def nonneg(text,label):", load_start)
     load_source = source[load_start:save_start]
 
-    assert "Thông tin xe buýt — nhập riêng, dùng chung cho 12 tháng" in source
-    assert "Người biệt phái đi xe buýt" in source
-    assert "Người Việt Nam đi xe buýt" in source
+    assert 't("hc_v2_bus_frame")' in source
+    assert 't("hc_v2_bus_expat")' in source
+    assert 't("hc_v2_bus_vn")' in source
     assert "bus_exp=tk.StringVar(value=\"0\")" in source
     assert "bus_vn=tk.StringVar(value=\"0\")" in source
     assert "source_conn = get_connection(self._operational_database())" in load_source

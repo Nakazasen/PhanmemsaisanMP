@@ -2,7 +2,13 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import os
+import re
 from src.engine.variance_analyzer import ComparisonContext, map_and_analyze_variances, safe_load_mp_form
+from src.services.i18n import (
+    t,
+    register_language_listener,
+    unregister_language_listener,
+)
 
 class VarianceTab(ttk.Frame):
     def __init__(self, parent, *args, **kwargs):
@@ -13,34 +19,55 @@ class VarianceTab(ttk.Frame):
         self.threshold_pct = tk.DoubleVar(value=10.0)
         self.threshold_abs = tk.DoubleVar(value=50000000.0)
         self._build_ui()
+        self._current_report = None
+        register_language_listener(self._on_language_changed)
+        self.bind("<Destroy>", self._on_destroy)
+
+    def _on_destroy(self, event):
+        if event.widget == self:
+            unregister_language_listener(self._on_language_changed)
+
+    def _on_language_changed(self, _lang: str):
+        self.refresh_language()
 
     def _build_ui(self):
-        ttk.Label(self, text="So sánh biến động chi phí MP giữa hai năm tài chính", font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=10, padx=10)
+        self.title_lbl = ttk.Label(self, text=t("variance_tab_title"), font=("Segoe UI", 12, "bold"))
+        self.title_lbl.pack(anchor="w", pady=10, padx=10)
 
         # Setup control frame
-        self.control_frame = ttk.LabelFrame(self, text="Cài đặt so sánh")
+        self.control_frame = ttk.LabelFrame(self, text=t("variance_settings_frame"))
         self.control_frame.pack(fill="x", padx=10, pady=5)
 
         # File selectors
-        ttk.Label(self.control_frame, text="File MP Năm Trước:").grid(row=0, column=0, sticky="e", padx=5, pady=5)
+        self.lbl_base_file = ttk.Label(self.control_frame, text=t("prev_year_file_label"))
+        self.lbl_base_file.grid(row=0, column=0, sticky="e", padx=5, pady=5)
         ttk.Entry(self.control_frame, textvariable=self.base_file, width=60).grid(row=0, column=1, padx=5, pady=5)
-        ttk.Button(self.control_frame, text="Chọn file...", command=lambda: self._select_file(self.base_file)).grid(row=0, column=2, padx=5, pady=5)
+        self.btn_base_file = ttk.Button(self.control_frame, text=t("choose_file_btn"), command=lambda: self._select_file(self.base_file))
+        self.btn_base_file.grid(row=0, column=2, padx=5, pady=5)
 
-        ttk.Label(self.control_frame, text="File MP Năm Nay:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
+        self.lbl_curr_file = ttk.Label(self.control_frame, text=t("curr_year_file_label"))
+        self.lbl_curr_file.grid(row=1, column=0, sticky="e", padx=5, pady=5)
         ttk.Entry(self.control_frame, textvariable=self.curr_file, width=60).grid(row=1, column=1, padx=5, pady=5)
-        ttk.Button(self.control_frame, text="Chọn file...", command=lambda: self._select_file(self.curr_file)).grid(row=1, column=2, padx=5, pady=5)
+        self.btn_curr_file = ttk.Button(self.control_frame, text=t("choose_file_btn"), command=lambda: self._select_file(self.curr_file))
+        self.btn_curr_file.grid(row=1, column=2, padx=5, pady=5)
 
         # Thresholds
         thresh_frame = ttk.Frame(self.control_frame)
         thresh_frame.grid(row=2, column=0, columnspan=3, sticky="w", padx=5, pady=5)
-        ttk.Label(thresh_frame, text="Ngưỡng cảnh báo:").pack(side="left")
+        self.lbl_thresh = ttk.Label(thresh_frame, text=t("alert_threshold_label"))
+        self.lbl_thresh.pack(side="left")
         ttk.Entry(thresh_frame, textvariable=self.threshold_pct, width=6).pack(side="left", padx=5)
-        ttk.Label(thresh_frame, text="% HOẶC").pack(side="left")
+        self.lbl_or = ttk.Label(thresh_frame, text=t("or_label"))
+        self.lbl_or.pack(side="left")
         ttk.Entry(thresh_frame, textvariable=self.threshold_abs, width=15).pack(side="left", padx=5)
-        ttk.Label(thresh_frame, text="VNĐ").pack(side="left")
-        ttk.Button(thresh_frame, text="Thực hiện So sánh", command=self._run_comparison, style="Accent.TButton").pack(side="left", padx=20)
-        ttk.Button(thresh_frame, text="Xuất báo cáo Excel", command=self._export_excel).pack(side="left", padx=5)
-        ttk.Button(thresh_frame, text="So sánh hàng loạt (Thư mục)", command=self._run_batch_comparison).pack(side="left", padx=5)
+        self.lbl_vnd = ttk.Label(thresh_frame, text=t("vnd_unit"))
+        self.lbl_vnd.pack(side="left")
+        self.btn_compare = ttk.Button(thresh_frame, text=t("run_compare_btn"), command=self._run_comparison, style="Accent.TButton")
+        self.btn_compare.pack(side="left", padx=20)
+        self.btn_export = ttk.Button(thresh_frame, text=t("export_excel_btn"), command=self._export_excel)
+        self.btn_export.pack(side="left", padx=5)
+        self.btn_batch = ttk.Button(thresh_frame, text=t("batch_compare_btn"), command=self._run_batch_comparison)
+        self.btn_batch.pack(side="left", padx=5)
 
         # Data Grid
         self.data_frame = ttk.Frame(self)
@@ -48,13 +75,13 @@ class VarianceTab(ttk.Frame):
 
         columns = ("Account", "Name", "Base", "Current", "Diff", "Pct", "Status")
         self.tree = ttk.Treeview(self.data_frame, columns=columns, show="headings")
-        self.tree.heading("Account", text="Mã Tài Khoản")
-        self.tree.heading("Name", text="Tên Khoản Mục")
-        self.tree.heading("Base", text="Năm Trước")
-        self.tree.heading("Current", text="Năm Nay")
-        self.tree.heading("Diff", text="Chênh Lệch")
-        self.tree.heading("Pct", text="% Biến Động")
-        self.tree.heading("Status", text="Trạng Thái")
+        self.tree.heading("Account", text=t("col_account_code"))
+        self.tree.heading("Name", text=t("col_item_name"))
+        self.tree.heading("Base", text=t("col_prev_year"))
+        self.tree.heading("Current", text=t("col_curr_year"))
+        self.tree.heading("Diff", text=t("col_curr_year_diff"))
+        self.tree.heading("Pct", text=t("col_pct_diff"))
+        self.tree.heading("Status", text=t("col_status"))
 
         self.tree.column("Account", width=100)
         self.tree.column("Name", width=250)
@@ -73,8 +100,49 @@ class VarianceTab(ttk.Frame):
         self.tree.tag_configure("alert_increase", background="#ffcccc") # Light red
         self.tree.tag_configure("alert_decrease", background="#fff0b3") # Light yellow
 
+    def refresh_language(self):
+        try:
+            top = self.winfo_toplevel()
+            if isinstance(top, tk.Toplevel):
+                top.title(t("variance_analysis_btn"))
+        except Exception:
+            pass
+
+        if hasattr(self, "title_lbl"):
+            self.title_lbl.configure(text=t("variance_tab_title"))
+        if hasattr(self, "control_frame"):
+            self.control_frame.configure(text=t("variance_settings_frame"))
+        if hasattr(self, "lbl_base_file"):
+            self.lbl_base_file.configure(text=t("prev_year_file_label"))
+        if hasattr(self, "lbl_curr_file"):
+            self.lbl_curr_file.configure(text=t("curr_year_file_label"))
+        if hasattr(self, "btn_base_file"):
+            self.btn_base_file.configure(text=t("choose_file_btn"))
+        if hasattr(self, "btn_curr_file"):
+            self.btn_curr_file.configure(text=t("choose_file_btn"))
+        if hasattr(self, "lbl_thresh"):
+            self.lbl_thresh.configure(text=t("alert_threshold_label"))
+        if hasattr(self, "lbl_or"):
+            self.lbl_or.configure(text=t("or_label"))
+        if hasattr(self, "lbl_vnd"):
+            self.lbl_vnd.configure(text=t("vnd_unit"))
+        if hasattr(self, "btn_compare"):
+            self.btn_compare.configure(text=t("run_compare_btn"))
+        if hasattr(self, "btn_export"):
+            self.btn_export.configure(text=t("export_excel_btn"))
+        if hasattr(self, "btn_batch"):
+            self.btn_batch.configure(text=t("batch_compare_btn"))
+        if hasattr(self, "tree"):
+            self.tree.heading("Account", text=t("col_account_code"))
+            self.tree.heading("Name", text=t("col_item_name"))
+            self.tree.heading("Base", text=t("col_prev_year"))
+            self.tree.heading("Current", text=t("col_curr_year"))
+            self.tree.heading("Diff", text=t("col_curr_year_diff"))
+            self.tree.heading("Pct", text=t("col_pct_diff"))
+            self.tree.heading("Status", text=t("col_status"))
+
     def _select_file(self, var):
-        path = filedialog.askopenfilename(filetypes=[("Excel Files", "*.xlsx")])
+        path = filedialog.askopenfilename(filetypes=[(t("excel_file_type"), "*.xlsx")])
         if path:
             var.set(path)
 
@@ -83,12 +151,8 @@ class VarianceTab(ttk.Frame):
         cf = self.curr_file.get().strip()
         if not bf or not cf:
             messagebox.showwarning(
-                "Chưa chọn tệp",
-                "Vui lòng chọn đầy đủ cả Tệp Năm Trước và Tệp Năm Nay trước khi so sánh.\n\n"
-                "Cách xử lý:\n"
-                "1. Bấm nút 'Chọn...' tại mục Báo cáo MP Năm Trước để chọn tệp.\n"
-                "2. Bấm nút 'Chọn...' tại mục Báo cáo MP Năm Nay để chọn tệp.\n"
-                "3. Bấm nút 'So sánh (Năm nay vs Năm ngoái)'."
+                t("variance_missing_files_title"),
+                t("variance_missing_files_msg"),
             )
             return
 
@@ -96,15 +160,11 @@ class VarianceTab(ttk.Frame):
             thresh_pct = self.threshold_pct.get()
             thresh_abs = self.threshold_abs.get()
             if thresh_pct < 0 or thresh_abs < 0:
-                raise ValueError("Ngưỡng cảnh báo không được là số âm.")
+                raise ValueError(t("variance_threshold_negative_error"))
         except (tk.TclError, ValueError):
             messagebox.showwarning(
-                "Lỗi nhập liệu ngưỡng",
-                "Ngưỡng cảnh báo phải là giá trị số dương hợp lệ (ví dụ: Tỷ lệ %: 10, Số tiền: 50,000,000).\n\n"
-                "Cách xử lý:\n"
-                "1. Kiểm tra lại ô 'Tỷ lệ biến động (%)' và 'Số tiền biến động tuyệt đối'.\n"
-                "2. Xóa các ký tự không phải số và nhập lại giá trị hợp lệ.\n"
-                "3. Thực hiện so sánh lại."
+                t("variance_threshold_invalid_title"),
+                t("variance_threshold_invalid_msg"),
             )
             return
 
@@ -144,41 +204,33 @@ class VarianceTab(ttk.Frame):
                 self.tree.insert("", "end", values=(line.account_code, line.item_name, b_str, c_str, d_str, p_str, line.status.value), tags=tags)
 
             self._current_report = report
-            messagebox.showinfo("Hoàn tất", "Đã so sánh xong dữ liệu hai năm.")
+            messagebox.showinfo(t("variance_compare_done_title"), t("variance_compare_done_msg"))
 
         except Exception as e:
-            messagebox.showerror("Lỗi So Sánh", f"{str(e)}")
+            messagebox.showerror(t("variance_compare_err_title"), f"{str(e)}")
 
     def _export_excel(self):
         if not hasattr(self, "_current_report") or not self._current_report:
             messagebox.showwarning(
-                "Chưa có dữ liệu",
-                "Vui lòng thực hiện So sánh dữ liệu trước khi xuất báo cáo Excel.\n\n"
-                "Cách xử lý:\n"
-                "1. Chọn tệp Năm Trước và Năm Nay ở phía trên.\n"
-                "2. Bấm 'So sánh (Năm nay vs Năm ngoái)'.\n"
-                "3. Sau khi bảng kết quả hiện ra, bấm 'Xuất Excel'."
+                t("variance_no_data_title"),
+                t("variance_no_data_msg"),
             )
             return
 
         path = filedialog.asksaveasfilename(
             defaultextension=".xlsx",
-            filetypes=[("Excel Files", "*.xlsx")],
+            filetypes=[(t("excel_file_type"), "*.xlsx")],
             initialfile="Bao_cao_bien_dong_MP.xlsx"
         )
         if path:
             try:
                 from src.utils.excel_variance_writer import export_variance_report
                 export_variance_report(self._current_report, path)
-                messagebox.showinfo("Thành công", f"Đã xuất báo cáo thành công tới:\n{path}")
+                messagebox.showinfo(t("variance_export_success_title"), t("variance_export_success_msg", path=path))
             except Exception as e:
                 messagebox.showerror(
-                    "Lỗi xuất Excel",
-                    f"Đã xảy ra lỗi khi ghi tệp Excel:\n{str(e)}\n\n"
-                    "Cách xử lý:\n"
-                    "1. Kiểm tra xem tệp Excel có đang được mở bởi ứng dụng khác không (nếu có, hãy đóng tệp).\n"
-                    "2. Kiểm tra quyền ghi tại thư mục đã chọn.\n"
-                    "3. Thử lưu với tên tệp khác hoặc vị trí khác."
+                    t("variance_export_err_title"),
+                    t("variance_export_err_msg", error=str(e)),
                 )
 
     def _run_batch_comparison(self):
@@ -186,42 +238,26 @@ class VarianceTab(ttk.Frame):
             thresh_pct = self.threshold_pct.get()
             thresh_abs = self.threshold_abs.get()
             if thresh_pct < 0 or thresh_abs < 0:
-                raise ValueError("Ngưỡng cảnh báo không được là số âm.")
+                raise ValueError(t("variance_threshold_negative_error"))
         except (tk.TclError, ValueError):
             messagebox.showwarning(
-                "Lỗi nhập liệu ngưỡng",
-                "Ngưỡng cảnh báo phải là giá trị số dương hợp lệ.\n\n"
-                "Cách xử lý: Kiểm tra lại 2 ô nhập ngưỡng cảnh báo ở phía trên."
+                t("variance_threshold_invalid_title"),
+                t("variance_threshold_invalid_msg"),
             )
             return
 
-        base_dir = filedialog.askdirectory(title="Chọn thư mục chứa báo cáo MP Năm Trước")
+        base_dir = filedialog.askdirectory(title=t("variance_batch_select_base_title"))
         if not base_dir:
             return
-        curr_dir = filedialog.askdirectory(title="Chọn thư mục chứa báo cáo MP Năm Nay")
+        curr_dir = filedialog.askdirectory(title=t("variance_batch_select_curr_title"))
         if not curr_dir:
             return
 
         from src.engine.variance_analyzer import scan_directories_and_pair_files, batch_analyze_variances
         pairs, unmatched = scan_directories_and_pair_files(base_dir, curr_dir)
         if not pairs:
-            msg = (
-                "Không tìm thấy cặp tệp MP nào khớp theo mã bộ phận giữa 2 thư mục.\n\n"
-                "Nguyên nhân: Tên tệp không chứa mã bộ phận giống nhau (ví dụ: MP_1412000040_FY2026.xlsx và MP_1412000040_FY2027.xlsx).\n\n"
-            )
-            if unmatched:
-                msg += f"Đã tìm thấy {len(unmatched)} tệp nhưng không thể ghép cặp:\n"
-                msg += "• " + "\n• ".join(unmatched[:10])
-                if len(unmatched) > 10:
-                    msg += f"\n... (và {len(unmatched) - 10} tệp khác)\n"
-                msg += "\n"
-            msg += (
-                "Cách xử lý:\n"
-                "1. Đảm bảo cả 2 thư mục đều chứa các tệp MP tương ứng của cùng bộ phận.\n"
-                "2. Kiểm tra quy tắc đặt tên tệp (chứa mã Cost Center 4 hoặc 10 chữ số).\n"
-                "3. Bấm 'So sánh hàng loạt' lại."
-            )
-            messagebox.showwarning("Không tìm thấy dữ liệu ghép cặp", msg)
+            msg = t("variance_batch_no_pairs_msg")
+            messagebox.showwarning(t("variance_batch_no_pairs_title"), msg)
             return
 
         try:
@@ -235,25 +271,19 @@ class VarianceTab(ttk.Frame):
             if not reports:
                 err_msg = "\n• ".join(errors[:5])
                 messagebox.showwarning(
-                    "Không thể phân tích dữ liệu",
-                    f"Đã tìm thấy các tệp MP nhưng không thể phân tích nội dung.\n\n"
-                    f"Chi tiết lỗi:\n• {err_msg}\n\n"
-                    f"Cách xử lý:\n"
-                    f"1. Kiểm tra các tệp bị báo lỗi theo hướng dẫn trong thông báo trên.\n"
-                    f"2. Đảm bảo các tệp là báo cáo MP hợp lệ có chứa trang tính chi tiết '内訳ﾘｽﾄ(4～3月)'.\n"
-                    f"3. Khắc phục lỗi trong các tệp và thực hiện lại."
+                    t("variance_batch_parse_err_title"),
+                    t("variance_batch_parse_err_msg", error=err_msg),
                 )
                 return
 
             path = filedialog.asksaveasfilename(
                 defaultextension=".xlsx",
-                filetypes=[("Excel Files", "*.xlsx")],
+                filetypes=[(t("excel_file_type"), "*.xlsx")],
                 initialfile="Tong_hop_bien_dong_MP.xlsx",
-                title="Lưu báo cáo tổng hợp"
+                title=t("variance_batch_save_title")
             )
             if path:
                 from src.utils.excel_variance_writer import batch_export_variance_reports
-                import re
 
                 # Sanitize sheet names: remove invalid Excel characters like \ / * ? : [ ]
                 def sanitize_sheet_name(name):
@@ -264,17 +294,12 @@ class VarianceTab(ttk.Frame):
 
                 batch_export_variance_reports(reports, path)
 
-                msg = f"Đã xử lý {len(reports)} phòng và lưu báo cáo tại:\n{path}"
+                msg = t("variance_batch_success_msg", count=len(reports), path=path)
                 if errors:
-                    msg += f"\n\nTuy nhiên có {len(errors)} file bị lỗi:\n" + "\n".join(errors[:3])
-                    if len(errors) > 3:
-                        msg += f"\n... (và {len(errors) - 3} lỗi khác)"
+                    msg += f"\n\n(Errors: {len(errors)})\n" + "\n".join(errors[:3])
                 if unmatched:
-                    msg += f"\n\nĐã bỏ qua {len(unmatched)} file do không tìm thấy đối chiếu:\n"
-                    msg += "- " + "\n- ".join(unmatched[:10])
-                    if len(unmatched) > 10:
-                        msg += f"\n... (và {len(unmatched) - 10} file khác)"
+                    msg += f"\n\n(Unmatched: {len(unmatched)})\n" + "\n".join(unmatched[:5])
 
-                messagebox.showinfo("Thành công", msg)
+                messagebox.showinfo(t("variance_export_success_title"), msg)
         except Exception as e:
-            messagebox.showerror("Lỗi So Sánh Hàng Loạt", f"Đã xảy ra lỗi:\n{str(e)}")
+            messagebox.showerror(t("variance_batch_err_title"), f"{str(e)}")

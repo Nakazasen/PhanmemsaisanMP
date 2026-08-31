@@ -16,6 +16,22 @@ def _isolate_run_history(tmp_path, monkeypatch):
     monkeypatch.setenv("MP_MANAGER_TEST_HISTORY_ROOT", str(tmp_path / "RUN_HISTORY"))
 
 
+@pytest.fixture(autouse=True)
+def _isolate_launcher_appdata(tmp_path, monkeypatch):
+    """Isolate LOCALAPPDATA so tests never mutate user's real launcher.json or language preferences."""
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "LOCALAPPDATA"))
+
+
+@pytest.fixture(autouse=True)
+def _isolate_i18n_language():
+    """Reset UI language to default for deterministic test execution."""
+    from src.services.i18n import DEFAULT_LANGUAGE, set_current_language
+
+    set_current_language(DEFAULT_LANGUAGE)
+    yield
+    set_current_language(DEFAULT_LANGUAGE)
+
+
 @pytest.fixture
 def sqlite_conn():
     """Return a schema-ready in-memory database for fast integration tests."""

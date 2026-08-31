@@ -804,8 +804,9 @@ def apply_complete_v1_source_order_to_workbook(
     dynamic_allocation_rows: Iterable[dict[str, object]] | None = None,
     fiscal_periods: Iterable[str] | None = None,
     source_file_order: Iterable[str] | None = None,
+    output_source_file_order: Iterable[str] | None = None,
     fiscal_year: int | None = None,
-) -> dict[str, int]:
+) -> dict[str, object]:
     """Ghi lại các dòng nghiệp vụ hoàn chỉnh (Complete-v1) theo từng khối tệp nguồn.
 
     Hàm thực hiện dọn dẹp các dòng dữ liệu cũ, gom nhóm theo từng tệp nguồn đầu vào,
@@ -829,6 +830,9 @@ def apply_complete_v1_source_order_to_workbook(
         resolved_source_order = tuple(source_file_order or CANONICAL_SOURCE_FILE_ORDER)
         if len(resolved_source_order) < len(SOURCE_ROW_GROUPS):
             raise ValueError("Danh sách thứ tự nguồn không đủ nhóm nghiệp vụ.")
+        resolved_output_source_order = tuple(
+            dict.fromkeys(output_source_file_order or resolved_source_order)
+        )
         try:
             ws = wb[helpers.find_hub_sheet_name(wb)]
         except ValueError:
@@ -925,7 +929,11 @@ def apply_complete_v1_source_order_to_workbook(
         rows_written = 0
         blank_rows_written = 0
 
-        for source_index, source_file in enumerate(resolved_source_order):
+        source_group_index = {
+            source_file: index for index, source_file in enumerate(resolved_source_order)
+        }
+        written_source_files: list[str] = []
+        for source_file in resolved_output_source_order:
             group = [row for row in staged if row.source_file == source_file]
             if not group:
                 continue
@@ -933,11 +941,14 @@ def apply_complete_v1_source_order_to_workbook(
                 _clear_business_row(ws, current_row)
                 blank_rows_written += 1
                 current_row += 1
-            for item in _ordered_source_group(group, source_index=source_index):
+            for item in _ordered_source_group(
+                group, source_index=source_group_index.get(source_file)
+            ):
                 _write_staged_row(ws, current_row, item)
                 rows_written += 1
                 current_row += 1
             source_blocks_written += 1
+            written_source_files.append(source_file)
 
         preserved_rows_written = 0
         if preserved:
@@ -971,6 +982,7 @@ def apply_complete_v1_source_order_to_workbook(
             "end_row": current_row - 1 if rows_written or preserved_rows_written else start_row - 1,
             "cleared_through_row": effective_clear_until_row,
             "tail_formulas_cleared": tail_formulas_cleared,
+            "source_block_order": tuple(written_source_files),
             "nnn_rows_written": sum(
                 1 for row in staged if row.source_file == resolved_source_order[6]
             ),
