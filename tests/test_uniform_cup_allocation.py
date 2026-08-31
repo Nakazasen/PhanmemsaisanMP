@@ -6,6 +6,10 @@ from pathlib import Path
 from src.db.loader import load_uniform_entitlements
 from src.db.schema import create_schema, get_connection, init_sys_params
 from src.engine.allocator import AllocationEngine
+from src.engine.uniform_cup_rules import (
+    SOURCE_BACKED_UNIFORM_ITEM_SPECS,
+    apply_approved_uniform_entitlement_amendments,
+)
 from src.parsers.manual_event_drivers import TEMPLATE_COLUMNS, parse_manual_event_drivers
 from src.utils.excel_helpers import get_fy_months
 
@@ -285,3 +289,113 @@ def test_cc_1412000019_splits_new_hire_hats_by_staff_and_worker(tmp_path):
         ("202606", "color_hat", 0, 1, 1, 2, 39_000, 78_000, "1*39000*2", "S46"),
     ]
     conn.close()
+
+
+def test_improvement_807_814_amendment_is_source_compatible_and_exactly_scoped():
+    base = [
+        {
+            "item_key": "color_hat",
+            "item_name": "Mũ màu",
+            "source_file": "requirements.xlsx",
+            "source_sheet": "原価センタ",
+            "source_cell": "S30",
+        }
+    ]
+
+    cc_0044 = apply_approved_uniform_entitlement_amendments("1412000044", base)
+    assert {row["item_key"] for row in cc_0044} == {
+        "safety_shoes_type_1",
+        "electrostatic_white_hat",
+        "collapsible_cup",
+    }
+    assert {
+        (row["source_file"], row["source_sheet"], row["source_cell"])
+        for row in cc_0044
+    } == {
+        (
+            "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx",
+            "Hạng mục cần cải tiến",
+            "C807:C814",
+        )
+    }
+    assert {row["item_key"] for row in apply_approved_uniform_entitlement_amendments("1412000056", [])} == {
+        "collapsible_cup"
+    }
+    assert {row["item_key"] for row in apply_approved_uniform_entitlement_amendments("1412000088", [])} == {
+        "collapsible_cup"
+    }
+    assert apply_approved_uniform_entitlement_amendments("1412000006", base) == base
+    assert len(SOURCE_BACKED_UNIFORM_ITEM_SPECS) == 16
+
+
+def test_improvement_807_814_allocates_0044_without_color_hat_and_worker_only_cup(tmp_path):
+    cc_code = "1412000044"
+    conn = _connection(tmp_path, cc_code=cc_code)
+    _rule(conn, "タイプ1の安全靴 Giày bảo hộ loại 1", 410_000)
+    _rule(conn, "金型用帽子（白）Mũ trắng tĩnh điện", 47_000)
+    _rule(conn, "帽子（カラー）Mũ màu", 39_000)
+    _rule(conn, "折りたたみコップ Cốc xếp", 8_500)
+    _entitlement(conn, "color_hat", "Mũ màu", cc_code=cc_code, cell="S30")
+    conn.commit()
+
+    engine = AllocationEngine(conn, target_cc=cc_code)
+    _headcount_cache(engine, {"202604": (1, 2)}, cc_code=cc_code)
+    engine.run_allocation()
+
+    april_rows = conn.execute(
+        """
+        SELECT item_key,issue_quantity,amount_vnd,entitlement_source_file,
+               entitlement_source_sheet,entitlement_source_cell
+        FROM audit_uniform_cup_calculation
+        WHERE period='202604'
+        ORDER BY item_key
+        """
+    ).fetchall()
+    assert [tuple(row) for row in april_rows] == [
+        (
+            "collapsible_cup", 2, 17_000,
+            "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx",
+            "Hạng mục cần cải tiến", "C807:C814",
+        ),
+        (
+            "electrostatic_white_hat", 6, 282_000,
+            "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx",
+            "Hạng mục cần cải tiến", "C807:C814",
+        ),
+        (
+            "safety_shoes_type_1", 3, 1_230_000,
+            "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx",
+            "Hạng mục cần cải tiến", "C807:C814",
+        ),
+    ]
+    assert conn.execute(
+        "SELECT COUNT(*) FROM audit_uniform_cup_calculation WHERE item_key='color_hat'"
+    ).fetchone()[0] == 0
+    assert conn.execute(
+        """
+        SELECT status FROM audit_uniform_cup_calculation
+        WHERE item_key='collapsible_cup' AND period='202608'
+        """
+    ).fetchone()[0] == "MISSING_PERIODIC_CUP_COUNT"
+    conn.close()
+
+
+def test_improvement_807_814_adds_worker_only_cup_for_0056_and_0088(tmp_path):
+    for cc_code in ("1412000056", "1412000088"):
+        case_dir = tmp_path / cc_code
+        case_dir.mkdir()
+        conn = _connection(case_dir, cc_code=cc_code)
+        _rule(conn, "折りたたみコップ Cốc xếp", 8_500)
+        conn.commit()
+        engine = AllocationEngine(conn, target_cc=cc_code)
+        _headcount_cache(engine, {"202604": (3, 2)}, cc_code=cc_code)
+        engine.run_allocation()
+        row = conn.execute(
+            """
+            SELECT new_staff,new_worker,issue_quantity,amount_vnd
+            FROM audit_uniform_cup_calculation
+            WHERE item_key='collapsible_cup' AND period='202604'
+            """
+        ).fetchone()
+        assert tuple(row) == (3, 2, 2, 17_000)
+        conn.close()

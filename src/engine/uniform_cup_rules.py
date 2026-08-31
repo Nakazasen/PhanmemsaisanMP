@@ -21,6 +21,7 @@ class UniformItemSpec:
     rule_excludes: tuple[str, ...] = ()
     quantity_per_hire: int = 1
     timing: str = "monthly"
+    source_backed: bool = True
 
     def matches_rule(self, item_name: object) -> bool:
         normalized = normalize_uniform_text(item_name)
@@ -46,11 +47,64 @@ UNIFORM_ITEM_SPECS: tuple[UniformItemSpec, ...] = (
     UniformItemSpec("color_hat", "Mũ màu", ("帽子（カラー）",), quantity_per_hire=2),
     UniformItemSpec("security_hat", "Mũ phòng an ninh", ("保安課", "帽子"), quantity_per_hire=2),
     UniformItemSpec("collapsible_cup", "Cốc xếp", ("折りたたみコップ",), quantity_per_hire=1, timing="cup"),
+    UniformItemSpec(
+        "safety_shoes_type_1",
+        "Giày bảo hộ loại 1",
+        ("タイプ1", "安全靴"),
+        quantity_per_hire=1,
+        source_backed=False,
+    ),
+    UniformItemSpec(
+        "electrostatic_white_hat",
+        "Mũ trắng tĩnh điện",
+        ("金型用帽子", "帽子（白）"),
+        quantity_per_hire=2,
+        source_backed=False,
+    ),
 )
 
 UNIFORM_ITEM_SPEC_BY_KEY = {spec.key: spec for spec in UNIFORM_ITEM_SPECS}
+SOURCE_BACKED_UNIFORM_ITEM_SPECS = tuple(spec for spec in UNIFORM_ITEM_SPECS if spec.source_backed)
 SUMMER_SHIRT_KEYS = frozenset({"short_sleeve", "polo", "security_short_sleeve"})
 LONG_SLEEVE_KEYS = frozenset({"long_sleeve", "security_long_sleeve"})
+
+IMPROVEMENT_807_814_SOURCE_FILE = "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx"
+IMPROVEMENT_807_814_SOURCE_SHEET = "Hạng mục cần cải tiến"
+IMPROVEMENT_807_814_SOURCE_CELL = "C807:C814"
+IMPROVEMENT_807_814_ITEMS_BY_CC = {
+    "1412000044": ("safety_shoes_type_1", "electrostatic_white_hat", "collapsible_cup"),
+    "1412000056": ("collapsible_cup",),
+    "1412000088": ("collapsible_cup",),
+}
+
+
+def apply_approved_uniform_entitlement_amendments(cc_code: object, entitlements) -> list[dict[str, object]]:
+    """Apply only the approved C807:C814 additions without changing source workbook rows."""
+    code = str(cc_code or "").strip()
+    effective = [dict(row) for row in entitlements]
+    additions = IMPROVEMENT_807_814_ITEMS_BY_CC.get(code, ())
+    if not additions:
+        return effective
+
+    if code == "1412000044":
+        # The approved change replaces the colour hat; it must never allocate both hats.
+        effective = [row for row in effective if row.get("item_key") != "color_hat"]
+
+    present = {str(row.get("item_key", "")) for row in effective}
+    for item_key in additions:
+        if item_key in present:
+            continue
+        effective.append(
+            {
+                "item_key": item_key,
+                "item_name": UNIFORM_ITEM_SPEC_BY_KEY[item_key].header,
+                "source_file": IMPROVEMENT_807_814_SOURCE_FILE,
+                "source_sheet": IMPROVEMENT_807_814_SOURCE_SHEET,
+                "source_cell": IMPROVEMENT_807_814_SOURCE_CELL,
+            }
+        )
+        present.add(item_key)
+    return effective
 
 
 def uniform_item_key_for_rule(item_name: object) -> str | None:

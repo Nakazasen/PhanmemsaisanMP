@@ -16,6 +16,7 @@ from src.engine.uniform_cup_rules import (
     SUMMER_SHIRT_KEYS,
     UNIFORM_ITEM_SPECS,
     UNIFORM_ITEM_SPEC_BY_KEY,
+    apply_approved_uniform_entitlement_amendments,
     uniform_item_key_for_rule,
 )
 from src.services.headcount_source_policy import HeadcountSourceError, load_canonical_headcount
@@ -687,19 +688,18 @@ class AllocationEngine:
         """Expand the hat entitlement for CCs whose staff and workers use different hats."""
         effective = list(entitlements)
         if cc_code not in ROLE_SPLIT_HAT_CC_CODES:
-            return effective
+            return apply_approved_uniform_entitlement_amendments(cc_code, effective)
         by_key = {str(row["item_key"]): row for row in effective}
         hat_entitlement = by_key.get("color_hat") or by_key.get("white_hat")
-        if hat_entitlement is None:
-            return effective
-        for item_key in ("color_hat", "white_hat"):
-            if item_key in by_key:
-                continue
-            synthetic = dict(hat_entitlement)
-            synthetic["item_key"] = item_key
-            synthetic["item_name"] = UNIFORM_ITEM_SPEC_BY_KEY[item_key].header
-            effective.append(synthetic)
-        return effective
+        if hat_entitlement is not None:
+            for item_key in ("color_hat", "white_hat"):
+                if item_key in by_key:
+                    continue
+                synthetic = dict(hat_entitlement)
+                synthetic["item_key"] = item_key
+                synthetic["item_name"] = UNIFORM_ITEM_SPEC_BY_KEY[item_key].header
+                effective.append(synthetic)
+        return apply_approved_uniform_entitlement_amendments(cc_code, effective)
 
     @staticmethod
     def _uniform_item_driver(

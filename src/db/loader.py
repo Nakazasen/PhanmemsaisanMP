@@ -16,7 +16,7 @@ from src.services.fiscal_run import resolve_uniform_policy_path
 
 import sys
 
-from src.engine.uniform_cup_rules import UNIFORM_ITEM_SPECS, normalize_uniform_text
+from src.engine.uniform_cup_rules import SOURCE_BACKED_UNIFORM_ITEM_SPECS, normalize_uniform_text
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = os.path.dirname(sys.executable)
@@ -107,7 +107,11 @@ def load_uniform_entitlements(
         cc_header = normalize_uniform_text("原価センタ")
         if cc_header not in headers:
             raise ValueError(f"Thiếu cột mã phòng trong sheet {UNIFORM_REQUIREMENTS_SHEET}")
-        missing = [spec.header for spec in UNIFORM_ITEM_SPECS if normalize_uniform_text(spec.header) not in headers]
+        missing = [
+            spec.header
+            for spec in SOURCE_BACKED_UNIFORM_ITEM_SPECS
+            if normalize_uniform_text(spec.header) not in headers
+        ]
         if missing:
             raise ValueError("Thiếu cột đối tượng đồng phục/cốc xếp: " + ", ".join(missing))
 
@@ -120,7 +124,7 @@ def load_uniform_entitlements(
             if cc_code in seen_cc:
                 raise ValueError(f"Mã phòng bị trùng trong sheet {UNIFORM_REQUIREMENTS_SHEET}: {cc_code}")
             seen_cc.add(cc_code)
-            for spec in UNIFORM_ITEM_SPECS:
+            for spec in SOURCE_BACKED_UNIFORM_ITEM_SPECS:
                 column = headers[normalize_uniform_text(spec.header)]
                 raw_mark = str(worksheet.cell(row_number, column).value or "").strip()
                 if raw_mark not in ("", "〇"):
