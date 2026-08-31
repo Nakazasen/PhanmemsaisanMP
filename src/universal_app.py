@@ -123,6 +123,7 @@ from src.services.manual_staffing_overrides import (
     copy_missing_baselines_from_april,
     find_missing_baseline_ccs,
     save_manual_baseline_override,
+    save_manual_g6_to_g5_transitions,
     save_manual_time_overrides,
 )
 from src.services.fiscal_run import annual_default_paths, create_fiscal_run_context, preflight_fiscal_run
@@ -3206,8 +3207,8 @@ class MPManagerApp:
         # Tạm ẩn hai tab nhập giờ; giữ nguyên frame, biến và logic để có thể bật lại khi cần.
         # notebook.add(fixed, text="Thời gian cố định")
         # notebook.add(overtime, text="Thời gian tăng ca")
-        fields=("expat","staff","worker","male","female","total","note"); month_vars={p:{f:tk.StringVar() for f in fields} for p in periods}
-        headers=(t("hc_time_header_period"),t("hc_header_expat"),t("hc_header_staff"),t("hc_header_worker"),"Nam (T12)","Nữ (T12)",t("hc_header_total"),t("hc_header_note"))
+        fields=("expat","staff","worker","g6_to_g5","male","female","total","note"); month_vars={p:{f:tk.StringVar() for f in fields} for p in periods}
+        headers=(t("hc_time_header_period"),t("hc_header_expat"),t("hc_header_staff"),t("hc_header_worker"),t("hc_header_g6_to_g5"),"Nam (T12)","Nữ (T12)",t("hc_header_total"),t("hc_header_note"))
         for col,label in enumerate(headers): ttk.Label(people,text=label).grid(row=0,column=col,sticky="w",padx=3)
         def update_total(period):
             vals=month_vars[period]
@@ -3216,16 +3217,17 @@ class MPManagerApp:
         for row,period in enumerate(periods,1):
             label=t("hc_month_label", month=int(period[-2:])) if period in fy_periods else t("hc_baseline_label", period=period)
             ttk.Label(people,text=label).grid(row=row,column=0,sticky="w",padx=3,pady=2)
-            for col,key,width in ((1,"expat",9),(2,"staff",11),(3,"worker",11),(4,"male",10),(5,"female",10)):
+            for col,key,width in ((1,"expat",9),(2,"staff",11),(3,"worker",11),(4,"g6_to_g5",10),(5,"male",10),(6,"female",10)):
                 entry=ttk.Entry(people,textvariable=month_vars[period][key],width=width); entry.grid(row=row,column=col,padx=3,pady=2)
                 if key in ("expat","staff","worker") and period in fy_periods: entry.state(["readonly"])
+                if key == "g6_to_g5" and period not in fy_periods: entry.state(["disabled"])
                 if key in ("male","female") and not period.endswith("12"): entry.state(["disabled"])
                 if key in ("expat","staff","worker"): month_vars[period][key].trace_add("write",lambda *_args,p=period:update_total(p))
-            total=ttk.Entry(people,textvariable=month_vars[period]["total"],width=11,state="readonly"); total.grid(row=row,column=6,padx=3)
-            ttk.Entry(people,textvariable=month_vars[period]["note"],width=42).grid(row=row,column=7,sticky="ew",padx=3)
+            total=ttk.Entry(people,textvariable=month_vars[period]["total"],width=11,state="readonly"); total.grid(row=row,column=7,padx=3)
+            ttk.Entry(people,textvariable=month_vars[period]["note"],width=42).grid(row=row,column=8,sticky="ew",padx=3)
             if period not in fy_periods:
-                ttk.Label(people,text=t("hc_baseline_hint"),foreground="#8A4B08").grid(row=row,column=8,sticky="w",padx=4)
-        people.columnconfigure(7,weight=1)
+                ttk.Label(people,text=t("hc_baseline_hint"),foreground="#8A4B08").grid(row=row,column=9,sticky="w",padx=4)
+        people.columnconfigure(8,weight=1)
         time_fields=("fixed_hours_expat","fixed_hours_local","overtime_hours_expat","overtime_hours_local")
         time_vars={p:{f:tk.StringVar() for f in time_fields} for p in get_fy_months(fiscal_year)}
         ttk.Label(fixed,text=t("hc_hours_optional"),font=("Segoe UI",9,"italic")).grid(row=0,column=0,columnspan=4,sticky="w",pady=(0,6))
@@ -3320,12 +3322,22 @@ class MPManagerApp:
                             (fiscal_year, cc, *fy_period_list),
                         ).fetchall()
                     }
+                    transitions = {
+                        row["period"]: dict(row)
+                        for row in manual_conn.execute(
+                            f"""SELECT * FROM fact_manual_g6_to_g5_transition
+                            WHERE fiscal_year=? AND CAST(cc_code AS TEXT)=?
+                            AND period IN ({period_placeholders}) ORDER BY period""",
+                            (fiscal_year, cc, *fy_period_list),
+                        ).fetchall()
+                    }
                     return {
                         "source_rows": source_rows,
                         "manual": manual,
                         "busrow": dict(busrow) if busrow else None,
                         "timerows": timerows,
                         "time_overrides": time_overrides,
+                        "transitions": transitions,
                     }
                 finally:
                     if manual_conn is not None:
@@ -3373,6 +3385,9 @@ class MPManagerApp:
                     if period in time_vars:
                         for key in time_fields:
                             time_vars[period][key].set(f"{float(row[key] or 0):g}")
+                for period, row in result["transitions"].items():
+                    if period in month_vars:
+                        month_vars[period]["g6_to_g5"].set(f"{float(row['transition_count'] or 0):g}")
                 source_status.set(
                     t("hc_has_source_data", count=len(result['source_rows']), fy=fiscal_year)
                     if result["source_rows"]
@@ -3442,6 +3457,7 @@ class MPManagerApp:
                         if male or female or note:
                             conn.execute("INSERT INTO fact_monthly_headcount(period,cc_code,headcount_all,headcount_expat,headcount_staff,headcount_worker,headcount_male,headcount_female,source,description) VALUES(?,?,0,0,0,0,?,?,'manual',?)",(period,cc,male,female,note))
                     save_manual_time_overrides(conn,fiscal_year,cc,{p: {f: v[f].get() for f in time_fields} for p, v in time_vars.items()})
+                    save_manual_g6_to_g5_transitions(conn,fiscal_year,cc,{p: v["g6_to_g5"].get() for p, v in month_vars.items() if p in fy_periods})
             except ValueError as exc:
                 conn.rollback()
                 messagebox.showerror(t("invalid_data_title"), _friendly_error_message(exc))

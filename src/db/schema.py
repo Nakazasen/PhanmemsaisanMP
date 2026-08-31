@@ -132,6 +132,13 @@ def create_schema(conn: sqlite3.Connection) -> None:
             description TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY(period, cc_code)
         )''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS fact_manual_g6_to_g5_transition (
+            period TEXT NOT NULL, cc_code TEXT NOT NULL, fiscal_year INTEGER NOT NULL DEFAULT 0,
+            transition_count REAL NOT NULL DEFAULT 0,
+            description TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY(period, cc_code)
+        )''')
 
     # Fact Tables
     cursor.execute("""
@@ -284,6 +291,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_bus_hc_cc ON fact_bus_headcount_drivers(cc_code)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_manual_hc_baseline_cc ON fact_manual_headcount_baseline_override(cc_code, period)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_manual_hc_time_cc ON fact_manual_headcount_time_override(cc_code, period)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_manual_g6_to_g5_cc ON fact_manual_g6_to_g5_transition(fiscal_year, cc_code, period)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_missing_inputs_source ON fact_missing_inputs(source, cc_code, period)")
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS idx_uniform_items_eligible "

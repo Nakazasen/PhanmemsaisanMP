@@ -215,6 +215,7 @@ class AllocationEngine:
         self.hc_cache = self._load_headcount_cache()
         self.bus_driver_cache = self._load_bus_driver_cache()
         self.bus_unit_price_cache = self._load_bus_unit_price_cache()
+        self.g6_to_g5_transition_cache = self._load_g6_to_g5_transition_cache()
         self._missing_input_keys: set[tuple[str, str, str, str]] = set()
         self._account_resolution_cache: dict[tuple[str, str, str, int | None], int | None] = {}
         self._uniform_new_hire_cache: dict[tuple[str, str], tuple[float, float, float]] = {}
@@ -306,6 +307,24 @@ class AllocationEngine:
                 if (driver_key, period) not in ambiguous:
                     cache[driver_key][period] = amount
         return cache
+
+    def _load_g6_to_g5_transition_cache(self) -> dict[tuple[str, str], float]:
+        """Load explicit internal transfers; an absent legacy table means zero."""
+        try:
+            rows = self.conn.execute(
+                """SELECT period,cc_code,transition_count
+                   FROM fact_manual_g6_to_g5_transition
+                   WHERE fiscal_year IN (?, 0)""",
+                (self.fiscal_year,),
+            ).fetchall()
+        except sqlite3.OperationalError as exc:
+            if "no such table" not in str(exc).lower():
+                raise
+            return {}
+        return {
+            (str(row["cc_code"]).strip(), str(row["period"])): float(row["transition_count"] or 0.0)
+            for row in rows
+        }
 
     @staticmethod
     def _is_valid_account_code(value) -> bool:
@@ -656,7 +675,7 @@ class AllocationEngine:
         if cached is not None:
             return cached
         try:
-            staff_new = self._get_event_delta(cc_code, period, "headcount_staff", rule=rule)
+            staff_new = self._new_hire_staff_delta(cc_code, period, rule=rule)
             worker_new = self._get_event_delta(cc_code, period, "headcount_worker", rule=rule)
         except HeadcountSourceError as exc:
             self._record_uniform_missing(
@@ -1089,6 +1108,15 @@ class AllocationEngine:
         delta = current - prev
         return delta if delta > 0 else 0.0
 
+    def _g6_to_g5_transition_count(self, cc_code: object, period: str) -> float:
+        """Return the explicit internal G6-to-G5 transfers for one FY month."""
+        return self.g6_to_g5_transition_cache.get((str(cc_code).strip(), str(period)), 0.0)
+
+    def _new_hire_staff_delta(self, cc_code: object, period: str, rule=None) -> float:
+        """Count only actual staff hires, excluding recorded G6-to-G5 transfers."""
+        staff_delta = self._get_event_delta(cc_code, period, "headcount_staff", rule=rule)
+        return max(0.0, staff_delta - self._g6_to_g5_transition_count(cc_code, period))
+
     def _resolve_rule_driver_type(self, rule) -> str:
         driver_type = str(rule["driver_type"] or "").strip() or "headcount_all"
         if driver_type in ("headcount_male", "headcount_female"):
@@ -1111,7 +1139,7 @@ class AllocationEngine:
         return any(self._normalize_text(token) in item_name for token in RECRUITMENT_HEALTH_TOKENS)
 
     def _recruitment_health_new_hires(self, cc_code: object, source_period: str, rule) -> tuple[float, float]:
-        staff_new = self._get_event_delta(cc_code, source_period, "headcount_staff", rule=rule)
+        staff_new = self._new_hire_staff_delta(cc_code, source_period, rule=rule)
         worker_new = self._get_event_delta(cc_code, source_period, "headcount_worker", rule=rule)
         return staff_new, worker_new
 
@@ -1124,12 +1152,14 @@ class AllocationEngine:
         independently floored deltas for event-driven new-hire rules, not the
         positive delta of their net total.
         """
+        if driver_type == "headcount_staff":
+            return self._new_hire_staff_delta(cc_code, period, rule=rule)
         if driver_type != "headcount_all":
             return self._get_event_delta(cc_code, period, driver_type, rule=rule)
         # Preserve the existing fail-closed diagnostic for the rule's declared
         # aggregate driver before requiring the finer staff/worker split.
         self._get_event_delta(cc_code, period, "headcount_all", rule=rule)
-        staff_new = self._get_event_delta(cc_code, period, "headcount_staff", rule=rule)
+        staff_new = self._new_hire_staff_delta(cc_code, period, rule=rule)
         worker_new = self._get_event_delta(cc_code, period, "headcount_worker", rule=rule)
         return staff_new + worker_new
 

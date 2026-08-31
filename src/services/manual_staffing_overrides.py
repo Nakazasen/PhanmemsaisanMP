@@ -18,6 +18,7 @@ TIME_FIELDS = (
 _FY_SCOPED_MANUAL_TABLES = (
     "fact_manual_headcount_time_override",
     "fact_manual_headcount_baseline_override",
+    "fact_manual_g6_to_g5_transition",
     "fact_bus_headcount_drivers",
 )
 
@@ -244,6 +245,58 @@ def normalize_manual_time_rows(periods: Sequence[str], values_by_period: Mapping
             row[field] = value
         rows.append(row)
     return rows
+
+
+def normalize_manual_g6_to_g5_transitions(
+    fiscal_year: int,
+    values_by_period: Mapping[str, object],
+) -> list[dict]:
+    """Validate explicit G6-to-G5 transition counts for all FY months.
+
+    The value is an input fact, not an inferred headcount adjustment.  Blank
+    deliberately means zero so projects that do not use this feature retain
+    their existing allocation results.
+    """
+    rows = []
+    for period in fiscal_periods(fiscal_year):
+        raw = str(values_by_period.get(str(period), "") or "").strip()
+        if raw == "":
+            count = 0
+        elif not raw.isdecimal():
+            raise ValueError(f"G6=>G5 at {period} must be a non-negative integer")
+        else:
+            count = int(raw)
+        rows.append({"period": str(period), "transition_count": count})
+    return rows
+
+
+def save_manual_g6_to_g5_transitions(
+    conn: sqlite3.Connection,
+    fiscal_year: int,
+    cc_code: object,
+    values_by_period: Mapping[str, object],
+) -> int:
+    """Replace one CC/FY's explicit G6-to-G5 transfer series atomically."""
+    rows = normalize_manual_g6_to_g5_transitions(fiscal_year, values_by_period)
+    cc = str(cc_code).strip()
+    periods = fiscal_periods(fiscal_year)
+    placeholders = ",".join("?" for _ in periods)
+    conn.execute(
+        f"""DELETE FROM fact_manual_g6_to_g5_transition
+            WHERE fiscal_year=? AND CAST(cc_code AS TEXT)=?
+              AND period IN ({placeholders})""",
+        (int(fiscal_year), cc, *periods),
+    )
+    conn.executemany(
+        """INSERT INTO fact_manual_g6_to_g5_transition
+           (period,cc_code,fiscal_year,transition_count,description,updated_at)
+           VALUES(?,?,?,?, 'MANUAL_G6_TO_G5_TRANSITION', CURRENT_TIMESTAMP)""",
+        [
+            (row["period"], cc, int(fiscal_year), row["transition_count"])
+            for row in rows
+        ],
+    )
+    return len(rows)
 
 
 def apply_manual_time_overrides(conn: sqlite3.Connection, fiscal_year: int, target_cc: object | None = None) -> int:

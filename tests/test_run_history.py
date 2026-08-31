@@ -485,6 +485,11 @@ def test_snapshot_copy_contract_covers_every_manual_staffing_input(tmp_path):
            VALUES('202703','CC',2028,10)"""
     )
     source.execute(
+        """INSERT INTO fact_manual_g6_to_g5_transition
+           (period,cc_code,fiscal_year,transition_count)
+           VALUES('202704','CC',2028,3)"""
+    )
+    source.execute(
         """INSERT INTO fact_bus_headcount_drivers
            (cc_code,fiscal_year,bus_expat_count,bus_vietnamese_count)
            VALUES('CC',2028,1,9)"""
