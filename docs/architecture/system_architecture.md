@@ -18,7 +18,7 @@ flowchart LR
     Engine --> Export["Bộ ghi/xuất FORM"]
     Export --> Output["Kết quả và báo cáo kiểm toán"]
     Output --> User
-    Update["Gói cập nhật/nội dung có chữ ký"] --> Security["An toàn chữ ký và ZIP"]
+    Update["Gói cập nhật .mpupdate (SHA-256 LAN)"] --> Security["Kiểm tra catalog SHA-256 và an toàn ZIP"]
     Security --> Launcher["Trình khởi chạy/cập nhật bên ngoài"]
     Launcher --> UI
 ```
@@ -48,27 +48,26 @@ flowchart LR
 6. Giữ nguyên cấu trúc FORM và xuất workbook theo từng trung tâm chi phí.
 7. Xem báo cáo kiểm toán và đầu vào còn thiếu trước khi chấp nhận kết quả.
 
-## Luồng cập nhật
+## Luồng cập nhật (HASH_ONLY_LAN)
 
 ```mermaid
 sequenceDiagram
     participant U as Người dùng
-    participant L as Trình khởi chạy
-    participant S as Bộ xác minh chữ ký
+    participant L as Trình khởi chạy (Launcher)
+    participant C as Thư mục LAN release_update (latest.json)
     participant A as Bộ cập nhật ứng dụng
-    participant H as Kiểm tra sức khỏe
-    U->>L: Mở ứng dụng
-    L->>S: Xác minh manifest và tệp nén
-    S-->>L: Hợp lệ hoặc không hợp lệ
-    L-->>U: Cập nhật ngay hoặc để sau nếu hợp lệ
-    L->>A: Chuẩn bị phiên bản onedir bất biến
-    A->>H: Chạy cổng kiểm tra sức khỏe
-    H-->>A: Đạt hoặc không đạt
-    A->>L: Kích hoạt con trỏ theo cách nguyên tử
-    L-->>U: Chạy phiên bản mới hoặc giữ phiên bản cũ
+    participant H as Kiểm tra sức khỏe (--health-check)
+    U->>L: Mở ứng dụng (MP2027_Launcher.exe)
+    L->>C: Đọc catalog latest.json trên LAN
+    C-->>L: Thông tin version, kích thước và SHA-256
+    L->>A: Tải/xác minh SHA-256 gói .mpupdate và an toàn ZIP
+    A->>H: Chạy cổng kiểm tra sức khỏe phiên bản onedir mới
+    H-->>A: Đạt (--health-check 0)
+    A->>L: Kích hoạt con trỏ phiên bản nguyên tử (current.json)
+    L-->>U: Chạy phiên bản mới hoặc giữ phiên bản cũ nếu rollback
 ```
 
-Người dùng thông thường không thao tác với khóa ký. Chữ ký hợp lệ được kiểm tra âm thầm; chỉ gói không hợp lệ, không tương thích hoặc hỏng mới tạo cảnh báo ngắn gọn.
+Dự án áp dụng chính sách `HASH_ONLY_LAN`: không tạo, tìm, khôi phục hoặc cấu hình khóa ký hay chữ ký gói. An toàn phát hành dựa trên thư mục LAN do công ty kiểm soát và kiểm tra SHA-256 hai đầu (`latest.json` + `manifest.json`).
 
 ## Các mô-đun rủi ro cao
 
@@ -85,7 +84,7 @@ Người dùng thông thường không thao tác với khóa ký. Chữ ký hợ
 - Chế độ portable phải được bật rõ ràng bằng `MP_MANAGER_PORTABLE_MODE=1`.
 - Bản phân phối dùng onedir, không dùng onefile.
 - Cổng đóng gói xác minh tài nguyên và chạy `--health-check`.
-- Kết quả, cơ sở dữ liệu, log, bí mật và khóa ký riêng không phải là artifact nguồn phát hành.
+- Kết quả, cơ sở dữ liệu, log và tệp tạm không phải là artifact nguồn phát hành.
 
 ## Bố cục phát hành
 
@@ -100,18 +99,18 @@ Người dùng thông thường không thao tác với khóa ký. Chữ ký hợ
     └── _internal/
 ```
 
-Trình khởi chạy ổn định đọc `current.json` được bảo vệ tính toàn vẹn, xác định phiên bản bất biến đang hoạt động và chạy tệp thực thi đó mà không cần Python. Định nghĩa Inno Setup cài cây thư mục này theo từng người dùng dưới `%LOCALAPPDATA%` để bản cập nhật có chữ ký có thể chuẩn bị và chuyển phiên bản theo cách nguyên tử mà không cần quyền quản trị. Dữ liệu dự án thay đổi được nằm riêng trong thư mục gốc dự án MPManager và không thuộc phạm vi rollback phiên bản. Bộ cài đầu tiên là ranh giới tin cậy ban đầu; các gói `.mpupdate` tiếp theo bắt buộc có chữ ký Ed25519.
+Trình khởi chạy ổn định đọc `current.json` được bảo vệ tính toàn vẹn, xác định phiên bản bất biến đang hoạt động và chạy tệp thực thi đó mà không cần Python. Định nghĩa Inno Setup cài cây thư mục này theo từng người dùng dưới `%LOCALAPPDATA%` để bản cập nhật có thể chuẩn bị và chuyển phiên bản theo cách nguyên tử mà không cần quyền quản trị. Dữ liệu dự án thay đổi được nằm riêng trong thư mục gốc dự án MPManager và không thuộc phạm vi rollback phiên bản. Ranh giới tin cậy là thư mục mạng LAN do công ty kiểm soát và xác minh SHA-256; không sử dụng khóa ký số.
 
 ## Chính sách VC++ runtime
 
 PyInstaller mang theo Python runtime và các phụ thuộc nhị phân được phát hiện trong gói onedir. Bộ cài không âm thầm tải hoặc cài VC++ redistributable. Việc xác minh phát hành phải chạy trên một bản Windows sạch được hỗ trợ; nếu kiểm tra phụ thuộc hoặc phép thử đó chứng minh cần redistributable, hãy cố định phiên bản và đóng kèm bản redistributable offline được Microsoft hỗ trợ.
 
-## Khoảng trống đã biết
+## Ranh giới tin cậy phát hành
 
-1. Khóa công khai phát hành thật chưa được provision; giao diện đã có thao tác **Cài gói quy tắc...** và xác minh gói `.mpcontent` theo cơ chế tin cậy runtime.
-2. Bộ tạo `.mpupdate` có chữ ký và tái lập đã tồn tại, nhưng luồng kiểm tra/cài đặt qua kênh truyền tải chưa được nối vào giao diện.
-3. Máy build hiện tại chưa cài Inno Setup 6 nên vẫn còn bước biên dịch bộ cài.
-4. Vẫn phải xác minh trên Windows sạch/không có Python và diễn tập rollback từ N-1.
+1. Thư mục chia sẻ LAN được kiểm soát là ranh giới tin cậy duy nhất (`HASH_ONLY_LAN`).
+2. Catalog `release_update/latest.json` và `manifest.json` trong từng gói quản lý version, kích thước và mã băm SHA-256.
+3. Luồng kiểm tra sức khỏe `--health-check` đảm bảo ứng dụng chạy tốt trên môi trường cách ly trước khi kích hoạt.
+4. Mọi lần phát hành bắt buộc phải tuân theo hướng dẫn chi tiết tại `docs/handover/release_update_playbook.md`.
 
 ## Bằng chứng đóng gói hiện tại
 

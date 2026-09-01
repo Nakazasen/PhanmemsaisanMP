@@ -14,8 +14,8 @@ Danh mục này được viết theo hướng thận trọng: chỉ ghi nhận c
 | F-008 | Lịch sử chạy và kết quả kiểm toán | `src/services/run_history.py` | Test lịch sử/runtime | Trung bình |
 | F-009 | Điều phối giao diện | `src/universal_app.py` | Test nhanh giao diện/đường dẫn | Cao |
 | F-010 | Sức khỏe runtime | `src/services/runtime_health.py`, `scripts/run_e2e.py` | Test sức khỏe runtime | Cao |
-| F-011 | Gói nội dung có chữ ký | `src/services/content_packs.py` | Test gói nội dung/an toàn | Cao |
-| F-012 | Cập nhật ứng dụng có chữ ký | `src/services/app_updates.py` | Test cập nhật/an toàn | Nghiêm trọng |
+| F-011 | Gói nội dung kiểm tra toàn vẹn | `src/services/content_packs.py` | Test gói nội dung/an toàn SHA-256 | Cao |
+| F-012 | Cập nhật ứng dụng qua LAN | `src/services/app_updates.py` | Test cập nhật/an toàn HASH_ONLY_LAN | Nghiêm trọng |
 | F-013 | Gói portable onedir | `MP2027_Portable.spec`, `scripts/package_app.py` | Test đóng gói + sức khỏe EXE | Nghiêm trọng |
 | F-014 | Trình khởi chạy ổn định/bộ cài ban đầu | `MP2027_Manager.spec`, `scripts/update_launcher.py`, `installer/` | Hợp đồng đóng gói + diễn tập Windows sạch | Nghiêm trọng |
 
@@ -24,8 +24,8 @@ Danh mục này được viết theo hướng thận trọng: chỉ ghi nhận c
 1. Thay đổi công thức hoặc driver phải cập nhật test đặc trưng hóa liên quan và bằng chứng quy tắc nghiệp vụ, không chỉ test giao diện.
 2. Thay đổi schema phải bổ sung migration và sinh lại `docs/database/schema_catalog.json` cùng `docs/database/data_dictionary.md`.
 3. Thay đổi đường dẫn hoặc đóng gói phải chạy kiểm tra sức khỏe source và EXE đã đóng gói.
-4. Bản cập nhật phát hành phải dùng `.mpupdate` có chữ ký; không phân phối các mô-đun Python rời cho người dùng.
-5. Thay đổi giá/ánh xạ riêng của bộ phận chỉ được đưa vào gói nội dung có chữ ký sau khi xác minh driver và hợp đồng tài khoản mà bộ máy hỗ trợ.
+4. Bản cập nhật phát hành phải dùng gói `.mpupdate` kèm mã băm SHA-256 trên thư mục LAN đã duyệt (`HASH_ONLY_LAN`); không phân phối các mô-đun Python rời cho người dùng.
+5. Thay đổi giá/ánh xạ riêng của bộ phận chỉ được đưa vào gói nội dung sau khi xác minh driver và hợp đồng tài khoản mà bộ máy hỗ trợ.
 
 ## Danh mục máy đọc được
 
