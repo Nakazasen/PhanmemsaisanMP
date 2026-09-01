@@ -10,6 +10,8 @@ import csv
 import inspect
 import json
 import os
+from pathlib import Path
+import shutil
 import sys
 import time
 import traceback
@@ -79,6 +81,7 @@ from src.engine.system_cost_writer import apply_system_cost_to_workbook
 from src.engine.reference_assisted_fill import apply_reference_assisted_fill_to_workbook
 from src.engine.fixed_assets_reference_skeleton import apply_fixed_assets_reference_skeleton_to_workbook
 from src.engine.complete_v1_source_order_writer import apply_complete_v1_source_order_to_workbook
+from src.engine.manual_special_cost_sections import preserve_manual_special_cost_section
 from src.engine.mp_saisan_complete_export import apply_mp_saisan_complete_v1
 from src.utils.excel_helpers import get_fy_months
 from src.utils.fiscal_periods import fiscal_baseline_period
@@ -117,6 +120,70 @@ from src.services.run_history import (
 )
 
 COMPLETE_V1_SOURCE_ORDER_START_ROW = 38
+
+
+def _parse_manual_special_legacy_starts(values: list[str] | tuple[str, ...]) -> dict[str, int]:
+    starts: dict[str, int] = {}
+    for value in values:
+        text = str(value or "").strip()
+        if not text or ":" not in text:
+            raise ValueError("Mốc chi phí riêng cũ phải có dạng MA_CC:DONG, ví dụ 1412000030:87.")
+        cc_code, raw_row = (part.strip() for part in text.split(":", 1))
+        try:
+            row = int(raw_row)
+        except ValueError as exc:
+            raise ValueError(f"Dòng mốc chi phí riêng không hợp lệ: {text}") from exc
+        if not cc_code or row < 1:
+            raise ValueError(f"Mốc chi phí riêng không hợp lệ: {text}")
+        starts[cc_code] = row
+    return starts
+
+
+def _stage_manual_special_cost_source(run_context, cc_code: object) -> tuple[str | None, str]:
+    """Snapshot the published CC workbook before export can replace it."""
+    workbook_name = f"MP_CC_{str(cc_code).strip()}.xlsx"
+    current = Path(run_context.output_dir) / workbook_name
+    if current.is_file():
+        snapshot_root = Path(run_context.workspace_dir or Path(run_context.output_dir).parent) / "manual_special_sources"
+        snapshot_root.mkdir(parents=True, exist_ok=True)
+        snapshot = snapshot_root / workbook_name
+        shutil.copy2(current, snapshot)
+        return str(snapshot), "current_fiscal_year"
+    inherited_dir = getattr(run_context, "manual_special_inheritance_dir", None)
+    if inherited_dir:
+        inherited = Path(inherited_dir) / workbook_name
+        if inherited.is_file():
+            return str(inherited), "previous_fiscal_year"
+    return None, "new_fiscal_year"
+
+
+def _restore_manual_special_cost_section(
+    output_path: str,
+    *,
+    run_context,
+    cc_code: object,
+    source_path: str | None,
+    source_kind: str,
+    log_callback,
+) -> dict[str, int | str]:
+    legacy_starts = getattr(run_context, "manual_special_legacy_starts", {}) or {}
+    result = preserve_manual_special_cost_section(
+        output_path,
+        cc_code,
+        source_workbook_path=source_path,
+        legacy_start_row=legacy_starts.get(str(cc_code).strip()),
+    )
+    log_callback(
+        "Chi phí riêng CC {cc}: {rows} dòng được {action}; số tiền cũ được giữ nguyên."
+        .format(
+            cc=result["cc_code"],
+            rows=result["manual_rows_preserved"],
+            action=("giữ lại từ lần chạy cùng FY" if source_kind == "current_fiscal_year"
+                    else "kế thừa từ FY trước" if source_kind == "previous_fiscal_year"
+                    else "khởi tạo vùng nhập tay"),
+        )
+    )
+    return result
 
 
 def _safe_console_print(message):
@@ -687,6 +754,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                            db_path: str | None = None,
                            operational_db_path: str | None = None,
                            manual_input_store: str | None = None,
+                           manual_special_inheritance_dir: str | None = None,
+                           manual_special_legacy_starts: dict[str, int] | None = None,
                            output_dir: str | None = None,
                            simulate_baseline_t3_from_t4: bool = False,
                            audit_exclude_incomplete_staffing: bool = False,
@@ -763,6 +832,11 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             return False, (
                 "Các tùy chọn audit chỉ được phép chạy với db_path cô lập, khác production mp2027.db."
             )
+    if manual_special_inheritance_dir and not os.path.isdir(manual_special_inheritance_dir):
+        return False, (
+            "Không tìm thấy thư mục kết quả FY trước để kế thừa chi phí riêng: "
+            f"{manual_special_inheritance_dir}"
+        )
 
     try:
         log_callback(f"Quy trình năm tài chính {fiscal_year} (Tỷ giá: {exchange_rate:,.0f})")
@@ -789,6 +863,8 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             exchange_rate_source=exchange_rate_source,
             history_root=effective_history_root,
             manual_input_store=manual_input_store,
+            manual_special_inheritance_dir=manual_special_inheritance_dir,
+            manual_special_legacy_starts=manual_special_legacy_starts,
             reference_policy=effective_reference_policy,
             base_dir=BASE_DIR,
         )
@@ -1191,6 +1267,9 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             # Single Export
             log_callback(f"Đang xuất riêng mã bộ phận: {target_cc}")
             out_path = os.path.join(output_dir, f"MP_CC_{target_cc}.xlsx")
+            manual_special_source, manual_special_source_kind = _stage_manual_special_cost_source(
+                run_context, target_cc
+            )
             complete_v1_primary_path = None
             if mp_saisan_complete_v1 and run_context.reference_policy != REFERENCE_POLICY_DISABLED:
                 complete_v1_primary_path = _try_resolve_primary_reference_path(
@@ -1303,6 +1382,14 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     source_file_order=_annual_complete_v1_source_order(run_context),
                     output_source_file_order=_annual_complete_v1_output_source_order(run_context),
                 )
+            _restore_manual_special_cost_section(
+                out_path,
+                run_context=run_context,
+                cc_code=target_cc,
+                source_path=manual_special_source,
+                source_kind=manual_special_source_kind,
+                log_callback=log_callback,
+            )
             log_callback(f"Hoàn tất: {output_dir}")
         else:
             # Batch Export
@@ -1314,6 +1401,9 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             count = 0
             for cc in all_ccs:
                 out_path = os.path.join(output_dir, f"MP_CC_{cc}.xlsx")
+                manual_special_source, manual_special_source_kind = _stage_manual_special_cost_source(
+                    run_context, cc
+                )
                 if builder.export_to_template(template_path, out_path, cc_code=cc):
                     if facility_file_order_export and facility_source_path:
                         apply_facility_file_order_to_workbook(
@@ -1414,6 +1504,14 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                             source_file_order=_annual_complete_v1_source_order(run_context),
                             output_source_file_order=_annual_complete_v1_output_source_order(run_context),
                         )
+                    _restore_manual_special_cost_section(
+                        out_path,
+                        run_context=run_context,
+                        cc_code=cc,
+                        source_path=manual_special_source,
+                        source_kind=manual_special_source_kind,
+                        log_callback=log_callback,
+                    )
                     count += 1
             
             log_callback(f"Đã xuất thành công {count} tệp vào: {output_dir}")
@@ -1598,6 +1696,19 @@ def main(argv=None):
     parser.add_argument('--uniform-policy', type=str, default=None)
     parser.add_argument('--operational-db', type=str, default=None)
     parser.add_argument('--manual-input-store', type=str, default=None)
+    parser.add_argument(
+        '--manual-special-inheritance-dir',
+        type=str,
+        default=None,
+        help='Thư mục OUTPUT_FY trước dùng để kế thừa chi phí riêng theo từng CC.',
+    )
+    parser.add_argument(
+        '--manual-special-legacy-start',
+        action='append',
+        default=[],
+        metavar='MA_CC:DONG',
+        help='Mốc chi phí riêng cho workbook cũ chưa có dấu mốc; có thể lặp lại.',
+    )
     parser.add_argument('--output-dir', type=str, default=None)
     parser.add_argument('--run-history-root', type=str, default=None)
     parser.add_argument(
@@ -1731,6 +1842,8 @@ def main(argv=None):
         uniform_policy_path=args.uniform_policy,
         operational_db_path=args.operational_db,
         manual_input_store=args.manual_input_store,
+        manual_special_inheritance_dir=args.manual_special_inheritance_dir,
+        manual_special_legacy_starts=_parse_manual_special_legacy_starts(args.manual_special_legacy_start),
         output_dir=args.output_dir,
         run_history_root=args.run_history_root,
         preserve_run_history=not args.no_run_history,

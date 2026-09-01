@@ -85,7 +85,7 @@ def load_uniform_entitlements(
     requirements_path: str | None = None,
     fiscal_year: int = 2027,
 ) -> int:
-    """Load all F:U entitlement decisions with cell-level provenance."""
+    """Load all F:W entitlement decisions with cell-level provenance."""
     path = resolve_uniform_requirements_path(requirements_path, fiscal_year=fiscal_year)
     workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
     try:
@@ -140,7 +140,7 @@ def load_uniform_entitlements(
                         1 if raw_mark == "〇" else 0,
                         os.path.abspath(path),
                         UNIFORM_REQUIREMENTS_SHEET,
-                        worksheet.cell(row_number, column).coordinate,
+                            f"{openpyxl.utils.get_column_letter(column)}{row_number}",
                     )
                 )
 

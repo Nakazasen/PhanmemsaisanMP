@@ -384,6 +384,8 @@ class FiscalRunContext:
     workspace_dir: str | None = None
     database_path: str | None = None
     manual_input_store: str | None = None
+    manual_special_inheritance_dir: str | None = None
+    manual_special_legacy_starts: dict[str, int] = field(default_factory=dict)
     ordered_sources: tuple[dict[str, object], ...] = ()
     reference_policy: str = REFERENCE_POLICY_DISABLED
     application_version: str = "unknown"
@@ -430,29 +432,37 @@ def _file_cache_key(path: str | os.PathLike[str]) -> tuple[str, int, int]:
 
 
 @lru_cache(maxsize=128)
-def _is_uniform_policy_cached(path: str, _mtime_ns: int, _size: int) -> bool:
+def _uniform_policy_validation_error_cached(path: str, _mtime_ns: int, _size: int) -> str | None:
     workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
     try:
         if "原価センタ" not in workbook.sheetnames:
-            return False
+            return "Thiếu sheet 原価センタ"
         sheet = workbook["原価センタ"]
         headers = {
             normalize_uniform_text(sheet.cell(1, column).value)
             for column in range(1, sheet.max_column + 1)
         }
-        return all(
-            normalize_uniform_text(spec.header) in headers
+        missing = [
+            spec.header
             for spec in SOURCE_BACKED_UNIFORM_ITEM_SPECS
-        )
+            if normalize_uniform_text(spec.header) not in headers
+        ]
+        if missing:
+            return "Thiếu cột policy trong sheet 原価センタ: " + ", ".join(missing)
+        return None
     finally:
         workbook.close()
 
 
-def _is_uniform_policy(path: Path) -> bool:
+def _uniform_policy_validation_error(path: Path) -> str | None:
     try:
-        return _is_uniform_policy_cached(*_file_cache_key(path))
-    except OSError:
-        return False
+        return _uniform_policy_validation_error_cached(*_file_cache_key(path))
+    except OSError as exc:
+        return f"Không thể mở file policy: {exc}"
+
+
+def _is_uniform_policy(path: Path) -> bool:
+    return _uniform_policy_validation_error(path) is None
 
 
 def resolve_uniform_policy_path(
@@ -494,6 +504,8 @@ def create_fiscal_run_context(
     exchange_rate_source: str = "explicit pipeline input",
     history_root: str | None = None,
     manual_input_store: str | None = None,
+    manual_special_inheritance_dir: str | None = None,
+    manual_special_legacy_starts: dict[str, int] | None = None,
     reference_policy: str | None = None,
     base_dir: str | os.PathLike[str] | None = None,
     run_id: str | None = None,
@@ -548,6 +560,16 @@ def create_fiscal_run_context(
         exchange_rate_source=str(exchange_rate_source or "").strip(),
         history_root=str(Path(history_root or defaults["history_root"]).resolve()),
         manual_input_store=str(Path(manual_input_store or defaults["manual_input_store"]).resolve()),
+        manual_special_inheritance_dir=(
+            str(Path(manual_special_inheritance_dir).resolve())
+            if manual_special_inheritance_dir
+            else None
+        ),
+        manual_special_legacy_starts={
+            str(cc).strip(): int(row)
+            for cc, row in dict(manual_special_legacy_starts or {}).items()
+            if str(cc).strip()
+        },
         reference_policy=resolved_reference_policy,
         application_version=application_version,
     )
@@ -1164,12 +1186,12 @@ def preflight_fiscal_run(
                 severity=ISSUE_SOURCE_SKIPPED,
                 impact="Đồng phục/cốc xếp không được tính; các category khác vẫn được chạy.",
             ))
-        elif not _is_uniform_policy(uniform_path):
+        elif uniform_validation_error := _uniform_policy_validation_error(uniform_path):
             issues.append(SourceIssue(
                 "uniform_policy",
                 str(uniform_path),
                 detect_fiscal_year(uniform_path),
-                "Thiếu sheet 原価センタ hoặc các cột policy đồng phục/cốc xếp F:U",
+                uniform_validation_error,
                 "Dùng bảng policy đúng cấu trúc; category này đang được bỏ qua.",
                 severity=ISSUE_SOURCE_SKIPPED,
                 impact="Đồng phục/cốc xếp không được tính; các category khác vẫn được chạy.",

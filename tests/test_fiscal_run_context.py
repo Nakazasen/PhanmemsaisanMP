@@ -274,6 +274,23 @@ def test_manual_input_store_is_physically_isolated_by_fiscal_year(tmp_path):
     assert fy2028.manual_input_store.endswith(os.path.join("raw", "FY2028", "manual_inputs.db"))
 
 
+def test_project_keeps_manual_special_inheritance_configuration_per_fiscal_year(tmp_path):
+    project = ProjectConfig.create_legacy_compatible(str(tmp_path), 2027)
+    project.ensure_fiscal_year(2028)
+    inherited = tmp_path / "OUTPUT_FY2027"
+
+    project.update_fiscal_paths(
+        2028,
+        manual_special_inheritance_dir=str(inherited),
+        manual_special_legacy_starts={"1412000030": 87},
+    )
+
+    paths = project.fiscal_paths(2028)
+    assert paths.manual_special_inheritance_dir == os.path.abspath(inherited)
+    assert paths.manual_special_legacy_starts == {"1412000030": 87}
+    assert project.fiscal_paths(2027).manual_special_inheritance_dir is None
+
+
 def test_recent_project_is_loaded_automatically_from_local_app_data(tmp_path):
     app_dir = tmp_path / "application"
     project_dir = tmp_path / "business-data"

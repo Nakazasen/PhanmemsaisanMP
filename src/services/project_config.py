@@ -24,6 +24,8 @@ class FiscalProjectPaths:
     headcount_source_dir: str
     uniform_policy_path: str | None
     manual_input_store: str
+    manual_special_inheritance_dir: str | None
+    manual_special_legacy_starts: dict[str, int]
     output_dir: str
     history_root: str
 
@@ -103,7 +105,7 @@ class ProjectConfig:
         fiscal_year: int | None,
         *,
         operational_database: str | None = None,
-        **paths: str | None,
+        **paths: Any,
     ) -> None:
         """Validate and atomically update shared and annual storage roles."""
         candidate_operational = (
@@ -124,12 +126,29 @@ class ProjectConfig:
             aliases = {
                 "template_path": "template", "source_dir": "cost_source_dir",
                 "headcount_source_dir": "headcount_source_dir", "uniform_policy_path": "uniform_policy",
-                "manual_input_store": "manual_input_store", "output_dir": "output_dir", "history_root": "history_root",
+                "manual_input_store": "manual_input_store",
+                "manual_special_inheritance_dir": "manual_special_inheritance_dir",
+                "output_dir": "output_dir", "history_root": "history_root",
             }
             for argument, key in aliases.items():
                 if argument in paths:
                     value = paths[argument]
                     candidate_entry[key] = "" if not value else _portable_path(self.resolve_path(value), self.root_dir)
+            if "manual_special_legacy_starts" in paths:
+                raw_starts = paths["manual_special_legacy_starts"] or {}
+                if not isinstance(raw_starts, dict):
+                    raise ValueError("Mốc chi phí riêng cũ phải là danh sách theo Trung tâm chi phí")
+                normalized_starts: dict[str, int] = {}
+                for raw_cc, raw_row in raw_starts.items():
+                    cc_code = str(raw_cc or "").strip()
+                    try:
+                        start_row = int(raw_row)
+                    except (TypeError, ValueError) as exc:
+                        raise ValueError(f"Dòng bắt đầu chi phí riêng không hợp lệ cho CC {cc_code}") from exc
+                    if not cc_code or start_row < 1:
+                        raise ValueError(f"Dòng bắt đầu chi phí riêng không hợp lệ cho CC {cc_code}")
+                    normalized_starts[cc_code] = start_row
+                candidate_entry["manual_special_legacy_starts"] = normalized_starts
 
             manual_store = self.resolve_path(candidate_entry.get("manual_input_store"))
             if not manual_store:
@@ -202,6 +221,8 @@ class ProjectConfig:
             # non-empty value is an explicit, fail-closed user selection.
             "uniform_policy": "",
             "manual_input_store": _portable_path(os.path.join(raw_dir, "manual_inputs.db"), self.root_dir),
+            "manual_special_inheritance_dir": "",
+            "manual_special_legacy_starts": {},
             "output_dir": _portable_path(os.path.join(root, f"OUTPUT_FY{year}"), self.root_dir),
             "history_root": _portable_path(os.path.join(root, "RUN_HISTORY"), self.root_dir),
         }
@@ -226,6 +247,19 @@ class ProjectConfig:
             and not os.path.isfile(uniform)
         ):
             uniform = ""
+        raw_legacy_starts = entry.get("manual_special_legacy_starts", {})
+        if not isinstance(raw_legacy_starts, dict):
+            raise ValueError(f"Mốc chi phí riêng cũ FY{year} phải là object")
+        legacy_starts: dict[str, int] = {}
+        for raw_cc, raw_row in raw_legacy_starts.items():
+            cc_code = str(raw_cc or "").strip()
+            try:
+                start_row = int(raw_row)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"Dòng bắt đầu chi phí riêng không hợp lệ cho CC {cc_code}") from exc
+            if not cc_code or start_row < 1:
+                raise ValueError(f"Dòng bắt đầu chi phí riêng không hợp lệ cho CC {cc_code}")
+            legacy_starts[cc_code] = start_row
         return FiscalProjectPaths(
             fiscal_year=year,
             template_path=self.resolve_path(entry.get("template")),
@@ -233,6 +267,10 @@ class ProjectConfig:
             headcount_source_dir=self.resolve_path(entry.get("headcount_source_dir")),
             uniform_policy_path=uniform or None,
             manual_input_store=self.resolve_path(entry.get("manual_input_store")),
+            manual_special_inheritance_dir=(
+                self.resolve_path(entry.get("manual_special_inheritance_dir")) or None
+            ),
+            manual_special_legacy_starts=legacy_starts,
             output_dir=self.resolve_path(entry.get("output_dir")),
             history_root=self.resolve_path(entry.get("history_root")),
         )

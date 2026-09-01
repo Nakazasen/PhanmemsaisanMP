@@ -218,7 +218,7 @@ Không xuất được tệp kết quả vì thiếu nguồn sự thật:
 
 CHI PHÍ ĐỒNG PHỤC VÀ CỐC XẾP
 
-- Chương trình đọc dấu chọn của từng phòng từ trang tính 原価センタ, cột F đến U, trong tệp yêu cầu Cải tiến nhập dữ liệu chung vào tệp MPnew 10.07.2026.xlsx. Phòng không được đánh dấu sẽ không bị tính.
+- Chương trình đọc dấu chọn của từng phòng từ trang tính 原価センタ, cột F đến W, trong tệp yêu cầu Cải tiến nhập dữ liệu chung vào tệp MPnew 10.07.2026.xlsx. Phòng không được đánh dấu sẽ không bị tính.
 - Số người mới của từng tháng là phần tăng riêng của Nhân viên và Công nhân so với tháng trước; tổng người mới bằng hai phần tăng này cộng lại. Tháng 4 cần dữ liệu tháng 3 của năm tài chính trước.
 - Quần, mũ và áo được cấp 2 cái/người; giày và áo khoác được cấp 1 cái/người.
 - Phòng được đánh dấu áo ngắn tay thì toàn bộ người mới dùng áo ngắn tay. Phòng được đánh dấu áo polo thì toàn bộ người mới dùng áo polo. Phòng an ninh dùng cột áo riêng. Nếu nguồn đánh dấu trùng nhiều loại áo, chương trình không tự chọn và sẽ báo người dùng sửa nguồn.

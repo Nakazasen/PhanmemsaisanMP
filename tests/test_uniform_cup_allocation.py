@@ -8,7 +8,6 @@ from src.db.schema import create_schema, get_connection, init_sys_params
 from src.engine.allocator import AllocationEngine
 from src.engine.uniform_cup_rules import (
     SOURCE_BACKED_UNIFORM_ITEM_SPECS,
-    apply_approved_uniform_entitlement_amendments,
 )
 from src.parsers.manual_event_drivers import TEMPLATE_COLUMNS, parse_manual_event_drivers
 from src.utils.excel_helpers import get_fy_months
@@ -100,7 +99,7 @@ def test_current_requirement_has_mutually_exclusive_summer_shirts(tmp_path):
     from src.db.loader import load_cost_centers
 
     assert load_cost_centers(conn, "docs/MP2027/FORM.xlsx") == 65
-    assert load_uniform_entitlements(conn) == 65 * 16
+    assert load_uniform_entitlements(conn) == 65 * 18
     dual = conn.execute(
         """
         SELECT cc_code
@@ -291,51 +290,59 @@ def test_cc_1412000019_splits_new_hire_hats_by_staff_and_worker(tmp_path):
     conn.close()
 
 
-def test_improvement_807_814_amendment_is_source_compatible_and_exactly_scoped():
+def test_0044_uniform_entitlements_come_only_from_source_policy():
     base = [
         {
-            "item_key": "color_hat",
-            "item_name": "Mũ màu",
+            "item_key": "electrostatic_white_hat",
+            "item_name": "Mũ tĩnh điện",
             "source_file": "requirements.xlsx",
             "source_sheet": "原価センタ",
-            "source_cell": "S30",
-        }
+            "source_cell": "V30",
+        },
+        {
+            "item_key": "safety_shoes_type_1",
+            "item_name": "Giày bảo hộ loại 1",
+            "source_file": "requirements.xlsx",
+            "source_sheet": "原価センタ",
+            "source_cell": "W30",
+        },
+        {
+            "item_key": "collapsible_cup",
+            "item_name": "Cốc xếp",
+            "source_file": "requirements.xlsx",
+            "source_sheet": "原価センタ",
+            "source_cell": "U30",
+        },
     ]
 
-    cc_0044 = apply_approved_uniform_entitlement_amendments("1412000044", base)
-    assert {row["item_key"] for row in cc_0044} == {
+    effective = AllocationEngine._effective_uniform_entitlements("1412000044", base)
+    assert {row["item_key"] for row in effective} == {
         "safety_shoes_type_1",
         "electrostatic_white_hat",
         "collapsible_cup",
     }
     assert {
         (row["source_file"], row["source_sheet"], row["source_cell"])
-        for row in cc_0044
+        for row in effective
     } == {
-        (
-            "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx",
-            "Hạng mục cần cải tiến",
-            "C807:C814",
-        )
+        ("requirements.xlsx", "原価センタ", "U30"),
+        ("requirements.xlsx", "原価センタ", "V30"),
+        ("requirements.xlsx", "原価センタ", "W30"),
     }
-    assert {row["item_key"] for row in apply_approved_uniform_entitlement_amendments("1412000056", [])} == {
-        "collapsible_cup"
-    }
-    assert {row["item_key"] for row in apply_approved_uniform_entitlement_amendments("1412000088", [])} == {
-        "collapsible_cup"
-    }
-    assert apply_approved_uniform_entitlement_amendments("1412000006", base) == base
-    assert len(SOURCE_BACKED_UNIFORM_ITEM_SPECS) == 16
+    assert effective == base
+    assert len(SOURCE_BACKED_UNIFORM_ITEM_SPECS) == 18
 
 
-def test_improvement_807_814_allocates_0044_without_color_hat_and_worker_only_cup(tmp_path):
+def test_source_policy_allocates_0044_without_color_hat_and_worker_only_cup(tmp_path):
     cc_code = "1412000044"
     conn = _connection(tmp_path, cc_code=cc_code)
     _rule(conn, "タイプ1の安全靴 Giày bảo hộ loại 1", 410_000)
     _rule(conn, "金型用帽子（白）Mũ trắng tĩnh điện", 47_000)
     _rule(conn, "帽子（カラー）Mũ màu", 39_000)
     _rule(conn, "折りたたみコップ Cốc xếp", 8_500)
-    _entitlement(conn, "color_hat", "Mũ màu", cc_code=cc_code, cell="S30")
+    _entitlement(conn, "electrostatic_white_hat", "Mũ tĩnh điện", cc_code=cc_code, cell="V30")
+    _entitlement(conn, "safety_shoes_type_1", "Giày bảo hộ loại 1", cc_code=cc_code, cell="W30")
+    _entitlement(conn, "collapsible_cup", "Cốc xếp", cc_code=cc_code, cell="U30")
     conn.commit()
 
     engine = AllocationEngine(conn, target_cc=cc_code)
@@ -354,18 +361,15 @@ def test_improvement_807_814_allocates_0044_without_color_hat_and_worker_only_cu
     assert [tuple(row) for row in april_rows] == [
         (
             "collapsible_cup", 2, 17_000,
-            "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx",
-            "Hạng mục cần cải tiến", "C807:C814",
+            "requirements.xlsx", "原価センタ", "U30",
         ),
         (
             "electrostatic_white_hat", 6, 282_000,
-            "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx",
-            "Hạng mục cần cải tiến", "C807:C814",
+            "requirements.xlsx", "原価センタ", "V30",
         ),
         (
             "safety_shoes_type_1", 3, 1_230_000,
-            "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx",
-            "Hạng mục cần cải tiến", "C807:C814",
+            "requirements.xlsx", "原価センタ", "W30",
         ),
     ]
     assert conn.execute(
@@ -380,12 +384,13 @@ def test_improvement_807_814_allocates_0044_without_color_hat_and_worker_only_cu
     conn.close()
 
 
-def test_improvement_807_814_adds_worker_only_cup_for_0056_and_0088(tmp_path):
+def test_source_policy_adds_worker_only_cup_for_0056_and_0088(tmp_path):
     for cc_code in ("1412000056", "1412000088"):
         case_dir = tmp_path / cc_code
         case_dir.mkdir()
         conn = _connection(case_dir, cc_code=cc_code)
         _rule(conn, "折りたたみコップ Cốc xếp", 8_500)
+        _entitlement(conn, "collapsible_cup", "Cốc xếp", cc_code=cc_code, cell="U30")
         conn.commit()
         engine = AllocationEngine(conn, target_cc=cc_code)
         _headcount_cache(engine, {"202604": (3, 2)}, cc_code=cc_code)

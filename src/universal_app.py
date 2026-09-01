@@ -433,6 +433,29 @@ def _annual_manual_input_store(fiscal_year: int) -> str:
     return path
 
 
+def _format_manual_special_legacy_starts(starts: dict[str, int]) -> str:
+    return ", ".join(f"{cc}:{row}" for cc, row in sorted(starts.items()))
+
+
+def _parse_manual_special_legacy_starts(text: str) -> dict[str, int]:
+    starts: dict[str, int] = {}
+    for fragment in str(text or "").split(","):
+        item = fragment.strip()
+        if not item:
+            continue
+        if ":" not in item:
+            raise ValueError(t("manual_special_legacy_start_invalid", value=item))
+        cc_code, raw_row = (part.strip() for part in item.split(":", 1))
+        try:
+            row = int(raw_row)
+        except ValueError as exc:
+            raise ValueError(t("manual_special_legacy_start_invalid", value=item)) from exc
+        if not cc_code or row < 1:
+            raise ValueError(t("manual_special_legacy_start_invalid", value=item))
+        starts[cc_code] = row
+    return starts
+
+
 def _default_template_path(fiscal_year: int = 2027) -> str:
     external_template = _annual_template_path(fiscal_year)
     if os.path.exists(external_template):
@@ -624,6 +647,70 @@ def _friendly_error_message(error) -> str:
         return f"{text}\n\n{custom_action}"
 
     return t("err_general_prefix", text=text) + "\n\n" + t("err_general_action")
+
+
+def _uniform_policy_warning(issue) -> str | None:
+    """Render the hidden uniform-policy dependency as a user action, not raw diagnostics."""
+    category = str(getattr(issue, "category", ""))
+    if category not in {"uniform_policy", "form_uniform_master"}:
+        return None
+
+    filename = os.path.basename(str(getattr(issue, "path", "") or "")) or t("preflight_no_file")
+    reason = str(getattr(issue, "reason", "") or "")
+    code = str(getattr(issue, "code", "") or "")
+    normalized_reason = reason.casefold()
+
+    if category == "form_uniform_master" and "cột bị trùng" in normalized_reason:
+        duplicate_headers = reason.partition(":")[2].strip() or reason
+        return t(
+            "preflight_uniform_duplicate_warning",
+            filename=filename,
+            headers=duplicate_headers,
+        )
+
+    if code == "MISSING_SOURCE" or not str(getattr(issue, "path", "") or "").strip():
+        return t("preflight_uniform_not_selected_warning")
+    if "không tồn tại" in normalized_reason or "not found" in normalized_reason:
+        return t("preflight_uniform_file_missing_warning", filename=filename)
+    if "thiếu cột policy" in normalized_reason or "missing policy column" in normalized_reason:
+        missing_columns = reason.partition(":")[2].strip() or reason
+        return t(
+            "preflight_uniform_missing_columns_warning",
+            filename=filename,
+            columns=missing_columns,
+        )
+    if "thiếu sheet" in normalized_reason or "missing sheet" in normalized_reason:
+        return t("preflight_uniform_layout_warning", filename=filename)
+    return t("preflight_uniform_incompatible_warning", filename=filename, details=reason)
+
+
+def _localized_preflight_issue_warning(issue) -> str:
+    """Return a fully localized, actionable warning for the incomplete-run dialog."""
+    uniform_warning = _uniform_policy_warning(issue)
+    if uniform_warning:
+        return uniform_warning
+
+    label = CATEGORY_DISPLAY_NAMES.get(issue.category, issue.category)
+    filename = os.path.basename(issue.path) if issue.path else t("preflight_no_file")
+    return t(
+        "preflight_issue_impact_format",
+        label=label,
+        filename=filename,
+        reason=issue.reason,
+        impact=issue.impact,
+    )
+
+
+def _uniform_policy_signature(path: str | None) -> tuple[str, int | None, int | None]:
+    """Detect a policy replacement even though that path is configured outside the main form."""
+    if not path:
+        return ("", None, None)
+    normalized = os.path.abspath(path)
+    try:
+        stat = os.stat(normalized)
+    except OSError:
+        return (normalized, None, None)
+    return (normalized, int(stat.st_mtime_ns), int(stat.st_size))
 
 
 def _is_legacy_root_template(path: str) -> bool:
@@ -842,6 +929,8 @@ class MPManagerApp:
                     exchange_rate_source="FORM!B2 / người dùng xác nhận trên giao diện",
                     history_root=paths.history_root,
                     manual_input_store=paths.manual_input_store,
+                    manual_special_inheritance_dir=paths.manual_special_inheritance_dir,
+                    manual_special_legacy_starts=paths.manual_special_legacy_starts,
                     base_dir=self.project.root_dir,
                 )
                 checker = lambda active_context: preflight_fiscal_run(
@@ -901,6 +990,7 @@ class MPManagerApp:
                     os.path.abspath(source),
                     os.path.abspath(headcount),
                     float(exchange_rate),
+                    _uniform_policy_signature(context.uniform_policy_path),
                 )
                 self._run_on_ui_thread(
                     self._finish_preflight_check,
@@ -961,11 +1051,7 @@ class MPManagerApp:
         if report.can_run:
             issue_lines = []
             for issue in report.skipped_issues:
-                label = CATEGORY_DISPLAY_NAMES.get(issue.category, issue.category)
-                filename = os.path.basename(issue.path) if issue.path else t("preflight_no_file")
-                issue_lines.append(
-                    t("preflight_issue_impact_format", label=label, filename=filename, reason=issue.reason, impact=issue.impact)
-                )
+                issue_lines.append(_localized_preflight_issue_warning(issue))
             return t("preflight_summary_incomplete") + " | ".join(issue_lines)
         issue_lines = []
         for issue in report.blocking_issues:
@@ -1179,6 +1265,8 @@ class MPManagerApp:
             (t("storage_op_db"), "operational_database", self.project.operational_database, "file"),
             (t("storage_uniform_policy"), "uniform_policy", paths.uniform_policy_path or "", "file"),
             (t("storage_manual_input"), "manual_input", paths.manual_input_store, "file"),
+            (t("storage_manual_special_inheritance"), "manual_special_inheritance", paths.manual_special_inheritance_dir or "", "dir"),
+            (t("storage_manual_special_legacy_starts"), "manual_special_legacy_starts", _format_manual_special_legacy_starts(paths.manual_special_legacy_starts), "text"),
             (t("storage_output_dir"), "output_dir", paths.output_dir, "dir"),
             (t("storage_history_dir"), "history_dir", paths.history_root, "dir"),
         ]
@@ -1190,9 +1278,12 @@ class MPManagerApp:
             ttk.Entry(dialog, textvariable=variable).grid(row=row, column=1, sticky="ew", padx=8, pady=8)
             if kind == "dir":
                 command = lambda var=variable, title=label: self._choose_project_directory(var, title)
-            else:
+            elif kind == "file":
                 command = lambda var=variable, title=label: self._choose_project_file(var, title)
-            ttk.Button(dialog, text=t("btn_choose"), command=command).grid(row=row, column=2, padx=(0, 12), pady=8)
+            else:
+                command = None
+            if command is not None:
+                ttk.Button(dialog, text=t("btn_choose"), command=command).grid(row=row, column=2, padx=(0, 12), pady=8)
 
         ttk.Label(
             dialog,
@@ -1211,6 +1302,10 @@ class MPManagerApp:
                     operational_database=variables["operational_database"].get().strip(),
                     uniform_policy_path=variables["uniform_policy"].get().strip(),
                     manual_input_store=variables["manual_input"].get().strip(),
+                    manual_special_inheritance_dir=variables["manual_special_inheritance"].get().strip(),
+                    manual_special_legacy_starts=_parse_manual_special_legacy_starts(
+                        variables["manual_special_legacy_starts"].get()
+                    ),
                     output_dir=variables["output_dir"].get().strip(),
                     history_root=variables["history_dir"].get().strip(),
                 )
@@ -1366,9 +1461,15 @@ class MPManagerApp:
         content_window = content_canvas.create_window((0, 0), window=container, anchor="nw")
 
         def refresh_scroll_region(_event=None):
+            # Keep the scrollable content attached to the canvas origin.  Without
+            # this normalization Tk can retain an offset while recomputing the
+            # scroll region after a resize, exposing an empty white band above
+            # the main screen.
+            content_canvas.coords(content_window, 0, 0)
             content_canvas.configure(scrollregion=content_canvas.bbox("all"))
 
         def resize_content_width(event):
+            content_canvas.coords(content_window, 0, 0)
             content_canvas.itemconfigure(
                 content_window,
                 width=max(event.width, container.winfo_reqwidth()),
@@ -1376,6 +1477,7 @@ class MPManagerApp:
 
         container.bind("<Configure>", refresh_scroll_region)
         content_canvas.bind("<Configure>", resize_content_width)
+        content_canvas.after_idle(lambda: content_canvas.yview_moveto(0.0))
 
         def scroll_content(event):
             content_canvas.yview_scroll(int(-event.delta / 120), "units")
@@ -3974,6 +4076,7 @@ class MPManagerApp:
                 os.path.abspath(source),
                 os.path.abspath(headcount_source),
                 float(exchange_rate),
+                _uniform_policy_signature(self._project_paths(fiscal_year).uniform_policy_path),
             )
             approved_report = self._approved_preflight_report
             if (
@@ -3989,9 +4092,7 @@ class MPManagerApp:
 
             if getattr(approved_report, "skipped_issues", ()):
                 warning_lines = "\n".join(
-                    f"• {CATEGORY_DISPLAY_NAMES.get(issue.category, issue.category)} — "
-                    f"{os.path.basename(issue.path) if issue.path else '(không có tệp)'}: "
-                    f"{issue.reason}. Tác động: {issue.impact}"
+                    f"• {_localized_preflight_issue_warning(issue)}"
                     for issue in approved_report.skipped_issues
                 )
                 proceed_incomplete = messagebox.askyesno(
@@ -4189,13 +4290,21 @@ class MPManagerApp:
         )
         approved_uniform = getattr(self, "_approved_uniform_policy_path", None)
         paths = self._project_paths(fiscal_year)
+        manual_special_inheritance_dir = getattr(paths, "manual_special_inheritance_dir", None)
+        manual_special_legacy_starts = getattr(paths, "manual_special_legacy_starts", {}) or {}
         cmd.extend([
             "--operational-db", self._operational_database(),
             "--manual-input-store", paths.manual_input_store,
+            "--manual-special-inheritance-dir", manual_special_inheritance_dir or "",
             "--output-dir", paths.output_dir,
             "--run-history-root", paths.history_root,
             "--project-config", self.project.config_path,
         ])
+        if not manual_special_inheritance_dir:
+            inheritance_index = cmd.index("--manual-special-inheritance-dir")
+            del cmd[inheritance_index:inheritance_index + 2]
+        for cc_code, start_row in manual_special_legacy_starts.items():
+            cmd.extend(["--manual-special-legacy-start", f"{cc_code}:{start_row}"])
         if approved_uniform:
             cmd.extend(["--uniform-policy", str(approved_uniform)])
         if target_cc:
