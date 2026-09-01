@@ -855,6 +855,13 @@ class MPManagerApp:
         self._approved_uniform_policy_path = None
         self.last_excel_mtime = 0.0
         self.syncing_master = False
+        self._pipeline_busy = False
+        self._output_cost_row_order_editor = None
+        self._legacy_headcount_editor = None
+        self._event_driver_editor = None
+        self._variance_editor = None
+        self._user_guide_window = None
+        self._run_history_window = None
         self.ui_thread_id = threading.get_ident()
         self.ui_queue = queue.Queue()
 
@@ -1546,12 +1553,14 @@ class MPManagerApp:
 
         self.fiscal_year_lbl = ttk.Label(container, text=t("fiscal_year_label"))
         self.fiscal_year_lbl.grid(row=1, column=0, sticky="w", pady=4)
-        ttk.Entry(container, textvariable=self.fiscal_year, width=20).grid(row=1, column=1, sticky="w")
+        self.fiscal_year_entry = ttk.Entry(container, textvariable=self.fiscal_year, width=20)
+        self.fiscal_year_entry.grid(row=1, column=1, sticky="w")
 
         # Tỷ giá (USD/VND)
         self.exchange_rate_lbl = ttk.Label(container, text=t("exchange_rate_label"))
         self.exchange_rate_lbl.grid(row=2, column=0, sticky="w", pady=4)
-        ttk.Entry(container, textvariable=self.exchange_rate, width=20).grid(row=2, column=1, sticky="w")
+        self.exchange_rate_entry = ttk.Entry(container, textvariable=self.exchange_rate, width=20)
+        self.exchange_rate_entry.grid(row=2, column=1, sticky="w")
         self.exchange_rate_hint_lbl = ttk.Label(container, text=t("exchange_rate_hint"))
         self.exchange_rate_hint_lbl.grid(
             row=2, column=2, sticky="w", padx=(12, 0)
@@ -1559,19 +1568,22 @@ class MPManagerApp:
 
         self.template_lbl = ttk.Label(container, text=t("template_label"))
         self.template_lbl.grid(row=3, column=0, sticky="w", pady=(14, 4))
-        ttk.Entry(container, textvariable=self.template_path).grid(
+        self.template_path_entry = ttk.Entry(container, textvariable=self.template_path)
+        self.template_path_entry.grid(
             row=3, column=1, columnspan=2, sticky="ew"
         )
 
         self.cost_source_lbl = ttk.Label(container, text=t("cost_source_dir_label"))
         self.cost_source_lbl.grid(row=4, column=0, sticky="w", pady=4)
-        ttk.Entry(container, textvariable=self.source_dir).grid(
+        self.source_dir_entry = ttk.Entry(container, textvariable=self.source_dir)
+        self.source_dir_entry.grid(
             row=4, column=1, columnspan=2, sticky="ew"
         )
 
         self.headcount_source_lbl = ttk.Label(container, text=t("headcount_source_dir_label"))
         self.headcount_source_lbl.grid(row=5, column=0, sticky="w", pady=4)
-        ttk.Entry(container, textvariable=self.headcount_source_dir).grid(row=5, column=1, sticky="ew", padx=(0, 8))
+        self.headcount_source_dir_entry = ttk.Entry(container, textvariable=self.headcount_source_dir)
+        self.headcount_source_dir_entry.grid(row=5, column=1, sticky="ew", padx=(0, 8))
         source_buttons = ttk.Frame(container)
         source_buttons.grid(row=5, column=2, sticky="w")
         self.update_db_btn = ttk.Button(
@@ -2287,6 +2299,8 @@ class MPManagerApp:
         messagebox.showinfo(t("update_db_success_title"), message)
 
     def open_output_cost_row_ordering(self):
+        if self._focus_existing_editor("_output_cost_row_order_editor"):
+            return
         try:
             fiscal_year = int(self.fiscal_year.get())
             output_dir = self._project_paths(fiscal_year).output_dir
@@ -2301,6 +2315,8 @@ class MPManagerApp:
             self._open_cost_row_ordering_dialog(selected_path)
 
     def _open_cost_row_ordering_dialog(self, workbook_path: str):
+        if self._focus_existing_editor("_output_cost_row_order_editor"):
+            return
         from src.engine.output_cost_row_ordering import (
             OutputCostRowOrderError,
             read_cost_rows,
@@ -2334,6 +2350,9 @@ class MPManagerApp:
         editor.title(f"{t('output_cost_row_order_title')} - {cc_code}")
         editor.geometry("920x560")
         editor.transient(self.root)
+        editor.lift()
+        editor.focus_force()
+        close_editor = self._register_singleton_editor("_output_cost_row_order_editor", editor)
         frame = ttk.Frame(editor, padding=12)
         frame.pack(fill="both", expand=True)
         ttk.Label(frame, text=t("output_cost_row_order_hint"), wraplength=860).pack(anchor="w", pady=(0, 8))
@@ -2398,13 +2417,13 @@ class MPManagerApp:
                 )
                 return
             messagebox.showinfo(t("output_cost_row_order_title"), t("output_cost_row_order_saved", count=len(ordered_rows)))
-            editor.destroy()
+            close_editor()
 
         buttons = ttk.Frame(frame)
         buttons.pack(fill="x", pady=(8, 0))
         ttk.Button(buttons, text=t("btn_move_up"), command=lambda: move_selected(-1)).pack(side="left")
         ttk.Button(buttons, text=t("btn_move_down"), command=lambda: move_selected(1)).pack(side="left", padx=(6, 0))
-        ttk.Button(buttons, text=t("btn_close"), command=editor.destroy).pack(side="right")
+        ttk.Button(buttons, text=t("btn_close"), command=close_editor).pack(side="right")
         ttk.Button(buttons, text=t("btn_save"), style="Primary.TButton", command=save).pack(side="right", padx=(0, 6))
         tree.bind("<ButtonPress-1>", start_drag)
         tree.bind("<ButtonRelease-1>", finish_drag)
@@ -2987,6 +3006,8 @@ class MPManagerApp:
         self._write_csv_rows(csv_path, BUS_DRIVER_COLUMNS, rows)
 
     def open_variance_tab(self):
+        if self._focus_existing_editor("_variance_editor"):
+            return
         try:
             from src.ui.tabs.variance_tab import VarianceTab
         except ImportError as e:
@@ -3005,13 +3026,20 @@ class MPManagerApp:
         editor.transient(self.root)
         editor.lift()
         editor.focus_force()
+        self._register_singleton_editor("_variance_editor", editor)
         VarianceTab(editor)
 
     def open_user_guide(self):
+        if self._focus_existing_editor("_user_guide_window"):
+            return
         guide = tk.Toplevel(self.root)
         guide.title(t("user_guide_title"))
         guide.geometry("920x700")
         guide.minsize(760, 560)
+        guide.transient(self.root)
+        guide.lift()
+        guide.focus_force()
+        close_guide = self._register_singleton_editor("_user_guide_window", guide)
 
         frame = ttk.Frame(guide, padding=14)
         frame.pack(fill=tk.BOTH, expand=True)
@@ -3113,13 +3141,19 @@ class MPManagerApp:
         search_var.trace_add("write", refresh_search)
         refresh_search()
 
-        ttk.Button(frame, text=t("user_guide_close_btn"), command=guide.destroy).pack(anchor="e", pady=(10, 0))
+        ttk.Button(frame, text=t("user_guide_close_btn"), command=close_guide).pack(anchor="e", pady=(10, 0))
 
     def open_run_history(self):
+        if self._focus_existing_editor("_run_history_window"):
+            return
         history_root = self._project_paths().history_root
         dialog = tk.Toplevel(self.root)
         dialog.title(t("run_history_dialog_title"))
         dialog.geometry("1180x620")
+        dialog.transient(self.root)
+        dialog.lift()
+        dialog.focus_force()
+        self._register_singleton_editor("_run_history_window", dialog)
         frame = ttk.Frame(dialog, padding=12)
         frame.pack(fill=tk.BOTH, expand=True)
         fiscal_var = tk.StringVar(value=str(self._current_fiscal_year()))
@@ -3265,6 +3299,8 @@ class MPManagerApp:
         ttk.Label(frame, text=t("history_note")).pack(anchor="w", pady=(8, 0))
 
     def open_headcount_editor(self):
+        if self._focus_existing_editor("_legacy_headcount_editor"):
+            return
         try:
             fiscal_year = int(self.fiscal_year.get())
         except Exception:
@@ -3277,6 +3313,10 @@ class MPManagerApp:
         editor = tk.Toplevel(self.root)
         editor.title(t("manual_headcount_title"))
         editor.geometry("1020x600")
+        editor.transient(self.root)
+        editor.lift()
+        editor.focus_force()
+        close_editor = self._register_singleton_editor("_legacy_headcount_editor", editor)
 
         frame = ttk.Frame(editor, padding=10)
         frame.pack(fill=tk.BOTH, expand=True)
@@ -3457,7 +3497,7 @@ class MPManagerApp:
         ttk.Button(btn, text=t("btn_add_update"), command=add_or_update).grid(row=0, column=0, padx=(0, 6))
         ttk.Button(btn, text=t("btn_delete_selected"), command=remove_selected).grid(row=0, column=1, padx=(0, 6))
         ttk.Button(btn, text=t("btn_save_file"), command=save_file).grid(row=0, column=2, padx=(0, 6))
-        ttk.Button(btn, text=t("btn_close"), command=editor.destroy).grid(row=0, column=3, padx=(0, 6))
+        ttk.Button(btn, text=t("btn_close"), command=close_editor).grid(row=0, column=3, padx=(0, 6))
 
         tree.bind("<<TreeviewSelect>>", on_select)
         load_rows()
@@ -3479,6 +3519,24 @@ class MPManagerApp:
         except tk.TclError:
             setattr(self, attribute_name, None)
             return False
+
+    def _register_singleton_editor(self, attribute_name: str, editor: tk.Toplevel):
+        """Remember an editor and release its slot whether it closes normally or externally."""
+        setattr(self, attribute_name, editor)
+
+        def close_editor():
+            if getattr(self, attribute_name, None) is editor:
+                setattr(self, attribute_name, None)
+            if editor.winfo_exists():
+                editor.destroy()
+
+        def clear_reference(event):
+            if event.widget is editor and getattr(self, attribute_name, None) is editor:
+                setattr(self, attribute_name, None)
+
+        editor.protocol("WM_DELETE_WINDOW", close_editor)
+        editor.bind("<Destroy>", clear_reference, add="+")
+        return close_editor
 
     def open_headcount_editor_v2(self, selected_cc=None):
         if self._focus_existing_editor("_headcount_editor_v2"):
@@ -3797,6 +3855,8 @@ class MPManagerApp:
             cc_var.set(initial); load_cc()
 
     def open_event_driver_editor(self):
+        if self._focus_existing_editor("_event_driver_editor"):
+            return
         try:
             fiscal_year = int(self.fiscal_year.get())
         except Exception:
@@ -3810,6 +3870,10 @@ class MPManagerApp:
         editor = tk.Toplevel(self.root)
         editor.title(t("event_driver_title"))
         editor.geometry("1260x760")
+        editor.transient(self.root)
+        editor.lift()
+        editor.focus_force()
+        close_editor = self._register_singleton_editor("_event_driver_editor", editor)
 
         frame = ttk.Frame(editor, padding=10)
         frame.pack(fill=tk.BOTH, expand=True)
@@ -4144,7 +4208,7 @@ class MPManagerApp:
         ttk.Button(button_row, text=t("btn_add_update"), command=add_or_update).grid(row=0, column=0, padx=(0, 6))
         ttk.Button(button_row, text=t("btn_delete_selected"), command=remove_selected).grid(row=0, column=1, padx=(0, 6))
         ttk.Button(button_row, text=t("btn_save_file"), command=save_file).grid(row=0, column=2, padx=(0, 6))
-        ttk.Button(button_row, text=t("btn_close"), command=editor.destroy).grid(row=0, column=3, padx=(0, 6))
+        ttk.Button(button_row, text=t("btn_close"), command=close_editor).grid(row=0, column=3, padx=(0, 6))
 
         def refresh_event_help(*_args):
             selected = event_var.get().strip()
@@ -4227,6 +4291,32 @@ class MPManagerApp:
             )
             return False
         return True
+
+    def _set_pipeline_ui_busy(self, busy: bool) -> None:
+        """Prevent edits or project changes from racing a running calculation."""
+        self._pipeline_busy = busy
+        state = tk.DISABLED if busy else tk.NORMAL
+        for attribute_name in (
+            "cc_select_btn",
+            "refresh_btn",
+            "update_db_btn",
+            "deep_scan_btn",
+            "open_proj_btn",
+            "create_proj_btn",
+            "config_proj_btn",
+            "fiscal_year_entry",
+            "exchange_rate_entry",
+            "template_path_entry",
+            "source_dir_entry",
+            "headcount_source_dir_entry",
+        ):
+            widget = getattr(self, attribute_name, None)
+            if widget is not None:
+                widget.configure(state=state)
+        for button, _key in getattr(self, "action_buttons", ()):
+            button.configure(state=state)
+        if hasattr(self, "start_btn"):
+            self.start_btn.configure(state=tk.DISABLED if busy else tk.NORMAL)
 
     def start_pipeline(self):
         try:
@@ -4327,9 +4417,7 @@ class MPManagerApp:
                 if not proceed:
                     return
 
-            self.start_btn.configure(state=tk.DISABLED)
-            if hasattr(self, "cc_select_btn"):
-                self.cc_select_btn.configure(state=tk.DISABLED)
+            self._set_pipeline_ui_busy(True)
             self.log(t("pipeline_start_heading"))
             self.log(t("pipeline_template_log", path=template))
             self.log(t("pipeline_source_log", path=source))
@@ -4352,6 +4440,9 @@ class MPManagerApp:
                 daemon=True,
             ).start()
         except Exception as exc:
+            if getattr(self, "_pipeline_busy", False):
+                self._set_pipeline_ui_busy(False)
+                self._mark_preflight_stale()
             messagebox.showerror(t("input_error_title"), _friendly_error_message(exc))
 
     def _run_pipeline_process(
@@ -4692,8 +4783,7 @@ class MPManagerApp:
                 self._open_baseline_recovery_dialog(*recovery)
             else:
                 messagebox.showerror(t("pipeline_failed_title"), message)
-        if hasattr(self, "cc_select_btn"):
-            self.cc_select_btn.configure(state=tk.NORMAL)
+        self._set_pipeline_ui_busy(False)
         # Source paths may have changed while the subprocess was running; do
         # not re-enable calculation until the current selection is checked.
         self._mark_preflight_stale()

@@ -19,6 +19,7 @@ class VarianceTab(ttk.Frame):
         self.curr_file = tk.StringVar()
         self.threshold_pct = tk.DoubleVar(value=10.0)
         self.threshold_abs = tk.DoubleVar(value=50000000.0)
+        self._chart_window = None
         self._build_ui()
         self._current_report = None
         register_language_listener(self._on_language_changed)
@@ -26,7 +27,25 @@ class VarianceTab(ttk.Frame):
 
     def _on_destroy(self, event):
         if event.widget == self:
+            self._chart_window = None
             unregister_language_listener(self._on_language_changed)
+
+    def _focus_existing_chart(self):
+        chart_window = self._chart_window
+        if chart_window is None:
+            return False
+        try:
+            if not chart_window.winfo_exists():
+                self._chart_window = None
+                return False
+            chart_window.deiconify()
+            chart_window.transient(self._dialog_parent())
+            chart_window.lift()
+            chart_window.focus_force()
+            return True
+        except tk.TclError:
+            self._chart_window = None
+            return False
 
     def _on_language_changed(self, _lang: str):
         self.refresh_language()
@@ -259,6 +278,8 @@ class VarianceTab(ttk.Frame):
                 )
 
     def _show_variance_chart(self):
+        if self._focus_existing_chart():
+            return
         if not self._current_report:
             messagebox.showwarning(
                 t("variance_no_data_title"),
@@ -296,6 +317,20 @@ class VarianceTab(ttk.Frame):
         chart_window.transient(self._dialog_parent())
         chart_window.lift()
         chart_window.focus_force()
+        self._chart_window = chart_window
+
+        def close_chart():
+            if self._chart_window is chart_window:
+                self._chart_window = None
+            if chart_window.winfo_exists():
+                chart_window.destroy()
+
+        def clear_chart_reference(event):
+            if event.widget is chart_window and self._chart_window is chart_window:
+                self._chart_window = None
+
+        chart_window.protocol("WM_DELETE_WINDOW", close_chart)
+        chart_window.bind("<Destroy>", clear_chart_reference, add="+")
 
         figure = Figure(figsize=(10.5, 5.8), dpi=100)
         axes = figure.add_subplot(111)
