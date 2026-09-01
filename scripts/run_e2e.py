@@ -88,6 +88,7 @@ from src.utils.fiscal_periods import fiscal_baseline_period
 from src.utils.source_manifest import describe_manifest
 from src.utils.cli import VietnameseArgumentParser
 from src.services.content_packs import load_runtime_content_rules
+from src.services.i18n import t
 from src.services.headcount_source_importer import import_headcount_time_sources
 from src.services.manual_staffing_overrides import (
     apply_manual_baseline_overrides,
@@ -172,17 +173,30 @@ def _restore_manual_special_cost_section(
         cc_code,
         source_workbook_path=source_path,
         legacy_start_row=legacy_starts.get(str(cc_code).strip()),
+        source_kind=source_kind,
     )
-    log_callback(
-        "Chi phí riêng CC {cc}: {rows} dòng được {action}; số tiền cũ được giữ nguyên."
-        .format(
-            cc=result["cc_code"],
-            rows=result["manual_rows_preserved"],
-            action=("giữ lại từ lần chạy cùng FY" if source_kind == "current_fiscal_year"
-                    else "kế thừa từ FY trước" if source_kind == "previous_fiscal_year"
-                    else "khởi tạo vùng nhập tay"),
-        )
+    detail_key = (
+        "manual_special_restore_previous"
+        if source_kind == "previous_fiscal_year"
+        else "manual_special_restore_current"
+        if source_kind == "current_fiscal_year"
+        else "manual_special_restore_new"
     )
+    action_key = (
+        "manual_special_restore_action_current"
+        if source_kind == "current_fiscal_year"
+        else "manual_special_restore_action_previous"
+        if source_kind == "previous_fiscal_year"
+        else "manual_special_restore_action_new"
+    )
+    log_callback(t(
+        "manual_special_restore_log",
+        cc=result["cc_code"],
+        rows=result["manual_rows_preserved"],
+        action=t(action_key),
+        detail=t(detail_key),
+        new_common=result.get("new_common_rows", 0),
+    ))
     return result
 
 

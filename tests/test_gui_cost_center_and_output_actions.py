@@ -234,6 +234,28 @@ def test_successful_pipeline_can_open_output(monkeypatch, tmp_path):
     assert any("THÀNH CÔNG" in message for message in messages)
 
 
+def test_output_row_order_action_uses_current_fy_output_folder(monkeypatch, tmp_path):
+    output_dir = tmp_path / "OUTPUT_FY2027"
+    output_dir.mkdir()
+    workbook = output_dir / "MP_CC_1412000030.xlsx"
+    workbook.touch()
+    selected = []
+    app = object.__new__(MPManagerApp)
+    app.fiscal_year = Variable("2027")
+    app._project_paths = lambda _fy: type("Paths", (), {"output_dir": str(output_dir)})()
+    app._open_cost_row_ordering_dialog = selected.append
+    options = {}
+    monkeypatch.setattr(
+        "src.universal_app.filedialog.askopenfilename",
+        lambda **kwargs: options.update(kwargs) or str(workbook),
+    )
+
+    app.open_output_cost_row_ordering()
+
+    assert selected == [str(workbook)]
+    assert options["initialdir"] == str(output_dir)
+
+
 def test_open_path_warns_when_output_does_not_exist(monkeypatch, tmp_path):
     warnings = []
     monkeypatch.setattr(

@@ -15,6 +15,7 @@ import openpyxl
 from openpyxl.formula.translate import Translator
 
 from src.utils import excel_helpers as helpers
+from src.engine.output_cost_row_ordering import has_saved_cost_row_order, restore_cost_layout
 
 
 MANUAL_SPECIAL_COST_METADATA_SHEET = "_mp2027_manual_special_cost_meta"
@@ -244,6 +245,7 @@ def preserve_manual_special_cost_section(
     *,
     source_workbook_path: str | Path | None = None,
     legacy_start_row: int | None = None,
+    source_kind: str = "current_fiscal_year",
 ) -> dict[str, int | str]:
     """Put the source CC's manual section below a newly generated common block.
 
@@ -257,6 +259,21 @@ def preserve_manual_special_cost_section(
         raise ManualSpecialCostSectionError("Thiếu mã Trung tâm chi phí cho vùng chi phí riêng.")
     if not output_path.is_file():
         raise ManualSpecialCostSectionError(f"Không tìm thấy workbook kết quả: {output_path}")
+
+    if source_workbook_path and has_saved_cost_row_order(source_workbook_path, normalized_cc):
+        result = restore_cost_layout(
+            output_path,
+            normalized_cc,
+            source_workbook_path,
+            source_kind=source_kind,
+        )
+        return {
+            **result,
+            "common_end_row": 0,
+            "manual_start_row": 0,
+            "manual_end_row": 0,
+            "source_workbook": str(source_workbook_path),
+        }
 
     snapshot = None
     if source_workbook_path:
@@ -279,11 +296,15 @@ def preserve_manual_special_cost_section(
             target_row = manual_start + offset
             for column, source_cell in enumerate(source_row.cells, start=FIRST_COST_COLUMN):
                 target = worksheet.cell(target_row, column)
-                target.value = _translate_formula(
-                    source_cell.value,
-                    source_row=source_row.source_row,
-                    target_row=target_row,
-                    column=column,
+                target.value = (
+                    None
+                    if source_kind == "previous_fiscal_year" and 6 <= column <= 18
+                    else _translate_formula(
+                        source_cell.value,
+                        source_row=source_row.source_row,
+                        target_row=target_row,
+                        column=column,
+                    )
                 )
                 target.font = copy(source_cell.font)
                 target.fill = copy(source_cell.fill)
@@ -316,5 +337,6 @@ def preserve_manual_special_cost_section(
         "manual_start_row": manual_start,
         "manual_end_row": manual_end,
         "manual_rows_preserved": len(manual_rows),
+        "new_common_rows": 0,
         "source_workbook": str(source_workbook_path or ""),
     }

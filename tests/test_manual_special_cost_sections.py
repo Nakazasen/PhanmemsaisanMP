@@ -71,7 +71,7 @@ def test_legacy_manual_rows_move_below_new_dynamic_common_block_without_mutating
     assert source.read_bytes() == before
     workbook = openpyxl.load_workbook(generated, data_only=False)
     try:
-        sheet = workbook["Chi tiết MP"]
+        sheet = workbook.active
         assert sheet["S91"].value == "CHI PHÍ RIÊNG - NHẬP THỦ CÔNG"
         assert sheet["B92"].value == 5005246286
         assert sheet["S92"].value == "Chi phí riêng A"
@@ -161,3 +161,45 @@ def test_pipeline_prefers_current_fy_snapshot_over_prior_fy_inheritance(tmp_path
         assert workbook["Chi tiết MP"]["S92"].value == "Chi phí riêng A"
     finally:
         workbook.close()
+
+
+def test_previous_fy_legacy_inheritance_keeps_code_description_but_clears_money(tmp_path):
+    previous_dir = tmp_path / "OUTPUT_FY2026"
+    workspace = tmp_path / "workspace"
+    previous_dir.mkdir()
+    workspace.mkdir()
+    source = previous_dir / "MP_CC_1412000030.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    _make_output(source, common_end_row=86)
+    _add_legacy_manual_rows(source, 87)
+    _make_output(generated, common_end_row=90)
+    messages = []
+    context = SimpleNamespace(
+        output_dir=str(tmp_path / "OUTPUT_FY2027"),
+        workspace_dir=str(workspace),
+        manual_special_inheritance_dir=str(previous_dir),
+        manual_special_legacy_starts={"1412000030": 87},
+    )
+
+    _restore_manual_special_cost_section(
+        str(generated),
+        run_context=context,
+        cc_code="1412000030",
+        source_path=str(source),
+        source_kind="previous_fiscal_year",
+        log_callback=messages.append,
+    )
+
+    workbook = openpyxl.load_workbook(generated, data_only=False)
+    source_workbook = openpyxl.load_workbook(source, data_only=False)
+    try:
+        sheet = workbook.active
+        assert sheet["B92"].value == 5005246286
+        assert sheet["S92"].value == source_workbook.active["S87"].value
+        assert sheet["F92"].value is None
+        assert sheet["R92"].value is None
+    finally:
+        workbook.close()
+        source_workbook.close()
+    assert len(messages) == 1
+    assert "1412000030" in messages[0]

@@ -209,6 +209,13 @@ class TestI18nLocalization(unittest.TestCase):
             "no_cc_warning_title",
             "cleanup_confirm_title",
             "cleanup_success_title",
+            "output_cost_row_order_btn",
+            "output_cost_row_order_title",
+            "output_cost_row_order_choose",
+            "output_cost_row_order_hint",
+            "output_cost_row_order_saved",
+            "output_cost_row_order_error",
+            "manual_special_restore_log",
         ]
         for lang in ("vi", "ja", "en"):
             set_current_language(lang)

@@ -1629,6 +1629,7 @@ class MPManagerApp:
             ("manual_headcount_btn", self.open_headcount_editor_v2),
             ("event_driver_btn", self.open_event_driver_editor),
             ("source_order_btn", self.open_source_order_editor),
+            ("output_cost_row_order_btn", self.open_output_cost_row_ordering),
             ("install_update_btn", self.install_application_update),
             ("run_history_btn", self.open_run_history),
             ("variance_analysis_btn", self.open_variance_tab),
@@ -2264,6 +2265,130 @@ class MPManagerApp:
         if detail_lines:
             message += "\n\n" + t("sync_files_to_check") + "\n\n".join(detail_lines)
         messagebox.showinfo(t("update_db_success_title"), message)
+
+    def open_output_cost_row_ordering(self):
+        try:
+            fiscal_year = int(self.fiscal_year.get())
+            output_dir = self._project_paths(fiscal_year).output_dir
+        except (TypeError, ValueError, AttributeError):
+            output_dir = BASE_DIR
+        selected_path = filedialog.askopenfilename(
+            initialdir=output_dir if os.path.isdir(output_dir) else BASE_DIR,
+            title=t("output_cost_row_order_choose"),
+            filetypes=[(t("excel_file_type"), "*.xlsx")],
+        )
+        if selected_path:
+            self._open_cost_row_ordering_dialog(selected_path)
+
+    def _open_cost_row_ordering_dialog(self, workbook_path: str):
+        from src.engine.output_cost_row_ordering import (
+            OutputCostRowOrderError,
+            read_cost_rows,
+            save_cost_row_order,
+        )
+
+        match = re.search(r"MP_CC_([^\\/]+)\.xlsx$", os.path.basename(workbook_path), re.IGNORECASE)
+        if not match:
+            messagebox.showerror(
+                t("output_cost_row_order_title"),
+                t("output_cost_row_order_invalid_file"),
+            )
+            return
+        cc_code = match.group(1).strip()
+        try:
+            rows = read_cost_rows(workbook_path, cc_code)
+        except (OutputCostRowOrderError, OSError, ValueError) as exc:
+            messagebox.showerror(
+                t("output_cost_row_order_title"),
+                t("output_cost_row_order_error", error=str(exc)),
+            )
+            return
+        if not rows:
+            messagebox.showwarning(
+                t("output_cost_row_order_title"),
+                t("output_cost_row_order_error", error="Không có dòng chi phí để sắp xếp."),
+            )
+            return
+
+        editor = tk.Toplevel(self.root)
+        editor.title(f"{t('output_cost_row_order_title')} - {cc_code}")
+        editor.geometry("920x560")
+        editor.transient(self.root)
+        frame = ttk.Frame(editor, padding=12)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(frame, text=t("output_cost_row_order_hint"), wraplength=860).pack(anchor="w", pady=(0, 8))
+        tree = ttk.Treeview(frame, columns=("no", "kind", "account", "description"), show="headings", height=18)
+        for column, title, width in (
+            ("no", "#", 50),
+            ("kind", t("output_cost_row_order_common"), 150),
+            ("account", t("col_account_code"), 170),
+            ("description", t("col_item_name"), 500),
+        ):
+            tree.heading(column, text=title)
+            tree.column(column, width=width, anchor="w")
+        tree.pack(fill="both", expand=True)
+        ordered_rows = list(rows)
+        drag_row_id = {"value": None}
+
+        def redraw(select_row_id: str | None = None):
+            tree.delete(*tree.get_children())
+            for index, row in enumerate(ordered_rows, start=1):
+                kind_label = t("output_cost_row_order_manual") if row.row_kind == "manual" else t("output_cost_row_order_common")
+                tree.insert("", "end", iid=row.row_id, values=(index, kind_label, row.account_code, row.description))
+            if select_row_id and tree.exists(select_row_id):
+                tree.selection_set(select_row_id)
+                tree.focus(select_row_id)
+
+        def move_selected(delta: int):
+            selected = tree.selection()
+            if not selected:
+                return
+            row_id = selected[0]
+            index = next((i for i, row in enumerate(ordered_rows) if row.row_id == row_id), None)
+            if index is None:
+                return
+            target = index + delta
+            if not 0 <= target < len(ordered_rows):
+                return
+            ordered_rows[index], ordered_rows[target] = ordered_rows[target], ordered_rows[index]
+            redraw(row_id)
+
+        def start_drag(event):
+            drag_row_id["value"] = tree.identify_row(event.y) or None
+
+        def finish_drag(event):
+            source_id = drag_row_id["value"]
+            target_id = tree.identify_row(event.y)
+            drag_row_id["value"] = None
+            if not source_id or not target_id or source_id == target_id:
+                return
+            source_index = next(i for i, row in enumerate(ordered_rows) if row.row_id == source_id)
+            target_index = next(i for i, row in enumerate(ordered_rows) if row.row_id == target_id)
+            moved = ordered_rows.pop(source_index)
+            ordered_rows.insert(target_index, moved)
+            redraw(source_id)
+
+        def save():
+            try:
+                save_cost_row_order(workbook_path, cc_code, [row.row_id for row in ordered_rows])
+            except (OutputCostRowOrderError, OSError, ValueError) as exc:
+                messagebox.showerror(
+                    t("output_cost_row_order_title"),
+                    t("output_cost_row_order_error", error=str(exc)),
+                )
+                return
+            messagebox.showinfo(t("output_cost_row_order_title"), t("output_cost_row_order_saved", count=len(ordered_rows)))
+            editor.destroy()
+
+        buttons = ttk.Frame(frame)
+        buttons.pack(fill="x", pady=(8, 0))
+        ttk.Button(buttons, text=t("btn_move_up"), command=lambda: move_selected(-1)).pack(side="left")
+        ttk.Button(buttons, text=t("btn_move_down"), command=lambda: move_selected(1)).pack(side="left", padx=(6, 0))
+        ttk.Button(buttons, text=t("btn_close"), command=editor.destroy).pack(side="right")
+        ttk.Button(buttons, text=t("btn_save"), style="Primary.TButton", command=save).pack(side="right", padx=(0, 6))
+        tree.bind("<ButtonPress-1>", start_drag)
+        tree.bind("<ButtonRelease-1>", finish_drag)
+        redraw()
 
     def open_source_order_editor(self):
         source_dir = self.source_dir.get() or BASE_DIR
