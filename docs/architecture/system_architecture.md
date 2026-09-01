@@ -1,5 +1,7 @@
 # MP2027 Manager — Bản đồ kiến trúc kỹ thuật
 
+> **Document Control**: Owner: MP Engineering | Status: Approved / Production-Ready | Last Updated: 2026-09-01 | Release Flow: `HASH_ONLY_LAN`
+
 Đây là bản đồ bàn giao phản ánh trạng thái hiện tại, không phải yêu cầu tái cấu trúc các quy tắc nghiệp vụ.
 
 ## Phạm vi hệ thống

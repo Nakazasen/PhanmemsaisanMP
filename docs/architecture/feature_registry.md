@@ -1,5 +1,7 @@
 # Danh mục tính năng MP2027
 
+> **Document Control**: Owner: MP Engineering | Status: Approved / Production-Ready | Last Updated: 2026-09-01 | Active Features: F-001..F-019
+
 Danh mục này được viết theo hướng thận trọng: chỉ ghi nhận các bề mặt đã triển khai và kỳ vọng xác minh, không đưa ra cam kết kế toán chưa được tài liệu hóa.
 
 | Mã tính năng | Bề mặt | Ranh giới nguồn | Bằng chứng chính | Rủi ro phát hành |

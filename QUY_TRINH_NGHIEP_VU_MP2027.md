@@ -341,6 +341,15 @@ XANH không có nghĩa số liệu đúng 100%. Người dùng vẫn cần kiể
 | `5383f75` | Canonical headcount path and CC-switch clearing. |
 | `a2f0759` | Quarantine unconfirmed manual headcount keys. |
 | `12d9232` | Mark legacy headcount source inactive. |
+| `d65d07b` | Kế thừa & bảo tồn chi phí riêng theo năm tài chính (`manual_special_cost_sections.py`). |
+| `c3b8575` | Sắp xếp thứ tự dòng chi phí kéo thả chuột trên sheet Chi tiết MP (`output_cost_row_ordering.py`). |
+| `697e285` | Tìm kiếm nhanh phòng ban trực tiếp trên giao diện chính. |
+| `cd1c725` | Khắc phục an toàn giới hạn 31 ký tự tên sheet ngầm `_mp2027_manual_special_meta` và dọn dòng IT trống. |
+| `3c8d4fc` | So sánh biến động cùng kỳ YoY với bộ giải công thức AST, biểu đồ Top 12 Matplotlib & native Excel chart. |
+| `e6dfcf9` | Singleton editor window manager & khóa an toàn khi Pipeline đang xuất dữ liệu. |
+| `514a179` | Đồng bộ kiến trúc và feature registry theo chuẩn phát hành `HASH_ONLY_LAN`. |
+| `6d13aa5` | Bổ sung tài liệu vận hành cho 5 tính năng mới và cập nhật trace code/test. |
+| `051e480` | Gắn nhãn superseded/archive cho knowledge base v1, experimental wiki và 44 audit Phase 42. |
 
 Các commit trên là mốc evidence hiện hành cho tài liệu này. File user/runtime data như CSV thật, DB, output, screenshot, workbook raw/reference không được commit nếu không có yêu cầu bàn giao rõ.
 

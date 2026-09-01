@@ -1,5 +1,7 @@
 # Từ điển dữ liệu SQLite MP2027
 
+> **Document Control**: Owner: MP Engineering | Status: Approved / Production-Ready | Last Updated: 2026-09-01 | Schema Version: 1
+>
 > Được tạo từ cơ sở dữ liệu trong bộ nhớ. Không đọc hoặc đưa dữ liệu người dùng/runtime vào báo cáo.
 
 Phiên bản schema: **1**

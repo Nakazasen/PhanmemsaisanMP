@@ -1,5 +1,9 @@
 # Development setup MP2027
 
+> **Document Control**: Owner: MP Engineering | Status: Approved / Production-Ready | Last Updated: 2026-09-01
+>
+> Xem thêm tài liệu tổng quan tại [README.md](../README.md) và chiến lược test tại [test_strategy_and_profiles.md](handover/test_strategy_and_profiles.md).
+
 ## Python khuyến nghị
 
 Dùng Python 3.10+ trên Windows. Nếu lệnh `python` mở Microsoft Store, dùng `py`.
