@@ -184,6 +184,12 @@ class TestI18nLocalization(unittest.TestCase):
             self.assertTrue(bool(t("variance_export_success_title")))
             self.assertTrue(bool(t("variance_batch_select_base_title")))
             self.assertTrue(bool(t("variance_batch_no_pairs_title")))
+            self.assertTrue(bool(t("variance_chart_btn")))
+            self.assertTrue(bool(t("variance_chart_title")))
+            self.assertTrue(bool(t("variance_chart_no_data")))
+            self.assertTrue(bool(t("variance_chart_axis_label")))
+            self.assertTrue(bool(t("variance_chart_legend")))
+            self.assertTrue(bool(t("variance_chart_source_note")))
 
     def test_universal_app_dialog_translations_exist(self):
         dialog_keys = [

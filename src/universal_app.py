@@ -2999,6 +2999,12 @@ class MPManagerApp:
         width, height = MPManagerApp._initial_window_size(self.root.winfo_screenwidth(), self.root.winfo_screenheight())
         editor.geometry(f"{width}x{height}")
         editor.minsize(800, 600)
+        # Keep the YoY work window associated with its parent.  Without this,
+        # Windows can put it behind the main MP window after a file dialog or
+        # a message box takes focus.
+        editor.transient(self.root)
+        editor.lift()
+        editor.focus_force()
         VarianceTab(editor)
 
     def open_user_guide(self):
@@ -3456,7 +3462,27 @@ class MPManagerApp:
         tree.bind("<<TreeviewSelect>>", on_select)
         load_rows()
 
+    def _focus_existing_editor(self, attribute_name: str) -> bool:
+        """Raise a still-open editor instead of creating a conflicting copy."""
+        editor = getattr(self, attribute_name, None)
+        if editor is None:
+            return False
+        try:
+            if not editor.winfo_exists():
+                setattr(self, attribute_name, None)
+                return False
+            editor.deiconify()
+            editor.transient(self.root)
+            editor.lift()
+            editor.focus_force()
+            return True
+        except tk.TclError:
+            setattr(self, attribute_name, None)
+            return False
+
     def open_headcount_editor_v2(self, selected_cc=None):
+        if self._focus_existing_editor("_headcount_editor_v2"):
+            return
         try:
             fiscal_year = int(self.fiscal_year.get())
         except Exception:
@@ -3466,6 +3492,22 @@ class MPManagerApp:
         editor = tk.Toplevel(self.root)
         editor.title(t("headcount_editor_title"))
         editor.geometry("1180x800")
+        editor.transient(self.root)
+        editor.lift()
+        editor.focus_force()
+        self._headcount_editor_v2 = editor
+
+        def close_editor():
+            if getattr(self, "_headcount_editor_v2", None) is editor:
+                self._headcount_editor_v2 = None
+            editor.destroy()
+
+        def clear_editor_reference(event):
+            if event.widget is editor and getattr(self, "_headcount_editor_v2", None) is editor:
+                self._headcount_editor_v2 = None
+
+        editor.protocol("WM_DELETE_WINDOW", close_editor)
+        editor.bind("<Destroy>", clear_editor_reference, add="+")
         frame = ttk.Frame(editor, padding=10); frame.pack(fill=tk.BOTH, expand=True)
         ttk.Label(frame, text=t("hc_v2_instruction"), font=("Segoe UI",9,"italic")).pack(anchor="w")
         top = ttk.Frame(frame); top.pack(fill="x", pady=8)
@@ -3748,7 +3790,7 @@ class MPManagerApp:
         ttk.Button(
             buttons, text=t("hc_v2_save_btn"), style="Primary.TButton", command=save
         ).pack(side="left", padx=6)
-        ttk.Button(buttons, text=t("btn_close"), command=editor.destroy).pack(side="left")
+        ttk.Button(buttons, text=t("btn_close"), command=close_editor).pack(side="left")
         cc_combo.bind("<<ComboboxSelected>>",load_cc)
         if cc_combo["values"]:
             initial=selected_cc if selected_cc in cc_combo["values"] else cc_combo["values"][0]

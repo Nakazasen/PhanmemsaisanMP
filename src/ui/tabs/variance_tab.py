@@ -6,6 +6,7 @@ import re
 from src.engine.variance_analyzer import ComparisonContext, map_and_analyze_variances, safe_load_mp_form
 from src.services.i18n import (
     t,
+    get_current_language,
     register_language_listener,
     unregister_language_listener,
 )
@@ -66,6 +67,8 @@ class VarianceTab(ttk.Frame):
         self.btn_compare.pack(side="left", padx=20)
         self.btn_export = ttk.Button(thresh_frame, text=t("export_excel_btn"), command=self._export_excel)
         self.btn_export.pack(side="left", padx=5)
+        self.btn_chart = ttk.Button(thresh_frame, text=t("variance_chart_btn"), command=self._show_variance_chart)
+        self.btn_chart.pack(side="left", padx=5)
         self.btn_batch = ttk.Button(thresh_frame, text=t("batch_compare_btn"), command=self._run_batch_comparison)
         self.btn_batch.pack(side="left", padx=5)
 
@@ -130,6 +133,8 @@ class VarianceTab(ttk.Frame):
             self.btn_compare.configure(text=t("run_compare_btn"))
         if hasattr(self, "btn_export"):
             self.btn_export.configure(text=t("export_excel_btn"))
+        if hasattr(self, "btn_chart"):
+            self.btn_chart.configure(text=t("variance_chart_btn"))
         if hasattr(self, "btn_batch"):
             self.btn_batch.configure(text=t("batch_compare_btn"))
         if hasattr(self, "tree"):
@@ -141,8 +146,14 @@ class VarianceTab(ttk.Frame):
             self.tree.heading("Pct", text=t("col_pct_diff"))
             self.tree.heading("Status", text=t("col_status"))
 
+    def _dialog_parent(self):
+        return self.winfo_toplevel()
+
     def _select_file(self, var):
-        path = filedialog.askopenfilename(filetypes=[(t("excel_file_type"), "*.xlsx")])
+        path = filedialog.askopenfilename(
+            parent=self._dialog_parent(),
+            filetypes=[(t("excel_file_type"), "*.xlsx")],
+        )
         if path:
             var.set(path)
 
@@ -153,6 +164,7 @@ class VarianceTab(ttk.Frame):
             messagebox.showwarning(
                 t("variance_missing_files_title"),
                 t("variance_missing_files_msg"),
+                parent=self._dialog_parent(),
             )
             return
 
@@ -165,6 +177,7 @@ class VarianceTab(ttk.Frame):
             messagebox.showwarning(
                 t("variance_threshold_invalid_title"),
                 t("variance_threshold_invalid_msg"),
+                parent=self._dialog_parent(),
             )
             return
 
@@ -201,23 +214,30 @@ class VarianceTab(ttk.Frame):
                     else:
                         tags = ("alert_decrease",)
 
-                self.tree.insert("", "end", values=(line.account_code, line.item_name, b_str, c_str, d_str, p_str, line.status.value), tags=tags)
+                status_text = t(f"variance_status_{line.status.name.lower()}")
+                self.tree.insert("", "end", values=(line.account_code, line.item_name, b_str, c_str, d_str, p_str, status_text), tags=tags)
 
             self._current_report = report
-            messagebox.showinfo(t("variance_compare_done_title"), t("variance_compare_done_msg"))
+            messagebox.showinfo(
+                t("variance_compare_done_title"),
+                t("variance_compare_done_msg"),
+                parent=self._dialog_parent(),
+            )
 
         except Exception as e:
-            messagebox.showerror(t("variance_compare_err_title"), f"{str(e)}")
+            messagebox.showerror(t("variance_compare_err_title"), f"{str(e)}", parent=self._dialog_parent())
 
     def _export_excel(self):
         if not hasattr(self, "_current_report") or not self._current_report:
             messagebox.showwarning(
                 t("variance_no_data_title"),
                 t("variance_no_data_msg"),
+                parent=self._dialog_parent(),
             )
             return
 
         path = filedialog.asksaveasfilename(
+            parent=self._dialog_parent(),
             defaultextension=".xlsx",
             filetypes=[(t("excel_file_type"), "*.xlsx")],
             initialfile="Bao_cao_bien_dong_MP.xlsx"
@@ -226,12 +246,95 @@ class VarianceTab(ttk.Frame):
             try:
                 from src.utils.excel_variance_writer import export_variance_report
                 export_variance_report(self._current_report, path)
-                messagebox.showinfo(t("variance_export_success_title"), t("variance_export_success_msg", path=path))
+                messagebox.showinfo(
+                    t("variance_export_success_title"),
+                    t("variance_export_success_msg", path=path),
+                    parent=self._dialog_parent(),
+                )
             except Exception as e:
                 messagebox.showerror(
                     t("variance_export_err_title"),
                     t("variance_export_err_msg", error=str(e)),
+                    parent=self._dialog_parent(),
                 )
+
+    def _show_variance_chart(self):
+        if not self._current_report:
+            messagebox.showwarning(
+                t("variance_no_data_title"),
+                t("variance_no_data_msg"),
+                parent=self._dialog_parent(),
+            )
+            return
+
+        from src.ui.variance_chart import build_variance_chart_rows, resolve_multilingual_font_path
+
+        rows = build_variance_chart_rows(
+            self._current_report.lines,
+            language=get_current_language(),
+        )
+        if not rows:
+            messagebox.showinfo(
+                t("variance_chart_title"),
+                t("variance_chart_no_data"),
+                parent=self._dialog_parent(),
+            )
+            return
+
+        try:
+            from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+            from matplotlib.figure import Figure
+            from matplotlib.font_manager import FontProperties
+            from matplotlib.ticker import FuncFormatter
+        except ImportError as exc:
+            messagebox.showerror(t("variance_compare_err_title"), str(exc), parent=self._dialog_parent())
+            return
+
+        chart_window = tk.Toplevel(self._dialog_parent())
+        chart_window.title(t("variance_chart_title"))
+        chart_window.geometry("1060x620")
+        chart_window.transient(self._dialog_parent())
+        chart_window.lift()
+        chart_window.focus_force()
+
+        figure = Figure(figsize=(10.5, 5.8), dpi=100)
+        axes = figure.add_subplot(111)
+        display_rows = list(reversed(rows))
+        font_path = resolve_multilingual_font_path(language=get_current_language())
+        chart_font = FontProperties(fname=str(font_path)) if font_path else FontProperties()
+        positions = list(range(len(display_rows)))
+        bars = axes.barh(
+            positions,
+            [row.amount for row in display_rows],
+            color=[row.color for row in display_rows],
+        )
+        axes.axvline(0, color="#555555", linewidth=0.8)
+        axes.set_yticks(positions, [row.label for row in display_rows], fontproperties=chart_font)
+        axes.set_title(t("variance_chart_title"), fontproperties=chart_font)
+        axes.set_xlabel(
+            f"{t('variance_chart_axis_label')} — {t('variance_chart_legend')}",
+            fontproperties=chart_font,
+        )
+        axes.xaxis.set_major_formatter(FuncFormatter(lambda value, _position: f"{value / 1_000_000:,.1f}M"))
+        axes.grid(axis="x", linestyle="--", alpha=0.35)
+        axes.set_axisbelow(True)
+        for bar, row in zip(bars, display_rows):
+            axes.text(
+                row.amount / 2,
+                bar.get_y() + bar.get_height() / 2,
+                f"{row.amount / 1_000_000:+,.2f}M",
+                ha="center",
+                va="center",
+                color="white",
+                fontweight="bold",
+                fontsize=9,
+            )
+        figure.subplots_adjust(left=0.36, right=0.96, top=0.90, bottom=0.17)
+
+        canvas = FigureCanvasTkAgg(figure, master=chart_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=8, pady=8)
+        ttk.Label(chart_window, text=t("variance_chart_source_note")).pack(anchor="w", padx=10, pady=(0, 8))
 
     def _run_batch_comparison(self):
         try:
@@ -243,13 +346,20 @@ class VarianceTab(ttk.Frame):
             messagebox.showwarning(
                 t("variance_threshold_invalid_title"),
                 t("variance_threshold_invalid_msg"),
+                parent=self._dialog_parent(),
             )
             return
 
-        base_dir = filedialog.askdirectory(title=t("variance_batch_select_base_title"))
+        base_dir = filedialog.askdirectory(
+            parent=self._dialog_parent(),
+            title=t("variance_batch_select_base_title"),
+        )
         if not base_dir:
             return
-        curr_dir = filedialog.askdirectory(title=t("variance_batch_select_curr_title"))
+        curr_dir = filedialog.askdirectory(
+            parent=self._dialog_parent(),
+            title=t("variance_batch_select_curr_title"),
+        )
         if not curr_dir:
             return
 
@@ -257,7 +367,7 @@ class VarianceTab(ttk.Frame):
         pairs, unmatched = scan_directories_and_pair_files(base_dir, curr_dir)
         if not pairs:
             msg = t("variance_batch_no_pairs_msg")
-            messagebox.showwarning(t("variance_batch_no_pairs_title"), msg)
+            messagebox.showwarning(t("variance_batch_no_pairs_title"), msg, parent=self._dialog_parent())
             return
 
         try:
@@ -273,10 +383,12 @@ class VarianceTab(ttk.Frame):
                 messagebox.showwarning(
                     t("variance_batch_parse_err_title"),
                     t("variance_batch_parse_err_msg", error=err_msg),
+                    parent=self._dialog_parent(),
                 )
                 return
 
             path = filedialog.asksaveasfilename(
+                parent=self._dialog_parent(),
                 defaultextension=".xlsx",
                 filetypes=[(t("excel_file_type"), "*.xlsx")],
                 initialfile="Tong_hop_bien_dong_MP.xlsx",
@@ -300,6 +412,6 @@ class VarianceTab(ttk.Frame):
                 if unmatched:
                     msg += f"\n\n(Unmatched: {len(unmatched)})\n" + "\n".join(unmatched[:5])
 
-                messagebox.showinfo(t("variance_export_success_title"), msg)
+                messagebox.showinfo(t("variance_export_success_title"), msg, parent=self._dialog_parent())
         except Exception as e:
-            messagebox.showerror(t("variance_batch_err_title"), f"{str(e)}")
+            messagebox.showerror(t("variance_batch_err_title"), f"{str(e)}", parent=self._dialog_parent())

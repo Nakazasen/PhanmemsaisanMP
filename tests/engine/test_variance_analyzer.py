@@ -278,6 +278,30 @@ def test_export_variance_report(tmp_path):
     ws = wb.active
     assert ws["A1"].value == "Mã Tài Khoản"
     assert ws["A2"].value == ACC_1
+    assert len(ws._charts) == 0
+    assert len(ws._images) == 1
+
+
+def test_export_variance_report_uses_the_active_interface_language(tmp_path):
+    from src.services.i18n import set_current_language, t
+    from src.utils.excel_variance_writer import export_variance_report
+
+    report = VarianceReport(context=_make_ctx())
+    report.lines.append(CostLineVariance(ACC_1, "Item A", 100, 110, 10, 10.0, VarianceStatus.INCREASE, True))
+    try:
+        for language in ("en", "ja"):
+            set_current_language(language)
+            export_path = tmp_path / f"export-{language}.xlsx"
+            export_variance_report(report, str(export_path))
+            import openpyxl
+            workbook = openpyxl.load_workbook(export_path)
+            worksheet = workbook.active
+            assert worksheet.title == t("variance_export_sheet_name")
+            assert worksheet["A1"].value == t("col_account_code")
+            assert worksheet["G2"].value == t("variance_status_increase")
+            workbook.close()
+    finally:
+        set_current_language("vi")
 
 # --- Integration test: realistic multi-sheet workbook ---
 
@@ -408,3 +432,44 @@ def test_integration_realistic_mp_workbook(tmp_path):
 
     assert len(errors) == 1
     assert "1002" in errors[0]
+
+
+def test_yoy_reads_totals_from_a_freshly_exported_formula_workbook(tmp_path, monkeypatch):
+    """YoY must work before Excel has opened and cached generated formulas."""
+    import openpyxl
+
+    workbook_path = tmp_path / "MP_CC_1412000086.xlsx"
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Hub"
+    worksheet["B2"] = 26273
+    # FORM summary cells can contain unrelated formulas outside the cost area.
+    # They must not block YoY from hydrating a real cost row below row 38.
+    worksheet["V29"] = 1.5
+    worksheet["F29"] = "=ROUNDUP(V29*$B$2,0)"
+    worksheet["R29"] = "=SUM(F29:Q29)"
+    worksheet["R5"] = "=SUM(R29:R1000)"
+    worksheet.cell(row=40, column=2, value=int(ACC_1))
+    worksheet.cell(row=40, column=3, value='=VLOOKUP($B40,AccountMaster!$A:$B,2,0)')
+    worksheet.cell(row=40, column=19, value="Generated source description")
+    worksheet.cell(row=40, column=6, value="=ROUND(1.5*$B$2,0)")
+    worksheet.cell(row=40, column=17, value="=ROUND(2*$B$2,0)")
+    worksheet.cell(row=40, column=18, value="=SUM(F40:Q40)")
+    workbook.save(workbook_path)
+    workbook.close()
+
+    monkeypatch.setattr(
+        "src.engine.variance_analyzer._resolve_hub_sheet_name",
+        lambda _path: "Hub",
+    )
+    dataframe = safe_load_mp_form(str(workbook_path))
+    report = map_and_analyze_variances(
+        dataframe,
+        dataframe,
+        _make_ctx(base_file_path=str(workbook_path), current_file_path=str(workbook_path)),
+    )
+
+    assert len(report.lines) == 1
+    assert report.lines[0].item_name == "Generated source description"
+    assert report.total_current == 91956.0
+    assert report.total_variance_absolute == 0.0
