@@ -116,7 +116,10 @@ Run `git add tests/test_output_cost_row_ordering.py tests/test_manual_special_co
 
 ```python
 def test_pipeline_logs_new_common_rows_and_new_fy_clear_money(tmp_path):
-    result = _restore_manual_special_cost_section(..., source_kind="previous_fiscal_year", log_callback=logs.append)
+    result = _restore_manual_special_cost_section(
+        str(generated), run_context=context, cc_code="1412000030",
+        source_path=str(source), source_kind="previous_fiscal_year", log_callback=logs.append,
+    )
 
     assert result["new_common_rows"] == 1
     assert any("mã và mô tả" in log for log in logs)
