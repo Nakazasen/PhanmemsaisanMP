@@ -1176,6 +1176,13 @@ class HubBuilder:
 
     def _write_it_system_total_row(self, worksheet, cc_code: int) -> None:
         rows = self._input_rows_for_cc(cc_code, source="it_sim")
+        row_index = getattr(self, "_resolved_it_system_row", None) or self._find_it_system_total_row(worksheet)
+        if not rows:
+            worksheet.cell(row=row_index, column=ACCOUNT_COL).value = None
+            worksheet.cell(row=row_index, column=DESCRIPTION_COL).value = None
+            worksheet.cell(row=row_index, column=TOTAL_COL).value = None
+            self._clear_visible_months(worksheet, row_index)
+            return
         total_vnd_by_period: dict[str, float] = {}
         component_usd_by_period: dict[str, dict[str, float]] = defaultdict(dict)
         component_terms_by_period: dict[str, dict[str, list[tuple[float, float]]]] = defaultdict(lambda: defaultdict(list))
@@ -1204,7 +1211,6 @@ class HubBuilder:
                     component_key = parts[2]
                     component_usd_by_period[period][component_key] = float(row["amount_usd"] or 0.0)
 
-        row_index = getattr(self, "_resolved_it_system_row", None) or self._find_it_system_total_row(worksheet)
         account_code = self._resolve_it_system_account_code(cc_code, account_codes)
         if account_code is None:
             raise RuntimeError(

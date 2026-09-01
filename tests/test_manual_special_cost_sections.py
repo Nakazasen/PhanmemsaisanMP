@@ -8,6 +8,7 @@ import pytest
 from openpyxl.styles import PatternFill
 
 from src.engine.manual_special_cost_sections import (
+    LEGACY_MANUAL_SPECIAL_COST_METADATA_SHEET,
     MANUAL_SPECIAL_COST_METADATA_SHEET,
     ManualSpecialCostSectionError,
     preserve_manual_special_cost_section,
@@ -103,6 +104,48 @@ def test_metadata_snapshot_survives_rerun_when_common_block_grows(tmp_path):
         assert sheet["B96"].value == 5005246286
         assert sheet["S96"].value == "Chi phí riêng A"
         assert sheet["B97"].value == 5005246288
+    finally:
+        workbook.close()
+
+
+def test_manual_special_metadata_sheet_name_is_valid_for_excel(tmp_path):
+    output = tmp_path / "output.xlsx"
+    _make_output(output, common_end_row=86)
+
+    preserve_manual_special_cost_section(output, "1412000030")
+
+    workbook = openpyxl.load_workbook(output, data_only=False)
+    try:
+        assert len(MANUAL_SPECIAL_COST_METADATA_SHEET) <= 31
+        assert MANUAL_SPECIAL_COST_METADATA_SHEET in workbook.sheetnames
+    finally:
+        workbook.close()
+
+
+def test_legacy_metadata_name_is_read_and_migrated_to_excel_safe_name(tmp_path):
+    source = tmp_path / "legacy.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    _make_output(source, common_end_row=86)
+    _add_legacy_manual_rows(source, 87)
+    workbook = openpyxl.load_workbook(source)
+    try:
+        sheet_name = workbook.active.title
+        metadata = workbook.create_sheet(LEGACY_MANUAL_SPECIAL_COST_METADATA_SHEET)
+        metadata.sheet_state = "veryHidden"
+        metadata.append(("sheet_name", "fiscal_year", "cc_code", "common_end_row", "manual_start_row", "manual_end_row", "schema_version"))
+        metadata.append((sheet_name, 2026, "1412000030", 86, 87, 88, 1))
+        workbook.save(source)
+    finally:
+        workbook.close()
+    _make_output(generated, common_end_row=90)
+
+    preserve_manual_special_cost_section(generated, "1412000030", source_workbook_path=source)
+
+    workbook = openpyxl.load_workbook(generated, data_only=False)
+    try:
+        assert MANUAL_SPECIAL_COST_METADATA_SHEET in workbook.sheetnames
+        assert LEGACY_MANUAL_SPECIAL_COST_METADATA_SHEET not in workbook.sheetnames
+        assert workbook.active["B92"].value == 5005246286
     finally:
         workbook.close()
 

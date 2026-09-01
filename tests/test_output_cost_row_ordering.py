@@ -105,6 +105,8 @@ def test_save_order_marks_legacy_manual_rows_and_keeps_mixed_order(tmp_path):
     saved = openpyxl.load_workbook(workbook, data_only=False)
     try:
         assert saved[OUTPUT_COST_ROW_ORDER_METADATA_SHEET].sheet_state == "veryHidden"
+        assert "_mp2027_manual_cost_meta" in saved.sheetnames
+        assert "_mp2027_manual_special_cost_meta" not in saved.sheetnames
     finally:
         saved.close()
 

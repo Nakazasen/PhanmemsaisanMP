@@ -18,7 +18,8 @@ from src.utils import excel_helpers as helpers
 from src.engine.output_cost_row_ordering import has_saved_cost_row_order, restore_cost_layout
 
 
-MANUAL_SPECIAL_COST_METADATA_SHEET = "_mp2027_manual_special_cost_meta"
+MANUAL_SPECIAL_COST_METADATA_SHEET = "_mp2027_manual_cost_meta"
+LEGACY_MANUAL_SPECIAL_COST_METADATA_SHEET = "_mp2027_manual_special_cost_meta"
 MANUAL_SPECIAL_COST_SCHEMA_VERSION = 1
 COMMON_COST_START_ROW = helpers.FORM_SHARED_COST_START_ROW
 MANUAL_SPECIAL_COST_SEPARATOR = "CHI PHÍ RIÊNG - NHẬP THỦ CÔNG"
@@ -87,8 +88,18 @@ def _last_content_row(worksheet, start_row: int) -> int:
 def _metadata_sheet(workbook, *, create: bool = False):
     if MANUAL_SPECIAL_COST_METADATA_SHEET in workbook.sheetnames:
         return workbook[MANUAL_SPECIAL_COST_METADATA_SHEET]
+    if not create and LEGACY_MANUAL_SPECIAL_COST_METADATA_SHEET in workbook.sheetnames:
+        return workbook[LEGACY_MANUAL_SPECIAL_COST_METADATA_SHEET]
     if not create:
         return None
+    if LEGACY_MANUAL_SPECIAL_COST_METADATA_SHEET in workbook.sheetnames:
+        legacy = workbook[LEGACY_MANUAL_SPECIAL_COST_METADATA_SHEET]
+        sheet = workbook.create_sheet(MANUAL_SPECIAL_COST_METADATA_SHEET)
+        sheet.sheet_state = "veryHidden"
+        for row in legacy.iter_rows(values_only=True):
+            sheet.append(row)
+        workbook.remove(legacy)
+        return sheet
     sheet = workbook.create_sheet(MANUAL_SPECIAL_COST_METADATA_SHEET)
     sheet.sheet_state = "veryHidden"
     sheet.append((

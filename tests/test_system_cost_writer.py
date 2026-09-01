@@ -29,6 +29,20 @@ def test_system_cost_writer_blank_row_212(tmp_path):
   assert ws.cell(212,17).value is None
   assert ws.cell(212,19).value is None
  finally: wb.close()
+
+
+def test_system_cost_writer_skips_row_when_cc_is_absent_from_every_source(tmp_path):
+ out=tmp_path/'out.xlsx'; copy2(TEMPLATE,out)
+ apply_system_cost_to_workbook(out,SYSTEM,fiscal_year=2027,cost_center='1412000086')
+ wb=load_workbook(out); ws=wb[helpers.find_hub_sheet_name(wb)]
+ try:
+  assert ws.cell(211,5).value is None
+  assert ws.cell(211,6).value is None
+  assert ws.cell(211,17).value is None
+  assert ws.cell(211,19).value is None
+  assert ws.cell(211,20).value is None
+ finally: wb.close()
+
 def test_system_cost_writer_does_not_modify_sources_or_template(tmp_path):
  out=tmp_path/'out.xlsx'; copy2(TEMPLATE,out); mt=TEMPLATE.stat().st_mtime_ns; ms=[p.stat().st_mtime_ns for p in SYSTEM]
  apply_system_cost_to_workbook(out,SYSTEM,fiscal_year=2027,cost_center=CC)

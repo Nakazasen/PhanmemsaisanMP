@@ -19,7 +19,12 @@ from src.utils import excel_helpers as helpers
 
 OUTPUT_COST_ROW_ORDER_METADATA_SHEET = "_mp2027_output_cost_row_order"
 OUTPUT_COST_ROW_ORDER_SCHEMA_VERSION = 1
-LEGACY_MANUAL_METADATA_SHEET = "_mp2027_manual_special_cost_meta"
+LEGACY_MANUAL_METADATA_SHEETS = (
+    "_mp2027_manual_cost_meta",
+    "_mp2027_manual_special_cost_meta",
+)
+MANUAL_METADATA_SHEET = LEGACY_MANUAL_METADATA_SHEETS[0]
+INVALID_LEGACY_MANUAL_METADATA_SHEET = LEGACY_MANUAL_METADATA_SHEETS[1]
 FIRST_COST_ROW = helpers.FORM_SHARED_COST_START_ROW
 FIRST_COST_COLUMN = 1
 LAST_COST_COLUMN = 20
@@ -121,20 +126,21 @@ def _signature(worksheet, row: int, seen: dict[str, int]) -> str:
 
 
 def _legacy_manual_bounds(workbook, cc_code: str) -> tuple[str, int, int] | None:
-    if LEGACY_MANUAL_METADATA_SHEET not in workbook.sheetnames:
-        return None
-    metadata = workbook[LEGACY_MANUAL_METADATA_SHEET]
-    for row in range(2, int(metadata.max_row or 1) + 1):
-        if _cc(metadata.cell(row, 3).value) != cc_code:
+    for metadata_sheet in LEGACY_MANUAL_METADATA_SHEETS:
+        if metadata_sheet not in workbook.sheetnames:
             continue
-        sheet_name = str(metadata.cell(row, 1).value or "").strip()
-        common_end = int(metadata.cell(row, 4).value or 0)
-        manual_start = int(metadata.cell(row, 5).value or 0)
-        manual_end = int(metadata.cell(row, 6).value or 0)
-        schema_version = int(metadata.cell(row, 7).value or 0)
-        if schema_version != 1 or not sheet_name or manual_start <= common_end or manual_end < manual_start - 1:
-            raise OutputCostRowOrderError(f"Dấu mốc chi phí riêng của CC {cc_code} không hợp lệ.")
-        return sheet_name, manual_start, manual_end
+        metadata = workbook[metadata_sheet]
+        for row in range(2, int(metadata.max_row or 1) + 1):
+            if _cc(metadata.cell(row, 3).value) != cc_code:
+                continue
+            sheet_name = str(metadata.cell(row, 1).value or "").strip()
+            common_end = int(metadata.cell(row, 4).value or 0)
+            manual_start = int(metadata.cell(row, 5).value or 0)
+            manual_end = int(metadata.cell(row, 6).value or 0)
+            schema_version = int(metadata.cell(row, 7).value or 0)
+            if schema_version != 1 or not sheet_name or manual_start <= common_end or manual_end < manual_start - 1:
+                raise OutputCostRowOrderError(f"Dấu mốc chi phí riêng của CC {cc_code} không hợp lệ.")
+            return sheet_name, manual_start, manual_end
     return None
 
 
@@ -147,6 +153,19 @@ def _metadata_sheet(workbook, *, create: bool = False):
     sheet.sheet_state = "veryHidden"
     sheet.append(ROW_ORDER_HEADERS)
     return sheet
+
+
+def _migrate_legacy_manual_metadata(workbook) -> None:
+    """Replace the pre-fix 32-character metadata title before saving."""
+    if INVALID_LEGACY_MANUAL_METADATA_SHEET not in workbook.sheetnames:
+        return
+    legacy = workbook[INVALID_LEGACY_MANUAL_METADATA_SHEET]
+    if MANUAL_METADATA_SHEET not in workbook.sheetnames:
+        migrated = workbook.create_sheet(MANUAL_METADATA_SHEET)
+        migrated.sheet_state = "veryHidden"
+        for row in legacy.iter_rows(values_only=True):
+            migrated.append(row)
+    workbook.remove(legacy)
 
 
 def _read_records(workbook, cc_code: str) -> list[dict[str, object]] | None:
@@ -297,6 +316,7 @@ def _write_snapshot(worksheet, snapshot: _RowSnapshot, target_row: int, *, clear
 
 
 def _write_records(workbook, cc_code: str, records: list[dict[str, object]]) -> None:
+    _migrate_legacy_manual_metadata(workbook)
     metadata = _metadata_sheet(workbook, create=True)
     metadata.sheet_state = "veryHidden"
     retained = [

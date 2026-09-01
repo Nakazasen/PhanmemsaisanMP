@@ -7,12 +7,14 @@ from src.engine.system_cost_preview import preview_system_cost_file_order
 from src.utils import excel_helpers as helpers
 
 ITEM_ID_COL = 5
+ACCOUNT_COL = 2
 MONTH_START_COL = 6
 DESCRIPTION_COL = 19
 NOTE_COL = 20
 
 
 def _clear_row(ws, row: int):
+    ws.cell(row=row, column=ACCOUNT_COL).value = None
     ws.cell(row=row, column=ITEM_ID_COL).value = None
     ws.cell(row=row, column=DESCRIPTION_COL).value = None
     ws.cell(row=row, column=NOTE_COL).value = None
@@ -36,6 +38,11 @@ def apply_system_cost_to_open_workbook(
     )
     ws = wb[helpers.find_hub_sheet_name(wb)]
     item = preview.items[0]
+    if not any(value is not None for value in item.month_values):
+        _clear_row(ws, item.planned_row)
+        _clear_row(ws, preview.blank_row_after)
+        normalize_output_description_column_s(ws)
+        return preview
     _clear_row(ws, item.planned_row)
     ws.cell(row=item.planned_row, column=ITEM_ID_COL, value=item.item_id)
     ws.cell(row=item.planned_row, column=DESCRIPTION_COL, value=item.display_name)
