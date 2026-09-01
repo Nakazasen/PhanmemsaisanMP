@@ -1,5 +1,8 @@
 # Hybrid Anti-Brain-Wiki -- Knowledge Index
 
+> [!NOTE]
+> **Historical Prototype (Deprecated):** Thư mục wiki này là bản thử nghiệm từ tháng 05/2026 và không phản ánh trạng thái vận hành hiện tại của MP2027. Tài liệu nghiệp vụ chính thức nằm tại [QUY_TRINH_NGHIEP_VU_MP2027.md](../QUY_TRINH_NGHIEP_VU_MP2027.md) và [docs/knowledge/mp_saisan_business_knowledge_base_v2.md](../docs/knowledge/mp_saisan_business_knowledge_base_v2.md).
+
 > Auto-generated index. Updated by `ingest-wiki` and `lint-wiki`.
 
 ---

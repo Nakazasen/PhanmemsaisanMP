@@ -1,10 +1,10 @@
 # MP2027 — Chỉ mục vòng đời audit
 
-Ngày dọn lại: `2026-07-20`
+Ngày dọn lại: `2026-09-01`
 
-Tài liệu trong `docs/audits` và `reports` là **bằng chứng lịch sử**, không phải
+Tài liệu trong `docs/audits` và `reports` là **bằng chứng lịch sử** (bao gồm 44 báo cáo Phase 42), không phải
 handover hoặc backlog. Handover hiện hành duy nhất là
-`docs/handover/HANDOVER_FOR_NEXT_AGENT.md`.
+`docs/handover/HANDOVER_FOR_NEXT_AGENT.md`. Các file CSV dữ liệu lịch sử được bảo tồn nguyên vẹn phục vụ kiểm toán và tính tương thích.
 
 ## Bằng chứng còn có giá trị tham khảo
 

@@ -1,5 +1,8 @@
 # Current Source Authority Notice
 
+> [!WARNING]
+> **Tài liệu lịch sử (Superseded):** Bản tài liệu này (v1) đã được nâng cấp toàn diện và thay thế bởi [mp_saisan_business_knowledge_base_v2.md](mp_saisan_business_knowledge_base_v2.md). Vui lòng sử dụng **v2** làm Single Source of Truth cho tri thức nghiệp vụ nén của AI/LLM.
+
 Current canonical requirement: `raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx`. The user confirmed it as the newest requirement source on `2026-07-11`.
 No visual snapshot has been confirmed for the 10.07 workbook. Any 09.06 visual snapshot, audit, or derived Markdown is historical evidence only and must not override the 10.07 workbook.
 
