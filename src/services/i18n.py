@@ -697,6 +697,44 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "field_bus_vn": "Người Việt Nam đi xe bus",
         "field_account_code": "mã tài khoản",
         "field_form_row": "dòng FORM",
+        "operations_assistant_btn": "Trợ lý xử lý lỗi",
+        "operations_assistant_window_title": "Trợ lý Vận hành & Xử lý Lỗi",
+        "operations_assistant_section_what_happened": "Điều đã xảy ra",
+        "operations_assistant_section_why_it_happened": "Lý do",
+        "operations_assistant_section_what_to_do": "Việc cần làm",
+        "operations_assistant_section_confidence": "Mức độ chắc chắn",
+        "operations_assistant_section_evidence": "Bằng chứng vận hành",
+        "operations_assistant_section_technical_details": "Chi tiết kỹ thuật từ hệ thống",
+        "operations_assistant_fiscal_year_label": "Năm tài chính:",
+        "operations_assistant_cost_center_label": "Trung tâm chi phí:",
+        "operations_assistant_status_label": "Trạng thái lần chạy:",
+        "operations_assistant_stage_label": "Giai đoạn:",
+        "operations_assistant_verification_verified": "Đã xác minh",
+        "operations_assistant_verification_missing": "Thiếu tệp",
+        "operations_assistant_verification_mismatch": "Không khớp",
+        "operations_assistant_confidence_confirmed": "Đã xác nhận",
+        "operations_assistant_confidence_possible": "Có thể xảy ra",
+        "operations_assistant_confidence_unknown": "Chưa xác nhận",
+        "operations_assistant_no_run_selected": "Vui lòng chọn một lần chạy từ danh sách lịch sử để mở trợ lý.",
+        "operations_assistant_run_not_finished": "Lần chạy đang được thực hiện và chưa kết thúc. Trợ lý chỉ hỗ trợ các lần chạy đã hoàn tất hoặc đã dừng.",
+        "operations_assistant_unable_to_load_case": "Không thể tải thông tin hỗ trợ cho lần chạy đã chọn.",
+        "operations_assistant_no_technical_evidence": "Không có bằng chứng kỹ thuật bổ sung nào được ghi nhận.",
+        "operations_assistant_readonly_notice": "Trợ lý vận hành chỉ cung cấp thông tin hướng dẫn và chẩn đoán an toàn; không tự ý sửa đổi tệp hay tự động chạy lại tính toán.",
+        "operations_assistant_close_btn": "Đóng",
+        "operations_assistant_section_scope": "Phạm vi lần chạy",
+        "operations_assistant_status_succeeded": "Đã hoàn tất",
+        "operations_assistant_status_failed": "Chưa hoàn tất",
+        "operations_assistant_status_precheck_failed": "Cần bổ sung dữ liệu trước khi tính",
+        "operations_assistant_status_succeeded_incomplete": "Đã hoàn tất nhưng có nguồn chưa được tính",
+        "operations_assistant_status_legacy": "Kết quả lịch sử",
+        "operations_assistant_status_unavailable": "Chưa có thông tin trạng thái",
+        "operations_assistant_evidence_type_catalog_row": "Bản ghi danh mục",
+        "operations_assistant_evidence_type_run_manifest": "Tệp thông tin lần chạy",
+        "operations_assistant_evidence_type_preflight_report": "Báo cáo tiền trạm",
+        "operations_assistant_evidence_type_stage_evidence": "Bằng chứng giai đoạn",
+        "operations_assistant_evidence_type_failure_traceback": "Nhật ký chi tiết lỗi",
+        "operations_assistant_evidence_type_other": "Tài liệu đính kèm",
+        "operations_assistant_evidence_summary_protected": "Thông tin chi tiết được hiển thị ở phần Chi tiết kỹ thuật.",
     },
     "ja": {
         "variance_chart_btn": "変動グラフ",
@@ -1366,6 +1404,44 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "field_bus_vn": "送迎バス利用のベトナム人",
         "field_account_code": "勘定科目コード",
         "field_form_row": "FORM行番号",
+        "operations_assistant_btn": "エラー対応アシスタント",
+        "operations_assistant_window_title": "運用・エラー対応アシスタント",
+        "operations_assistant_section_what_happened": "発生した事象",
+        "operations_assistant_section_why_it_happened": "発生理由",
+        "operations_assistant_section_what_to_do": "対応手順",
+        "operations_assistant_section_confidence": "確信度",
+        "operations_assistant_section_evidence": "運用証拠",
+        "operations_assistant_section_technical_details": "システム技術詳細",
+        "operations_assistant_fiscal_year_label": "会計年度:",
+        "operations_assistant_cost_center_label": "コストセンター:",
+        "operations_assistant_status_label": "実行ステータス:",
+        "operations_assistant_stage_label": "処理フェーズ:",
+        "operations_assistant_verification_verified": "検証済み",
+        "operations_assistant_verification_missing": "不足",
+        "operations_assistant_verification_mismatch": "不一致",
+        "operations_assistant_confidence_confirmed": "確認済み",
+        "operations_assistant_confidence_possible": "可能性あり",
+        "operations_assistant_confidence_unknown": "未確定",
+        "operations_assistant_no_run_selected": "アシスタントを開くには、履歴一覧から実行を選択してください。",
+        "operations_assistant_run_not_finished": "処理は現在実行中です。アシスタントは完了または停止した実行のみを対象とします。",
+        "operations_assistant_unable_to_load_case": "選択された実行のサポート情報を読み込めませんでした。",
+        "operations_assistant_no_technical_evidence": "記録された追加の技術証跡はありません。",
+        "operations_assistant_readonly_notice": "運用アシスタントは安全な診断と手順の案内のみを行い、ファイルを自動変更したり再計算を実行したりすることはありません。",
+        "operations_assistant_close_btn": "閉じる",
+        "operations_assistant_section_scope": "実行範囲",
+        "operations_assistant_status_succeeded": "完了",
+        "operations_assistant_status_failed": "完了できませんでした",
+        "operations_assistant_status_precheck_failed": "計算前にデータの追加が必要です",
+        "operations_assistant_status_succeeded_incomplete": "完了しましたが、一部の入力元は計算対象外です",
+        "operations_assistant_status_legacy": "過去の結果",
+        "operations_assistant_status_unavailable": "実行状態の情報がありません",
+        "operations_assistant_evidence_type_catalog_row": "カタログレコード",
+        "operations_assistant_evidence_type_run_manifest": "実行マニフェスト",
+        "operations_assistant_evidence_type_preflight_report": "事前検証レポート",
+        "operations_assistant_evidence_type_stage_evidence": "フェーズ証拠",
+        "operations_assistant_evidence_type_failure_traceback": "エラー詳細ログ",
+        "operations_assistant_evidence_type_other": "その他の証拠",
+        "operations_assistant_evidence_summary_protected": "詳細は「システム技術詳細」に表示されています。",
     },
     "en": {
         "variance_chart_btn": "Variance Chart",
@@ -2035,8 +2111,87 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "field_bus_vn": "Shuttle bus Vietnamese passengers",
         "field_account_code": "account code",
         "field_form_row": "FORM row",
+        "operations_assistant_btn": "Operations Assistant",
+        "operations_assistant_window_title": "Operations & Error Assistant",
+        "operations_assistant_section_what_happened": "What Happened",
+        "operations_assistant_section_why_it_happened": "Why It Happened",
+        "operations_assistant_section_what_to_do": "What To Do",
+        "operations_assistant_section_confidence": "Confidence Level",
+        "operations_assistant_section_evidence": "Operational Evidence",
+        "operations_assistant_section_technical_details": "System Technical Details",
+        "operations_assistant_fiscal_year_label": "Fiscal Year:",
+        "operations_assistant_cost_center_label": "Cost Center:",
+        "operations_assistant_status_label": "Run Status:",
+        "operations_assistant_stage_label": "Pipeline Stage:",
+        "operations_assistant_verification_verified": "Verified",
+        "operations_assistant_verification_missing": "Missing",
+        "operations_assistant_verification_mismatch": "Mismatch",
+        "operations_assistant_confidence_confirmed": "Confirmed",
+        "operations_assistant_confidence_possible": "Possible",
+        "operations_assistant_confidence_unknown": "Unconfirmed",
+        "operations_assistant_no_run_selected": "Please select a run from the history list to open the assistant.",
+        "operations_assistant_run_not_finished": "The calculation run is currently in progress. The assistant only inspects completed or stopped runs.",
+        "operations_assistant_unable_to_load_case": "Unable to load support information for the selected run.",
+        "operations_assistant_no_technical_evidence": "No additional technical evidence recorded.",
+        "operations_assistant_readonly_notice": "The operations assistant only provides guidance and safe diagnostics; it never modifies files or automatically reruns calculations.",
+        "operations_assistant_close_btn": "Close",
+        "operations_assistant_section_scope": "Run Scope",
+        "operations_assistant_status_succeeded": "Completed",
+        "operations_assistant_status_failed": "Did Not Complete",
+        "operations_assistant_status_precheck_failed": "More Data Is Needed Before Calculation",
+        "operations_assistant_status_succeeded_incomplete": "Completed With Some Sources Not Calculated",
+        "operations_assistant_status_legacy": "Historical Result",
+        "operations_assistant_status_unavailable": "Run Status Is Not Available",
+        "operations_assistant_evidence_type_catalog_row": "Catalog Record",
+        "operations_assistant_evidence_type_run_manifest": "Run Manifest",
+        "operations_assistant_evidence_type_preflight_report": "Preflight Report",
+        "operations_assistant_evidence_type_stage_evidence": "Stage Evidence",
+        "operations_assistant_evidence_type_failure_traceback": "Error Details Log",
+        "operations_assistant_evidence_type_other": "Supporting Evidence",
+        "operations_assistant_evidence_summary_protected": "The detailed information is shown in System Technical Details.",
     },
 }
+
+OPERATIONS_ASSISTANT_I18N_KEYS: tuple[str, ...] = (
+    "operations_assistant_btn",
+    "operations_assistant_window_title",
+    "operations_assistant_section_what_happened",
+    "operations_assistant_section_why_it_happened",
+    "operations_assistant_section_what_to_do",
+    "operations_assistant_section_confidence",
+    "operations_assistant_section_evidence",
+    "operations_assistant_section_technical_details",
+    "operations_assistant_fiscal_year_label",
+    "operations_assistant_cost_center_label",
+    "operations_assistant_status_label",
+    "operations_assistant_stage_label",
+    "operations_assistant_verification_verified",
+    "operations_assistant_verification_missing",
+    "operations_assistant_verification_mismatch",
+    "operations_assistant_confidence_confirmed",
+    "operations_assistant_confidence_possible",
+    "operations_assistant_confidence_unknown",
+    "operations_assistant_no_run_selected",
+    "operations_assistant_run_not_finished",
+    "operations_assistant_unable_to_load_case",
+    "operations_assistant_no_technical_evidence",
+    "operations_assistant_readonly_notice",
+    "operations_assistant_close_btn",
+    "operations_assistant_section_scope",
+    "operations_assistant_status_succeeded",
+    "operations_assistant_status_failed",
+    "operations_assistant_status_precheck_failed",
+    "operations_assistant_status_succeeded_incomplete",
+    "operations_assistant_status_legacy",
+    "operations_assistant_status_unavailable",
+    "operations_assistant_evidence_type_catalog_row",
+    "operations_assistant_evidence_type_run_manifest",
+    "operations_assistant_evidence_type_preflight_report",
+    "operations_assistant_evidence_type_stage_evidence",
+    "operations_assistant_evidence_type_failure_traceback",
+    "operations_assistant_evidence_type_other",
+    "operations_assistant_evidence_summary_protected",
+)
 
 
 def t(key: str, **params: Any) -> str:
@@ -2051,6 +2206,32 @@ def t(key: str, **params: Any) -> str:
         except (KeyError, IndexError, ValueError):
             return template
     return template
+
+
+def translate_for_language(key: str, language: str, **params: Any) -> str:
+    """Tra cứu bản dịch theo key cho một ngôn ngữ cụ thể mà không làm thay đổi ngôn ngữ toàn cục.
+
+    Hàm này không thực hiện fallback im lặng sang ngôn ngữ khác. Nếu ngôn ngữ không hợp lệ
+    hoặc khóa không tồn tại, hàm sẽ ném ngoại lệ rõ ràng.
+    """
+    lang = str(language).strip().lower() if language else ""
+    if lang not in SUPPORTED_LANGUAGES:
+        raise ValueError(
+            f"Ngôn ngữ '{language}' không được hỗ trợ. Các ngôn ngữ hợp lệ: {sorted(SUPPORTED_LANGUAGES)}"
+        )
+    lang_dict = TRANSLATIONS.get(lang, {})
+    if key not in lang_dict:
+        raise KeyError(
+            f"Khóa bản dịch '{key}' không tồn tại trong từ điển ngôn ngữ '{lang}'."
+        )
+    template = lang_dict[key]
+    if params:
+        try:
+            return template.format(**params)
+        except (KeyError, IndexError, ValueError):
+            return template
+    return template
+
 
 
 def translation_key_for_text(value: str, *, keys: tuple[str, ...] | None = None) -> str | None:

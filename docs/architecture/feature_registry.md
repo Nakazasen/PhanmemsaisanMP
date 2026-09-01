@@ -1,6 +1,6 @@
 # Danh mục tính năng MP2027
 
-> **Document Control**: Owner: MP Engineering | Status: Approved / Production-Ready | Last Updated: 2026-09-01 | Active Features: F-001..F-019
+> **Document Control**: Owner: MP Engineering | Status: Approved / Production-Ready for accepted entries; F-020 is pending manual acceptance | Last Updated: 2026-09-01 | Active Features: F-001..F-020
 
 Danh mục này được viết theo hướng thận trọng: chỉ ghi nhận các bề mặt đã triển khai và kỳ vọng xác minh, không đưa ra cam kết kế toán chưa được tài liệu hóa.
 
@@ -25,6 +25,7 @@ Danh mục này được viết theo hướng thận trọng: chỉ ghi nhận c
 | F-017 | Tìm kiếm nhanh phòng ban màn hình chính | `src/universal_app.py` | `tests/test_gui_cost_center_and_output_actions.py` | Trung bình |
 | F-018 | So sánh biến động cùng kỳ (YoY) & Biểu đồ | `src/engine/variance_analyzer.py`, `src/ui/variance_chart.py`, `src/ui/tabs/variance_tab.py`, `src/utils/excel_variance_writer.py` | `tests/engine/test_variance_analyzer.py`, `tests/ui/test_variance_chart.py` | Cao |
 | F-019 | An toàn giao diện & Khóa chống xung đột | `src/universal_app.py` | `tests/test_singleton_editor_windows.py`, `tests/test_variance_window_layering.py` | Cao |
+| F-020 | Trợ lý Vận hành & Xử lý Lỗi (MVP Read-only, chờ nghiệm thu thủ công) | `src/services/operations_case_service.py`, `src/services/operations_knowledge.py`, `src/ui/operations_assistant.py` | `tests/services/test_operations_case_service.py`, `tests/services/test_operations_knowledge.py`, `tests/ui/test_operations_assistant.py` | Trung bình |
 
 ## Quy tắc cho các thay đổi sau này
 

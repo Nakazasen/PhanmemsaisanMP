@@ -170,6 +170,8 @@ from src.services.user_guide_content import (
     USER_GUIDE_VI,
 )
 from src.services.run_history import filter_runs
+from src.services.operations_case_service import assemble_operational_case
+from src.ui.operations_assistant import OperationsAssistantDialog
 from src.services.template_confirmation import inspect_form
 from src.services.batch_publication import publish_selected_cc_batch
 from src.parsers.manual_event_drivers import TEMPLATE_COLUMNS, ensure_manual_event_drivers_template
@@ -3202,6 +3204,23 @@ class MPManagerApp:
         table.pack(fill=tk.BOTH, expand=True)
         selected_rows: dict[str, dict[str, object]] = {}
 
+        assistant_button = None
+
+        def on_table_select(_event=None) -> None:
+            if assistant_button is None or not dialog.winfo_exists():
+                return
+            row = selected()
+            if not row:
+                assistant_button.configure(state=tk.DISABLED)
+                return
+            status = str(row.get("status") or "").strip().upper()
+            if status in ("FAILED", "PRECHECK_FAILED", "SUCCEEDED", "SUCCEEDED_INCOMPLETE", "LEGACY_FY2027"):
+                assistant_button.configure(state=tk.NORMAL)
+            else:
+                assistant_button.configure(state=tk.DISABLED)
+
+        table.bind("<<TreeviewSelect>>", on_table_select)
+
         def render_rows(rows: list[dict[str, object]]) -> None:
             if not dialog.winfo_exists():
                 return
@@ -3216,6 +3235,7 @@ class MPManagerApp:
                 ]
                 node = table.insert("", tk.END, values=values)
                 selected_rows[node] = row
+            on_table_select()
 
         filter_button = None
         filter_token = {"value": 0}
@@ -3286,6 +3306,45 @@ class MPManagerApp:
             workspace = os.path.dirname(database_path) if database_path else ""
             open_path(os.path.join(workspace, relative))
 
+        def open_operations_assistant():
+            row = selected()
+            if not row:
+                messagebox.showwarning(
+                    t("operations_assistant_window_title"),
+                    t("operations_assistant_no_run_selected"),
+                    parent=dialog,
+                )
+                return
+
+            status = str(row.get("status") or "").strip().upper()
+            if status == "RUNNING" or status not in ("FAILED", "PRECHECK_FAILED", "SUCCEEDED", "SUCCEEDED_INCOMPLETE", "LEGACY_FY2027"):
+                messagebox.showinfo(
+                    t("operations_assistant_window_title"),
+                    t("operations_assistant_run_not_finished"),
+                    parent=dialog,
+                )
+                return
+
+            run_id = str(row.get("run_id") or "").strip()
+            if not run_id:
+                messagebox.showerror(
+                    t("operations_assistant_window_title"),
+                    t("operations_assistant_unable_to_load_case"),
+                    parent=dialog,
+                )
+                return
+
+            try:
+                current_lang = get_current_language()
+                case = assemble_operational_case(history_root, run_id, current_lang)
+                OperationsAssistantDialog.open_or_focus(self.root, case, current_lang)
+            except Exception:
+                messagebox.showerror(
+                    t("operations_assistant_window_title"),
+                    t("operations_assistant_unable_to_load_case"),
+                    parent=dialog,
+                )
+
         filter_button = ttk.Button(filters, text=t("btn_filter"), command=refresh)
         filter_button.grid(row=0, column=10, padx=(12, 0))
         actions = ttk.Frame(frame)
@@ -3295,6 +3354,13 @@ class MPManagerApp:
         ttk.Button(actions, text=t("btn_open_uniform_log"), command=lambda: open_run_file("run.db")).pack(side=tk.LEFT)
         ttk.Button(actions, text=t("btn_open_asset_log"), command=lambda: open_run_file("run.db")).pack(side=tk.LEFT, padx=6)
         ttk.Button(actions, text=t("btn_open_run_db"), command=lambda: open_run_file("run.db")).pack(side=tk.LEFT)
+        assistant_button = ttk.Button(
+            actions,
+            text=t("operations_assistant_btn"),
+            command=open_operations_assistant,
+            state=tk.DISABLED,
+        )
+        assistant_button.pack(side=tk.LEFT, padx=6)
         refresh()
         ttk.Label(frame, text=t("history_note")).pack(anchor="w", pady=(8, 0))
 

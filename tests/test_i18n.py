@@ -268,6 +268,88 @@ class TestI18nLocalization(unittest.TestCase):
             except Exception:
                 pass
 
+    def test_operations_assistant_i18n_keys_completeness_and_quality(self):
+        """Xác thực toàn bộ 24 nhãn i18n của trợ lý vận hành có đủ trên cả 3 ngôn ngữ và không chứa từ cấm."""
+        from src.services.i18n import OPERATIONS_ASSISTANT_I18N_KEYS, TRANSLATIONS
+
+        self.assertGreaterEqual(len(OPERATIONS_ASSISTANT_I18N_KEYS), 20)
+
+        for lang in ("vi", "ja", "en"):
+            set_current_language(lang)
+            for key in OPERATIONS_ASSISTANT_I18N_KEYS:
+                # Do not let t(...) hide a missing Japanese/English entry by
+                # falling back to Vietnamese.  Every active language must own
+                # every assistant label before the UI is allowed to use it.
+                self.assertIn(key, TRANSLATIONS[lang], f"Key '{key}' thiếu trực tiếp trong '{lang}'")
+                direct_translation = TRANSLATIONS[lang][key]
+                self.assertTrue(
+                    isinstance(direct_translation, str) and bool(direct_translation.strip()),
+                    f"Key '{key}' bị rỗng trực tiếp trong ngôn ngữ '{lang}'",
+                )
+                translated = t(key)
+                self.assertEqual(
+                    translated,
+                    direct_translation,
+                    f"Key '{key}' ({lang}) đã rơi sang fallback thay vì dùng bản dịch hiện hành",
+                )
+                self.assertTrue(bool(translated), f"Key '{key}' bị rỗng trong ngôn ngữ '{lang}'")
+                self.assertNotEqual(translated, key, f"Key '{key}' chưa được dịch trong '{lang}'")
+
+                # Không chứa placeholder chưa xử lý hoặc từ khóa kỹ thuật thô
+                for forbidden in (
+                    "{{", "}}", "i18n.", "translation_key", "TODO", "TBD",
+                    "Traceback", "FAILED", "PRECHECK_FAILED",
+                ):
+                    self.assertNotIn(
+                        forbidden,
+                        translated,
+                        f"Key '{key}' ({lang}) chứa chuỗi cấm '{forbidden}': '{translated}'"
+                    )
+
+    def test_operations_assistant_language_switching(self):
+        """Xác thực chuyển đổi ngôn ngữ cho nút bấm và tiêu đề cửa sổ của trợ lý."""
+        # 1. Tiếng Việt
+        set_current_language("vi")
+        self.assertEqual(t("operations_assistant_btn"), "Trợ lý xử lý lỗi")
+        self.assertEqual(t("operations_assistant_window_title"), "Trợ lý Vận hành & Xử lý Lỗi")
+        self.assertEqual(t("operations_assistant_close_btn"), "Đóng")
+
+        # 2. Tiếng Nhật
+        set_current_language("ja")
+        self.assertEqual(t("operations_assistant_btn"), "エラー対応アシスタント")
+        self.assertEqual(t("operations_assistant_window_title"), "運用・エラー対応アシスタント")
+        self.assertEqual(t("operations_assistant_close_btn"), "閉じる")
+
+        # 3. Tiếng Anh
+        set_current_language("en")
+        self.assertEqual(t("operations_assistant_btn"), "Operations Assistant")
+        self.assertEqual(t("operations_assistant_window_title"), "Operations & Error Assistant")
+        self.assertEqual(t("operations_assistant_close_btn"), "Close")
+
+    def test_translate_for_language_explicit_lookup(self):
+        """Xác thực translate_for_language tra cứu đúng theo ngôn ngữ yêu cầu mà không đổi global language."""
+        from src.services.i18n import translate_for_language
+
+        set_current_language("vi")
+
+        # Tra cứu tiếng Nhật nhưng global vẫn là tiếng Việt
+        ja_btn = translate_for_language("operations_assistant_btn", "ja")
+        self.assertEqual(ja_btn, "エラー対応アシスタント")
+        self.assertEqual(get_current_language(), "vi")
+        self.assertEqual(t("operations_assistant_btn"), "Trợ lý xử lý lỗi")
+
+        # Tra cứu tiếng Anh
+        en_btn = translate_for_language("operations_assistant_btn", "en")
+        self.assertEqual(en_btn, "Operations Assistant")
+
+        # Từ chối ngôn ngữ không hỗ trợ
+        with self.assertRaises(ValueError):
+            translate_for_language("operations_assistant_btn", "fr")
+
+        # Từ chối key không tồn tại (không fallback im lặng)
+        with self.assertRaises(KeyError):
+            translate_for_language("non_existent_key_9999", "vi")
+
 
 if __name__ == "__main__":
     unittest.main()

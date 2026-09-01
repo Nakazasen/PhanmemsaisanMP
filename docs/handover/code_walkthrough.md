@@ -112,6 +112,9 @@ Luồng dòng lệnh `scripts/run_e2e.py` dùng cùng parser, service, database 
 | `src/services/update_delivery.py` | Dò nguồn folder/HTTPS, đọc catalog, tải atomic và kiểm tra SHA-256. |
 | `src/services/update_security.py` | Hash, manifest validation, safe extraction; không dùng signing key. |
 | `src/services/content_packs.py` | Cài và kiểm tra gói rule dữ liệu bằng manifest/hash. |
+| `src/services/operations_case_service.py` | Lắp ráp tình huống vận hành (OperationalCase) chỉ đọc từ bằng chứng RUN_HISTORY. |
+| `src/services/operations_knowledge.py` | Kho tri thức lỗi chuẩn tắc bất biến, hỗ trợ giải thích đa ngôn ngữ (VI/EN/JA). |
+| `src/ui/operations_assistant.py` | Hộp thoại Trợ lý Vận hành & Xử lý Lỗi (presentation-only shell, singleton guard). |
 | `src/ui/tabs/variance_tab.py` | Tab giao diện điều phối phân tích so sánh biến động chi phí YoY. |
 | `src/ui/variance_chart.py` | Cửa sổ biểu đồ Top 12 biến động Matplotlib, tự tìm font đa ngôn ngữ (NotoSans, Meiryo, YuGothic). |
 

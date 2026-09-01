@@ -1,0 +1,11 @@
+{
+  "fiscal_year": 2027,
+  "legacy_database": "D:\\Sandbox\\MP2027\\mp2027.db",
+  "legacy_sha256": "a08a65fec1f74c42bcde5e862a28fc149336d0c0b0e10f8f945f9df67939dac6",
+  "copied_rows": {
+    "fact_manual_headcount_time_override": 0,
+    "fact_manual_headcount_baseline_override": 0,
+    "fact_manual_g6_to_g5_transition": 0,
+    "fact_bus_headcount_drivers": 0
+  }
+}
