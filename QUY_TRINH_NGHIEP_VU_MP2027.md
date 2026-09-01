@@ -442,3 +442,35 @@ Không bắt đầu bằng refactor lớn. Việc có giá trị nhất là bổ
 - Cốc định kỳ chỉ nhập ở tháng 2 hoặc tháng 8 trong cửa sổ `Nhập sự kiện thiếu dữ liệu` → `Cốc xếp định kỳ`. Phải nhập số nguyên từ 0 trở lên; số 0 là đã xác nhận không phát, còn để trống thì chi phí bằng 0 và có cảnh báo.
 - Chi phí cấp đổi do hỏng hoặc mất vẫn phải lấy số phát thực tế, chương trình không suy ra từ số người mới.
 - Nhật ký `audit_uniform_cup_calculation` lưu dấu chọn nguồn, số người mới, tháng nguồn, số lượng, đơn giá, công thức, tài khoản và loại phát để giải thích lại cho người dùng.
+
+## 20. Kế thừa và bảo tồn chi phí riêng theo năm tài chính
+
+- **Mục đích**: Bảo toàn các dòng chi phí riêng nhập tay của từng phòng ban khi tính toán lại hoặc chuyển tiếp sang năm tài chính kế tiếp (`src/engine/manual_special_cost_sections.py`).
+- **Nguyên tắc bảo tồn**:
+  - Dòng chi phí riêng tự động xếp dưới nhóm chi phí chung và giữ nguyên liên kết công thức/mô tả.
+  - Khi chạy lại trong cùng năm tài chính: Giữ nguyên số tiền và công thức đã nhập.
+  - Khi tạo/kế thừa sang năm tài chính mới (`is_new_fiscal_year=True`): Giữ nguyên cấu trúc dòng, tên hạng mục và công thức, nhưng tự động **xóa trắng các ô số tiền** để người dùng nhập dự toán mới.
+- **Cấu hình**: Cấu hình thư mục kế thừa `manual_special_inheritance_dir` trong `project.json`.
+
+## 21. Tùy biến sắp xếp thứ tự dòng chi phí kéo-thả
+
+- **Mục đích**: Cho phép người dùng tùy ý điều chỉnh thứ tự hiển thị các dòng chi phí trên sheet `Chi tiết MP` (`内訳ﾘｽﾄ(4～3月)`) trực tiếp qua giao diện GUI (`src/engine/output_cost_row_ordering.py`).
+- **Thao tác**:
+  - Mở hộp thoại `Sắp xếp thứ tự dòng chi phí...` từ menu giao diện chính.
+  - Chọn dòng chi phí và kéo thả (hoặc dùng nút Lên/Xuống) để thay đổi vị trí.
+  - Bấm `Lưu thứ tự`. Hệ thống sẽ ghi nhận thứ tự vào sheet ẩn `_mp2027_manual_special_meta` trong file Excel xuất ra.
+- **Bảo toàn an toàn**: Khi pipeline chạy lại, thứ tự đã lưu được ưu tiên áp dụng tự động mà không làm sai lệch logic tính toán hoặc mất dòng.
+
+## 22. Tìm kiếm nhanh phòng ban trên màn hình chính
+
+- **Mục đích**: Tìm kiếm tức thì trung tâm chi phí trong danh sách hàng trăm phòng ban (`src/universal_app.py`).
+- **Thao tác**: Nhập mã số (ví dụ `1412000040`) hoặc tên phòng ban (tiếng Nhật/tiếng Việt) vào ô tìm kiếm nhanh phía trên danh sách phòng ban. Danh sách sẽ tự động lọc realtime theo từ khóa gõ vào.
+
+## 23. So sánh biến động ngân sách cùng kỳ (YoY) và biểu đồ trực quan
+
+- **Mục đích**: Tự động so sánh chênh lệch dự toán ngân sách giữa các lần chạy hoặc giữa hai năm tài chính (`src/engine/variance_analyzer.py`, `src/ui/variance_chart.py`).
+- **Tính năng nổi bật**:
+  - **Bộ giải công thức AST độc lập (`_MpFormulaResolver`)**: Tự động tính toán các ô công thức Excel mà không phụ thuộc vào Excel application.
+  - **Cửa sổ Biểu đồ Tương tác**: Nhấn nút `Xem biểu đồ biến động` trên tab So sánh biến động để mở biểu đồ Top 12 hạng mục tăng/giảm mạnh nhất với font chữ đa ngôn ngữ (NotoSans, Meiryo, YuGothic).
+  - **Nhúng biểu đồ Native vào Excel**: Khi xuất file so sánh biến động, hệ thống tự động nhúng đối tượng `BarChart` chuẩn của Excel vào sheet kết quả (`src/utils/excel_variance_writer.py`).
+- **An toàn giao diện**: Áp dụng cơ chế khóa nút bấm khi pipeline đang xử lý (`_set_pipeline_ui_busy`) và quản lý chống mở trùng lặp cửa sổ (`_register_singleton_editor`).

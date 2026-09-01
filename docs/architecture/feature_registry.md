@@ -18,6 +18,11 @@ Danh mục này được viết theo hướng thận trọng: chỉ ghi nhận c
 | F-012 | Cập nhật ứng dụng qua LAN | `src/services/app_updates.py` | Test cập nhật/an toàn HASH_ONLY_LAN | Nghiêm trọng |
 | F-013 | Gói portable onedir | `MP2027_Portable.spec`, `scripts/package_app.py` | Test đóng gói + sức khỏe EXE | Nghiêm trọng |
 | F-014 | Trình khởi chạy ổn định/bộ cài ban đầu | `MP2027_Manager.spec`, `scripts/update_launcher.py`, `installer/` | Hợp đồng đóng gói + diễn tập Windows sạch | Nghiêm trọng |
+| F-015 | Kế thừa & bảo tồn chi phí riêng liên năm | `src/engine/manual_special_cost_sections.py`, `src/services/project_config.py` | `tests/test_manual_special_cost_sections.py` | Cao |
+| F-016 | Sắp xếp thứ tự dòng chi phí kéo-thả | `src/engine/output_cost_row_ordering.py`, `src/universal_app.py` | `tests/test_output_cost_row_ordering.py`, `test_gui_cost_center_and_output_actions.py` | Cao |
+| F-017 | Tìm kiếm nhanh phòng ban màn hình chính | `src/universal_app.py` | `tests/test_gui_cost_center_and_output_actions.py` | Trung bình |
+| F-018 | So sánh biến động cùng kỳ (YoY) & Biểu đồ | `src/engine/variance_analyzer.py`, `src/ui/variance_chart.py`, `src/ui/tabs/variance_tab.py`, `src/utils/excel_variance_writer.py` | `tests/engine/test_variance_analyzer.py`, `tests/ui/test_variance_chart.py` | Cao |
+| F-019 | An toàn giao diện & Khóa chống xung đột | `src/universal_app.py` | `tests/test_singleton_editor_windows.py`, `tests/test_variance_window_layering.py` | Cao |
 
 ## Quy tắc cho các thay đổi sau này
 

@@ -357,6 +357,20 @@ Khóa ngoại:
 | `description` | `TEXT` | không | không | `` |
 | `updated_at` | `TIMESTAMP` | không | không | `CURRENT_TIMESTAMP` |
 
+## Sheet ẩn Excel Metadata (`_mp2027_manual_special_meta`)
+
+Metadata sheet ẩn trong workbook đầu ra (`<= 31` ký tự sheet name) dùng để bảo toàn thứ tự dòng tùy biến, phân loại dòng và liên kết công thức giữa chi phí chung và chi phí riêng:
+
+| Cột | Ý nghĩa | Kiểu giá trị |
+|---|---|---|
+| A (`row_id`) | Định danh duy nhất của dòng chi phí | `TEXT` (UUID hoặc format chuẩn `common_row_*`, `manual_row_*`) |
+| B (`row_kind`) | Phân loại nguồn gốc dòng | `TEXT` (`common_cost`, `manual_special`, `legacy_special`) |
+| C (`account_code`) | Mã tài khoản kế toán | `INTEGER` / `TEXT` |
+| D (`item_name`) | Tên hạng mục chi phí | `TEXT` |
+| E (`display_order`) | Thứ tự hiển thị đã được người dùng tùy biến | `INTEGER` |
+| F (`formula_template`) | Mẫu công thức kế thừa khi chuyển năm tài chính | `TEXT` |
+| G (`schema_version`) | Phiên bản schema metadata | `INTEGER` (Mặc định `1`) |
+
 ## Tạo lại tài liệu
 
 ```powershell

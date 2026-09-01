@@ -46,6 +46,14 @@ Lịch sử audit riêng của tài sản cố định được lưu append-only
 [`docs/audits/history/fixed_assets`](docs/audits/history/fixed_assets). Lịch sử này được tạo khi chạy
 `py scripts/classify_fixed_assets_mismatches.py`; lần chạy GUI thông thường không tự chạy comparator này.
 
+## Tính năng nâng cao nổi bật
+
+- **Kế thừa & Bảo tồn chi phí riêng**: Tự động giữ lại các dòng chi phí riêng nhập tay của phòng ban khi chuyển năm tài chính (giữ công thức/mô tả, xóa trắng số tiền cho FY mới).
+- **Sắp xếp thứ tự dòng kéo-thả**: Hộp thoại kéo thả trực quan giúp sắp xếp lại thứ tự hiển thị dòng chi phí trên sheet chi tiết mà không làm sai lệch dữ liệu.
+- **Tìm kiếm nhanh phòng ban**: Lọc danh sách phòng ban realtime theo mã hoặc tên trực tiếp trên giao diện chính.
+- **Phân tích biến động cùng kỳ (YoY) & Biểu đồ**: So sánh chênh lệch dự toán kèm biểu đồ Top 12 trực quan và nhúng biểu đồ native `BarChart` vào file Excel xuất ra.
+- **Khóa an toàn Pipeline & Quản lý cửa sổ**: Ngăn chặn click trùng lặp khi đang xuất dữ liệu và tránh mở trùng các cửa sổ công cụ.
+
 ## Nguyên tắc nghiệp vụ an toàn
 
 - Không tự bịa dữ liệu.

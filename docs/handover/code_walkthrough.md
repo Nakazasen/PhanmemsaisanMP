@@ -88,15 +88,18 @@ Luồng dòng lệnh `scripts/run_e2e.py` dùng cùng parser, service, database 
 | `src/engine/reference_assisted_fill.py` | Bổ sung output dựa trên reference đã kiểm tra. |
 | `src/engine/column_s_normalizer.py` | Chuẩn hóa mô tả cột S trong workbook detail. |
 | `src/engine/uniform_cup_rules.py` | Chuẩn hóa entitlement uniform/cup và identity của rule. |
+| `src/engine/manual_special_cost_sections.py` | Kế thừa/bảo tồn chi phí riêng nhập tay theo năm tài chính; xóa tiền khi sang FY mới. |
+| `src/engine/output_cost_row_ordering.py` | Quản lý thứ tự dòng chi phí kéo-thả, snapshot layout và sheet ẩn `_mp2027_manual_special_meta`. |
+| `src/engine/variance_analyzer.py` | Phân tích biến động cùng kỳ (YoY) với bộ giải công thức AST `_MpFormulaResolver`. |
 | `src/engine/fy2027_compat.py` | Metadata tương thích engine riêng cho FY2027. |
 
-## 7. Services — điều phối và runtime
+## 7. Services và UI — điều phối và runtime
 
 | File | Vai trò |
 |---|---|
 | `src/services/__init__.py` | Mô tả package service. |
 | `src/services/fiscal_run.py` | Resolve nguồn theo FY và preflight fail-closed. |
-| `src/services/project_config.py` | Đọc/ghi cấu hình project độc lập với thư mục app. |
+| `src/services/project_config.py` | Đọc/ghi cấu hình project (`manual_special_inheritance_dir`, `manual_special_legacy_starts`). |
 | `src/services/headcount_source_policy.py` | Chính sách chọn nguồn staffing theo từng field/tháng. |
 | `src/services/headcount_source_importer.py` | Import staffing official/extracted trong transaction. |
 | `src/services/manual_staffing_overrides.py` | Lưu override staffing thủ công. |
@@ -109,6 +112,8 @@ Luồng dòng lệnh `scripts/run_e2e.py` dùng cùng parser, service, database 
 | `src/services/update_delivery.py` | Dò nguồn folder/HTTPS, đọc catalog, tải atomic và kiểm tra SHA-256. |
 | `src/services/update_security.py` | Hash, manifest validation, safe extraction; không dùng signing key. |
 | `src/services/content_packs.py` | Cài và kiểm tra gói rule dữ liệu bằng manifest/hash. |
+| `src/ui/tabs/variance_tab.py` | Tab giao diện điều phối phân tích so sánh biến động chi phí YoY. |
+| `src/ui/variance_chart.py` | Cửa sổ biểu đồ Top 12 biến động Matplotlib, tự tìm font đa ngôn ngữ (NotoSans, Meiryo, YuGothic). |
 
 ## 8. Utility và audit
 
@@ -117,6 +122,7 @@ Luồng dòng lệnh `scripts/run_e2e.py` dùng cùng parser, service, database 
 | `src/utils/__init__.py` | Mô tả package utility. |
 | `src/utils/cli.py` | Parser/console helper tương thích Windows code page. |
 | `src/utils/excel_helpers.py` | Hàm đọc, chuẩn hóa và kiểm tra Excel. |
+| `src/utils/excel_variance_writer.py` | Xuất workbook so sánh biến động và nhúng biểu đồ BarChart native. |
 | `src/utils/fiscal_periods.py` | Mapping tháng tài chính và file nguồn; phát hiện gap/overlap. |
 | `src/utils/source_manifest.py` | Detect, lưu và resolve manifest file nguồn. |
 | `src/audit/exchange_rate_audit.py` | Kiểm tra tỷ giá USD/VND trong workbook. |
