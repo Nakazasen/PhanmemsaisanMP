@@ -25,6 +25,26 @@ def _default_fiscal_year(today: datetime | None = None) -> int:
     current = today or datetime.now()
     return current.year + 1 if current.month >= 4 else current.year
 
+
+def _filter_cost_center_choices(choices, query: str) -> list[str]:
+    """Filter visible CC choices without mutating the source selection list."""
+    normalized_query = "".join(
+        character
+        for character in unicodedata.normalize("NFKD", str(query or "").casefold())
+        if not unicodedata.combining(character)
+    ).strip()
+    if not normalized_query:
+        return list(choices)
+
+    def searchable(choice: object) -> str:
+        return "".join(
+            character
+            for character in unicodedata.normalize("NFKD", str(choice).casefold())
+            if not unicodedata.combining(character)
+        )
+
+    return [str(choice) for choice in choices if normalized_query in searchable(choice)]
+
 def resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
     try:
@@ -2728,6 +2748,15 @@ class MPManagerApp:
             text=t("cc_dialog_desc"),
         ).pack(anchor="w", padx=18, pady=(0, 10))
 
+        search_shell = ttk.Frame(dialog)
+        search_shell.pack(fill="x", padx=18, pady=(0, 8))
+        ttk.Label(search_shell, text=t("cc_search_label")).pack(side="left")
+        search_var = tk.StringVar()
+        search_entry = ttk.Entry(search_shell, textvariable=search_var, width=38)
+        search_entry.pack(side="left", padx=(6, 6), fill="x", expand=True)
+        search_result = ttk.Label(search_shell, text=t("cc_search_matches", count=len(choices)))
+        search_result.pack(side="left", padx=(0, 6))
+
         list_shell = ttk.Frame(dialog)
         list_shell.pack(fill="both", expand=True, padx=18)
         canvas = tk.Canvas(list_shell, highlightthickness=1, highlightbackground="#cbd5e1")
@@ -2748,12 +2777,32 @@ class MPManagerApp:
 
         selected = set(getattr(self, "_selected_cc_values", []))
         variables = {}
-        for row, choice in enumerate(choices):
+        for choice in choices:
             variable = tk.BooleanVar(value=choice in selected)
             variables[choice] = variable
-            ttk.Checkbutton(checklist, text=choice, variable=variable).grid(
-                row=row, column=0, sticky="w", pady=2
-            )
+        checkbuttons = {}
+
+        def render_filtered_choices(*_args) -> None:
+            for checkbutton in checkbuttons.values():
+                checkbutton.destroy()
+            checkbuttons.clear()
+            visible_choices = _filter_cost_center_choices(choices, search_var.get())
+            for row, choice in enumerate(visible_choices):
+                checkbutton = ttk.Checkbutton(checklist, text=choice, variable=variables[choice])
+                checkbutton.grid(row=row, column=0, sticky="w", pady=2)
+                checkbuttons[choice] = checkbutton
+            search_result.configure(text=t("cc_search_matches", count=len(visible_choices)))
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            canvas.yview_moveto(0)
+
+        def clear_search() -> None:
+            search_var.set("")
+            search_entry.focus_set()
+
+        ttk.Button(search_shell, text=t("cc_search_clear"), command=clear_search).pack(side="right")
+        search_var.trace_add("write", render_filtered_choices)
+        render_filtered_choices()
+        search_entry.focus_set()
 
         def set_all(value: bool) -> None:
             for variable in variables.values():

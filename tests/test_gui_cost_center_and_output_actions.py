@@ -5,6 +5,7 @@ import pytest
 from src.services.run_history import OutputPublicationLockedError
 from src.universal_app import (
     MPManagerApp,
+    _filter_cost_center_choices,
     _friendly_error_message,
     _headcount_coverage_error_message,
 )
@@ -68,6 +69,23 @@ def test_parse_selected_cost_centers_supports_multiple_rooms():
     assert app._parse_selected_cc_codes() == ("1412000004", "1412000036")
     assert app.cc_code_filter.get() == "Đã chọn 2 Trung tâm chi phí"
     assert not app._all_cost_centers_selected()
+
+
+def test_quick_cost_center_search_matches_code_or_name_without_changing_choices():
+    choices = [
+        "1412000080 - 部品技術課",
+        "1412000086 - 試験システム課",
+        "1412000103 - 部品管理課",
+    ]
+
+    assert _filter_cost_center_choices(choices, "0086") == [choices[1]]
+    assert _filter_cost_center_choices(choices, "システム") == [choices[1]]
+    assert _filter_cost_center_choices(choices, "") == choices
+    assert choices == [
+        "1412000080 - 部品技術課",
+        "1412000086 - 試験システム課",
+        "1412000103 - 部品管理課",
+    ]
 
 
 def test_missing_selected_staffing_source_message_names_the_missing_cost_center():

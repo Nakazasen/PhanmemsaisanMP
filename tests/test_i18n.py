@@ -216,6 +216,10 @@ class TestI18nLocalization(unittest.TestCase):
             "output_cost_row_order_saved",
             "output_cost_row_order_error",
             "manual_special_restore_log",
+            "cc_search_label",
+            "cc_search_hint",
+            "cc_search_clear",
+            "cc_search_matches",
         ]
         for lang in ("vi", "ja", "en"):
             set_current_language(lang)
