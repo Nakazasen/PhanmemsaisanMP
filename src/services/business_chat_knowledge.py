@@ -659,17 +659,20 @@ def local_fallback(
             "vi": (
                 "Chưa tìm thấy hướng dẫn nội bộ phù hợp với câu hỏi này.\n"
                 "Vui lòng thử hỏi lại bằng từ ngữ nghiệp vụ đơn giản hơn, "
-                "ví dụ: \"file bị khóa\", \"thiếu nhân sự tháng 3\", hoặc chọn một lỗi từ Lịch sử lần chạy."
+                "ví dụ: \"phân bổ chi phí chung và riêng thế nào\", \"nhập dữ liệu nhân sự ở đâu\", "
+                "hoặc nêu rõ năm tài chính và trung tâm chi phí cần hỏi."
             ),
             "en": (
                 "No matching internal guidance was found for this question.\n"
                 "Please try rephrasing using simpler business terms, "
-                "e.g. \"locked file\", \"missing March headcount\", or select an error from Run History."
+                "e.g. \"how are common and special costs allocated?\", \"where do I enter staffing data?\", "
+                "or specify the fiscal year and cost center."
             ),
             "ja": (
                 "この質問に該当する社内ガイダンスが見つかりませんでした。\n"
                 "よりシンプルな業務用語で質問し直してください。"
-                "例：「ファイルロック」「3月の人員不足」、または実行履歴からエラーを選択してください。"
+                "例：「共通費と個別費はどう配賦しますか」「人員データはどこに入力しますか」、"
+                "または対象の年度とコストセンターを指定してください。"
             ),
         }
         return no_match.get(lang, no_match["vi"])

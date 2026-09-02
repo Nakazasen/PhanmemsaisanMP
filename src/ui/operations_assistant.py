@@ -172,10 +172,10 @@ def is_error_related_query(query: str) -> bool:
     """Kiểm tra xem câu hỏi của người dùng có đang hỏi về lỗi/sự cố/cách xử lý hay không."""
     q = (query or "").lower().strip()
     keywords = [
-        "lỗi", "sự cố", "tại sao", "không chạy", "bị dừng", "thất bại", "hỏng", "không được",
-        "khóa", "thiếu", "hướng dẫn", "khắc phục", "help", "error", "fail", "issue",
-        "problem", "broken", "troubleshoot", "why", "stuck", "exception",
-        "エラー", "失敗", "動かない", "問題", "原因", "対処", "トラブル", "なぜ", "止まった", "ロック", "不足",
+        "lỗi", "sự cố", "không chạy", "bị dừng", "thất bại", "hỏng", "không được",
+        "khóa", "thiếu", "khắc phục", "error", "fail", "issue",
+        "problem", "broken", "troubleshoot", "stuck", "exception",
+        "エラー", "失敗", "動かない", "問題", "対処", "トラブル", "止まった", "ロック", "不足",
     ]
     return any(k in q for k in keywords)
 

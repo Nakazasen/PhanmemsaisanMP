@@ -88,6 +88,52 @@ def test_gemini_web_answers_a_business_question_without_an_api_key() -> None:
     assert b"How do I check the source?" in captured["body"]
 
 
+def test_business_prompt_does_not_force_error_status_for_normal_questions() -> None:
+    captured: dict[str, object] = {}
+
+    def fake_transport(url: str, headers: dict[str, str], body: bytes, timeout: float) -> tuple[int, bytes]:
+        captured["body"] = body
+        return 200, json.dumps(
+            {"choices": [{"message": {"content": "Use the source form, then rescan it."}}]}
+        ).encode("utf-8")
+
+    result = request_gemini_web_business_guidance(
+        "cách sử dụng phần mềm này",
+        "MP2027 hỗ trợ lập kế hoạch ngân sách và phân bổ chi phí từ tệp Excel.",
+        "vi",
+        transport=fake_transport,
+    )
+
+    assert result.status == "ready"
+    prompt = captured["body"].decode("utf-8")
+    assert "Do NOT add any health or incident statement" in prompt
+    assert "system is currently normal" not in prompt
+    assert "no recent errors" not in prompt
+
+
+def test_business_prompt_requires_scope_instead_of_inventing_a_cost_count() -> None:
+    captured: dict[str, object] = {}
+
+    def fake_transport(url: str, headers: dict[str, str], body: bytes, timeout: float) -> tuple[int, bytes]:
+        captured["body"] = body
+        return 200, json.dumps(
+            {"choices": [{"message": {"content": "Please specify the fiscal year and cost center."}}]}
+        ).encode("utf-8")
+
+    result = request_gemini_web_business_guidance(
+        "MP có bao nhiêu chi phí?",
+        "Chưa có số lượng khoản chi cụ thể trong ngữ cảnh này.",
+        "vi",
+        transport=fake_transport,
+    )
+
+    assert result.status == "ready"
+    prompt = captured["body"].decode("utf-8")
+    assert "For a count or amount question" in prompt
+    assert "Never invent a number" in prompt
+    assert "no recent errors" not in prompt
+
+
 def test_gemini_web_removes_internal_followup_markup_from_displayed_answer() -> None:
     result = request_gemini_web_business_guidance(
         "How do I check the source?",

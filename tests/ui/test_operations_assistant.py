@@ -1310,6 +1310,9 @@ class TestOperationsBusinessChatDialog(unittest.TestCase):
         self.assertFalse(is_error_related_query("Xin chào"))
         self.assertFalse(is_error_related_query("Hello there"))
         self.assertFalse(is_error_related_query("こんにちは"))
+        self.assertFalse(is_error_related_query("cách sử dụng phần mềm này"))
+        self.assertFalse(is_error_related_query("MP có bao nhiêu chi phí?"))
+        self.assertFalse(is_error_related_query("Why is this cost allocated this way?"))
 
     def test_format_nontech_case_diagnosis_no_uuids(self) -> None:
         from src.ui.operations_assistant import format_nontech_case_diagnosis
