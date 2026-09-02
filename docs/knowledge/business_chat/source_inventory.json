@@ -1,0 +1,187 @@
+{
+  "schema_version": "1.0",
+  "description": "Master source inventory and authority classification for MP2027 business chat knowledge.",
+  "sources": [
+    {
+      "source_id": "approved_business_guidance",
+      "display_name": "Approved MP2027 Business Guidance",
+      "kind": "catalog",
+      "language": "multilingual",
+      "authority": "canonical",
+      "status": "approved",
+      "external_shareable": true,
+      "business_area": "operations",
+      "reason": "Officially curated and approved non-technical operational procedures and FAQ for MP2027 desktop operations.",
+      "path": "docs/knowledge/business_chat/knowledge_catalog.json"
+    },
+    {
+      "source_id": "operations_knowledge_base",
+      "display_name": "MP2027 Operational Error Taxonomy and Resolution Base",
+      "kind": "code_reference",
+      "language": "multilingual",
+      "authority": "canonical",
+      "status": "approved",
+      "external_shareable": true,
+      "business_area": "troubleshooting",
+      "reason": "Core domain error knowledge model defining verified operational failure modes and user recovery steps in VI, EN, JA.",
+      "path": "src/services/operations_knowledge.py"
+    },
+    {
+      "source_id": "ai_operations_assistant_guide",
+      "display_name": "AI Operations Assistant User Guide",
+      "kind": "handbook",
+      "language": "multilingual",
+      "authority": "canonical",
+      "status": "review_required",
+      "external_shareable": false,
+      "business_area": "operations",
+      "reason": "Mixed operational and developer/C-AGENT guidance. Excluded until a separate end-user-only guide is curated.",
+      "path": "docs/operations/ai_operations_assistant.md"
+    },
+    {
+      "source_id": "mp_saisan_business_knowledge_base_v2",
+      "display_name": "MP Saisan Business Specification v2",
+      "kind": "specification",
+      "language": "vi",
+      "authority": "canonical",
+      "status": "review_required",
+      "external_shareable": false,
+      "business_area": "cost_allocation",
+      "reason": "Mixed business requirements, source paths, audit status, and implementation detail. Excluded until a separate end-user-only guide is curated.",
+      "path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md"
+    },
+    {
+      "source_id": "curated_ai_operations_assistant_guidance",
+      "display_name": "Curated AI Operations Assistant Guidance",
+      "kind": "curated_pack",
+      "language": "multilingual",
+      "authority": "canonical",
+      "status": "approved",
+      "external_shareable": true,
+      "business_area": "operations",
+      "reason": "Reviewed end-user-only guidance derived from the AI assistant documentation without technical or C-AGENT details.",
+      "path": "docs/knowledge/business_chat/curated/ai_assistant_pack.json"
+    },
+    {
+      "source_id": "curated_cost_allocation_guidance",
+      "display_name": "Curated MP Saisan Cost Allocation Guidance",
+      "kind": "curated_pack",
+      "language": "multilingual",
+      "authority": "canonical",
+      "status": "approved",
+      "external_shareable": true,
+      "business_area": "cost_allocation",
+      "reason": "Reviewed end-user-only cost allocation guidance derived from MP Saisan requirements without source paths, audit status, or implementation detail.",
+      "path": "docs/knowledge/business_chat/curated/cost_allocation_pack.json"
+    },
+    {
+      "source_id": "curated_staffing_headcount_guidance",
+      "display_name": "Curated Staffing and Headcount Guidance",
+      "kind": "curated_pack",
+      "language": "multilingual",
+      "authority": "canonical",
+      "status": "approved",
+      "external_shareable": true,
+      "business_area": "staffing",
+      "reason": "Reviewed end-user-only staffing allocation guidance: admin consumables, bus transport, new employee, staffing override, source file order.",
+      "path": "docs/knowledge/business_chat/curated/staffing_and_headcount_pack.json"
+    },
+    {
+      "source_id": "curated_calculation_output_guidance",
+      "display_name": "Curated Calculation and Output Guidance",
+      "kind": "curated_pack",
+      "language": "multilingual",
+      "authority": "canonical",
+      "status": "approved",
+      "external_shareable": true,
+      "business_area": "cost_allocation",
+      "reason": "Reviewed end-user-only calculation rules: system cost, fixed assets, birthday, NNN paperwork, allocation/travel, fiscal year calendar.",
+      "path": "docs/knowledge/business_chat/curated/calculation_and_output_pack.json"
+    },
+    {
+      "source_id": "curated_operational_errors_guidance",
+      "display_name": "Curated Common Operational Errors Guidance",
+      "kind": "curated_pack",
+      "language": "multilingual",
+      "authority": "canonical",
+      "status": "approved",
+      "external_shareable": true,
+      "business_area": "troubleshooting",
+      "reason": "Reviewed end-user-only operational guidance: output format preservation, provenance labels, run history statuses.",
+      "path": "docs/knowledge/business_chat/curated/common_operational_errors_pack.json"
+    },
+
+    {
+      "source_id": "release_update_playbook",
+      "display_name": "MP2027 Release and Update Playbook",
+      "kind": "manual",
+      "language": "en",
+      "authority": "supporting",
+      "status": "technical_excluded",
+      "external_shareable": false,
+      "business_area": "system",
+      "reason": "Technical release and LAN update playbook excluded from generic end-user RAG context.",
+      "path": "docs/handover/release_update_playbook.md"
+    },
+    {
+      "source_id": "handover_operations_guide",
+      "display_name": "MP2027 Handover Operations Guide",
+      "kind": "handbook",
+      "language": "en",
+      "authority": "supporting",
+      "status": "technical_excluded",
+      "external_shareable": false,
+      "business_area": "operations",
+      "reason": "Technical developer handover guide excluded from generic end-user RAG context.",
+      "path": "docs/handover/HANDOVER_FOR_NEXT_AGENT.md"
+    },
+    {
+      "source_id": "system_architecture_doc",
+      "display_name": "System Architecture Overview",
+      "kind": "specification",
+      "language": "en",
+      "authority": "supporting",
+      "status": "technical_excluded",
+      "external_shareable": false,
+      "business_area": "system",
+      "reason": "Internal technical architectural documentation containing developer details not suitable for end-user business chat.",
+      "path": "docs/architecture/system_architecture.md"
+    },
+    {
+      "source_id": "audit_status_index",
+      "display_name": "Audit Status Index",
+      "kind": "handbook",
+      "language": "en",
+      "authority": "supporting",
+      "status": "technical_excluded",
+      "external_shareable": false,
+      "business_area": "system",
+      "reason": "Historical audit log index intended for development tracking rather than operational end-user guidance.",
+      "path": "docs/audits/AUDIT_STATUS_INDEX.md"
+    },
+    {
+      "source_id": "mp_saisan_business_knowledge_base_v1",
+      "display_name": "MP Saisan Business Knowledge Base v1 (Legacy)",
+      "kind": "specification",
+      "language": "vi",
+      "authority": "historical",
+      "status": "historical_excluded",
+      "external_shareable": false,
+      "business_area": "cost_allocation",
+      "reason": "Superseded by v2 specification on 2026-07-11; kept for historical audit trace only.",
+      "path": "docs/knowledge/mp_saisan_business_knowledge_base.md"
+    },
+    {
+      "source_id": "headcount_legacy_readme",
+      "display_name": "Headcount Manual Legacy Guide",
+      "kind": "manual",
+      "language": "en",
+      "authority": "historical",
+      "status": "historical_excluded",
+      "external_shareable": false,
+      "business_area": "staffing",
+      "reason": "Legacy manual input instructions replaced by MP2027 unified headcount dialog.",
+      "path": "docs/MP2027/README_HEADCOUNT_LEGACY.md"
+    }
+  ]
+}

@@ -157,6 +157,7 @@ from src.services.project_config import (
 )
 from src.services.i18n import (
     t,
+    translate_for_language,
     get_current_language,
     set_current_language,
     get_supported_languages,
@@ -171,7 +172,8 @@ from src.services.user_guide_content import (
 )
 from src.services.run_history import filter_runs
 from src.services.operations_case_service import assemble_operational_case
-from src.ui.operations_assistant import OperationsAssistantDialog
+from src.services.operations_ai_provider import CagentProviderPolicy, load_cagent_provider_policy_from_env
+from src.ui.operations_assistant import OperationsAssistantDialog, OperationsBusinessChatDialog
 from src.services.template_confirmation import inspect_form
 from src.services.batch_publication import publish_selected_cc_batch
 from src.parsers.manual_event_drivers import TEMPLATE_COLUMNS, ensure_manual_event_drivers_template
@@ -822,6 +824,11 @@ class MPManagerApp:
 
     def __init__(self, root: tk.Tk):
         self.root = root
+        try:
+            from src.ui.operations_assistant import apply_modern_window_style
+            apply_modern_window_style(self.root)
+        except Exception:
+            pass
         initial_lang = read_ui_language()
         set_current_language(initial_lang)
         self.language_var = tk.StringVar(value=get_language_name(initial_lang))
@@ -866,6 +873,10 @@ class MPManagerApp:
         self._run_history_window = None
         self.ui_thread_id = threading.get_ident()
         self.ui_queue = queue.Queue()
+        # C-AGENT deployment policy: loaded from env vars at startup (fail-closed).
+        # If env vars are absent or invalid, cagent_policy.enabled == False.
+        # No network calls are made during loading.
+        self.cagent_policy: CagentProviderPolicy = load_cagent_provider_policy_from_env()
 
         self.fiscal_year.trace_add("write", self._on_staffing_selection_changed)
         self.template_path.trace_add("write", self._on_source_selection_changed)
@@ -1121,6 +1132,16 @@ class MPManagerApp:
         }
         self._refresh_preflight_status()
 
+    def _manual_editor_selected_cc(self) -> str | None:
+        """Return the single selected CC code for the manual editor, or None if multiple/invalid."""
+        try:
+            selected_ccs = tuple(self._parse_selected_cc_codes())
+            if len(selected_ccs) == 1:
+                return str(selected_ccs[0]).strip()
+        except Exception:
+            pass
+        return None
+
     def _refresh_preflight_status(self) -> None:
         state = getattr(self, "_preflight_status_state", {"kind": "key", "key": "preflight_untested_label", "params": {}})
         if state["kind"] == "error_key":
@@ -1130,7 +1151,13 @@ class MPManagerApp:
             report = state.get("report")
             summary = self._localized_preflight_summary(report) if report is not None else state["summary"]
             if bool(getattr(report, "can_run", False)):
-                prefix = t("preflight_warning_partial") if getattr(report, "skipped_issues", ()) else t("preflight_ready")
+                pending_baselines = getattr(self, "_pending_baseline_ccs", ())
+                if pending_baselines:
+                    prefix = t("preflight_baseline_required", cc=", ".join(pending_baselines))
+                elif getattr(report, "skipped_issues", ()):
+                    prefix = t("preflight_warning_partial")
+                else:
+                    prefix = t("preflight_ready")
                 mode = t("preflight_mode_cache") if state["cache_hit"] else t("preflight_mode_scan")
                 self.preflight_status.set(t("preflight_done", prefix=prefix, mode=mode, elapsed=state["elapsed_seconds"]))
             else:
@@ -1460,9 +1487,12 @@ class MPManagerApp:
 
     def setup_styles(self):
         style = ttk.Style()
-        style.theme_use("clam")
-        style.configure("Header.TLabel", font=("Segoe UI", 15, "bold"))
-        style.configure("WorkflowTitle.TLabel", font=("Segoe UI", 11, "bold"), foreground="#1f344d")
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+        style.configure("Header.TLabel", font=("Segoe UI", 15, "bold"), foreground="#0f172a")
+        style.configure("WorkflowTitle.TLabel", font=("Segoe UI", 11, "bold"), foreground="#1e293b")
         style.configure("Primary.TButton", font=("Segoe UI", 10, "bold"), padding=10)
 
     def setup_ui(self):
@@ -1665,7 +1695,6 @@ class MPManagerApp:
             ("source_order_btn", self.open_source_order_editor),
             ("output_cost_row_order_btn", self.open_output_cost_row_ordering),
             ("install_update_btn", self.install_application_update),
-            ("run_history_btn", self.open_run_history),
             ("variance_analysis_btn", self.open_variance_tab),
         ):
             btn = ttk.Button(actions, text=t(key), command=command)
@@ -1707,6 +1736,198 @@ class MPManagerApp:
             log_frame, height=5, state=tk.DISABLED, font=("Consolas", 9)
         )
         self.log_widget.grid(row=1, column=0, sticky="ew")
+
+        self._setup_floating_mascot()
+
+    def open_business_chat_assistant(self):
+        """Mở cửa sổ Hỏi AI nội bộ (Business Chat Assistant)."""
+        current_lang = get_current_language()
+        history_root = None
+        try:
+            history_root = self._project_paths().history_root
+        except Exception:
+            history_root = None
+        fiscal_year = None
+        try:
+            fiscal_year = self._current_fiscal_year()
+        except Exception:
+            fiscal_year = None
+        return OperationsBusinessChatDialog.open(
+            self.root,
+            current_lang,
+            open_history=self.open_run_history,
+        )
+
+    def _setup_floating_mascot(self):
+        """Tạo mascot robot 3D có bóng đổ chân thực dưới chân, hiệu ứng bay và có thể kéo thả (Draggable)."""
+        try:
+            bg_color = "#f0f0f0"
+            try:
+                raw_bg = self.root.cget("bg")
+                if raw_bg:
+                    bg_color = raw_bg
+            except Exception:
+                bg_color = "#f0f0f0"
+
+            canvas_w = 120
+            canvas_h = 115
+            self._mascot_canvas = tk.Canvas(
+                self.root,
+                width=canvas_w,
+                height=canvas_h,
+                bg=bg_color,
+                highlightthickness=0,
+                bd=0,
+                cursor="hand2",
+            )
+            self._mascot_frame = self._mascot_canvas
+            self._mascot_canvas.place(relx=1.0, rely=1.0, x=-16, y=-16, anchor="se")
+
+            def _build_3d_mascot_image(hovering: bool = False):
+                try:
+                    img_path = resource_path("assets/operations_ai_mascot.png")
+                    if not os.path.exists(img_path):
+                        return None
+                    from PIL import Image, ImageDraw, ImageFilter, ImageTk
+
+                    bg_rgb = (240, 240, 240)
+                    if isinstance(bg_color, str) and bg_color.startswith("#") and len(bg_color) == 7:
+                        bg_rgb = (
+                            int(bg_color[1:3], 16),
+                            int(bg_color[3:5], 16),
+                            int(bg_color[5:7], 16),
+                        )
+
+                    w, h = 90, 88
+                    base = Image.new("RGBA", (w, h), (*bg_rgb, 255))
+
+                    shadow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+                    sdraw = ImageDraw.Draw(shadow)
+                    sy = 75 if hovering else 73
+                    sr_x = 24 if hovering else 21
+                    sr_y = 6 if hovering else 7
+                    s_alpha = 100 if hovering else 145
+                    sdraw.ellipse(
+                        [w // 2 - sr_x, sy - sr_y, w // 2 + sr_x, sy + sr_y],
+                        fill=(71, 85, 105, s_alpha),
+                    )
+                    shadow = shadow.filter(ImageFilter.GaussianBlur(3))
+                    base = Image.alpha_composite(base, shadow)
+
+                    robot_y = 2 if hovering else 6
+                    robot = Image.open(img_path).resize((64, 64), Image.Resampling.LANCZOS)
+                    base.paste(robot, (w // 2 - 32, robot_y), robot)
+
+                    return ImageTk.PhotoImage(base.convert("RGB"))
+                except Exception:
+                    return None
+
+            self._mascot_img_normal = _build_3d_mascot_image(hovering=False)
+            self._mascot_img_hover = _build_3d_mascot_image(hovering=True)
+            self._mascot_photo = self._mascot_img_normal
+
+            if self._mascot_img_normal:
+                self._mascot_canvas_img_id = self._mascot_canvas.create_image(
+                    canvas_w // 2, 68, image=self._mascot_img_normal, anchor="center"
+                )
+
+            def _draw_speech_bubble():
+                self._mascot_canvas.delete("bubble")
+                current_lang = get_current_language()
+                title = translate_for_language("operations_business_chat_title", current_lang)
+                bubble_text = f"✦ {title}"
+
+                bx = canvas_w // 2
+                bw = min(canvas_w - 4, max(68, len(bubble_text) * 7 + 16))
+                x1 = bx - bw // 2
+                y1 = 2
+                x2 = bx + bw // 2
+                y2 = 22
+
+                self._mascot_canvas.create_rectangle(
+                    x1 + 1, y1 + 1, x2 + 1, y2 + 1,
+                    fill="#cbd5e1", outline="", tags="bubble"
+                )
+                self._mascot_canvas.create_rectangle(
+                    x1, y1, x2, y2,
+                    fill="#0284c7", outline="#0369a1", tags="bubble"
+                )
+                self._mascot_canvas.create_polygon(
+                    bx - 4, y2, bx + 4, y2, bx, y2 + 4,
+                    fill="#0284c7", outline="", tags="bubble"
+                )
+                self._mascot_bubble_text_id = self._mascot_canvas.create_text(
+                    bx, (y1 + y2) // 2,
+                    text=bubble_text,
+                    fill="#ffffff",
+                    font=("Segoe UI", 8, "bold"),
+                    tags="bubble"
+                )
+
+            _draw_speech_bubble()
+            self._mascot_draw_bubble = _draw_speech_bubble
+
+            class _MascotTextProxy:
+                def __init__(proxy_self, parent_app):
+                    proxy_self._app = parent_app
+                def configure(proxy_self, text=""):
+                    if hasattr(proxy_self._app, "_mascot_draw_bubble"):
+                        proxy_self._app._mascot_draw_bubble()
+                def cget(proxy_self, key=""):
+                    current_lang = get_current_language()
+                    return f"✦ {translate_for_language('operations_business_chat_title', current_lang)}"
+
+            self._mascot_text_lbl = _MascotTextProxy(self)
+
+            self._mascot_drag = {"start_x": 0, "start_y": 0, "moved": False}
+
+            def on_drag_start(event):
+                self._mascot_drag["start_x"] = event.x_root
+                self._mascot_drag["start_y"] = event.y_root
+                self._mascot_drag["moved"] = False
+                self._mascot_canvas.lift()
+
+            def on_drag_motion(event):
+                dx = event.x_root - self._mascot_drag["start_x"]
+                dy = event.y_root - self._mascot_drag["start_y"]
+                if abs(dx) > 3 or abs(dy) > 3:
+                    self._mascot_drag["moved"] = True
+
+                cur_x = self._mascot_canvas.winfo_x() + dx
+                cur_y = self._mascot_canvas.winfo_y() + dy
+
+                root_w = max(100, self.root.winfo_width())
+                root_h = max(100, self.root.winfo_height())
+                frame_w = self._mascot_canvas.winfo_width()
+                frame_h = self._mascot_canvas.winfo_height()
+
+                new_x = max(10, min(root_w - frame_w - 10, cur_x))
+                new_y = max(10, min(root_h - frame_h - 10, cur_y))
+
+                self._mascot_canvas.place(x=new_x, y=new_y, relx=0, rely=0, anchor="nw")
+                self._mascot_drag["start_x"] = event.x_root
+                self._mascot_drag["start_y"] = event.y_root
+
+            def on_drag_release(event):
+                if not self._mascot_drag["moved"]:
+                    self.open_business_chat_assistant()
+
+            def on_enter(_event):
+                if hasattr(self, "_mascot_canvas_img_id") and self._mascot_img_hover:
+                    self._mascot_canvas.itemconfig(self._mascot_canvas_img_id, image=self._mascot_img_hover)
+
+            def on_leave(_event):
+                if hasattr(self, "_mascot_canvas_img_id") and self._mascot_img_normal:
+                    self._mascot_canvas.itemconfig(self._mascot_canvas_img_id, image=self._mascot_img_normal)
+
+            self._mascot_canvas.bind("<Button-1>", on_drag_start)
+            self._mascot_canvas.bind("<B1-Motion>", on_drag_motion)
+            self._mascot_canvas.bind("<ButtonRelease-1>", on_drag_release)
+            self._mascot_canvas.bind("<Enter>", on_enter)
+            self._mascot_canvas.bind("<Leave>", on_leave)
+
+        except Exception:
+            pass
 
     def _on_language_selected(self, _event=None):
         selected_name = self.language_var.get()
@@ -1780,6 +2001,8 @@ class MPManagerApp:
             self._refresh_headcount_source_status()
         if hasattr(self, "preflight_status"):
             self._refresh_preflight_status()
+        if hasattr(self, "_mascot_text_lbl") and self._mascot_text_lbl is not None:
+            self._mascot_text_lbl.configure(text=f"✦ {t('operations_business_chat_title')}")
         self._update_workflow_guide()
         self._update_cc_selection_summary()
 
@@ -2919,7 +3142,7 @@ class MPManagerApp:
     def auto_init_master_data(self):
         """Automatically load master data if FORM.xlsx is available in current dir."""
         if self.syncing_master: return
-        
+
         template = self.template_path.get()
         if not os.path.exists(template):
             template = _default_template_path()
@@ -2930,7 +3153,7 @@ class MPManagerApp:
         self.log(t("auto_init_heading"))
         self.log(t("auto_init_template", path=template))
         self.log(t("auto_init_source", path=self.source_dir.get() or BASE_DIR))
-        
+
         def run_sync():
             try:
                 db_path = self._operational_database()
@@ -3337,7 +3560,15 @@ class MPManagerApp:
             try:
                 current_lang = get_current_language()
                 case = assemble_operational_case(history_root, run_id, current_lang)
-                OperationsAssistantDialog.open_or_focus(self.root, case, current_lang)
+                policy = getattr(self, "cagent_policy", None) or CagentProviderPolicy()
+                OperationsBusinessChatDialog.open_with_case(
+                    self.root,
+                    current_lang,
+                    case,
+                    policy=policy,
+                    history_root=history_root,
+                    open_history=lambda: self.open_run_history(initial_cost_center=row.get("selected_cost_center")),
+                )
             except Exception:
                 messagebox.showerror(
                     t("operations_assistant_window_title"),

@@ -1,0 +1,183 @@
+{
+  "schema_version": "1.0",
+  "description": "Controlled registry of approved business knowledge sources for MP2027 business chat.",
+  "sources": {
+    "approved_business_guidance": {
+      "type": "curated_catalog",
+      "status": "active",
+      "vi": {
+        "label": "Hướng dẫn nghiệp vụ MP2027 đã duyệt",
+        "description": "Nội dung nghiệp vụ được tuyển chọn và phê duyệt nội bộ"
+      },
+      "en": {
+        "label": "Approved MP2027 business guidance",
+        "description": "Curated and internally approved business guidance"
+      },
+      "ja": {
+        "label": "承認済みMP2027業務ガイダンス",
+        "description": "厳選され社内承認された業務ガイダンス"
+      }
+    },
+    "operations_knowledge_base": {
+      "type": "code_reference",
+      "status": "active",
+      "vi": {
+        "label": "Sổ tay xử lý sự cố vận hành MP2027",
+        "description": "Mô hình tri thức chẩn đoán lỗi và khắc phục sự cố vận hành"
+      },
+      "en": {
+        "label": "MP2027 Operations Troubleshooting Handbook",
+        "description": "Operational failure diagnosis and resolution knowledge model"
+      },
+      "ja": {
+        "label": "MP2027運用トラブルシューティングハンドブック",
+        "description": "運用エラー診断および復旧ナレッジモデル"
+      }
+    },
+    "curated_ai_operations_assistant_guidance": {
+      "type": "curated_pack",
+      "status": "active",
+      "vi": {
+        "label": "Hướng dẫn Trợ lý AI MP2027 đã duyệt",
+        "description": "Hướng dẫn nghiệp vụ dành cho người dùng đã được biên soạn an toàn"
+      },
+      "en": {
+        "label": "Approved MP2027 AI Assistant guidance",
+        "description": "Reviewed, end-user-safe operational guidance"
+      },
+      "ja": {
+        "label": "承認済みMP2027 AIアシスタントガイダンス",
+        "description": "利用者向けに安全に編集された運用ガイダンス"
+      }
+    },
+    "curated_cost_allocation_guidance": {
+      "type": "curated_pack",
+      "status": "active",
+      "vi": {
+        "label": "Hướng dẫn phân bổ chi phí MP Saisan đã duyệt",
+        "description": "Hướng dẫn nghiệp vụ phân bổ chi phí dành cho người dùng"
+      },
+      "en": {
+        "label": "Approved MP Saisan cost allocation guidance",
+        "description": "Reviewed, end-user-safe cost allocation guidance"
+      },
+      "ja": {
+        "label": "承認済みMP Saisan費用配賦ガイダンス",
+        "description": "利用者向けに安全に編集された費用配賦ガイダンス"
+      }
+    },
+    "curated_staffing_headcount_guidance": {
+      "type": "curated_pack",
+      "status": "active",
+      "vi": {
+        "label": "Hướng dẫn nhân sự và phân bổ đầu người đã duyệt",
+        "description": "Hướng dẫn nghiệp vụ nhân sự, vật tư, xe bus, nhân viên mới"
+      },
+      "en": {
+        "label": "Approved staffing and headcount guidance",
+        "description": "Reviewed, end-user-safe staffing allocation guidance"
+      },
+      "ja": {
+        "label": "承認済み人員配置・人員数ガイダンス",
+        "description": "利用者向けに安全に編集された人員配置ガイダンス"
+      }
+    },
+    "curated_calculation_output_guidance": {
+      "type": "curated_pack",
+      "status": "active",
+      "vi": {
+        "label": "Hướng dẫn quy tắc tính toán và kết quả đã duyệt",
+        "description": "Hướng dẫn nghiệp vụ tính chi phí hệ thống, tài sản, sinh nhật, NNN"
+      },
+      "en": {
+        "label": "Approved calculation and output rules guidance",
+        "description": "Reviewed, end-user-safe cost calculation rules guidance"
+      },
+      "ja": {
+        "label": "承認済み計算・出力ルールガイダンス",
+        "description": "利用者向けに安全に編集された費用計算ルールガイダンス"
+      }
+    },
+    "curated_operational_errors_guidance": {
+      "type": "curated_pack",
+      "status": "active",
+      "vi": {
+        "label": "Hướng dẫn xử lý lỗi vận hành thường gặp đã duyệt",
+        "description": "Hướng dẫn nghiệp vụ: bảo toàn format, nhãn nguồn gốc, lịch sử chạy"
+      },
+      "en": {
+        "label": "Approved common operational errors guidance",
+        "description": "Reviewed, end-user-safe operational troubleshooting guidance"
+      },
+      "ja": {
+        "label": "承認済み一般的な運用エラーガイダンス",
+        "description": "利用者向けに安全に編集された運用トラブルシューティングガイダンス"
+      }
+    },
+
+    "ai_operations_assistant_guide": {
+      "type": "handbook",
+      "status": "active",
+      "vi": {
+        "label": "Hướng dẫn sử dụng Trợ lý AI MP2027",
+        "description": "Hướng dẫn vận hành tính năng Trợ lý AI nội bộ"
+      },
+      "en": {
+        "label": "MP2027 AI Operations Assistant Guide",
+        "description": "Operational guide for AI Assistant workflows"
+      },
+      "ja": {
+        "label": "MP2027 AI運用アシスタントガイド",
+        "description": "AIアシスタント機能の操作ガイド"
+      }
+    },
+    "mp_saisan_business_knowledge_base_v2": {
+      "type": "specification",
+      "status": "active",
+      "vi": {
+        "label": "Quy chuẩn nghiệp vụ MP Saisan v2",
+        "description": "Đặc tả nghiệp vụ chuẩn tắc cho chuỗi phân bổ chi phí"
+      },
+      "en": {
+        "label": "MP Saisan Business Specification v2",
+        "description": "Canonical business specification for cost allocation"
+      },
+      "ja": {
+        "label": "MP採算業務仕様書 v2",
+        "description": "費用配賦の標準業務仕様書"
+      }
+    },
+    "release_update_playbook": {
+      "type": "manual",
+      "status": "active",
+      "vi": {
+        "label": "Hướng dẫn cập nhật và khôi phục hệ thống",
+        "description": "Quy trình cập nhật mạng LAN và khôi phục an toàn"
+      },
+      "en": {
+        "label": "Release and Update Playbook",
+        "description": "LAN update verification and safe rollback handbook"
+      },
+      "ja": {
+        "label": "リリース・更新プレイブック",
+        "description": "LAN共有更新および安全なロールバック手順書"
+      }
+    },
+    "handover_operations_guide": {
+      "type": "handbook",
+      "status": "active",
+      "vi": {
+        "label": "Tài liệu bàn giao vận hành hệ thống",
+        "description": "Hướng dẫn môi trường và vận hành kiểm thử"
+      },
+      "en": {
+        "label": "Handover Operations Guide",
+        "description": "Environment setup and testing verification guide"
+      },
+      "ja": {
+        "label": "運用引き継ぎガイド",
+        "description": "環境構築およびテスト検証ガイド"
+      }
+    }
+  }
+}

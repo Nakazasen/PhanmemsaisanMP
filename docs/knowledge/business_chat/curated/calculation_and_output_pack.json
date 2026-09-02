@@ -1,0 +1,2117 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "calculation_and_output_pack",
+  "status": "approved",
+  "review_status": "approved",
+  "business_area": "cost_allocation",
+  "authority": "canonical",
+  "external_shareable": true,
+  "source_ref_ids": [
+    "curated_calculation_output_guidance"
+  ],
+  "entries": [
+    {
+      "topic_id": "cur_system_cost_combined",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Quy tắc chi phí hệ thống (3 kỳ mô phỏng)",
+        "keywords": [
+          "chi phí hệ thống",
+          "system cost",
+          "mô phỏng",
+          "3 kỳ",
+          "tháng 4 đến tháng 6",
+          "tháng 7 đến tháng 12",
+          "tháng 1 đến tháng 3"
+        ],
+        "answer_context": "Chi phí hệ thống (IT) được tính từ 3 tệp mô phỏng riêng biệt theo kỳ: tháng 4-6, tháng 7-12 và tháng 1-3. Mỗi tháng trong bảng kết quả chỉ lấy giá trị từ tệp nguồn đúng kỳ tương ứng. Không suy luận giá trị tháng thiếu từ các tháng lân cận. Kết quả mặc định là một dòng tổng hợp chi phí hệ thống.",
+        "safe_steps": [
+          "Kiểm tra đủ 3 tệp mô phỏng chi phí hệ thống trong thư mục nguồn.",
+          "Xác nhận từng tệp thuộc đúng kỳ: tháng 4-6, tháng 7-12, tháng 1-3.",
+          "Bấm Quét lại nội dung để hệ thống nhận diện các tệp.",
+          "Chạy tính toán và kiểm tra dòng tổng hợp chi phí hệ thống trong kết quả."
+        ],
+        "aliases": [
+          "IT cost",
+          "chi phí IT",
+          "system simulation"
+        ]
+      },
+      "en": {
+        "title": "System Cost Rules (3 Simulation Periods)",
+        "keywords": [
+          "system cost",
+          "IT cost",
+          "simulation periods",
+          "3 periods",
+          "April to June",
+          "July to December",
+          "January to March"
+        ],
+        "answer_context": "System (IT) costs are calculated from 3 separate simulation workbooks by period: April-June, July-December, and January-March. Each month in the output takes values only from the matching source period file. Missing months are never inferred from neighboring months. The default result is a single combined system cost row.",
+        "safe_steps": [
+          "Verify all 3 system cost simulation files are in the source folder.",
+          "Confirm each file covers the correct period: Apr-Jun, Jul-Dec, Jan-Mar.",
+          "Click Rescan Sources to detect the files.",
+          "Run Calculation and check the combined system cost row in the output."
+        ],
+        "aliases": [
+          "IT expense",
+          "system charge",
+          "simulation cost"
+        ]
+      },
+      "ja": {
+        "title": "システム費用ルール（3期間シミュレーション）",
+        "keywords": [
+          "システム費用",
+          "IT費用",
+          "シミュレーション",
+          "3期間",
+          "4月から6月",
+          "7月から12月",
+          "1月から3月"
+        ],
+        "answer_context": "システム（IT）費用は3つの期間別シミュレーションファイルから計算されます：4〜6月、7〜12月、1〜3月。出力の各月は対応する期間のソースファイルからのみ値を取得します。隣接する月から欠損月を推測することはありません。デフォルト結果はシステム費用の合計行1行です。",
+        "safe_steps": [
+          "ソースフォルダに3つのシステム費用シミュレーションファイルがあることを確認してください。",
+          "各ファイルが正しい期間（4〜6月、7〜12月、1〜3月）をカバーしていることを確認してください。",
+          "「内容を再確認」をクリックしてファイルを検出してください。",
+          "計算を実行し、出力のシステム費用合計行を確認してください。"
+        ],
+        "aliases": [
+          "IT経費",
+          "システム課金",
+          "シミュレーション費用"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "### 4.3 System Cost",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "### 4.3 System Cost",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Module chi phí hệ thống phần mềm và máy chủ",
+            "en": "IT System and Infrastructure Cost Module",
+            "ja": "ITシステムおよびインフラ費用計算モジュール"
+          },
+          "supported_summary": {
+            "vi": "Tổng hợp chi phí bản quyền IT từ 3 tệp mô phỏng theo quý, nhân tỷ giá ô B2 và điền vào các dòng tương ứng của phòng ban.",
+            "en": "Aggregates software license costs from 3 quarterly simulation files, applies rate B2, and populates department rows.",
+            "ja": "四半期シミュレーションからITライセンス費を集計し、B2レートを乗じて各部門の該当行へ入力します。"
+          },
+          "evidence_anchor": "Historical fixed-row note: row `211`, item_id `sys"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 7. Sheet `Chi phí hệ thống`",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy chuẩn phân bổ chi phí hệ thống",
+            "en": "IT System Cost Master Allocation Specifications",
+            "ja": "ITシステム費用の標準配賦仕様"
+          },
+          "supported_summary": {
+            "vi": "Tổng hợp chi phí bản quyền phần mềm và máy chủ từ 3 tệp mô phỏng theo quý, nhân tỷ giá ô B2 và phân bổ cho các phòng ban.",
+            "en": "Consolidates software licenses and server costs from 3 quarterly simulation files, multiplied by rate B2 per cost center.",
+            "ja": "3つの四半期シミュレーションからソフトウェアおよびサーバー費用を集計し、B2レートを乗じて各部門へ配賦します。"
+          },
+          "evidence_anchor": "Hình tổng quan từ sheet `Chi phí hệ thống`:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 7.1. Mục tiêu",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Mục tiêu phân bổ chi phí hệ thống",
+            "en": "Objectives of IT System Cost Distribution",
+            "ja": "ITシステム費用配賦の目的"
+          },
+          "supported_summary": {
+            "vi": "Phân bổ chính xác chi phí bản quyền CNTT cho từng phòng ban sử dụng theo quý mà không làm sai lệch số tiền ngoại tệ gốc.",
+            "en": "Accurately allocates quarterly IT software licenses to incurring departments while preserving original foreign currency amounts.",
+            "ja": "原本の外貨金額を維持しながら、四半期ごとに利用部門へITライセンス費用を正確に配賦することを目的とします。"
+          },
+          "evidence_anchor": "Sửa logic chi phí hệ thống vì hiện tại:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 7.2. File nguồn hệ thống",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Danh mục 3 tệp nguồn chi phí hệ thống theo quý",
+            "en": "Three Quarterly IT System Cost Source Workbooks",
+            "ja": "ITシステム費用の四半期別3元ファイル構成"
+          },
+          "supported_summary": {
+            "vi": "Xác định 3 tệp bảng tính mô phỏng chi phí hệ thống quý 1, quý 2-3 và quý 4 dùng làm căn cứ trích xuất số liệu.",
+            "en": "Specifies the 3 quarterly simulation workbooks for Q1, Q2-Q3, and Q4 used as authoritative sources for IT cost extraction.",
+            "ja": "第1四半期、第2-3四半期、第4四半期の3つのシミュレーションファイルをIT費用の抽出元として指定します。"
+          },
+          "evidence_anchor": "Nhóm file nguồn là các file:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 7.3. Công thức chi tiết",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Công thức tính chi phí hệ thống theo tỷ giá B2",
+            "en": "Detailed IT Cost Formula with Rate Cell B2",
+            "ja": "B2レートを乗算するIT費用の詳細計算式"
+          },
+          "supported_summary": {
+            "vi": "Số tiền = Chi phí ngoại tệ trên file mô phỏng × Tỷ giá ô B2 của biểu mẫu, áp dụng riêng cho từng quý.",
+            "en": "Amount = Foreign currency cost in simulation × Rate cell B2 on form, applied independently per quarter.",
+            "ja": "金額 ＝ シミュレーションの外貨費用 × フォームB2セルの為替レート（四半期ごとに適用）。"
+          },
+          "evidence_anchor": "Mỗi sheet detail tính theo logic:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 7.4. Công thức tổng hệ thống",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Công thức tổng hợp chi phí hệ thống cả năm",
+            "en": "Annual IT System Cost Consolidation Formula",
+            "ja": "年間ITシステム費用の総合集計数式"
+          },
+          "supported_summary": {
+            "vi": "Tổng hợp toàn bộ chi phí 4 quý vào dòng tài khoản hệ thống của phòng ban trên biểu mẫu kết quả ngân sách.",
+            "en": "Consolidates all 4 quarterly amounts into the designated IT expense line of the department budget workbook.",
+            "ja": "4四半期の全金額を、部門予算ワークブックの所定のITシステム費用行へ統合計上します。"
+          },
+          "evidence_anchor": "Tổng chi phí hệ thống cho một Cost Center:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 7.5. Rule đối chiếu và điều chỉnh",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy tắc đối soát chi phí hệ thống giữa các quý",
+            "en": "Quarterly IT Reconciliation and Adjustment Rules",
+            "ja": "四半期間のIT費用照合および調整ルール"
+          },
+          "supported_summary": {
+            "vi": "Đối chiếu số tiền giữa các quý để đảm bảo không bỏ sót quý nào và khớp đúng tổng chi phí được phê duyệt.",
+            "en": "Reconciles quarterly figures to ensure no missing periods and validates alignment with approved total budgets.",
+            "ja": "四半期間のデータを照合して計上漏れを防止し、承認済み総予算枠との整合性を検証します。"
+          },
+          "evidence_anchor": "1. Lọc từng sheet detail theo Cost Center."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 7.6. Nhập vào FORM",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Định tuyến chi phí hệ thống vào biểu mẫu kết quả",
+            "en": "Routing IT System Costs into Output Forms",
+            "ja": "ITシステム費用の出力フォームへのマッピング"
+          },
+          "supported_summary": {
+            "vi": "Điền số tiền chi phí hệ thống vào đúng các cột tháng tương ứng với quý phát sinh trên bảng tính chi tiết.",
+            "en": "Populates IT cost figures into the exact monthly columns matching their active quarter on detail sheets.",
+            "ja": "発生四半期に対応する詳細シート上の月別列へ、ITシステム費用金額を正確に入力します。"
+          },
+          "evidence_anchor": "HISTORICAL_04_06_CONTEXT: lineage 04.06 ghi nhận y"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 7.8. Tháng áp dụng",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Lịch trình các tháng áp dụng chi phí hệ thống",
+            "en": "Active Months Schedule for IT System Costs",
+            "ja": "ITシステム費用の適用月スケジュール"
+          },
+          "supported_summary": {
+            "vi": "Chi phí hệ thống được phân bổ vào các tháng 4-6 cho quý 1, tháng 7-12 cho quý 2-3 và tháng 1-3 cho quý 4.",
+            "en": "Schedules IT costs into Apr-Jun for Q1, Jul-Dec for Q2-Q3, and Jan-Mar for Q4.",
+            "ja": "Q1は4〜6月、Q2-Q3は7〜12月、Q4は1〜3月の月別列へそれぞれ配賦計上します。"
+          },
+          "evidence_anchor": "File yêu cầu có thêm bước:"
+        },
+        {
+          "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+          "source_section": "### 1. Chi phí hệ thống (System Cost)",
+          "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Khái niệm phân loại chi phí chung",
+            "en": "General Cost Category Concepts",
+            "ja": "共通費用分類コンセプト"
+          },
+          "heading_title": {
+            "vi": "Khái niệm phân bổ chi phí hệ thống phần mềm",
+            "en": "IT System and Software License Cost Allocation Concepts",
+            "ja": "ITシステムおよびソフトウェアライセンス費用の配賦概念"
+          },
+          "supported_summary": {
+            "vi": "Tập hợp chi phí hạ tầng máy chủ và bản quyền phần mềm từ các file mô phỏng theo quý, áp dụng tỷ giá ô B2 để phân bổ.",
+            "en": "Consolidates server infrastructure and software licenses from quarterly simulation files, applying rate B2 for allocation.",
+            "ja": "四半期シミュレーションからサーバーおよびライセンス費用を集計し、B2レートを適用して配賦します。"
+          },
+          "evidence_anchor": "- **Vấn đề**: Hiện tại chi phí hệ thống chưa lấy đ"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_fixed_asset_depreciation",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Quy tắc khấu hao và lãi tài sản cố định",
+        "keywords": [
+          "tài sản cố định",
+          "khấu hao",
+          "lãi tài sản",
+          "fixed assets",
+          "depreciation",
+          "lãi vay"
+        ],
+        "answer_context": "Chi phí tài sản cố định gồm hai phần chính: khấu hao tài sản và lãi vay tài sản. Mỗi phần được tính theo tháng dựa trên dữ liệu nguồn từ bảng thông tin tài sản cố định. Hệ thống chỉ tính khi có đủ dữ liệu nguồn đã xác minh; không tự ước lượng số liệu thiếu.",
+        "safe_steps": [
+          "Kiểm tra tệp thông tin tài sản cố định đã có trong thư mục nguồn.",
+          "Đảm bảo tệp chứa đủ dữ liệu 12 tháng cho phòng ban cần tính.",
+          "Chạy tính toán và kiểm tra hai dòng: khấu hao và lãi vay trong kết quả.",
+          "Nếu thiếu dữ liệu, hệ thống sẽ bỏ qua hạng mục thay vì ước lượng sai."
+        ],
+        "aliases": [
+          "khấu hao tài sản",
+          "tài sản cố định",
+          "chi phí khấu hao"
+        ]
+      },
+      "en": {
+        "title": "Fixed Asset Depreciation and Interest Rules",
+        "keywords": [
+          "fixed assets",
+          "depreciation",
+          "asset interest",
+          "fixed asset cost",
+          "asset calculation"
+        ],
+        "answer_context": "Fixed asset costs include two main components: asset depreciation and asset interest. Each is calculated monthly based on verified source data from the fixed assets information workbook. The system only generates results when verified source data is available; missing data causes the items to be skipped rather than estimated.",
+        "safe_steps": [
+          "Verify the fixed assets information workbook is in the source folder.",
+          "Ensure the file contains 12-month data for the target department.",
+          "Run Calculation and check two rows in the output: depreciation and interest.",
+          "If data is missing, the system will skip these items rather than estimate."
+        ],
+        "aliases": [
+          "asset depreciation",
+          "fixed asset expense",
+          "asset write-off"
+        ]
+      },
+      "ja": {
+        "title": "固定資産減価償却および利息ルール",
+        "keywords": [
+          "固定資産",
+          "減価償却",
+          "資産利息",
+          "固定資産費用",
+          "資産計算"
+        ],
+        "answer_context": "固定資産費用には減価償却と資産利息の2つの主要要素があります。それぞれ固定資産情報ワークブックの検証済みソースデータに基づいて月次で計算されます。システムは検証済みソースデータがある場合のみ結果を生成し、データ不足の場合は推定せずにスキップします。",
+        "safe_steps": [
+          "固定資産情報ワークブックがソースフォルダにあることを確認してください。",
+          "対象部門の12か月データがファイルに含まれていることを確認してください。",
+          "計算を実行し、出力の減価償却行と利息行を確認してください。",
+          "データが不足している場合、これらの項目は推定せずにスキップされます。"
+        ],
+        "aliases": [
+          "資産償却",
+          "固定資産経費",
+          "償却費"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "### 4.4 Fixed Assets / 固定資産",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "### 4.4 Fixed Assets / 固定資産",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Module trích khấu hao tài sản cố định",
+            "en": "Fixed Asset Monthly Depreciation Module",
+            "ja": "固定資産減価償却費計算モジュール"
+          },
+          "supported_summary": {
+            "vi": "Trích khấu hao từng tháng cho từng tài sản và tự động dừng trích sau khi đến tháng khấu hao cuối cùng.",
+            "en": "Calculates monthly depreciation per asset and automatically halts allocation once the final depreciation month is reached.",
+            "ja": "資産ごとの月次減価償却費を計算し、最終償却月に達した後は自動的に計上を停止します。"
+          },
+          "evidence_anchor": "Known account/group: `5005026371` has 75 primary r"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 9. Sheet `Chi phí tài sản cố định`",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy chuẩn trích khấu hao tài sản cố định",
+            "en": "Fixed Asset Monthly Depreciation Specifications",
+            "ja": "固定資産減価償却費の標準仕様"
+          },
+          "supported_summary": {
+            "vi": "Trích khấu hao từng tháng theo từng tài sản và tự động ngừng trích sau khi đến tháng kết thúc khấu hao.",
+            "en": "Computes monthly depreciation per asset and automatically ceases allocation after the final depreciation month.",
+            "ja": "資産ごとの月次減価償却費を計算し、最終償却月に達した後は自動的に計上を終了します。"
+          },
+          "evidence_anchor": "Hình tổng quan từ sheet `Chi phí tài sản cố định`:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 9.1. Mục tiêu",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Mục tiêu tự động hóa tính khấu hao tài sản",
+            "en": "Objectives of Automated Asset Depreciation Allocation",
+            "ja": "固定資産減価償却自動計算の目的"
+          },
+          "supported_summary": {
+            "vi": "Tự động hóa tính toán chi phí khấu hao cho hàng trăm tài sản cố định của từng phòng ban một cách chính xác tuyệt đối.",
+            "en": "Automates monthly depreciation allocations for hundreds of fixed assets per department with absolute accuracy.",
+            "ja": "各部門が保有する数百件の固定資産について、月次減価償却費の配賦計算を完全自動化します。"
+          },
+          "evidence_anchor": "Tự động nhập chi phí fixed assets từ file:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 9.2. Cột nguồn quan trọng",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Các cột dữ liệu trọng yếu trong bảng khấu hao",
+            "en": "Critical Source Columns in Depreciation Table",
+            "ja": "減価償却台帳における重要元データ列"
+          },
+          "supported_summary": {
+            "vi": "Xác định các cột nguyên giá, thời gian trích, mã Cost Center và giá trị khấu hao từng tháng trên bảng tài sản.",
+            "en": "Identifies key columns for initial cost, amortization duration, Cost Center code, and monthly depreciation figures.",
+            "ja": "取得価額、償却期間、原価センタコード、および月次減価償却額の重要元データ列を定義しています。"
+          },
+          "evidence_anchor": "Các trường cần đọc/chuẩn hóa:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 9.3. Vùng FORM đích",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Định tuyến khấu hao vào vùng dòng biểu mẫu",
+            "en": "Target Output Row Range for Fixed Assets Depreciation",
+            "ja": "固定資産減価償却の出力対象行範囲"
+          },
+          "supported_summary": {
+            "vi": "Xuất số liệu khấu hao vào các dòng chi phí khấu hao tài sản tương ứng của Cost Center trên bảng tính chi tiết.",
+            "en": "Maps depreciation totals into the designated fixed asset expense rows for each Cost Center on detail sheets.",
+            "ja": "詳細シート上の各コストセンターの該当する固定資産減価償却行へデータを配置します。"
+          },
+          "evidence_anchor": "| Khoản | Vùng FORM |"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 9.4. Rule tổng quát",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy tắc tổng quát tính toán khấu hao tài sản",
+            "en": "General Calculation Rules for Monthly Depreciation",
+            "ja": "月次減価償却計算の全体原則"
+          },
+          "supported_summary": {
+            "vi": "Trích xuất khấu hao hàng tháng và đối chiếu mã tài sản để đảm bảo số tiền khớp đúng với bảng cân đối kế toán.",
+            "en": "Extracts monthly depreciation and validates asset identifiers to ensure figures align with ledger balances.",
+            "ja": "月次減価償却額を抽出し、資産コードと照合して試算表残高との完全な整合性を保証します。"
+          },
+          "evidence_anchor": "① Filter Cost Center chịu chi phí."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 9.5. Nếu tháng khấu hao cuối cùng KHÔNG nằm trong FY2027",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Khấu hao tài sản kéo dài trọn vẹn cả năm",
+            "en": "Handling Depreciation Extending Throughout Fiscal Year",
+            "ja": "会計年度全体にわたる継続償却の処理"
+          },
+          "supported_summary": {
+            "vi": "Tài sản có thời hạn khấu hao kéo dài qua năm tài chính tiếp theo được trích đều đặn trong cả 12 tháng của năm.",
+            "en": "Assets whose depreciation extends beyond the fiscal year are allocated continuously across all 12 months.",
+            "ja": "償却期間が翌年度以降に及ぶ資産は、当該年度の全12か月すべてに均等に減価償却費を計上します。"
+          },
+          "evidence_anchor": "Ví dụ file ghi:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 9.6. Nếu tháng khấu hao cuối cùng nằm trong FY2027",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Ngắt trích khấu hao sau tháng cuối cùng",
+            "en": "Halting Depreciation After Final Month in Fiscal Year",
+            "ja": "年度内最終償却月経過後の計上停止処理"
+          },
+          "supported_summary": {
+            "vi": "Khi tài sản kết thúc khấu hao trong năm, các tháng sau tháng cuối cùng được ghi nhận giá trị bằng 0.",
+            "en": "When an asset amortizes fully within the fiscal year, months following the final month are set to zero.",
+            "ja": "資産が年度内に償却完了する場合、最終償却月より後の残存月は配賦額を0として処理します。"
+          },
+          "evidence_anchor": "No.3: Tháng khấu hao cuối cùng là 5/2026"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 9.7. Aggregation",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Tổng hợp khấu hao nhiều tài sản vào một Cost Center",
+            "en": "Aggregating Multiple Asset Depreciations per Cost Center",
+            "ja": "部門単位での複数資産減価償却集計"
+          },
+          "supported_summary": {
+            "vi": "Cộng dồn toàn bộ các khoản trích khấu hao của các tài sản thuộc cùng một Cost Center thành tổng chi phí hàng tháng.",
+            "en": "Sums monthly depreciation across all individual assets belonging to the same Cost Center into total figures.",
+            "ja": "同一原価センタに所属するすべての個別資産の月次減価償却額を合算して部門合計を算出します。"
+          },
+          "evidence_anchor": "Nếu một Cost Center có nhiều asset:"
+        },
+        {
+          "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+          "source_section": "### 3. Chi phí tài sản cố định (Fixed Assets)",
+          "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Khái niệm phân loại chi phí chung",
+            "en": "General Cost Category Concepts",
+            "ja": "共通費用分類コンセプト"
+          },
+          "heading_title": {
+            "vi": "Khái niệm khấu hao tài sản cố định theo tháng",
+            "en": "Fixed Asset Monthly Depreciation Allocation Concepts",
+            "ja": "固定資産の月次減価償却配賦概念"
+          },
+          "supported_summary": {
+            "vi": "Trích khấu hao từng tháng theo bảng danh mục tài sản và tự động ngắt tính toán sau tháng kết thúc khấu hao.",
+            "en": "Calculates monthly asset depreciation and automatically ceases allocation after the final depreciation month.",
+            "ja": "固定資産一覧に基づいて月次減価償却費を計上し、最終償却月の経過後は自動的に計算を停止します。"
+          },
+          "evidence_anchor": "- **Cách làm**:"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_birthday_cost",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Quy tắc chi phí sinh nhật nhân viên",
+        "keywords": [
+          "sinh nhật",
+          "tiền sinh nhật",
+          "chi phí sinh nhật",
+          "số người sinh nhật",
+          "đơn giá sinh nhật"
+        ],
+        "answer_context": "Chi phí sinh nhật được tính theo công thức: số người có sinh nhật trong tháng (cộng thêm người mới cùng tháng) nhân với đơn giá tiền sinh nhật. Dữ liệu nguồn là bảng sinh nhật nhân viên theo tháng. Kết quả được ghi vào vùng chỉ định trên bảng tính kết quả.",
+        "safe_steps": [
+          "Kiểm tra tệp danh sách sinh nhật nhân viên đã có trong thư mục nguồn.",
+          "Xác nhận đơn giá tiền sinh nhật cho năm tài chính hiện tại.",
+          "Chạy tính toán và kiểm tra dòng chi phí sinh nhật trong kết quả.",
+          "Nếu tệp nguồn thiếu, hệ thống sẽ bỏ qua hạng mục này."
+        ],
+        "aliases": [
+          "birthday benefit",
+          "quà sinh nhật",
+          "phúc lợi sinh nhật"
+        ]
+      },
+      "en": {
+        "title": "Employee Birthday Cost Calculation Rule",
+        "keywords": [
+          "birthday cost",
+          "birthday allowance",
+          "employee birthday",
+          "birthday headcount",
+          "birthday unit price"
+        ],
+        "answer_context": "Birthday cost is calculated using the formula: number of employees with birthdays in the month (plus new hires entering in the same month) multiplied by the birthday unit allowance. Source data comes from the monthly employee birthday workbook.",
+        "safe_steps": [
+          "Verify the employee birthday workbook is in the source folder.",
+          "Confirm the birthday unit allowance for the current fiscal year.",
+          "Run Calculation and check the birthday cost row in the output.",
+          "If source data is missing, the system will skip this item."
+        ],
+        "aliases": [
+          "birthday allowance",
+          "birthday gift",
+          "birthday benefit"
+        ]
+      },
+      "ja": {
+        "title": "従業員誕生日費用計算ルール",
+        "keywords": [
+          "誕生日費用",
+          "誕生日手当",
+          "従業員誕生日",
+          "誕生月人員数",
+          "誕生日単価"
+        ],
+        "answer_context": "誕生日費用は、当月の誕生日対象人数（同月入社の新入社員を含む）に誕生日単価を乗じて計算されます。ソースデータは月別従業員誕生日一覧ワークブックです。",
+        "safe_steps": [
+          "従業員誕生日一覧ワークブックがソースフォルダにあることを確認してください。",
+          "今年度の誕生日単価を確認してください。",
+          "計算を実行し、出力の誕生日費用行を確認してください。",
+          "ソースデータが不足している場合、この項目はスキップされます。"
+        ],
+        "aliases": [
+          "誕生日手当",
+          "誕生日プレゼント",
+          "誕生日給付"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "### 4.5 Birthday / Sinh nhật",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "### 4.5 Birthday / Sinh nhật",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Module tính chi phí sinh nhật nhân viên",
+            "en": "Employee Birthday Benefit Cost Module",
+            "ja": "社員誕生日祝金計算モジュール"
+          },
+          "supported_summary": {
+            "vi": "Tính chi phí sinh nhật bằng số người sinh nhật trong tháng nhân đơn giá 152.000 VNĐ và ghi vào dòng 59 trên biểu mẫu.",
+            "en": "Computes birthday costs by multiplying monthly celebrant counts by 152,000 VND unit rate, mapped to form row 59.",
+            "ja": "月別誕生日人数に単価152,000 VNDを乗じて誕生日祝金を算出し、フォームの59行目へ配置します。"
+          },
+          "evidence_anchor": "Requirement status: Birthday/Tiền sinh nhật image "
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 11. Sheet `Chi phí sinh nhật`",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy chuẩn tính chi phí sinh nhật cán bộ nhân viên",
+            "en": "Employee Birthday Benefit Cost Specifications",
+            "ja": "社員誕生日祝金費用の標準仕様"
+          },
+          "supported_summary": {
+            "vi": "Chi phí sinh nhật được tính bằng số người sinh nhật trong tháng nhân đơn giá 152.000 VNĐ và điền vào dòng 59 của biểu mẫu.",
+            "en": "Calculates birthday costs by multiplying monthly celebrant counts by the 152,000 VND unit rate, mapped to row 59.",
+            "ja": "月別対象人数に単価152,000 VNDを乗じて誕生日祝金を算出し、フォームの59行目へ配置します。"
+          },
+          "evidence_anchor": "Hình tổng quan từ sheet `Chi phí sinh nhật`:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 11.1. Mục tiêu",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Mục tiêu phân bổ chi phí sinh nhật nhân viên",
+            "en": "Objectives of Employee Birthday Benefit Allocation",
+            "ja": "誕生日祝金配賦の目的"
+          },
+          "supported_summary": {
+            "vi": "Tự động tính toán khoản phúc lợi sinh nhật cho nhân viên theo từng tháng dựa trên danh sách nhân sự chính thức.",
+            "en": "Automates monthly employee birthday welfare calculations based on verified regular staffing rolls.",
+            "ja": "正社員名簿に基づいて、月別の社員誕生日福利厚生費の計算を自動化します。"
+          },
+          "evidence_anchor": "Tự động nhập chi phí sinh nhật từ file:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 11.2. Cách làm",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy trình 3 bước tính toán chi phí sinh nhật",
+            "en": "Three-Step Workflow for Birthday Cost Calculation",
+            "ja": "誕生日祝金計算の3ステップ処理手順"
+          },
+          "supported_summary": {
+            "vi": "Lọc Cost Center, đếm số người sinh nhật trong tháng, nhân với đơn giá 152.000 VNĐ và điền vào dòng 59.",
+            "en": "Filters Cost Center, counts monthly celebrants, multiplies by 152,000 VND rate, and maps to line 59.",
+            "ja": "原価センタを絞り込み、月別誕生日対象者数をカウントし、単価152,000 VNDを乗じて59行目へ入力します。"
+          },
+          "evidence_anchor": "① Filter code tài khoản mong muốn tại cột \"Code tà"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 11.3. Rule cộng người mới",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy tắc tính gộp nhân viên mới có sinh nhật trong tháng",
+            "en": "Inclusion Rule for New Hires Celebrating Birthdays",
+            "ja": "入社月に誕生日を迎える新入社員の合算ルール"
+          },
+          "supported_summary": {
+            "vi": "Nhân viên mới tuyển dụng có sinh nhật trong tháng tiếp nhận được cộng chung vào danh sách sinh nhật của tháng đó.",
+            "en": "New recruits celebrating birthdays in their hiring month are included directly in that month's celebrant roll.",
+            "ja": "入社当月に誕生日を迎える新入社員は、該当月の誕生日対象者リストへそのまま合算計上します。"
+          },
+          "evidence_anchor": "Trong trường hợp tháng đó có người mới thì sẽ cộng"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 11.4. Đơn giá",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Định mức đơn giá chi phí sinh nhật 152.000 VNĐ",
+            "en": "Standard Birthday Benefit Unit Rate 152,000 VND",
+            "ja": "誕生日祝金の標準単価152,000 VND基準"
+          },
+          "supported_summary": {
+            "vi": "Áp dụng đơn giá quy định 152.000 VNĐ cho mỗi nhân viên sinh nhật theo đúng bảng phân bổ hành chính đã duyệt.",
+            "en": "Applies the approved 152,000 VND rate per birthday celebrant from the canonical administrative allocation master.",
+            "ja": "承認済み総務配賦マスターに準拠し、誕生日対象者1名につき単価152,000 VNDを適用します。"
+          },
+          "evidence_anchor": "Trong ảnh/yêu cầu có ví dụ:"
+        },
+        {
+          "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+          "source_section": "### 5. Chi phí sinh nhật (Birthday Costs)",
+          "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Khái niệm phân loại chi phí chung",
+            "en": "General Cost Category Concepts",
+            "ja": "共通費用分類コンセプト"
+          },
+          "heading_title": {
+            "vi": "Khái niệm tính chi phí sinh nhật nhân viên",
+            "en": "Employee Birthday Benefit Cost Allocation Concepts",
+            "ja": "社員誕生日祝金費用の計算概念"
+          },
+          "supported_summary": {
+            "vi": "Chi phí sinh nhật tính bằng số lượng người sinh nhật trong tháng nhân đơn giá 152.000 VNĐ và điền vào dòng 59.",
+            "en": "Birthday costs equal monthly celebrant count multiplied by 152,000 VND unit rate, mapped to row 59.",
+            "ja": "月別誕生日人数に単価152,000 VNDを乗じて誕生日費用を算出し、59行目へ配置します。"
+          },
+          "evidence_anchor": "- **Cách làm**: Lọc code tài khoản chịu chi phí, l"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_nnn_paperwork_cost",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Quy tắc chi phí làm giấy tờ cho người nước ngoài (NNN)",
+        "keywords": [
+          "giấy tờ nnn",
+          "người nước ngoài",
+          "chi phí giấy tờ",
+          "thủ tục nnn",
+          "hồ sơ cư trú",
+          "dòng 137"
+        ],
+        "answer_context": "Chi phí làm giấy tờ cho người nước ngoài (NNN) gồm các thủ tục visa, giấy phép lao động, thẻ tạm trú cho chuyên gia nước ngoài. Dữ liệu nguồn từ bảng tổng hợp chi phí NNN theo Cost Center. Kết quả được ghi nhận vào dòng chỉ định (dòng 137) trên bảng tính kết quả.",
+        "safe_steps": [
+          "Kiểm tra tệp chi phí giấy tờ NNN trong thư mục nguồn.",
+          "Đảm bảo các dòng chi phí đã phân loại đúng mã Cost Center.",
+          "Chạy tính toán và đối soát số liệu tại dòng chi phí giấy tờ NNN."
+        ],
+        "aliases": [
+          "visa nnn",
+          "chi phí visa",
+          "giấy tờ lao động nước ngoài"
+        ]
+      },
+      "en": {
+        "title": "Foreign Worker (NNN) Paperwork Cost Rule",
+        "keywords": [
+          "nnn paperwork",
+          "foreign worker paperwork",
+          "visa cost",
+          "work permit",
+          "temporary residence",
+          "row 137"
+        ],
+        "answer_context": "Foreign worker (NNN) paperwork costs cover visa processing, work permits, and temporary residence cards for foreign personnel. Source data comes from the NNN summary workbook by Cost Center. Results are populated into the designated row (row 137) of the output sheet.",
+        "safe_steps": [
+          "Verify the NNN paperwork cost file is in the source folder.",
+          "Ensure cost line items are matched to the correct Cost Center.",
+          "Run Calculation and verify the NNN paperwork expense line item."
+        ],
+        "aliases": [
+          "foreign staff visa",
+          "nnn visa expense",
+          "expatriate paperwork"
+        ]
+      },
+      "ja": {
+        "title": "外国人（NNN）書類手続き費用ルール",
+        "keywords": [
+          "nnn書類",
+          "外国人書類費用",
+          "ビザ費用",
+          "労働許可証",
+          "一時滞在許可",
+          "137行目"
+        ],
+        "answer_context": "外国人（NNN）書類手続き費用は、外国人専門家のビザ申請、労働許可証、一時滞在許可等の手続き費用を対象とします。ソースデータはコストセンター別のNNN費用集計ファイルです。結果は出力シートの指定行（137行目）に出力されます。",
+        "safe_steps": [
+          "ソースフォルダにNNN書類費用ファイルがあることを確認してください。",
+          "費用項目が正しいコストセンターに分類されていることを確認してください。",
+          "計算を実行し、NNN書類手続き費用行のデータを確認してください。"
+        ],
+        "aliases": [
+          "外国人ビザ",
+          "nnnビザ経費",
+          "外国人書類"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "### 4.6 NNN paperwork",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "### 4.6 NNN paperwork",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Module chi phí thủ tục chuyên gia nước ngoài",
+            "en": "Foreign Expert Paperwork Expense Module",
+            "ja": "外国人専門家書類手続き費用モジュール"
+          },
+          "supported_summary": {
+            "vi": "Tập hợp chi phí visa, giấy phép lao động cho chuyên gia nước ngoài và ghi nhận vào dòng 137 trên biểu mẫu kết quả.",
+            "en": "Consolidates visa and work permit expenses for foreign expats, populating destination row 137 on output forms.",
+            "ja": "外国人専門家のビザおよび労働許可証費用を集計し、出力フォームの137行目に計上します。"
+          },
+          "evidence_anchor": "Current status: STATUS_REQUIRES_CURRENT_CODE_AUDIT"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 10. Sheet `Chi phí làm giấy tờ cho NNN`",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy chuẩn chi phí thủ tục chuyên gia nước ngoài",
+            "en": "Foreign Expat Paperwork Expense Specifications",
+            "ja": "外国人専門家書類手続き費用の標準仕様"
+          },
+          "supported_summary": {
+            "vi": "Tổng hợp chi phí visa, giấy phép lao động cho chuyên gia Nhật Bản và ghi nhận vào dòng 137 trên biểu mẫu kết quả.",
+            "en": "Consolidates visa and work permit fees for Japanese expats, populating destination row 137 on output forms.",
+            "ja": "日本人専門家のビザおよび労働許可証費用を集計し、出力フォームの137行目に計上します。"
+          },
+          "evidence_anchor": "Hình tổng quan từ sheet `Chi phí làm giấy tờ cho N"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 10.1. Mục tiêu",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Mục tiêu phân bổ chi phí thủ tục chuyên gia",
+            "en": "Objectives of Expat Paperwork Cost Allocation",
+            "ja": "外国人手続き費用配賦の目的"
+          },
+          "supported_summary": {
+            "vi": "Hạch toán đầy đủ các chi phí pháp lý và thủ tục cư trú cho chuyên gia nước ngoài vào ngân sách quản lý.",
+            "en": "Accurately accounts for legal compliance and residency paperwork costs for foreign experts within management budgets.",
+            "ja": "外国人専門家の法的手続きおよび在留資格関連費用を管理予算へ正確に計上することを目的とします。"
+          },
+          "evidence_anchor": "Bổ sung loại chi phí mới:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 10.2. Vùng FORM đích",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Định tuyến dòng 137 cho chi phí thủ tục chuyên gia",
+            "en": "Target Master Form Row 137 for Expat Expenses",
+            "ja": "外国人手続き費用のマスターフォーム137行目マッピング"
+          },
+          "supported_summary": {
+            "vi": "Điền số tiền chi phí làm giấy tờ vào đúng dòng 137 của phòng ban quản lý chuyên gia trên bảng tính kết quả.",
+            "en": "Populates expat paperwork expenses into row 137 of the managing department on output workbooks.",
+            "ja": "専門家管理部門の出力ワークブック137行目へ外国人書類手続き費用を入力します。"
+          },
+          "evidence_anchor": "Nhập vào dòng 137, từ F137 => Q137 vào file FORM"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 10.3. Cách filter đúng",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Phương pháp lọc đúng bản ghi chi phí chuyên gia",
+            "en": "Filtering Criteria for Foreign Expert Paperwork Records",
+            "ja": "外国人手続き費用の適正抽出・フィルタ条件"
+          },
+          "supported_summary": {
+            "vi": "Lọc các khoản chi phí liên quan đến visa, thẻ tạm trú và gia hạn giấy phép lao động từ bảng kê chi tiết.",
+            "en": "Filters expense records for visas, temporary residence cards, and work permits from the tracking sheet.",
+            "ja": "管理台帳からビザ、一時滞在許可カード、および労働許可証更新に関する費用レコードを抽出します。"
+          },
+          "evidence_anchor": "① Filter code tài khoản mong muốn tại cột \"Code tà"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 10.4. Cách cộng dữ liệu",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Cộng dồn chi phí chuyên gia theo từng tháng",
+            "en": "Monthly Aggregation Method for Expat Paperwork Costs",
+            "ja": "月別外国人手続き費用の合算集計手法"
+          },
+          "supported_summary": {
+            "vi": "Cộng toàn bộ các khoản phí phát sinh của các chuyên gia trong tháng để ghi một số tiền tổng vào dòng 137.",
+            "en": "Sums all expat procedural fees incurred in the month into a unified monthly total on line 137.",
+            "ja": "該当月に発生したすべての専門家手続き費用を月ごとに合算し、137行目へ統合計上します。"
+          },
+          "evidence_anchor": "Lọc code 1412000018."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 10.5. Công thức hay giá trị?",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy định xuất giá trị và giữ công thức liên kết",
+            "en": "Value Output and Formula Preservation Guidelines",
+            "ja": "値出力およびリンク数式保持の適用指針"
+          },
+          "supported_summary": {
+            "vi": "Điền số tiền thực tế và liên kết công thức tổng cộng nếu chi phí được tổng hợp từ nhiều chứng từ con.",
+            "en": "Writes actual numeric amounts and preserves sum formulas when expenses consolidate multiple sub-vouchers.",
+            "ja": "実発生額を数値入力し、複数のサブ伝票から集計される場合は合計リンク数式を保持します。"
+          },
+          "evidence_anchor": "File nói “nhập số tiền của các tháng”. Không yêu c"
+        },
+        {
+          "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+          "source_section": "### 4. Chi phí làm giấy tờ cho người nước ngoài (Foreigners Paperwork Costs)",
+          "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Khái niệm phân loại chi phí chung",
+            "en": "General Cost Category Concepts",
+            "ja": "共通費用分類コンセプト"
+          },
+          "heading_title": {
+            "vi": "Khái niệm chi phí thủ tục visa chuyên gia nước ngoài",
+            "en": "Foreign Expert Visa and Paperwork Cost Concepts",
+            "ja": "外国人専門家のビザ・書類手続き費用概念"
+          },
+          "supported_summary": {
+            "vi": "Chi phí visa và giấy phép lao động của chuyên gia được tổng hợp và ghi nhận vào dòng 137 trên biểu mẫu kết quả.",
+            "en": "Visa and work permit fees for foreign experts are consolidated into line 137 on the output form.",
+            "ja": "外国人専門家のビザおよび労働許可証費用を集計し、出力フォームの137行目に計上します。"
+          },
+          "evidence_anchor": "- **Đặc điểm**: Đây là loại chi phí mới được bổ su"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_allocation_travel_shared",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Quy tắc phân bổ chi phí du lịch và dùng chung",
+        "keywords": [
+          "phân bổ du lịch",
+          "chi phí dùng chung",
+          "du lịch công ty",
+          "tỷ lệ phân bổ",
+          "bảng phân bổ"
+        ],
+        "answer_context": "Chi phí du lịch công ty và các khoản chi dùng chung từ khối hành chính được phân bổ tới từng phòng ban theo tỷ lệ nhân sự hoặc giá trị cố định được phê duyệt. Tệp nguồn phân bổ quy định rõ mã tài khoản và tỷ lệ áp dụng cho từng tháng.",
+        "safe_steps": [
+          "Kiểm tra tệp bảng phân bổ chi phí hành chính trong thư mục nguồn.",
+          "Xác nhận tỷ lệ phân bổ của phòng ban trong danh mục chung.",
+          "Chạy tính toán và đối soát dòng phân bổ du lịch trong kết quả."
+        ],
+        "aliases": [
+          "du lich dung chung",
+          "phan bo hanh chinh",
+          "chi phi su kien"
+        ]
+      },
+      "en": {
+        "title": "Company Travel and Shared Allocation Rules",
+        "keywords": [
+          "travel allocation",
+          "shared expenses",
+          "company trip",
+          "allocation ratio",
+          "shared cost table"
+        ],
+        "answer_context": "Company trip expenses and shared general administrative costs are allocated to individual departments based on headcount ratios or approved fixed rates. The allocation source file specifies account codes and effective distribution percentages by month.",
+        "safe_steps": [
+          "Verify the administrative allocation workbook is in the source folder.",
+          "Confirm the department allocation ratio in the master sheet.",
+          "Run Calculation and verify travel allocation line items in the output."
+        ],
+        "aliases": [
+          "shared travel cost",
+          "general allocation",
+          "event allocation"
+        ]
+      },
+      "ja": {
+        "title": "社員旅行および共有費用配賦ルール",
+        "keywords": [
+          "旅行配賦",
+          "共有費用",
+          "社員旅行",
+          "配賦比率",
+          "共通配賦表"
+        ],
+        "answer_context": "社員旅行費用および総務共有費用は、人員比率または承認済み固定レートに基づいて各部門に配賦されます。配賦元データファイルには勘定科目および月別の適用配賦比率が規定されています。",
+        "safe_steps": [
+          "ソースフォルダに総務配賦ワークブックがあることを確認してください。",
+          "マスタシートで部門の配賦比率を確認してください。",
+          "計算を実行し、出力シートの旅行配賦行を確認してください。"
+        ],
+        "aliases": [
+          "共有旅行費用",
+          "一般配賦",
+          "イベント配賦"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "### 4.7 Allocation / 配賦",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "### 4.7 Allocation / 配賦",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Module 23 quy tắc phân bổ chi phí chung",
+            "en": "23 Overhead Allocation Rules Execution Module",
+            "ja": "共通費用23配賦ルール実行モジュール"
+          },
+          "supported_summary": {
+            "vi": "Thực thi tính toán chi tiết 23 quy tắc phân bổ chi phí vật tư, bảo hộ lao động và sự kiện định kỳ cho từng phòng ban.",
+            "en": "Executes detailed calculations for 23 distribution rules covering consumables, protective gear, and periodic events.",
+            "ja": "事務用品、保護具、定期イベントに関する23の配賦ルールを各部門に対して詳細計算します。"
+          },
+          "evidence_anchor": "Current status: BLOCKED_BY_MISSING_DRIVER_DATA / S"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_fiscal_year_calendar",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Quy tắc lịch năm tài chính (Tháng 4 đến Tháng 3 năm sau)",
+        "keywords": [
+          "năm tài chính",
+          "lich nam",
+          "thang 4 den thang 3",
+          "chu ky tai chinh",
+          "ky tinh toan",
+          "fiscal year"
+        ],
+        "answer_context": "MP2027 tuân thủ lịch năm tài chính chuẩn Nhật Bản bắt đầu từ tháng 4 và kết thúc vào tháng 3 năm kế tiếp (12 tháng). Mọi vector phân bổ chi phí, dữ liệu nhân sự và các bảng tính kết quả đều sắp xếp theo thứ tự cột từ Tháng 4 đến Tháng 3.",
+        "safe_steps": [
+          "Kiểm tra dữ liệu nguồn đã chuẩn bị đúng kỳ 12 tháng từ tháng 4 đến tháng 3.",
+          "Xác nhận tiêu đề cột trên biểu mẫu hiển thị từ Tháng 4 đến Tháng 3.",
+          "Chạy tính toán và đối soát dữ liệu trên đủ 12 cột tháng."
+        ],
+        "aliases": [
+          "chu ky 12 thang",
+          "nam tai chinh nhat ban",
+          "lich tai chinh"
+        ]
+      },
+      "en": {
+        "title": "Fiscal Year Calendar Rules (April through Following March)",
+        "keywords": [
+          "fiscal year",
+          "calendar rules",
+          "april to march",
+          "financial cycle",
+          "calculation period"
+        ],
+        "answer_context": "MP2027 follows the standard Japanese fiscal year cycle starting in April and ending in March of the subsequent year (12 months). All cost allocation vectors, staffing tables, and output sheets are ordered from April through March across columns.",
+        "safe_steps": [
+          "Ensure source data covers the full 12-month period from April to March.",
+          "Confirm column headers on template sheets span April through March.",
+          "Run Calculation and check that all 12 monthly columns are populated."
+        ],
+        "aliases": [
+          "12 month cycle",
+          "japanese fiscal calendar",
+          "fiscal period"
+        ]
+      },
+      "ja": {
+        "title": "会計年度カレンダールール（4月〜翌年3月）",
+        "keywords": [
+          "会計年度",
+          "カレンダールール",
+          "4月から翌年3月",
+          "年度サイクル",
+          "計算期間"
+        ],
+        "answer_context": "MP2027は4月に始まり翌年3月に終了する日本の標準的な会計年度サイクル（12か月）に従います。すべての費用配賦ベクトル、人員表、および出力シートは4月から翌年3月までの列順で配置されます。",
+        "safe_steps": [
+          "元データが4月から3月までの12か月期間を網羅していることを確認してください。",
+          "テンプレートシートの列見出しが4月から3月になっていることを確認してください。",
+          "計算を実行し、12か月すべての列データを確認してください。"
+        ],
+        "aliases": [
+          "12か月サイクル",
+          "日本会計年度",
+          "年度期間"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## Vận hành nhiều năm tài chính",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## Vận hành nhiều năm tài chính",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Vận hành nhiều năm tài chính độc lập",
+            "en": "Multi-Year Fiscal Operation",
+            "ja": "複数年度の独立運用"
+          },
+          "supported_summary": {
+            "vi": "Hệ thống hỗ trợ chạy độc lập nhiều năm tài chính như FY2027 và FY2028; mỗi năm có bộ dữ liệu nguồn và thư mục kết quả riêng biệt, tuyệt đối không ghi đè dữ liệu giữa các năm.",
+            "en": "The system supports independent execution across multiple fiscal years like FY2027 and FY2028, requiring isolated source workbooks and separate output folders without cross-year overwriting.",
+            "ja": "システムはFY2027やFY2028などの複数年度の独立実行に対応しており、年度間でデータを上書きすることなく、年度別の元データと出力先フォルダを使用します。"
+          },
+          "evidence_anchor": "Chương trình dùng chung cho FY2027, FY2028 và các "
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_system_cost_account_mapping",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Ánh xạ mã tài khoản chi phí hệ thống KDC System theo Nguyên giá",
+        "keywords": [
+          "mã tài khoản hệ thống",
+          "kdc system",
+          "nguyên giá",
+          "5005246282",
+          "6005146628",
+          "6005146542",
+          "sản xuất",
+          "chung",
+          "bán hàng"
+        ],
+        "answer_context": "Chi phí hệ thống KDC System được ánh xạ mã tài khoản theo phân loại 原価区分 (Cost Classification): (1) Phân loại Sản xuất (製造): mã 5005246282. (2) Phân loại Quản lý chung (一般): mã 6005146628. (3) Phân loại Bán hàng (販売): mã 6005146542. Hệ thống tự động tra cứu Cost Center để lấy đúng mã tài khoản tương ứng.",
+        "safe_steps": [
+          "Kiểm tra phân loại 原価区分 của phòng ban trong sheet Cost Center.",
+          "Đối chiếu mã tài khoản hệ thống tương ứng (5005246282 cho sản xuất, 6005146628 cho quản lý, 6005146542 cho bán hàng).",
+          "Chạy tính toán và xác nhận mã tài khoản xuất hiện tại cột Account Code trên dòng chi phí hệ thống."
+        ],
+        "aliases": [
+          "tài khoản kdc",
+          "mã chi phí it",
+          "account kdc system"
+        ]
+      },
+      "en": {
+        "title": "KDC System Cost Account Code Mapping by Cost Classification",
+        "keywords": [
+          "system account mapping",
+          "kdc system account",
+          "5005246282",
+          "6005146628",
+          "6005146542",
+          "manufacturing",
+          "general admin",
+          "sales"
+        ],
+        "answer_context": "KDC System cost resolves account codes based on the department's Cost Classification (原価区分): (1) Manufacturing (製造): code 5005246282. (2) General Administration (一般): code 6005146628. (3) Sales (販売): code 6005146542. The engine automatically looks up the Cost Center master to select the matching account code.",
+        "safe_steps": [
+          "Check the Cost Classification of the target department in the Cost Center master.",
+          "Confirm the mapped account code (5005246282 for manufacturing, 6005146628 for general, 6005146542 for sales).",
+          "Run Calculation and verify the account code on the system cost row."
+        ],
+        "aliases": [
+          "kdc account code",
+          "it cost mapping",
+          "system account lookup",
+          "production system costs",
+          "production system cost account code"
+        ]
+      },
+      "ja": {
+        "title": "原価区分に応じたKDCシステム費用勘定科目マッピング",
+        "keywords": [
+          "システム勘定科目",
+          "kdcシステム科目",
+          "5005246282",
+          "6005146628",
+          "6005146542",
+          "製造",
+          "一般管理",
+          "販売"
+        ],
+        "answer_context": "KDCシステム費用は、部門の原価区分に応じて勘定科目が決定されます：(1) 製造：コード 5005246282、(2) 一般管理：コード 6005146628、(3) 販売：コード 6005146542。システムは原価センタマスタを参照して適切な科目を自動適用します。",
+        "safe_steps": [
+          "原価センタマスタで対象部門の原価区分を確認してください。",
+          "対応する勘定科目コード（製造: 5005246282、一般: 6005146628、販売: 6005146542）を確認してください。",
+          "計算を実行し、システム費用行の勘定科目列を確認してください。"
+        ],
+        "aliases": [
+          "kdc勘定科目",
+          "it費用マッピング",
+          "システム科目特定"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 7.7. Account code đúng cho chi phí hệ thống",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 7.7. Account code đúng cho chi phí hệ thống",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Mã tài khoản kế toán chuẩn cho chi phí hệ thống",
+            "en": "Canonical Account Codes for IT System Expenses",
+            "ja": "ITシステム費用の標準勘定科目コード定義"
+          },
+          "supported_summary": {
+            "vi": "Sử dụng mã 5005246282 cho quý 1 và các mã tài khoản chuẩn tương ứng cho các quý tiếp theo.",
+            "en": "Assigns account 5005246282 for Q1 and appropriate standard account codes for subsequent quarters.",
+            "ja": "第1四半期にはコード5005246282を割り当て、後続四半期には所定の標準勘定科目を適用します。"
+          },
+          "evidence_anchor": "Trong sheet `勘定科目`, tài khoản hệ thống nội bộ/KDC "
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_facility_cost_breakdown",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Thứ tự phân rã 6 khoản chi phí cơ sở vật chất (Facility)",
+        "keywords": [
+          "phân rã cơ sở vật chất",
+          "6 khoản chi phí",
+          "thứ tự facility",
+          "khấu hao nhà",
+          "khấu hao đất",
+          "lãi nhà",
+          "lãi đất",
+          "tiền điện",
+          "tiền nước"
+        ],
+        "answer_context": "Nhóm chi phí cơ sở vật chất (Facility) được xuất ra bảng tính kết quả theo đúng thứ tự 6 khoản cố định: (1) Khấu hao nhà xưởng, (2) Khấu hao đất/mặt bằng, (3) Lãi vay nhà xưởng, (4) Lãi vay đất, (5) Chi phí tiền điện, (6) Chi phí tiền nước. Các công thức SUM tổng nhóm phải được giữ nguyên.",
+        "safe_steps": [
+          "Kiểm tra kết quả nhóm cơ sở vật chất xuất hiện đầy đủ theo thứ tự 6 khoản.",
+          "Xác nhận các dòng thành phần không bị đảo lộn thứ tự.",
+          "Kiểm tra công thức tính tổng nhóm cơ sở vật chất hoạt động chính xác."
+        ],
+        "aliases": [
+          "thứ tự 6 khoản cơ sở",
+          "breakdown facility",
+          "chi tiết chi phí nhà đất"
+        ]
+      },
+      "en": {
+        "title": "Fixed 6-Item Facility Cost Breakdown Sequence",
+        "keywords": [
+          "facility breakdown",
+          "6 facility items",
+          "facility sequence",
+          "building depreciation",
+          "land depreciation",
+          "building interest",
+          "land interest",
+          "electricity",
+          "water"
+        ],
+        "answer_context": "Facility costs are exported in a fixed 6-item sequence: (1) Building Depreciation, (2) Land/Site Depreciation, (3) Building Interest, (4) Land Interest, (5) Electricity Expense, (6) Water Expense. Subtotal SUM formulas for the group are strictly preserved.",
+        "safe_steps": [
+          "Check that the facility section in the output contains all 6 items in sequence.",
+          "Verify that line items are not reordered or omitted.",
+          "Confirm that subtotal SUM formulas calculate accurately."
+        ],
+        "aliases": [
+          "6 item facility order",
+          "facility cost breakdown",
+          "building cost sequence"
+        ]
+      },
+      "ja": {
+        "title": "施設費6項目の固定内訳順序",
+        "keywords": [
+          "施設費内訳",
+          "施設6項目",
+          "施設順序",
+          "建物減価償却",
+          "土地減価償却",
+          "建物利息",
+          "土地利息",
+          "電気代",
+          "水道代"
+        ],
+        "answer_context": "施設課費用は固定された6項目の順序で出力されます：(1) 建物減価償却費、(2) 土地減価償却費、(3) 建物利息、(4) 土地利息、(5) 電気代、(6) 水道代。グループの小計SUM数式は保持されます。",
+        "safe_steps": [
+          "出力の施設セクションに6項目が順序通り配置されていることを確認してください。",
+          "各項目行が入れ替わったり欠落していないことを確認してください。",
+          "小計SUM数式が正しく計算されていることを確認してください。"
+        ],
+        "aliases": [
+          "施設6項目順序",
+          "施設費ブレークダウン",
+          "建物費用順序"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 8.2. Thứ tự chi phí",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 8.2. Thứ tự chi phí",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Thứ tự xuất các dòng chi phí cơ sở vật chất",
+            "en": "Export Sequence of Facility Expense Rows",
+            "ja": "施設費用行の出力順序定義"
+          },
+          "supported_summary": {
+            "vi": "Xuất các dòng khấu hao nhà đất trước, tiếp theo là tiền thuê đất, tiền điện và tiền nước theo đúng mẫu biểu gốc.",
+            "en": "Writes land depreciation rows first, followed sequentially by land lease, electricity, and water lines.",
+            "ja": "土地・建物減価償却行を最初に出力し、次いで土地賃料、電気代、水道代の順で出力します。"
+          },
+          "evidence_anchor": "File yêu cầu ghi thứ tự:"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_admin_monthly_events",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Quy tắc phân bổ chi phí sự kiện theo từng tháng từ Hành chính",
+        "keywords": [
+          "chi phí sự kiện",
+          "sự kiện theo tháng",
+          "du lịch tháng 5",
+          "quà du lịch tháng 6",
+          "trung thu tháng 9",
+          "tri ân 10 năm tháng 10",
+          "lịch tháng 11",
+          "tất niên lì xì tháng 2",
+          "khám sức khỏe tháng 12"
+        ],
+        "answer_context": "Các sự kiện hành chính phát sinh theo từng tháng đặc thù: Tháng 5 (Du lịch công ty), Tháng 6 (Quà cho người không đi du lịch), Tháng 9 (Bánh trung thu), Tháng 10 (Tri ân 10 năm), Tháng 11 (Lịch công ty), Tháng 12 (Khám sức khỏe nam/nữ định kỳ), Tháng 2 (Tất niên và Lì xì tết). Mỗi sự kiện chỉ được điền vào đúng tháng diễn ra, các tháng còn lại để giá trị 0 hoặc trống.",
+        "safe_steps": [
+          "Kiểm tra danh sách sự kiện và tháng diễn ra trên bảng nhập liệu sự kiện.",
+          "Xác nhận số tiền hoặc số lượng người tham gia của từng sự kiện.",
+          "Chạy tính toán và đối soát kết quả: chi phí sự kiện chỉ xuất hiện tại đúng cột tháng tương ứng."
+        ],
+        "aliases": [
+          "sự kiện hành chính",
+          "chi phí theo tháng",
+          "lịch sự kiện năm"
+        ]
+      },
+      "en": {
+        "title": "Monthly Specific Event Allocation Rules from General Administration",
+        "keywords": [
+          "event allocation",
+          "monthly events",
+          "May trip",
+          "June non-trip gift",
+          "September mooncake",
+          "October anniversary",
+          "November calendar",
+          "December medical check",
+          "February year-end lucky money"
+        ],
+        "answer_context": "General administrative events occur in specific months: May (Company Trip), June (Gift for non-attendees), September (Mid-Autumn Mooncake), October (10-Year Recognition), November (Company Calendar), December (Annual Medical Check), February (Year-End Party and Lucky Money). Each event amount is populated only in its active month; other months remain zero or blank.",
+        "safe_steps": [
+          "Check the event list and designated months in the event input sheet.",
+          "Verify participant counts or amounts for each event.",
+          "Run Calculation and confirm that event costs appear strictly in the matching monthly columns."
+        ],
+        "aliases": [
+          "admin events",
+          "month-specific costs",
+          "event schedule"
+        ]
+      },
+      "ja": {
+        "title": "総務発の月別特定イベント費用配賦ルール",
+        "keywords": [
+          "イベント配賦",
+          "月別イベント",
+          "5月旅行",
+          "6月旅行不参加ギフト",
+          "9月中秋月餅",
+          "10月10年表彰",
+          "11月カレンダー",
+          "12月定期健診",
+          "2月忘年会お年玉"
+        ],
+        "answer_context": "総務イベントは特定月に発生します：5月（社員旅行）、6月（不参加者ギフト）、9月（月餅）、10月（10年勤続表彰）、11月（カレンダー）、12月（定期健康診断）、2月（忘年会・お年玉）。各イベント費用は該当月のみに計上され、他の月は0または空白となります。",
+        "safe_steps": [
+          "イベント入力シートでイベント一覧と対象月を確認してください。",
+          "各イベントの参加人数または金額を確認してください。",
+          "計算を実行し、イベント費用が該当月の列にのみ出力されていることを確認してください。"
+        ],
+        "aliases": [
+          "総務イベント",
+          "特定月費用",
+          "イベントスケジュール"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 12.2. Nhóm 2 — chi phí đặc thù theo từng tháng",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 12.2. Nhóm 2 — chi phí đặc thù theo từng tháng",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Phân bổ các khoản chi phí sự kiện đặc thù theo tháng",
+            "en": "Group 2: Month-Specific Periodic Corporate Events",
+            "ja": "グループ2: 発生月指定の定期社内イベント費用配賦"
+          },
+          "supported_summary": {
+            "vi": "Lấy mã tài khoản kế toán từ danh mục master và phân bổ chi phí vào đúng tháng diễn ra sự kiện theo số người tham gia.",
+            "en": "Looks up account codes in master directories and allocates expenses into active event months based on participant counts.",
+            "ja": "マスターから勘定科目を参照し、参加人数に基づいてイベント開催月へ正確に配賦計上します。"
+          },
+          "evidence_anchor": "Cách lấy mã account đúng:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 12.3. Lưu ý filter nội dung",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Lưu ý lọc chính xác tên hạng mục trước dấu hai chấm",
+            "en": "Content Filtering Rules Matching Text Before Colons",
+            "ja": "コロン前の項目名に基づく抽出・フィルタ基準"
+          },
+          "supported_summary": {
+            "vi": "Lọc đúng chuỗi văn bản tiêu đề trước dấu hai chấm để khớp chính xác với dòng chi phí trên bảng phân bổ.",
+            "en": "Filters exact header text preceding colons to match corresponding expense lines on allocation tables.",
+            "ja": "コロン前の正確なヘッダーテキストを抽出条件として使用し、配賦表の費用行と正確に照合します。"
+          },
+          "evidence_anchor": "Filter giống như đầu mục trước dấu 2 chấm."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 12.4. Ví dụ `社員旅行 / Du lịch công ty`",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Ví dụ phân bổ chi phí du lịch công ty vào tháng 5",
+            "en": "Case Study: Allocating Company Trip Expenses to May",
+            "ja": "具体例: 5月社員旅行費用の配賦処理手順"
+          },
+          "supported_summary": {
+            "vi": "Ví dụ phân bổ chi phí du lịch công ty cho phòng sản xuất mã 1412000089 vào cột tháng 5 theo mã tài khoản 5005246281.",
+            "en": "Demonstrates mapping May company trip costs for manufacturing unit 1412000089 to account 5005246281.",
+            "ja": "製造部門1412000089に対する5月の社員旅行費用を勘定科目5005246281へ配賦する具体例です。"
+          },
+          "evidence_anchor": "Ví dụ trong file:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 12.5. Danh sách event/hạng mục đặc thù theo tháng",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Danh mục các sự kiện nội bộ định kỳ trong năm",
+            "en": "Catalog of Periodic Events and Month-Specific Drivers",
+            "ja": "定期社内イベントおよび月別ドライバー一覧"
+          },
+          "supported_summary": {
+            "vi": "Tổng hợp danh sách các sự kiện gồm tiệc chúc mừng, du lịch công ty, tiệc thành lập và tiệc tất niên kèm tháng tổ chức.",
+            "en": "Catalogs corporate events including kickoff parties, company trips, anniversary gifts, and year-end celebrations.",
+            "ja": "決起コンパ、社員旅行、創立記念品、忘年会など、開催月と対象イベントを網羅した一覧です。"
+          },
+          "evidence_anchor": "Các khoản áp dụng cùng cách làm trên:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 12.6. Khám sức khỏe định kỳ nam/nữ",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy tắc phân bổ chi phí khám sức khỏe định kỳ nam/nữ",
+            "en": "Periodic Medical Check Cost Rules for Male and Female Staff",
+            "ja": "男女別定期健康診断費用の配賦ルール"
+          },
+          "supported_summary": {
+            "vi": "Tính chi phí khám sức khỏe định kỳ bằng số lượng nhân viên nam và nữ nhân đơn giá tương ứng và ghi vào tháng tổ chức khám.",
+            "en": "Computes periodic medical check costs using male/female counts multiplied by specific rates into the checkup month.",
+            "ja": "男女別の人員数にそれぞれの所定単価を乗じて定期健康診断費用を算出し、実施月へ計上します。"
+          },
+          "evidence_anchor": "Khám sức khỏe (cho CNV nam)"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 26.2. Claim 13: Chưa có tiền du lịch của tháng 5",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Nghiệm thu Claim 13: Bổ sung tiền du lịch vào tháng 5",
+            "en": "Claim 13 Resolution: Allocating Company Trip Expenses to May",
+            "ja": "Claim 13検収: 5月列への社員旅行費用の確実な計上"
+          },
+          "supported_summary": {
+            "vi": "Bổ sung chi phí du lịch công ty vào cột tháng 5 theo đúng số lượng người tham gia thực tế của phòng ban.",
+            "en": "Adds company trip expenses into the May column based on verified actual department participant numbers.",
+            "ja": "部門の実際の参加人数実績に基づいて、社員旅行費用を5月列へ確実に計上します。"
+          },
+          "evidence_anchor": "> **Excel Row 268 cột M** (item 13):"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 27. Yêu cầu bổ sung — item 20: Chi phí event theo tháng chưa chạy được",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Yêu cầu bổ sung phân bổ chi phí sự kiện theo tháng",
+            "en": "Supplementary Requirement: Monthly Event Cost Allocation",
+            "ja": "追加要件: 月次イベント費用の配賦計算仕様"
+          },
+          "supported_summary": {
+            "vi": "Đặc tả phân bổ các sự kiện định kỳ vào đúng tháng phát sinh và xử lý ngoại lệ cho các khoản chi có số người riêng.",
+            "en": "Specifies distributing periodic events into actual occurrence months with exceptions for custom headcount items.",
+            "ja": "定期イベントの発生月別配賦および「個別人数指定」項目の例外処理を定めた追加仕様です。"
+          },
+          "evidence_anchor": "> **Nguồn**: Excel gốc sheet `Hạng mục cần cải tiế"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 27.1. Nội dung yêu cầu",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Nội dung yêu cầu phân bổ sự kiện du lịch và tiệc",
+            "en": "Requirement Details: Company Trip and Party Allocations",
+            "ja": "社員旅行および決起コンパの配賦要件詳細"
+          },
+          "supported_summary": {
+            "vi": "Phân bổ chi phí du lịch công ty và tiệc khuấy động năm tài chính vào tháng 5 theo đúng số lượng nhân sự tham gia.",
+            "en": "Allocates company trip and fiscal kickoff party expenses into May according to verified participant numbers.",
+            "ja": "社員旅行および決起コンパの費用を、確認済み参加人数に基づき5月へ配賦します。"
+          },
+          "evidence_anchor": "> **Excel Row 341 cột F** (item 20):"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 27.3. Ưu tiên giữa yêu cầu 7 và yêu cầu 20",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy tắc ưu tiên giữa yêu cầu 7 và yêu cầu bổ sung 20",
+            "en": "Precedence Rule: Supplementary Item 20 Overrides Item 7",
+            "ja": "優先順位ルール: 追加要件20が要件7より優先"
+          },
+          "supported_summary": {
+            "vi": "Khi có xung đột về các khoản chi có số người riêng, hệ thống ưu tiên tuân theo yêu cầu số 20 để tạm bỏ qua khoản chi.",
+            "en": "When conflicts arise regarding custom headcount items, the system strictly prioritizes Item 20 to defer calculation.",
+            "ja": "個別人数項目に関する要件の競合時は、要件20の除外ルールを最優先として適用します。"
+          },
+          "evidence_anchor": "> **Excel Row 343 cột F**:"
+        },
+        {
+          "source_path": "wiki/timelines/nhap-lieu-nhan-su-master-plan.md",
+          "source_section": "### 2. Dữ liệu nhân sự đặc thù theo từng tháng",
+          "source_sha256": "dd88f9cb69b680fa389e40e0502fdb7f951c0852fddd7fca8ed18ef466abc223",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Kế hoạch nhập liệu nhân sự 12 tháng",
+            "en": "12-Month Staffing Input Master Plan",
+            "ja": "12か月人員データ入力マスタープラン"
+          },
+          "heading_title": {
+            "vi": "Chỉ tiêu nhân sự biến động và tuyển mới theo tháng",
+            "en": "Monthly Variable Headcount and New Hire Metrics",
+            "ja": "月別の変動人員および新入社員指標"
+          },
+          "supported_summary": {
+            "vi": "Ghi nhận số lượng nhân viên mới tuyển dụng, người sinh nhật và người đi khám sức khỏe riêng biệt theo từng tháng.",
+            "en": "Tracks new recruit numbers, birthday celebrants, and medical check participants separately for each month.",
+            "ja": "新入社員数、誕生日対象者数、健康診断受診者数を月ごとに個別に記録・管理します。"
+          },
+          "evidence_anchor": "- **Tháng 3 (FY cũ)**: Nhập số người để tính chi p"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_form_column_alignment",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Quy tắc đẩy dữ liệu về đúng cột theo biểu mẫu FORM",
+        "keywords": [
+          "đúng cột form",
+          "12 cột tháng",
+          "cột f đến q",
+          "cột a đến e",
+          "căn chỉnh cột",
+          "form chuẩn"
+        ],
+        "answer_context": "Hệ thống đảm bảo đẩy toàn bộ dữ liệu chi phí vào đúng cấu trúc cột chuẩn của FORM: Cột A-D (thông tin tài khoản/phân loại), Cột E (tên hiển thị hạng mục chi phí), và Cột F đến Q (12 tháng từ tháng 4 đến tháng 3). Tuyệt đối không làm lệch vị trí các cột dữ liệu.",
+        "safe_steps": [
+          "Mở file kết quả sau khi chạy tính toán.",
+          "Xác nhận Cột E chứa đúng tên hạng mục và Cột F:Q chứa đúng số liệu 12 tháng.",
+          "Kiểm tra không có cột nào bị dịch chuyển hay ghi đè sai vị trí."
+        ],
+        "aliases": [
+          "căn cột excel",
+          "cột f đến q",
+          "cấu trúc form"
+        ]
+      },
+      "en": {
+        "title": "Data Alignment to Target FORM Column Structure",
+        "keywords": [
+          "column alignment",
+          "12 month columns",
+          "columns F to Q",
+          "columns A to E",
+          "FORM layout",
+          "standard columns"
+        ],
+        "answer_context": "The system ensures all allocated expense data aligns strictly with standard FORM columns: Columns A-D (Account/Classification info), Column E (Cost item display name), and Columns F through Q (12 months from April through March). Column positions must never shift.",
+        "safe_steps": [
+          "Open the exported result workbook.",
+          "Verify Column E contains cost names and Columns F:Q contain the 12-month data.",
+          "Check that no columns are shifted or written to wrong positions."
+        ],
+        "aliases": [
+          "column structure",
+          "form columns F to Q",
+          "excel alignment"
+        ]
+      },
+      "ja": {
+        "title": "FORMテンプレートの指定列へのデータ配置ルール",
+        "keywords": [
+          "列配置",
+          "12か月列",
+          "F列からQ列",
+          "A列からE列",
+          "FORMレイアウト",
+          "標準列構造"
+        ],
+        "answer_context": "システムはすべての配賦データを標準FORM列構造に厳格に配置します：A〜D列（科目・分類情報）、E列（費用項目表示名）、F〜Q列（4月〜翌年3月の12か月）。列位置がずれることはありません。",
+        "safe_steps": [
+          "エクスポートされた結果ワークブックを開いてください。",
+          "E列に費用項目名、F〜Q列に12か月データが配置されていることを確認してください。",
+          "列のずれや誤った位置への書き込みがないことを確認してください。"
+        ],
+        "aliases": [
+          "列構造ルール",
+          "FからQ列",
+          "エクセル列配置"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 4.2. Đẩy dữ liệu về đúng cột theo FORM",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 4.2. Đẩy dữ liệu về đúng cột theo FORM",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Căn chỉnh dữ liệu vào các cột tháng của biểu mẫu",
+            "en": "Aligning 12-Month Expense Data to Correct Form Columns",
+            "ja": "フォームの月別列へのデータ正確配置"
+          },
+          "supported_summary": {
+            "vi": "Điền số tiền chi phí 12 tháng vào dải cột từ cột E trở đi, bảo toàn nguyên vẹn các cột định danh A đến D.",
+            "en": "Populates 12-month expense amounts into columns starting from Column E while protecting metadata columns A through D.",
+            "ja": "A〜D列の識別情報を保護したまま、12か月の費用金額をE列以降の正しい月別列へ配置します。"
+          },
+          "evidence_anchor": "Sheet `Hạng mục cần cải tiến` yêu cầu: **Đẩy các c"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_fixed_assets_audit_history",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Lịch sử đối soát và kiểm toán tài sản cố định",
+        "keywords": [
+          "audit tai san co dinh",
+          "kiem toan tai san",
+          "lich su giai thich",
+          "doi soat khau hao"
+        ],
+        "answer_context": "Lịch sử kiểm toán và giải thích phân bổ khấu hao tài sản cố định qua các kỳ đối soát, theo dõi nguyên giá, thời gian bắt đầu và kết thúc khấu hao trong năm tài chính. Hãy xác nhận lại trước khi áp dụng vào số liệu thực tế.",
+        "safe_steps": [
+          "Đối chiếu danh mục tài sản cố định từ tệp nguồn.",
+          "Kiểm tra tháng kết thúc khấu hao có nằm trong năm FY2027 hay không.",
+          "Xác nhận số liệu khấu hao hàng tháng trước khi kết xuất FORM."
+        ],
+        "aliases": [
+          "audit tai san co dinh",
+          "kiem toan tai san"
+        ]
+      },
+      "en": {
+        "title": "Fixed Assets Audit Trail and Explanatory History",
+        "keywords": [
+          "fixed asset audit",
+          "depreciation audit history",
+          "fixed asset reconciliation",
+          "asset depreciation trace"
+        ],
+        "answer_context": "Audit trail and reconciliation history for fixed asset depreciation, tracking original cost, depreciation start/end dates within the fiscal year. Please confirm before applying to actual operational figures.",
+        "safe_steps": [
+          "Reconcile fixed asset list against source workbooks.",
+          "Verify whether depreciation end month falls inside FY2027.",
+          "Confirm monthly depreciation amounts prior to FORM output."
+        ],
+        "aliases": [
+          "fixed asset audit",
+          "depreciation audit history"
+        ]
+      },
+      "ja": {
+        "title": "固定資産監査証跡および照合履歴",
+        "keywords": [
+          "固定資産監査",
+          "償却履歴",
+          "固定資産照合",
+          "減価償却監査"
+        ],
+        "answer_context": "固定資産の減価償却配賦に関する監査履歴と照合説明です。取得原価および当期（FY2027）内外の償却完了月を確認できます。実際の業務数値に適用する前に再確認してください。",
+        "safe_steps": [
+          "元データファイルから固定資産台帳を照合してください。",
+          "減価償却完了月がFY2027年度内か確認してください。",
+          "FORM出力前に月別償却額を再確認してください。"
+        ],
+        "aliases": [
+          "固定資産監査",
+          "償却履歴"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "### Audit tài sản cố định và lịch sử giải thích",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "reference_with_caveat",
+        "review_status": "reference_with_caveat"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "### Audit tài sản cố định và lịch sử giải thích",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "reference_with_caveat",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Lịch sử kiểm toán tài sản cố định và khấu hao",
+            "en": "Fixed Assets Depreciation Audit History",
+            "ja": "固定資産減価償却の監査履歴"
+          },
+          "supported_summary": {
+            "vi": "Ghi chép lịch sử kiểm toán đối soát khấu hao tài sản cố định và lưu vết các quyết định phân loại chênh lệch giữa các lần chạy số liệu.",
+            "en": "Maintains audit history for fixed asset depreciation reconciliation and records classification decisions for cross-run variances.",
+            "ja": "固定資産減価償却の照合監査履歴を保持し、実行回ごとの差異分類の判断履歴を記録しています。"
+          },
+          "evidence_anchor": "Luồng tính tài sản cố định trong pipeline chính đọ"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_birthday_form_row_conflict",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Đối soát dòng chi phí sinh nhật trên biểu mẫu FORM (dòng 63 vs dòng 59)",
+        "keywords": [
+          "dong 63 dong 59",
+          "dong sinh nhat form",
+          "xung dot dong form",
+          "vi tri sinh nhat"
+        ],
+        "answer_context": "Trong một số phiên bản mẫu biểu FORM trước đây có sự khác biệt giữa dòng 63 và dòng 59 cho mục chi phí sinh nhật. Người dùng cần đối chiếu đúng dòng có tiêu đề sinh nhật trên mẫu Excel chính thức đang sử dụng. Hãy xác nhận lại trước khi áp dụng vào số liệu thực tế.",
+        "safe_steps": [
+          "Mở mẫu biểu FORM chính thức của phòng ban.",
+          "Tìm đúng dòng có tiêu đề chi phí sinh nhật (Birthday).",
+          "Đảm bảo công thức tổng tại biểu mẫu đã liên kết đúng dòng."
+        ],
+        "aliases": [
+          "dong 63 dong 59",
+          "dong sinh nhat form"
+        ]
+      },
+      "en": {
+        "title": "Birthday Cost FORM Row Reconciliation (Row 63 vs Row 59)",
+        "keywords": [
+          "birthday row 63 59",
+          "birthday form row",
+          "row conflict form",
+          "birthday line position"
+        ],
+        "answer_context": "In earlier template variations, birthday expenses appeared at row 63 or row 59. Operators should verify against the active official template to ensure the birthday row matches. Please confirm before applying to actual operational figures.",
+        "safe_steps": [
+          "Open the active official FORM template for the department.",
+          "Locate the row labeled Birthday expense.",
+          "Verify that sum formulas correctly reference the active row."
+        ],
+        "aliases": [
+          "birthday row 63 59",
+          "birthday form row"
+        ]
+      },
+      "ja": {
+        "title": "誕生日費用 FORM行番号照合（63行目 vs 59行目）",
+        "keywords": [
+          "誕生日行",
+          "63行目59行目",
+          "FORM行の競合",
+          "誕生日行位置"
+        ],
+        "answer_context": "過去のテンプレート版によって誕生日費用の配置行が63行目または59行目と異なる場合があります。現行の公式テンプレートの「誕生日」行を確認してください。実際の業務数値に適用する前に再確認してください。",
+        "safe_steps": [
+          "部門の公式FORMテンプレートを開いてください。",
+          "「誕生日」と記載された行番号を確認してください。",
+          "合計数式が正しい行を参照しているか確認してください。"
+        ],
+        "aliases": [
+          "誕生日行",
+          "63行目59行目"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 11.5. Xung đột dòng FORM: dòng 63 hay dòng 59",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "reference_with_caveat",
+        "review_status": "reference_with_caveat"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 11.5. Xung đột dòng FORM: dòng 63 hay dòng 59",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "reference_with_caveat",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Giải quyết xung đột dòng biểu mẫu sinh nhật 59 vs 63",
+            "en": "Resolution of Birthday Form Line Conflict (Row 59 vs 63)",
+            "ja": "誕生日祝金フォーム行の競合解消仕様（59行目 vs 63行目）"
+          },
+          "supported_summary": {
+            "vi": "Xác nhận dòng 59 là vị trí chính thức trên biểu mẫu kết quả mới thay vì dòng 63 của biểu mẫu cũ.",
+            "en": "Confirms row 59 as the canonical target line on the modern form, superseding historical line 63.",
+            "ja": "旧フォームの63行目を廃止し、最新の出力フォームでは59行目を正式な計上行として確定しました。"
+          },
+          "evidence_anchor": "File có 2 thông tin:"
+        }
+      ]
+    }
+  ]
+}

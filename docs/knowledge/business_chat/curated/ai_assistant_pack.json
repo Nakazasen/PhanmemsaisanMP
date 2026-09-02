@@ -1,0 +1,1320 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "ai_assistant_pack",
+  "status": "approved",
+  "review_status": "approved",
+  "business_area": "operations",
+  "authority": "canonical",
+  "external_shareable": true,
+  "source_ref_ids": [
+    "curated_ai_operations_assistant_guidance"
+  ],
+  "entries": [
+    {
+      "topic_id": "cur_ai_assistant_diagnostics",
+      "business_area": "operations",
+      "vi": {
+        "title": "Tổng quan tính năng Trợ lý AI và chẩn đoán sự cố",
+        "keywords": [
+          "tro ly ai",
+          "chan doan su co",
+          "hoi dap ai",
+          "ho tro van hanh",
+          "giai thich loi"
+        ],
+        "answer_context": "Trợ lý AI là công cụ hỗ trợ người dùng MP2027 giải thích nguyên nhân sự cố và hướng dẫn các bước khắc phục an toàn. Trợ lý hoạt động hoàn toàn cục bộ, chỉ đọc, bảo vệ dữ liệu nội bộ và sử dụng ngôn ngữ nghiệp vụ thân thiện, không hiển thị mã kỹ thuật phức tạp.",
+        "safe_steps": [
+          "Bấm nút Hỏi AI nội bộ trên thanh công cụ ứng dụng.",
+          "Nhập câu hỏi bằng tiếng Việt, tiếng Anh hoặc tiếng Nhật về thao tác cần thực hiện.",
+          "Thực hiện theo các bước hướng dẫn an toàn được AI đề xuất."
+        ],
+        "aliases": [
+          "tro ly ai van hanh",
+          "chan doan ai",
+          "huong dan ai"
+        ]
+      },
+      "en": {
+        "title": "AI Operations Assistant Diagnostic Overview",
+        "keywords": [
+          "ai assistant",
+          "issue diagnosis",
+          "internal ai",
+          "operations support",
+          "error explanation"
+        ],
+        "answer_context": "The AI Assistant helps MP2027 operators understand issue causes and follow safe recovery steps. It runs locally and read-only, protecting internal business data while using clean, non-technical business language without confusing error IDs.",
+        "safe_steps": [
+          "Click Internal AI Assistant on the application toolbar.",
+          "Enter your question in English, Vietnamese, or Japanese about the task or issue.",
+          "Follow the safe, actionable steps recommended by the assistant."
+        ],
+        "aliases": [
+          "ai operations assistant",
+          "ai diagnosis",
+          "ai help"
+        ]
+      },
+      "ja": {
+        "title": "AIオペレーションアシスタントと障害診断の概要",
+        "keywords": [
+          "aiアシスタント",
+          "障害診断",
+          "社内ai",
+          "運用支援",
+          "エラー解説"
+        ],
+        "answer_context": "AIアシスタントは、MP2027の運用担当者が障害原因を理解し、安全な対処手順を実施できるよう支援するツールです。完全ローカル・読み取り専用で動作し、社内データを保護しながら専門用語やIDを省いた分かりやすい業務用語で説明します。",
+        "safe_steps": [
+          "ツールバーの「社内AIに質問」をクリックしてください。",
+          "操作やエラーに関する質問を日本語、英語、またはベトナム語で入力してください。",
+          "AIから提案された安全な手順に従って対処を実施してください。"
+        ],
+        "aliases": [
+          "aiアシスタント",
+          "ai診断",
+          "aiヘルプ"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/operations/ai_operations_assistant.md",
+        "source_section": "## 1. Tổng quan & Mục đích (Overview)",
+        "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "## 1. Tổng quan & Mục đích (Overview)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Tổng quan và mục đích Trợ lý AI MP2027",
+            "en": "AI Operations Assistant Overview and Purpose",
+            "ja": "AIオペレーションアシスタントの概要と目的"
+          },
+          "supported_summary": {
+            "vi": "Trợ lý AI hỗ trợ người dùng tra cứu quy định tài chính, giải thích kết quả tính toán và hướng dẫn khắc phục sự cố ngay trên ứng dụng.",
+            "en": "The AI assistant enables operators to query financial rules, understand cost outputs, and resolve operational issues within the app.",
+            "ja": "アプリ内で財務ルールの照会、配賦計算結果の解説、および障害復旧手順の案内を提供する業務支援AIです。"
+          },
+          "evidence_anchor": "Tính năng **Trợ lý Vận hành & Xử lý Lỗi** (AI Oper"
+        },
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "## 2. Quy trình thao tác của người dùng (User Workflow)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Quy trình tương tác và đặt câu hỏi với AI",
+            "en": "User Interaction and Query Workflow",
+            "ja": "AIとの対話および質問操作ワークフロー"
+          },
+          "supported_summary": {
+            "vi": "Người dùng nhập câu hỏi bằng tiếng Việt, tiếng Anh hoặc tiếng Nhật để nhận câu trả lời kèm trích dẫn tài liệu gốc đã được xác thực.",
+            "en": "Users submit queries in Vietnamese, English, or Japanese to receive grounded answers with verified source document citations.",
+            "ja": "ベトナム語、英語、日本語で質問を入力し、検証済みの原本ドキュメントの引用付き回答を受け取ります。"
+          },
+          "evidence_anchor": "A[\"Mở cửa sổ 'Lịch sử các lần chạy'\"] --> B{\"Chọn "
+        },
+        {
+          "source_path": "docs/operations/ai_operations_assistant_scope.md",
+          "source_section": "# Phạm vi tính năng: Trợ lý Vận hành & Xử lý Lỗi (AI Operations Assistant - MVP Read-only)",
+          "source_sha256": "fd73341eb0739a2447c081b308db35c5536303e49b3923b37651b1350ca211df",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Phạm vi tính năng và ranh giới an toàn Trợ lý AI",
+            "en": "AI Assistant Feature Scope and Safety Boundary",
+            "ja": "AIアシスタント機能範囲と安全境界仕様"
+          },
+          "heading_title": {
+            "vi": "Đặc tả phạm vi hoạt động của Trợ lý AI",
+            "en": "AI Operations Assistant Operational Scope",
+            "ja": "AIオペレーションアシスタントの機能範囲定義"
+          },
+          "supported_summary": {
+            "vi": "Quy định ranh giới tính năng của Trợ lý AI: hoạt động ở chế độ chỉ đọc, tập trung hỗ trợ hướng dẫn vận hành và chẩn đoán sự cố nội bộ.",
+            "en": "Defines operational boundaries for the AI Assistant: read-only mode focused on operational guidance and internal issue diagnostics.",
+            "ja": "AIアシスタントの運用範囲を規定し、業務ガイダンスおよび社内障害診断に特化した読み取り専用モードとして機能します。"
+          },
+          "evidence_anchor": "> **Document Control**:"
+        },
+        {
+          "source_path": "docs/operations/ai_operations_assistant_scope.md",
+          "source_section": "## 2. Các chức năng trong phạm vi (In-Scope for MVP)",
+          "source_sha256": "fd73341eb0739a2447c081b308db35c5536303e49b3923b37651b1350ca211df",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Phạm vi tính năng và ranh giới an toàn Trợ lý AI",
+            "en": "AI Assistant Feature Scope and Safety Boundary",
+            "ja": "AIアシスタント機能範囲と安全境界仕様"
+          },
+          "heading_title": {
+            "vi": "Danh mục các tính năng được phê duyệt cho AI",
+            "en": "Approved In-Scope Feature Catalog for AI Assistant",
+            "ja": "AIアシスタントの承認済み対象機能一覧"
+          },
+          "supported_summary": {
+            "vi": "Bao gồm tra cứu quy tắc phân bổ, giải thích công thức tính, chẩn đoán lỗi tệp bảng tính và hỗ trợ hỏi đáp đa ngôn ngữ.",
+            "en": "Covers allocation rule queries, calculation formula explanations, workbook error diagnostics, and multilingual Q&A support.",
+            "ja": "配賦ルールの照会、計算式の解説、ワークブックのエラー診断、および多言語Q&Aサポートが機能範囲に含まれます。"
+          },
+          "evidence_anchor": "- **Trích xuất bằng chứng có căn cứ (Evidence-base"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_ai_assistant_copy_response",
+      "business_area": "operations",
+      "vi": {
+        "title": "Sao chép câu trả lời của AI vào bộ nhớ tạm (Clipboard)",
+        "keywords": [
+          "sao chep cau tra loi",
+          "copy clipboard",
+          "nut copy",
+          "luu huong dan"
+        ],
+        "answer_context": "Người dùng có thể sao chép nhanh toàn bộ nội dung câu trả lời của AI vào clipboard bằng cách bấm nút Sao chép (Copy) hiển thị dưới mỗi câu trả lời, giúp dễ dàng dán vào ghi chú công việc hoặc báo cáo trao đổi.",
+        "safe_steps": [
+          "Tìm nút Sao chép (biểu tượng hai trang giấy) ở góc dưới của câu trả lời AI.",
+          "Bấm nút một lần; hệ thống sẽ hiển thị thông báo đã sao chép thành công.",
+          "Dán nội dung (Ctrl+V) vào tài liệu hoặc email trao đổi khi cần."
+        ],
+        "aliases": [
+          "copy cau tra loi",
+          "sao chep ai"
+        ]
+      },
+      "en": {
+        "title": "Copying AI Guidance to the Clipboard",
+        "keywords": [
+          "copy response",
+          "clipboard copy",
+          "copy button",
+          "save guidance"
+        ],
+        "answer_context": "Users can copy the complete AI response to the clipboard by clicking the Copy button located below each message, making it easy to paste guidance into work notes or support communications.",
+        "safe_steps": [
+          "Locate the Copy button (two-sheet icon) below the AI response bubble.",
+          "Click the button once; a visual confirmation indicates the text is copied.",
+          "Paste the content (Ctrl+V) into your notes or email as needed."
+        ],
+        "aliases": [
+          "copy ai answer",
+          "clipboard action"
+        ]
+      },
+      "ja": {
+        "title": "AIの回答内容をクリップボードにコピーする機能",
+        "keywords": [
+          "回答コピー",
+          "クリップボード",
+          "コピーボタン",
+          "ガイダンス保存"
+        ],
+        "answer_context": "AIの回答枠の下にある「コピー」ボタンをクリックすることで、回答テキスト全文をクリップボードにコピーし、業務メモや報告連絡に素早く貼り付けることができます。",
+        "safe_steps": [
+          "AIの回答枠の下部にある「コピー」アイコンをクリックしてください。",
+          "コピー完了の表示を確認してください。",
+          "必要に応じてメモ帳やメール（Ctrl+V）に貼り付けて共有してください。"
+        ],
+        "aliases": [
+          "aiコピー",
+          "回答をコピー"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/operations/ai_operations_assistant.md",
+        "source_section": "## 2. Quy trình thao tác của người dùng (User Workflow)",
+        "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "## 2. Quy trình thao tác của người dùng (User Workflow)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Quy trình tương tác và đặt câu hỏi với AI",
+            "en": "User Interaction and Query Workflow",
+            "ja": "AIとの対話および質問操作ワークフロー"
+          },
+          "supported_summary": {
+            "vi": "Người dùng nhập câu hỏi bằng tiếng Việt, tiếng Anh hoặc tiếng Nhật để nhận câu trả lời kèm trích dẫn tài liệu gốc đã được xác thực.",
+            "en": "Users submit queries in Vietnamese, English, or Japanese to receive grounded answers with verified source document citations.",
+            "ja": "ベトナム語、英語、日本語で質問を入力し、検証済みの原本ドキュメントの引用付き回答を受け取ります。"
+          },
+          "evidence_anchor": "A[\"Mở cửa sổ 'Lịch sử các lần chạy'\"] --> B{\"Chọn "
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_ai_assistant_image_paste",
+      "business_area": "operations",
+      "vi": {
+        "title": "Dán ảnh chụp màn hình trực tiếp vào khung chat AI",
+        "keywords": [
+          "dan anh",
+          "paste image",
+          "chup man hinh",
+          "screenshot",
+          "dinh kem anh"
+        ],
+        "answer_context": "Người dùng có thể chụp ảnh màn hình thông báo lỗi (phím Win+Shift+S hoặc PrintScreen) rồi nhấn phím Ctrl+V trực tiếp trong ô nhập chat của Trợ lý AI để gửi kèm hình ảnh mô tả sự cố.",
+        "safe_steps": [
+          "Chụp ảnh màn hình khu vực phát sinh lỗi trên ứng dụng.",
+          "Nhấp chuột vào ô nhập tin nhắn của Trợ lý AI và nhấn tổ hợp phím Ctrl+V.",
+          "Xem hình thu nhỏ xuất hiện phía trên ô nhập, gõ thêm câu hỏi nếu cần rồi bấm Gửi."
+        ],
+        "aliases": [
+          "paste anh",
+          "gui anh loi",
+          "ctrl v anh"
+        ]
+      },
+      "en": {
+        "title": "Pasting Screenshots Directly into AI Chat",
+        "keywords": [
+          "paste image",
+          "screenshot paste",
+          "image attachment",
+          "ctrl v image",
+          "error screenshot"
+        ],
+        "answer_context": "Users can take a screenshot of an error message (Win+Shift+S or PrintScreen) and paste it directly into the AI Assistant chat input box using Ctrl+V to provide visual context.",
+        "safe_steps": [
+          "Capture the screen area showing the issue or error notification.",
+          "Click inside the AI Assistant message input field and press Ctrl+V.",
+          "Confirm the thumbnail appears above the input box, type your query, and click Send."
+        ],
+        "aliases": [
+          "paste screenshot",
+          "attach image",
+          "chat image"
+        ]
+      },
+      "ja": {
+        "title": "エラー画面のスクリーンショットを直接チャットに貼り付ける機能",
+        "keywords": [
+          "画像貼り付け",
+          "スクリーンショット",
+          "画像添付",
+          "ctrl v 画像",
+          "キャプチャ"
+        ],
+        "answer_context": "エラー発生時に画面キャプチャ（Win+Shift+S 等）を取得し、AIアシスタントの入力欄で Ctrl+V を押すことで、画像を直接チャットに添付して状況を問い合わせることができます。",
+        "safe_steps": [
+          "エラーが表示されている画面領域をキャプチャ（コピー）してください。",
+          "AIアシスタントのチャット入力欄をクリックし、Ctrl+V を押してください。",
+          "入力欄の上にサムネイルが表示されたことを確認し、質問文を入力して送信してください。"
+        ],
+        "aliases": [
+          "スクショ貼り付け",
+          "画像添付",
+          "画面コピー"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/operations/ai_operations_assistant.md",
+        "source_section": "## 2. Quy trình thao tác của người dùng (User Workflow)",
+        "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "## 2. Quy trình thao tác của người dùng (User Workflow)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Quy trình tương tác và đặt câu hỏi với AI",
+            "en": "User Interaction and Query Workflow",
+            "ja": "AIとの対話および質問操作ワークフロー"
+          },
+          "supported_summary": {
+            "vi": "Người dùng nhập câu hỏi bằng tiếng Việt, tiếng Anh hoặc tiếng Nhật để nhận câu trả lời kèm trích dẫn tài liệu gốc đã được xác thực.",
+            "en": "Users submit queries in Vietnamese, English, or Japanese to receive grounded answers with verified source document citations.",
+            "ja": "ベトナム語、英語、日本語で質問を入力し、検証済みの原本ドキュメントの引用付き回答を受け取ります。"
+          },
+          "evidence_anchor": "A[\"Mở cửa sổ 'Lịch sử các lần chạy'\"] --> B{\"Chọn "
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_ai_assistant_language_policy",
+      "business_area": "operations",
+      "vi": {
+        "title": "Chính sách đa ngôn ngữ (Tiếng Việt, Tiếng Anh, Tiếng Nhật)",
+        "keywords": [
+          "đa ngôn ngữ",
+          "tiếng việt",
+          "tiếng anh",
+          "tiếng nhật",
+          "chính sách ngôn ngữ",
+          "phản hồi cùng ngôn ngữ",
+          "ngôn ngữ tự nhiên"
+        ],
+        "answer_context": "Trợ lý AI tuân thủ nghiêm ngặt chính sách đa ngôn ngữ: (1) Tự động nhận diện ngôn ngữ của câu hỏi và phản hồi đúng ngôn ngữ đó (Việt, Anh hoặc Nhật). (2) Toàn bộ nội dung tiếng Nhật và tiếng Anh đều được soạn thảo tự nhiên, chuẩn mực nghiệp vụ, không dùng câu dịch máy vụng về. (3) Khi ngoại tuyến, hệ thống trả lời bằng bản dịch ngoại tuyến chuẩn của đúng ngôn ngữ người dùng.",
+        "safe_steps": [
+          "Nhập câu hỏi bằng bất kỳ ngôn ngữ nào trong 3 ngôn ngữ: Tiếng Việt, Tiếng Anh hoặc Tiếng Nhật.",
+          "AI sẽ tự động trả lời bằng chính ngôn ngữ bạn đã dùng.",
+          "Không cần chọn ngôn ngữ thủ công; hệ thống tự nhận diện ngữ cảnh."
+        ],
+        "aliases": [
+          "ngôn ngữ trợ lý",
+          "hỗ trợ tiếng nhật",
+          "trả lời đa ngữ"
+        ]
+      },
+      "en": {
+        "title": "Multilingual Policy (Vietnamese, English, Japanese)",
+        "keywords": [
+          "multilingual policy",
+          "vietnamese",
+          "english",
+          "japanese",
+          "same language response",
+          "native tone",
+          "offline translations"
+        ],
+        "answer_context": "The AI Assistant strictly observes a multilingual policy: (1) Automatically detects the query language and responds in the same language (Vietnamese, English, or Japanese). (2) All English and Japanese responses use professional native phrasing without machine translation artifacts. (3) When offline, the system returns pre-approved local guidance in the user's matching language.",
+        "safe_steps": [
+          "Type your query in Vietnamese, English, or Japanese.",
+          "The assistant responds in the exact language of your question.",
+          "No manual language selection is required; detection is automatic."
+        ],
+        "aliases": [
+          "language policy",
+          "multilingual support",
+          "japanese assistance"
+        ]
+      },
+      "ja": {
+        "title": "多言語対応ポリシー（ベトナム語・英語・日本語）",
+        "keywords": [
+          "多言語ポリシー",
+          "ベトナム語",
+          "英語",
+          "日本語",
+          "同一言語応答",
+          "自然な業務用語",
+          "オフライン対応"
+        ],
+        "answer_context": "AIアシスタントは厳格な多言語ポリシーを遵守します：(1) 質問言語を自動判別し、同一言語（ベトナム語・英語・日本語）で応答します。(2) 日本語および英語の回答は不自然な機械翻訳を排し、業務に即した自然な表現を使用します。(3) オフライン時にも該当言語の承認済みローカルガイダンスを返答します。",
+        "safe_steps": [
+          "ベトナム語、英語、日本語のいずれかで質問を入力してください。",
+          "AIが質問言語を自動検知し、同じ言語で回答します。",
+          "言語の手動切り替えは不要です。"
+        ],
+        "aliases": [
+          "多言語ポリシー",
+          "言語サポート",
+          "日本語対応"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/operations/ai_operations_assistant.md",
+        "source_section": "## 3. Chính sách đa ngôn ngữ (Language Policy)",
+        "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "## 3. Chính sách đa ngôn ngữ (Language Policy)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Chính sách hỗ trợ đa ngôn ngữ của Trợ lý AI",
+            "en": "AI Multilingual Support and Localization Policy",
+            "ja": "AI多言語サポートおよびローカライゼーション方針"
+          },
+          "supported_summary": {
+            "vi": "Trợ lý AI tự động phản hồi theo ngôn ngữ của câu hỏi hoặc ngôn ngữ giao diện được chọn, sử dụng thuật ngữ kế toán chuẩn mực.",
+            "en": "The AI assistant responds in the query language or selected UI language while maintaining precise financial accounting terminology.",
+            "ja": "質問の言語または選択されたUI言語に合わせて自動応答し、正確な財務会計用語を一貫して使用します。"
+          },
+          "evidence_anchor": "1. **Đồng bộ ngôn ngữ giao diện**: Trợ lý tự động "
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_ai_assistant_separation_of_concerns",
+      "business_area": "operations",
+      "vi": {
+        "title": "Phân định rõ ngôn ngữ nghiệp vụ và chi tiết kỹ thuật nội bộ",
+        "keywords": [
+          "ngôn ngữ nghiệp vụ",
+          "chi tiết kỹ thuật",
+          "không lộ code",
+          "không hiển thị stack trace",
+          "bảo mật kỹ thuật",
+          "thân thiện người dùng"
+        ],
+        "answer_context": "Trợ lý AI tuân thủ nguyên tắc phân định ranh giới chặt chẽ: Câu trả lời cho người dùng chỉ sử dụng ngôn ngữ nghiệp vụ trong sáng, hướng dẫn thao tác cụ thể, tuyệt đối không hiển thị đoạn mã lập trình, tên hàm, đường dẫn tệp nội bộ, hay stack trace lỗi hệ thống vào màn hình giao diện.",
+        "safe_steps": [
+          "Đọc hướng dẫn bằng ngôn ngữ nghiệp vụ dễ hiểu trên giao diện.",
+          "Thực hiện các bước an toàn được khuyến nghị.",
+          "Nếu cần hỗ trợ kỹ thuật chuyên sâu, liên hệ quản trị viên kèm ảnh chụp màn hình."
+        ],
+        "aliases": [
+          "ranh giới kỹ thuật",
+          "bảo mật nội bộ",
+          "ngôn ngữ thân thiện"
+        ]
+      },
+      "en": {
+        "title": "Clear Separation Between Business Language and Technical Details",
+        "keywords": [
+          "separation of concerns",
+          "business language",
+          "no internal code",
+          "no stack traces",
+          "user friendly",
+          "technical boundaries"
+        ],
+        "answer_context": "The AI Assistant strictly enforces separation of concerns: User-facing responses communicate exclusively in accessible business language with actionable steps, never exposing code snippets, internal function names, file paths, or technical stack traces to the end user.",
+        "safe_steps": [
+          "Review clear, non-technical instructions on the assistant interface.",
+          "Perform recommended operational recovery steps.",
+          "For deeper technical assistance, share a screenshot with system administrators."
+        ],
+        "aliases": [
+          "technical boundaries",
+          "non-technical tone",
+          "business phrasing"
+        ]
+      },
+      "ja": {
+        "title": "業務用語と内部技術詳細の明確な分離原則",
+        "keywords": [
+          "関心の分離",
+          "業務用語",
+          "内部コード非表示",
+          "スタックトレース禁止",
+          "ユーザーフレンドリー",
+          "技術境界"
+        ],
+        "answer_context": "AIアシスタントは明確な境界分離を維持します：ユーザーへの回答は平易な業務用語と安全な対処手順のみで構成され、内部コード、関数名、ローカルファイルパス、およびスタックトレースを画面上に露出させることはありません。",
+        "safe_steps": [
+          "画面上に表示される分かりやすい業務ガイダンスを確認してください。",
+          "推奨された安全な手順に従って操作を行ってください。",
+          "技術的なサポートが必要な場合は、キャプチャを管理者に共有してください。"
+        ],
+        "aliases": [
+          "技術分離原則",
+          "業務用語対応",
+          "専門用語排除"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/operations/ai_operations_assistant.md",
+        "source_section": "## 4. Phân định Ngôn ngữ Nghiệp vụ & Chi tiết Kỹ thuật (Separation of Concerns)",
+        "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "## 4. Phân định Ngôn ngữ Nghiệp vụ & Chi tiết Kỹ thuật (Separation of Concerns)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Phân định ngôn ngữ nghiệp vụ và kỹ thuật",
+            "en": "Separation of Business Language and Technical Details",
+            "ja": "業務説明と技術詳細の分離原則"
+          },
+          "supported_summary": {
+            "vi": "Câu trả lời cho người dùng chỉ sử dụng ngôn từ nghiệp vụ thân thiện; chi tiết kỹ thuật như đường dẫn máy tính hay mã code bị ẩn hoàn toàn.",
+            "en": "User-facing answers use intuitive business language, strictly hiding internal details like computer drive paths and source code.",
+            "ja": "ユーザー向け回答はわかりやすい業務用語のみを用い、ローカルパスやソースコードなどの内部技術情報は完全に隠蔽します。"
+          },
+          "evidence_anchor": "Nhằm đảm bảo người dùng phổ thông không bị bối rối"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_ai_assistant_evidence_limits",
+      "business_area": "operations",
+      "vi": {
+        "title": "Ranh giới bằng chứng và bảo mật dữ liệu nguồn",
+        "keywords": [
+          "ranh giới bằng chứng",
+          "bảo mật dữ liệu nguồn",
+          "không gửi đường dẫn",
+          "không gửi mã băm",
+          "chỉ đọc an toàn",
+          "giới hạn bằng chứng"
+        ],
+        "answer_context": "Trợ lý AI chỉ đưa ra câu trả lời dựa trên các nguồn tri thức nghiệp vụ đã được phê duyệt. Hệ thống thực hiện chắt lọc và bảo vệ dữ liệu: tuyệt đối không truyền đường dẫn tệp nhạy cảm, mã băm SHA-256 nội bộ hay dữ liệu riêng tư ra ngoài phạm vi vận hành.",
+        "safe_steps": [
+          "Yên tâm sử dụng Trợ lý AI trong môi trường làm việc nội bộ.",
+          "Dữ liệu bảng tính và thông tin cá nhân luôn được bảo vệ cục bộ.",
+          "Mọi hướng dẫn đưa ra đều dựa trên tri thức nghiệp vụ chính thống đã kiểm duyệt."
+        ],
+        "aliases": [
+          "ranh giới dữ liệu",
+          "bảo vệ tệp nguồn",
+          "chỉ đọc cục bộ"
+        ]
+      },
+      "en": {
+        "title": "Evidence Boundaries and Source Data Security",
+        "keywords": [
+          "evidence limits",
+          "source data security",
+          "no raw paths",
+          "no sha256 leak",
+          "safe read only",
+          "grounded knowledge"
+        ],
+        "answer_context": "The AI Assistant grounds its responses strictly in approved business knowledge sources. The system filters sensitive metadata: absolute file paths, internal SHA-256 hashes, and confidential raw data are never leaked outside the secured runtime boundary.",
+        "safe_steps": [
+          "Use the internal AI assistant with confidence in internal environments.",
+          "Spreadsheet contents and sensitive data remain strictly local and protected.",
+          "All guidance is derived from verified and audited business knowledge."
+        ],
+        "aliases": [
+          "evidence boundary",
+          "data safety limits",
+          "local read only"
+        ]
+      },
+      "ja": {
+        "title": "根拠境界とソースデータのセキュリティ保護",
+        "keywords": [
+          "根拠境界",
+          "データセキュリティ",
+          "パス非送信",
+          "sha256非公開",
+          "安全な読み取り専用",
+          "承認済み知識"
+        ],
+        "answer_context": "AIアシスタントは承認済みの業務ナレッジに厳格に基づいた回答を行います。機密パス、内部SHA-256ハッシュ、および生データはフィルタリングされ、安全な実行境界外に漏洩することはありません。",
+        "safe_steps": [
+          "社内環境で安心してAIアシスタントをご利用ください。",
+          "ワークブック内容および個人情報はローカルで安全に保護されます。",
+          "すべてのガイダンスは検証済みの公式ナレッジに基づいています。"
+        ],
+        "aliases": [
+          "データ境界",
+          "ソース保護",
+          "ローカル読み取り"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/operations/ai_operations_assistant.md",
+        "source_section": "## 5. Ranh giới & Giới hạn Bằng chứng (Evidence Limits)",
+        "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "## 5. Ranh giới & Giới hạn Bằng chứng (Evidence Limits)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Ranh giới an toàn và giới hạn bằng chứng của AI",
+            "en": "Safety Boundaries and Evidence Grounding Limits",
+            "ja": "安全境界とエビデンス根拠の限界"
+          },
+          "supported_summary": {
+            "vi": "AI chỉ đưa ra câu trả lời khi có bằng chứng rõ ràng từ tài liệu đã duyệt; nếu thiếu dữ liệu, AI sẽ thông báo rõ ràng thay vì tự suy diễn.",
+            "en": "The AI answers strictly based on verified evidence in approved sources, explicitly noting when information is absent instead of speculating.",
+            "ja": "承認済みソースに明確なエビデンスがある場合にのみ回答し、根拠情報が不足している場合は推測せず明確にその旨を伝えます。"
+          },
+          "evidence_anchor": "1. **Ranh giới thư mục nghiêm ngặt (Path Boundary "
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_ai_assistant_confidence_levels",
+      "business_area": "operations",
+      "vi": {
+        "title": "Ba mức độ chắc chắn của chẩn đoán AI (Confirmed, Likely, Unknown)",
+        "keywords": [
+          "mức độ chắc chắn",
+          "confidence levels",
+          "đã xác nhận",
+          "có thể xảy ra",
+          "chưa xác nhận",
+          "confirmed",
+          "likely",
+          "unknown"
+        ],
+        "answer_context": "Trợ lý AI phân loại chẩn đoán sự cố theo 3 mức độ chắc chắn rõ ràng: (1) Đã xác nhận (CONFIRMED): Khớp chính xác với 3 lớp lỗi đã duyệt, cung cấp quy trình sửa ngay. (2) Có thể xảy ra (LIKELY): Khớp một phần với bằng chứng, gợi ý các bước kiểm tra mở rộng. (3) Chưa xác nhận (UNKNOWN): Không đủ dữ liệu, AI trung thực báo chưa thể khẳng định và hướng dẫn các bước kiểm tra cơ bản.",
+        "safe_steps": [
+          "Xem mức độ chắc chắn hiển thị trong phần chẩn đoán của AI.",
+          "Với mức Đã xác nhận: Làm theo chính xác các bước an toàn được đề xuất.",
+          "Với mức Chưa xác nhận: Kiểm tra nhật ký lần chạy và thử quét lại nguồn dữ liệu."
+        ],
+        "aliases": [
+          "độ tin cậy chẩn đoán",
+          "3 mức độ lỗi",
+          "confidence score"
+        ]
+      },
+      "en": {
+        "title": "Three AI Confidence Levels (Confirmed, Likely, Unknown)",
+        "keywords": [
+          "confidence levels",
+          "confirmed",
+          "likely",
+          "unknown",
+          "diagnosis certainty",
+          "verified issues"
+        ],
+        "answer_context": "The AI Assistant classifies diagnostic confidence into 3 distinct levels: (1) CONFIRMED: Exact match with an approved error class with definitive resolution steps. (2) LIKELY: Partial match with available evidence suggesting plausible causes. (3) UNKNOWN: Insufficient evidence; the AI transparently acknowledges uncertainty and guides general verification steps.",
+        "safe_steps": [
+          "Check the confidence level indicator shown with the AI diagnosis.",
+          "For Confirmed: Follow the provided step-by-step safe recovery instructions.",
+          "For Unknown: Review the run log and click Rescan Sources."
+        ],
+        "aliases": [
+          "diagnostic certainty",
+          "confidence tiers",
+          "error certainty"
+        ]
+      },
+      "ja": {
+        "title": "AI診断の3つの確信度レベル（確認済み・可能性あり・未確認）",
+        "keywords": [
+          "確信度レベル",
+          "確認済み",
+          "可能性あり",
+          "未確認",
+          "confirmed",
+          "likely",
+          "unknown"
+        ],
+        "answer_context": "AIアシスタントは障害診断を3段階の確信度で分類します：(1) 確認済み（CONFIRMED）：承認済みエラークラスに完全一致し、確定的な対処手順を提示。(2) 可能性あり（LIKELY）：部分的根拠に基づき想定原因を提示。(3) 未確認（UNKNOWN）：根拠不十分な場合、確証がない旨を誠実に伝え一般的な確認手順を案内。",
+        "safe_steps": [
+          "AI診断の確信度レベルを確認してください。",
+          "「確認済み」の場合：提示された安全な手順に従って対処してください。",
+          "「未確認」の場合：実行ログを確認し、ソース再スキャンを実施してください。"
+        ],
+        "aliases": [
+          "診断確信度",
+          "3つの確信度",
+          "確信度判定"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/operations/ai_operations_assistant.md",
+        "source_section": "## 6. Mức độ chắc chắn (Confidence Levels)",
+        "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "## 6. Mức độ chắc chắn (Confidence Levels)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Các cấp độ tin cậy của thông tin trích dẫn",
+            "en": "Citation Confidence Levels and Verification Status",
+            "ja": "引用情報の信頼度レベルと検証ステータス"
+          },
+          "supported_summary": {
+            "vi": "Phân định 2 mức độ chắc chắn: 'Đã xác nhận' cho các quy tắc chính thức và 'Tham khảo nội bộ' cho các phản ánh hoặc ghi chú đang hoàn thiện.",
+            "en": "Differentiates 2 confidence levels: 'Confirmed' for official business rules and 'Internal Reference' for evolving feedback.",
+            "ja": "公式業務ルールに対する「確定」と、検討中メモ等に対する「社内参考」の2つの信頼度レベルを明確に区分します。"
+          },
+          "evidence_anchor": "- **`confirmed` (Đã xác nhận)**:"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_operations_error_taxonomy",
+      "business_area": "troubleshooting",
+      "vi": {
+        "title": "Ba lớp lỗi vận hành đã được phê duyệt trong MP2027",
+        "keywords": [
+          "3 lớp lỗi",
+          "phân loại lỗi",
+          "lỗi nhân sự mốc",
+          "tệp bị khóa",
+          "tiền kiểm thất bại",
+          "supported error classes"
+        ],
+        "answer_context": "MP2027 hỗ trợ chẩn đoán 3 lớp lỗi vận hành chuẩn tắc: (1) missing_staffing_baseline: Thiếu dữ liệu nhân sự mốc tháng 3 của kỳ trước. (2) blocked_output_file_lock: Tệp kết quả đầu ra đang bị mở trong Excel làm khóa tiến trình ghi. (3) preflight_source_validation_failure: Tệp nguồn đầu vào bị thiếu, sai định dạng hoặc hỏng.",
+        "safe_steps": [
+          "Xác định thông báo lỗi thuộc lớp nào trong 3 lớp lỗi trên.",
+          "Với tệp bị khóa: Đóng file Excel đang mở và chạy lại tính toán.",
+          "Với thiếu nhân sự: Mở Cài đặt để nhập số người mốc cơ sở hoặc bổ sung tệp nhân sự.",
+          "Với tiền kiểm thất bại: Kiểm tra lại tên và định dạng tệp trong thư mục nguồn."
+        ],
+        "aliases": [
+          "3 loại lỗi chính",
+          "danh mục lỗi vận hành",
+          "các lỗi thường gặp"
+        ]
+      },
+      "en": {
+        "title": "Three Approved Operational Error Classes in MP2027",
+        "keywords": [
+          "3 error classes",
+          "error taxonomy",
+          "missing baseline",
+          "file lock",
+          "preflight failure",
+          "supported errors"
+        ],
+        "answer_context": "MP2027 supports diagnosis for 3 canonical operational error classes: (1) missing_staffing_baseline: Missing March baseline staffing data from the prior period. (2) blocked_output_file_lock: Output workbook is locked open in Excel. (3) preflight_source_validation_failure: Input source files are missing, corrupted, or have invalid formats.",
+        "safe_steps": [
+          "Identify which of the 3 classes matches the operational issue.",
+          "For locked files: Close Excel and rerun the calculation.",
+          "For missing baseline: Open Settings to enter a baseline headcount override or add staffing data.",
+          "For preflight failure: Check source file names and formats in the input folder."
+        ],
+        "aliases": [
+          "error classes",
+          "approved error models",
+          "common issues"
+        ]
+      },
+      "ja": {
+        "title": "MP2027で承認された3つの運用エラークラス",
+        "keywords": [
+          "3つのエラークラス",
+          "エラー分類",
+          "基準人員不足",
+          "ファイルロック",
+          "事前検証失敗",
+          "サポート対象エラー"
+        ],
+        "answer_context": "MP2027は以下の3つの承認済み標準エラークラスを診断します：(1) missing_staffing_baseline：前期3月の基準人員データ不足、(2) blocked_output_file_lock：出力ファイルがExcelで開かれてロック中、(3) preflight_source_validation_failure：入力ソースファイルの欠落・破損・形式不正。",
+        "safe_steps": [
+          "発生した事象が上記3つのどのクラスに該当するか確認してください。",
+          "ファイルロック時：Excelを閉じて計算を再実行してください。",
+          "基準人員不足時：設定画面で基準人員を入力するか人員ファイルを補完してください。",
+          "事前検証失敗時：入力フォルダ内のファイル名と形式を確認してください。"
+        ],
+        "aliases": [
+          "エラー分類",
+          "承認済みエラー",
+          "代表的エラー"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/operations/ai_operations_assistant.md",
+        "source_section": "## 7. Ba lớp lỗi đã được phê duyệt (Supported Error Classes)",
+        "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "## 7. Ba lớp lỗi đã được phê duyệt (Supported Error Classes)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Ba nhóm lỗi vận hành được hỗ trợ xử lý",
+            "en": "Three Supported Operational Error Classes",
+            "ja": "サポート対象の3大運用障害分類"
+          },
+          "supported_summary": {
+            "vi": "Bao gồm lỗi file bị khóa khi ghi kết quả, lỗi thiếu mốc nhân sự tháng 3 và lỗi kiểm tra dữ liệu nguồn đầu vào không hợp lệ.",
+            "en": "Covers output Excel file locks, missing March baseline staffing figures, and preflight source workbook validation failures.",
+            "ja": "出力ファイルのロック、3月基準人員の欠落、および元ファイル事前検証エラーの3つの障害分類をサポートします。"
+          },
+          "evidence_anchor": "- **Dấu hiệu bằng chứng**: Giai đoạn `validate_sta"
+        },
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "### 1. `missing_staffing_baseline` (Thiếu dữ liệu nhân sự mốc ban đầu)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Lỗi thiếu số liệu nhân sự mốc tháng 3",
+            "en": "Missing March Staffing Baseline Resolution",
+            "ja": "3月基準人員データの欠落エラー対処手順"
+          },
+          "supported_summary": {
+            "vi": "Bổ sung số liệu nhân sự tháng 3 vào bảng nhân sự hoặc nhập trực tiếp giá trị cơ sở trong phần cài đặt trước khi tính toán.",
+            "en": "Supply March headcount numbers in the staffing sheet or enter the baseline count in settings before running calculations.",
+            "ja": "人員データシートに3月人員数を補完するか、計算前に設定画面で基準人員数を直接入力してください。"
+          },
+          "evidence_anchor": "- **Dấu hiệu bằng chứng**: Giai đoạn `validate_sta"
+        },
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "### 2. `blocked_output_file_lock` (Tệp kết quả đầu ra đang bị khóa)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Lỗi tệp bảng tính đầu ra đang bị khóa",
+            "en": "Blocked Output Excel File Lock Resolution",
+            "ja": "出力Excelファイルのロックエラー対処手順"
+          },
+          "supported_summary": {
+            "vi": "Đóng tệp Excel kết quả đang mở trước khi chạy lại hoặc đổi thư mục lưu kết quả để tiếp tục quá trình xuất báo cáo.",
+            "en": "Close open output Excel workbooks before calculating or select a different output directory to continue exporting.",
+            "ja": "再実行する前に対象の出力Excelファイルを閉じるか、別の出力先フォルダを指定して処理を続行してください。"
+          },
+          "evidence_anchor": "- **Dấu hiệu bằng chứng**: Giai đoạn `publication`"
+        },
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "### 3. `preflight_source_validation_failure` (Kiểm tra dữ liệu nguồn thất bại)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Lỗi tệp nguồn thiếu sheet hoặc sai định dạng",
+            "en": "Source Workbook Validation Failure Resolution",
+            "ja": "元ファイルのシート欠落・形式不正エラー対処手順"
+          },
+          "supported_summary": {
+            "vi": "Kiểm tra lại danh mục các tệp bảng tính nguồn và đảm bảo các sheet chi phí bắt buộc có mặt đầy đủ với đúng tên quy định.",
+            "en": "Verify input source workbooks and ensure all mandatory expense sheets are present with correct canonical naming.",
+            "ja": "入力元ファイルの一覧を再確認し、必要なすべての費用シートが規定の名称で存在することを確認してください。"
+          },
+          "evidence_anchor": "- **Dấu hiệu bằng chứng**: Báo cáo `preflight_repo"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_ai_assistant_unknown_error_handling",
+      "business_area": "troubleshooting",
+      "vi": {
+        "title": "Quy trình xử lý khi gặp lỗi chưa xác nhận (Unknown Error Flow)",
+        "keywords": [
+          "lỗi chưa xác nhận",
+          "unknown error",
+          "lỗi lạ",
+          "sự cố chưa rõ",
+          "bước kiểm tra an toàn"
+        ],
+        "answer_context": "Khi phát sinh sự cố không khớp với 3 lớp lỗi đã biết, Trợ lý AI sẽ không đoán mò hay suy diễn sai lệch. Hệ thống hướng dẫn người vận hành thực hiện quy trình kiểm tra an toàn 3 bước: (1) Kiểm tra xem các tệp Excel đầu ra có đang bị mở khóa không, (2) Bấm Quét lại nội dung để kiểm tra lại tính hợp lệ của tệp nguồn, (3) Xem chi tiết tại cửa sổ Lịch sử các lần chạy.",
+        "safe_steps": [
+          "Đóng toàn bộ các tệp Excel đang mở liên quan đến ứng dụng.",
+          "Bấm nút Quét lại nội dung trên giao diện chính.",
+          "Mở cửa sổ Lịch sử các lần chạy để xem thông báo trạng thái.",
+          "Nếu vẫn không giải quyết được, chụp ảnh màn hình và liên hệ hỗ trợ kỹ thuật."
+        ],
+        "aliases": [
+          "xử lý lỗi lạ",
+          "quy trình lỗi chưa rõ",
+          "khắc phục sự cố chưa biết"
+        ]
+      },
+      "en": {
+        "title": "Handling Unknown or Unconfirmed Errors",
+        "keywords": [
+          "unknown error",
+          "unconfirmed issue",
+          "unrecognized error",
+          "safe verification steps",
+          "error handling flow"
+        ],
+        "answer_context": "When an issue does not match the 3 known error classes, the AI Assistant avoids speculative guesswork. It guides operators through a safe 3-step verification routine: (1) Ensure output Excel files are not locked open, (2) Click Rescan Sources to re-verify input files, (3) Check the Run History window for details.",
+        "safe_steps": [
+          "Close all open Excel workbooks related to the application.",
+          "Click Rescan Sources on the main window.",
+          "Open Run History to inspect the latest run status details.",
+          "If the issue persists, take a screenshot and contact support."
+        ],
+        "aliases": [
+          "unknown error flow",
+          "handling unknown errors",
+          "unrecognized issue"
+        ]
+      },
+      "ja": {
+        "title": "未確認エラー発生時の安全な対処フロー",
+        "keywords": [
+          "未確認エラー",
+          "未知のエラー",
+          "不明な事象",
+          "安全な確認手順",
+          "トラブルシューティング"
+        ],
+        "answer_context": "3つの承認済みエラークラスに該当しない事象が発生した場合、AIアシスタントは推測による不正確な案内を避け、安全な3段階の確認手順を案内します：(1) 出力Excelファイルが開かれていないことを確認、(2) 「内容を再確認」をクリックしてソースファイルを再検証、(3) 実行履歴ウィンドウで詳細を確認。",
+        "safe_steps": [
+          "関連するすべての開いているExcelファイルを閉じてください。",
+          "メイン画面の「内容を再確認」をクリックしてください。",
+          "「実行履歴」を開いて直近のステータス詳細を確認してください。",
+          "解消しない場合は画面キャプチャを取得してサポートに連絡してください。"
+        ],
+        "aliases": [
+          "未確認エラー対応",
+          "未知エラーフロー",
+          "不明エラー対処"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/operations/ai_operations_assistant.md",
+        "source_section": "## 8. Luồng xử lý khi Lỗi chưa xác nhận (`unknown`)",
+        "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "## 8. Luồng xử lý khi Lỗi chưa xác nhận (`unknown`)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Quy trình xử lý khi gặp sự cố chưa xác định",
+            "en": "Handling Procedures for Unrecognized Operational Issues",
+            "ja": "未特定障害発生時の安全なハンドリング手順"
+          },
+          "supported_summary": {
+            "vi": "Khi gặp lỗi chưa nằm trong danh mục, AI hướng dẫn kiểm tra nhật ký và liên hệ bộ phận hỗ trợ kỹ thuật mà không đưa ra chỉ dẫn sai lệch.",
+            "en": "When unclassified errors occur, the AI advises checking logs and contacting IT support without providing misleading guidance.",
+            "ja": "未分類の障害が発生した場合、AIはログ確認とITサポートへの連絡を案内し、不確かな誤誘導を防止します。"
+          },
+          "evidence_anchor": "Khi gặp trường hợp chưa xác nhận:"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_ai_assistant_explicit_boundaries",
+      "business_area": "operations",
+      "vi": {
+        "title": "Giới hạn và các điều cấm tuyệt đối của Trợ lý AI (Non-Capabilities)",
+        "keywords": [
+          "giới hạn trợ lý ai",
+          "điều cấm tuyệt đối",
+          "không tự sửa file",
+          "không truy cập web",
+          "chỉ đọc an toàn",
+          "non-capabilities"
+        ],
+        "answer_context": "Trợ lý AI tuân thủ nghiêm ngặt các ranh giới an toàn: (1) Không tự ý chỉnh sửa hay ghi đè các tệp dữ liệu nguồn của người dùng, (2) Không tự động chạy lại quy trình tính toán khi chưa có lệnh của người dùng, (3) Không kết nối ra ngoài Internet hay tìm kiếm web, (4) Không suy diễn số liệu tài chính khi thiếu dữ liệu nguồn.",
+        "safe_steps": [
+          "Người dùng hoàn toàn kiểm soát việc thực hiện thao tác tính toán và lưu file.",
+          "AI chỉ đóng vai trò tư vấn và hướng dẫn các bước an toàn.",
+          "Mọi thay đổi dữ liệu đều do người dùng trực tiếp thực hiện."
+        ],
+        "aliases": [
+          "ranh giới an toàn ai",
+          "điều cấm ai",
+          "giới hạn quyền hạn"
+        ]
+      },
+      "en": {
+        "title": "Explicit Limitations and Non-Capabilities of AI Assistant",
+        "keywords": [
+          "ai limitations",
+          "explicit non-capabilities",
+          "no auto edit",
+          "no web access",
+          "safe read only",
+          "safety boundaries"
+        ],
+        "answer_context": "The AI Assistant operates within strict safety boundaries: (1) Never modifies or overwrites user source data files, (2) Never triggers calculation runs automatically without explicit user action, (3) Never accesses external Internet or web search, (4) Never hallucinates financial figures when source data is missing.",
+        "safe_steps": [
+          "The user retains full control over executing calculations and saving files.",
+          "The AI serves solely as an advisory guide recommending safe steps.",
+          "All data modifications are made directly by authorized users."
+        ],
+        "aliases": [
+          "ai safety limits",
+          "explicit boundaries",
+          "non capabilities"
+        ]
+      },
+      "ja": {
+        "title": "AIアシスタントの明示的制限事項と禁止事項",
+        "keywords": [
+          "ai制限事項",
+          "禁止事項",
+          "ファイル自動変更禁止",
+          "外部通信禁止",
+          "読み取り専用",
+          "安全境界"
+        ],
+        "answer_context": "AIアシスタントは厳格な安全境界内で動作します：(1) ユーザーの元データファイルを勝手に編集・上書きしない、(2) ユーザーの明示的指示なしに計算処理を自動実行しない、(3) 外部インターネットやWeb検索に接続しない、(4) ソースデータ不足時に財務数値を推測・捏造しない。",
+        "safe_steps": [
+          "計算の実行およびファイルの保存はユーザーが完全にコントロールします。",
+          "AIは安全な手順を提案するアドバイザーとしてのみ機能します。",
+          "すべてのデータ変更はユーザー自身が実施します。"
+        ],
+        "aliases": [
+          "ai安全制限",
+          "明示的境界",
+          "機能制限"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/operations/ai_operations_assistant.md",
+        "source_section": "## 9. Giới hạn & Các điều cấm tuyệt đối (Explicit Non-Capabilities)",
+        "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "## 9. Giới hạn & Các điều cấm tuyệt đối (Explicit Non-Capabilities)",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Các giới hạn và điều cấm tuyệt đối của AI",
+            "en": "Explicit Limitations and Security Invariants",
+            "ja": "AIの明確な制限事項およびセキュリティ禁止事項"
+          },
+          "supported_summary": {
+            "vi": "AI hoạt động ở chế độ chỉ đọc, tuyệt đối không tự sửa file, không chạy lệnh hệ thống và không gửi dữ liệu ra ngoài mạng nội bộ.",
+            "en": "Operates strictly in read-only mode, never modifying files, executing system commands, or sending data outside the local LAN.",
+            "ja": "読み取り専用モードで稼働し、ファイルの直接改変、システムコマンド実行、および社外への通信は厳格に禁止されています。"
+          },
+          "evidence_anchor": "Trợ lý Vận hành được thiết kế theo mô hình **Zero-"
+        },
+        {
+          "source_path": "docs/operations/ai_operations_assistant.md",
+          "source_section": "### Nguyên tắc vận hành",
+          "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+            "en": "AI Operations Assistant and Diagnostics Guide",
+            "ja": "AIアシスタント運用および障害診断ガイド"
+          },
+          "heading_title": {
+            "vi": "Nguyên tắc vận hành an toàn dịch vụ AI nội bộ",
+            "en": "Safe Operational Principles for Enterprise AI Service",
+            "ja": "社内AIサービスの安全運用原則"
+          },
+          "supported_summary": {
+            "vi": "Dịch vụ AI được quản lý và bảo trì bởi bộ phận CNTT nội bộ, tuân thủ nghiêm ngặt chính sách bảo mật thông tin doanh nghiệp.",
+            "en": "The AI service is managed internally by corporate IT, adhering strictly to enterprise data protection policies.",
+            "ja": "社内IT部門によって管理・運用され、企業のセキュリティポリシーに厳格に準拠して運用されます。"
+          },
+          "evidence_anchor": "- C-AGENT là dịch vụ nội bộ do IT doanh nghiệp quả"
+        },
+        {
+          "source_path": "docs/operations/ai_operations_assistant_scope.md",
+          "source_section": "## 1. Tôn chỉ cốt lõi & Ranh giới an toàn (Safety Boundary)",
+          "source_sha256": "fd73341eb0739a2447c081b308db35c5536303e49b3923b37651b1350ca211df",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Phạm vi tính năng và ranh giới an toàn Trợ lý AI",
+            "en": "AI Assistant Feature Scope and Safety Boundary",
+            "ja": "AIアシスタント機能範囲と安全境界仕様"
+          },
+          "heading_title": {
+            "vi": "Tôn chỉ cốt lõi và ranh giới an toàn của AI",
+            "en": "Core Philosophy and Safety Boundaries for AI Assistant",
+            "ja": "AIアシスタントの基本理念と安全境界"
+          },
+          "supported_summary": {
+            "vi": "AI không tự ý sửa đổi file dữ liệu nguồn, không kết nối dịch vụ ngoài mạng nội bộ và tuyệt đối bảo mật số liệu tài chính.",
+            "en": "The AI never alters source files, connects to external services, and strictly protects proprietary financial figures.",
+            "ja": "AIは元データファイルを一切改変せず、社外外部サービスへの通信を行わず、機密財務データを厳格に保護します。"
+          },
+          "evidence_anchor": "Tính năng **AI Operations Assistant (Phiên bản MVP"
+        },
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 8. Gap accounting and what not to say",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Đối chiếu chênh lệch số lượng dòng chi phí",
+            "en": "Cost Row Discrepancy Analysis and Audit Guidance",
+            "ja": "費用行の差異分析と監査対応ガイド"
+          },
+          "supported_summary": {
+            "vi": "Giải thích nguyên nhân chênh lệch số dòng giữa các phiên bản do loại bỏ các dòng nhân sự cũ không còn áp dụng.",
+            "en": "Explains row count deltas across versions resulting from permanent exclusion of legacy staffing rows.",
+            "ja": "旧人員行の完全除外に伴うバージョン間の行数差異の要因を解説し、適切な監査対応を案内します。"
+          },
+          "evidence_anchor": "- Generated v1 = 141 business rows."
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_dashboard_audit_status",
+      "business_area": "operations",
+      "vi": {
+        "title": "Ý nghĩa 3 trạng thái kiểm toán trên Dashboard (Xanh, Vàng, Đỏ)",
+        "keywords": [
+          "trạng thái dashboard",
+          "kiểm toán dashboard",
+          "trạng thái xanh",
+          "trạng thái vàng",
+          "trạng thái đỏ",
+          "audit status"
+        ],
+        "answer_context": "Màn hình Dashboard hiển thị trạng thái kiểm toán của từng phòng ban bằng 3 màu rõ ràng: (1) XANH (READY): Đã đủ dữ liệu nguồn cơ bản, sẵn sàng tính toán. (2) VÀNG (REVIEW_NEEDED): Còn một số dữ liệu cần kiểm tra hoặc nhập bổ sung trước khi chốt. (3) ĐỎ (MISSING_DATA): Thiếu dữ liệu nguồn quan trọng, không thể chạy tính toán đầy đủ.",
+        "safe_steps": [
+          "Mở màn hình Dashboard để kiểm tra tổng quan màu sắc các phòng ban.",
+          "Với các phòng màu ĐỎ: Bổ sung tệp nguồn hoặc dữ liệu nhân sự còn thiếu.",
+          "Với các phòng màu VÀNG: Kiểm tra lại các mục cảnh báo trước khi xuất chính thức.",
+          "Khi toàn bộ chuyển sang màu XANH: Bấm Chạy tính toán để xuất kết quả hoàn chỉnh."
+        ],
+        "aliases": [
+          "màu sắc dashboard",
+          "đèn tín hiệu dashboard",
+          "trạng thái kiểm toán"
+        ]
+      },
+      "en": {
+        "title": "Meaning of 3 Dashboard Audit Status Indicators (Green, Yellow, Red)",
+        "keywords": [
+          "dashboard audit status",
+          "dashboard status",
+          "green status",
+          "yellow status",
+          "red status",
+          "audit indicators"
+        ],
+        "answer_context": "The Dashboard displays department audit statuses in 3 distinct colors: (1) GREEN (READY): Baseline source data is complete and ready for calculation. (2) YELLOW (REVIEW_NEEDED): Supplementary data or manual confirmation is recommended before finalizing. (3) RED (MISSING_DATA): Critical source data is missing; full calculation cannot proceed.",
+        "safe_steps": [
+          "Open the Dashboard to review the overall status colors across departments.",
+          "For RED departments: Add the missing source files or staffing entries.",
+          "For YELLOW departments: Review the advisory notices before official export.",
+          "When all departments turn GREEN: Click Run Calculation to export finalized sheets."
+        ],
+        "aliases": [
+          "dashboard colors",
+          "audit light indicator",
+          "department status"
+        ]
+      },
+      "ja": {
+        "title": "ダッシュボード監査ステータス3色（緑・黄・赤）の意味",
+        "keywords": [
+          "ダッシュボード監査",
+          "ステータス色",
+          "緑ステータス",
+          "黄ステータス",
+          "赤ステータス",
+          "監査インジケーター"
+        ],
+        "answer_context": "ダッシュボードは各部門の監査ステータスを3色で表示します：(1) 緑（READY）：基本データが揃い計算可能な状態。(2) 黄（REVIEW_NEEDED）：確定前に追加確認または入力が必要な項目が存在。(3) 赤（MISSING_DATA）：重要データが不足し完全な計算が不可。",
+        "safe_steps": [
+          "ダッシュボードを開き各部門のステータス色を確認してください。",
+          "赤の部門：不足しているソースファイルまたは人員データを補完してください。",
+          "黄の部門：正式出力前に確認警告事項をチェックしてください。",
+          "すべて緑になったら：「計算を実行」をクリックして確定シートを出力してください。"
+        ],
+        "aliases": [
+          "ダッシュボード色",
+          "監査シグナル",
+          "部門ステータス"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 13. Dashboard và audit",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 13. Dashboard và audit",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Bảng điều khiển và đèn tín hiệu kiểm toán",
+            "en": "Dashboard and Audit Reconciliation Indicators",
+            "ja": "ダッシュボードと監査照合シグナル"
+          },
+          "supported_summary": {
+            "vi": "Hệ thống đèn tín hiệu Xanh/Vàng/Đỏ trên bảng điều khiển giúp người dùng nhận biết ngay trạng thái cân đối số liệu sau mỗi lần tính toán.",
+            "en": "The Green/Yellow/Red indicator system on the dashboard allows users to immediately verify reconciliation status after every calculation run.",
+            "ja": "ダッシュボード上の緑/黄/赤のシグナル表示により、計算実行後のデータバランス状態を即座に確認できます。"
+          },
+          "evidence_anchor": "Dashboard là lớp kiểm toán cho người dùng tài chín"
+        }
+      ]
+    }
+  ]
+}

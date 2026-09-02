@@ -161,6 +161,150 @@ def test_unmarked_source_requires_explicit_start_row(tmp_path):
         preserve_manual_special_cost_section(generated, "1412000030", source_workbook_path=source)
 
 
+def test_pipeline_treats_unmarked_current_output_as_first_run(tmp_path):
+    output_dir = tmp_path / "OUTPUT_FY2027"
+    workspace = tmp_path / "workspace"
+    output_dir.mkdir()
+    workspace.mkdir()
+    current = output_dir / "MP_CC_1412000030.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    _make_output(current, common_end_row=86)
+    _make_output(generated, common_end_row=90)
+    before = current.read_bytes()
+    context = SimpleNamespace(
+        output_dir=str(output_dir),
+        workspace_dir=str(workspace),
+        manual_special_inheritance_dir=None,
+        manual_special_legacy_starts={},
+    )
+
+    source, kind = _stage_manual_special_cost_source(context, "1412000030")
+    result = _restore_manual_special_cost_section(
+        str(generated),
+        run_context=context,
+        cc_code="1412000030",
+        source_path=source,
+        source_kind=kind,
+        log_callback=lambda _message: None,
+    )
+
+    assert (source, kind) == (None, "new_fiscal_year")
+    assert result["manual_rows_preserved"] == 0
+    assert current.read_bytes() == before
+
+
+def test_pipeline_stages_unmarked_current_output_when_legacy_start_is_configured(tmp_path):
+    output_dir = tmp_path / "OUTPUT_FY2027"
+    workspace = tmp_path / "workspace"
+    output_dir.mkdir()
+    workspace.mkdir()
+    current = output_dir / "MP_CC_1412000030.xlsx"
+    _make_output(current, common_end_row=86)
+    _add_legacy_manual_rows(current, 87)
+    context = SimpleNamespace(
+        output_dir=str(output_dir),
+        workspace_dir=str(workspace),
+        manual_special_inheritance_dir=None,
+        manual_special_legacy_starts={"1412000030": 87},
+    )
+
+    source, kind = _stage_manual_special_cost_source(context, "1412000030")
+
+    assert kind == "current_fiscal_year"
+    assert source is not None
+
+
+def test_pipeline_stages_current_output_with_saved_special_cost_metadata(tmp_path):
+    output_dir = tmp_path / "OUTPUT_FY2027"
+    workspace = tmp_path / "workspace"
+    output_dir.mkdir()
+    workspace.mkdir()
+    current = output_dir / "MP_CC_1412000030.xlsx"
+    _make_output(current, common_end_row=86)
+    preserve_manual_special_cost_section(current, "1412000030")
+    context = SimpleNamespace(
+        output_dir=str(output_dir),
+        workspace_dir=str(workspace),
+        manual_special_inheritance_dir=None,
+        manual_special_legacy_starts={},
+    )
+
+    source, kind = _stage_manual_special_cost_source(context, "1412000030")
+
+    assert kind == "current_fiscal_year"
+    assert source is not None
+
+
+def test_pipeline_stages_saved_layout_from_previous_fiscal_year(tmp_path):
+    previous_dir = tmp_path / "OUTPUT_FY2027"
+    workspace = tmp_path / "workspace"
+    previous_dir.mkdir()
+    workspace.mkdir()
+    inherited = previous_dir / "MP_CC_1412000030.xlsx"
+    generated = tmp_path / "generated.xlsx"
+    _make_output(inherited, common_end_row=86)
+    _add_legacy_manual_rows(inherited, 87)
+    preserve_manual_special_cost_section(
+        inherited,
+        "1412000030",
+        source_workbook_path=inherited,
+        legacy_start_row=87,
+    )
+    _make_output(generated, common_end_row=90)
+    context = SimpleNamespace(
+        output_dir=str(tmp_path / "OUTPUT_FY2028"),
+        workspace_dir=str(workspace),
+        manual_special_inheritance_dir=str(previous_dir),
+        manual_special_legacy_starts={},
+    )
+
+    source, kind = _stage_manual_special_cost_source(context, "1412000030")
+    result = _restore_manual_special_cost_section(
+        str(generated),
+        run_context=context,
+        cc_code="1412000030",
+        source_path=source,
+        source_kind=kind,
+        log_callback=lambda _message: None,
+    )
+
+    assert (source, kind) == (str(inherited), "previous_fiscal_year")
+    assert result["manual_rows_preserved"] == 2
+    workbook = openpyxl.load_workbook(generated, data_only=False)
+    try:
+        assert workbook["Chi tiết MP"]["B92"].value == 5005246286
+        assert workbook["Chi tiết MP"]["S92"].value == "Chi phí riêng A"
+        assert workbook["Chi tiết MP"]["F92"].value is None
+        assert workbook["Chi tiết MP"]["R92"].value is None
+    finally:
+        workbook.close()
+
+
+def test_pipeline_rejects_malformed_special_cost_metadata_instead_of_treating_it_as_first_run(tmp_path):
+    output_dir = tmp_path / "OUTPUT_FY2027"
+    workspace = tmp_path / "workspace"
+    output_dir.mkdir()
+    workspace.mkdir()
+    current = output_dir / "MP_CC_1412000030.xlsx"
+    _make_output(current, common_end_row=86)
+    workbook = openpyxl.load_workbook(current)
+    metadata = workbook.create_sheet(MANUAL_SPECIAL_COST_METADATA_SHEET)
+    metadata.sheet_state = "veryHidden"
+    metadata.append(("sheet_name", "fiscal_year", "cc_code", "common_end_row", "manual_start_row", "manual_end_row", "schema_version"))
+    metadata.append(("Chi tiết MP", 2027, "1412000030", 86, 86, 86, 1))
+    workbook.save(current)
+    workbook.close()
+    context = SimpleNamespace(
+        output_dir=str(output_dir),
+        workspace_dir=str(workspace),
+        manual_special_inheritance_dir=None,
+        manual_special_legacy_starts={},
+    )
+
+    with pytest.raises(ManualSpecialCostSectionError, match="không hợp lệ"):
+        _stage_manual_special_cost_source(context, "1412000030")
+
+
 def test_pipeline_prefers_current_fy_snapshot_over_prior_fy_inheritance(tmp_path):
     current_dir = tmp_path / "OUTPUT_FY2027"
     inherited_dir = tmp_path / "OUTPUT_FY2026"

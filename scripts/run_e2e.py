@@ -81,7 +81,10 @@ from src.engine.system_cost_writer import apply_system_cost_to_workbook
 from src.engine.reference_assisted_fill import apply_reference_assisted_fill_to_workbook
 from src.engine.fixed_assets_reference_skeleton import apply_fixed_assets_reference_skeleton_to_workbook
 from src.engine.complete_v1_source_order_writer import apply_complete_v1_source_order_to_workbook
-from src.engine.manual_special_cost_sections import preserve_manual_special_cost_section
+from src.engine.manual_special_cost_sections import (
+    has_saved_manual_special_cost_layout,
+    preserve_manual_special_cost_section,
+)
 from src.engine.mp_saisan_complete_export import apply_mp_saisan_complete_v1
 from src.utils.excel_helpers import get_fy_months
 from src.utils.fiscal_periods import fiscal_baseline_period
@@ -142,9 +145,16 @@ def _parse_manual_special_legacy_starts(values: list[str] | tuple[str, ...]) -> 
 
 def _stage_manual_special_cost_source(run_context, cc_code: object) -> tuple[str | None, str]:
     """Snapshot the published CC workbook before export can replace it."""
-    workbook_name = f"MP_CC_{str(cc_code).strip()}.xlsx"
+    normalized_cc = str(cc_code).strip()
+    workbook_name = f"MP_CC_{normalized_cc}.xlsx"
+    legacy_starts = getattr(run_context, "manual_special_legacy_starts", {}) or {}
+    has_legacy_start = normalized_cc in legacy_starts
+
+    def is_preservation_source(path: Path) -> bool:
+        return has_legacy_start or has_saved_manual_special_cost_layout(path, normalized_cc)
+
     current = Path(run_context.output_dir) / workbook_name
-    if current.is_file():
+    if current.is_file() and is_preservation_source(current):
         snapshot_root = Path(run_context.workspace_dir or Path(run_context.output_dir).parent) / "manual_special_sources"
         snapshot_root.mkdir(parents=True, exist_ok=True)
         snapshot = snapshot_root / workbook_name
@@ -153,7 +163,7 @@ def _stage_manual_special_cost_source(run_context, cc_code: object) -> tuple[str
     inherited_dir = getattr(run_context, "manual_special_inheritance_dir", None)
     if inherited_dir:
         inherited = Path(inherited_dir) / workbook_name
-        if inherited.is_file():
+        if inherited.is_file() and is_preservation_source(inherited):
             return str(inherited), "previous_fiscal_year"
     return None, "new_fiscal_year"
 
@@ -854,7 +864,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
 
     try:
         log_callback(f"Quy trình năm tài chính {fiscal_year} (Tỷ giá: {exchange_rate:,.0f})")
-        
+
         effective_reference_policy = reference_policy or (
             REFERENCE_POLICY_EXPLICIT_SAME_FY
             if primary_reference_path else (
@@ -977,7 +987,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             db_path = requested_db_path or production_db_path
             output_dir = requested_output_dir
         os.makedirs(output_dir, exist_ok=True)
-        
+
         # 2. Database & Loading
         if stage_evidence is not None:
             stage_evidence.start("initialize_database")
@@ -1006,7 +1016,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         if stage_evidence is not None:
             stage_evidence.complete()
             stage_evidence.start("import_sources")
-        
+
         log_callback("Đang nạp dữ liệu gốc theo phạm vi preflight đã duyệt...")
         allocation_paths = usable_sources.get("allocation_rules", ())
         uniform_paths = usable_sources.get("uniform_policy", ())
@@ -1261,7 +1271,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         if stage_evidence is not None:
             stage_evidence.complete()
             stage_evidence.start("export_workbooks")
-        
+
         # 5. Export Logic
         source_file_by_category = {
             category: os.path.basename(paths[0])
@@ -1271,7 +1281,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
         builder = HubBuilder(
             conn, fiscal_year=fiscal_year, source_file_by_category=source_file_by_category
         )
-        
+
         resolved = run_context.resolved_sources
         facility_source_path = (resolved.get("facility") or [None])[0]
         admin_source_path = (resolved.get("ga") or [None])[0]
@@ -1411,7 +1421,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
             cursor.execute("SELECT DISTINCT cc_code FROM fact_input_data WHERE account_code > 0")
             excluded_set = set(audit_excluded_ccs)
             all_ccs = [row[0] for row in cursor.fetchall() if str(row[0]) not in excluded_set]
-            
+
             count = 0
             for cc in all_ccs:
                 out_path = os.path.join(output_dir, f"MP_CC_{cc}.xlsx")
@@ -1527,7 +1537,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                         log_callback=log_callback,
                     )
                     count += 1
-            
+
             log_callback(f"Đã xuất thành công {count} tệp vào: {output_dir}")
 
         if stage_evidence is not None:
@@ -1600,7 +1610,7 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                 start_row=facility_preview_start_row,
             )
             log_callback(f"Tệp xem trước Cơ sở vật chất theo thứ tự nguồn: {preview_path}")
-        
+
         if stage_evidence is not None:
             stage_evidence.start("publication")
         if conn is not None:

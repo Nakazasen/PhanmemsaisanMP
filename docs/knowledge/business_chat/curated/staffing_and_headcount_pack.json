@@ -1,0 +1,1450 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "staffing_and_headcount_pack",
+  "status": "approved",
+  "review_status": "approved",
+  "business_area": "staffing",
+  "authority": "canonical",
+  "external_shareable": true,
+  "source_ref_ids": [
+    "curated_staffing_headcount_guidance"
+  ],
+  "entries": [
+    {
+      "topic_id": "cur_admin_consumables_12month",
+      "business_area": "staffing",
+      "vi": {
+        "title": "Quy tắc phân bổ vật tư hành chính 12 tháng",
+        "keywords": [
+          "vật tư hành chính",
+          "phân bổ 12 tháng",
+          "giấy vệ sinh",
+          "nước rửa tay",
+          "gas",
+          "cleaning",
+          "số người tháng trước"
+        ],
+        "answer_context": "Vật tư hành chính (giấy vệ sinh, nước rửa tay, dung dịch khử trùng, gas, vệ sinh) được phân bổ cho từng phòng ban theo đơn giá nhân với số người tháng trước. Ví dụ chi phí tháng 5 = số người cuối tháng 4 nhân đơn giá. Ngoại lệ: tháng 4 (tháng đầu năm tài chính) dùng số người tháng 4 vì không có dữ liệu tháng 3 kỳ trước.",
+        "safe_steps": [
+          "Kiểm tra bảng nhân sự đã nhập đầy đủ 12 tháng cho phòng ban.",
+          "Xác nhận đơn giá từng hạng mục vật tư đã được cập nhật trong năm tài chính hiện tại.",
+          "Lưu ý tháng 4 dùng số người tháng 4, không phải tháng 3 kỳ trước.",
+          "Bấm Chạy tính toán để hệ thống tự phân bổ theo công thức."
+        ],
+        "aliases": [
+          "chi phí hành chính",
+          "vật tư tiêu hao",
+          "phân bổ theo đầu người"
+        ]
+      },
+      "en": {
+        "title": "Admin Consumables 12-Month Allocation Rule",
+        "keywords": [
+          "admin consumables",
+          "12-month allocation",
+          "toilet paper",
+          "hand soap",
+          "gas",
+          "cleaning",
+          "previous month headcount"
+        ],
+        "answer_context": "Administrative consumables (toilet paper, hand soap, disinfectant, gas, cleaning) are allocated per department using a per-person unit price multiplied by the previous month's headcount. For example, May cost = end-of-April headcount × unit price. Exception: April (first month of fiscal year) uses April's own headcount because March data from the prior period is not available.",
+        "safe_steps": [
+          "Verify that the staffing grid has all 12 months filled for the department.",
+          "Confirm that unit prices for each consumable item are updated for the current fiscal year.",
+          "Note that April uses April headcount, not prior March.",
+          "Click Run Calculation to let the system allocate using the formula."
+        ],
+        "aliases": [
+          "admin expenses",
+          "consumable allocation",
+          "per-person allocation"
+        ]
+      },
+      "ja": {
+        "title": "管理消耗品12か月配賦ルール",
+        "keywords": [
+          "管理消耗品",
+          "12か月配賦",
+          "トイレットペーパー",
+          "ハンドソープ",
+          "ガス",
+          "清掃",
+          "前月人員数"
+        ],
+        "answer_context": "管理消耗品（トイレットペーパー、ハンドソープ、消毒液、ガス、清掃）は、前月末の人員数に単価を掛けて各部門に配賦されます。例：5月の費用 = 4月末の人員数 × 単価。例外：4月（会計年度の最初の月）は前期3月のデータがないため、4月の人員数を使用します。",
+        "safe_steps": [
+          "該当部門の12か月の人員数がすべて入力されていることを確認してください。",
+          "各消耗品の単価が今年度に更新されていることを確認してください。",
+          "4月は前期3月ではなく、4月の人員数を使用する点に注意してください。",
+          "「計算を実行」をクリックして、数式に基づく配賦を実行してください。"
+        ],
+        "aliases": [
+          "管理経費",
+          "消耗品配賦",
+          "一人当たり配賦"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "### 4.2 Admin / GA consumables",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "### 4.2 Admin / GA consumables",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Module chi phí vật tư và sự kiện hành chính",
+            "en": "Administrative Supplies and Events Module",
+            "ja": "総務消耗品およびイベント費用計算モジュール"
+          },
+          "supported_summary": {
+            "vi": "Phân bổ chi phí vật tư tiêu hao hàng tháng theo số nhân sự và chi phí sự kiện vào đúng tháng tổ chức thực tế.",
+            "en": "Allocates monthly consumables using headcount numbers and assigns event expenses to actual occurrence months.",
+            "ja": "人員数に基づき月次消耗品を配賦し、社内イベント費用は実際の開催月へ正確に計上します。"
+          },
+          "evidence_anchor": "Historical fixed-row note: Admin rows `207-209`, b"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 12. Sheet `Chi phí phân bổ từ hành chính`",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy chuẩn phân bổ chi phí hành chính và sự kiện",
+            "en": "Administrative Consumables and Events Master Specifications",
+            "ja": "総務消耗品およびイベント費用の標準仕様"
+          },
+          "supported_summary": {
+            "vi": "Phân bổ vật tư tiêu hao theo nhân sự tháng trước và phân bổ các sự kiện định kỳ (du lịch, khám sức khỏe) theo tháng phát sinh thực tế.",
+            "en": "Allocates consumables based on prior month headcount and distributes periodic events (trips, health checks) to actual event months.",
+            "ja": "前月人員数に基づいて消耗品を配賦し、定期イベント（社員旅行、健康診断）は実際の発生月へ配賦します。"
+          },
+          "evidence_anchor": "Đây là phần quan trọng nhất và được ưu tiên làm tr"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 12.1. Nhóm 1 — chi phí phân bổ cho cả 12 tháng",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Phân bổ chi phí vật tư tiêu hao đều đặn 12 tháng",
+            "en": "Group 1: 12-Month Continuous Administrative Consumables",
+            "ja": "グループ1: 12か月定常総務消耗品の均等配賦"
+          },
+          "supported_summary": {
+            "vi": "Phân bổ tiền gas, nước rửa tay, giấy vệ sinh và vệ sinh văn phòng theo số lượng nhân sự của tháng trước.",
+            "en": "Allocates gas, hand soap, toilet paper, and cleaning overhead monthly based on prior month headcount.",
+            "ja": "ガス代、ハンドソープ、トイレットペーパー、清掃費を前月人員数に基づいて毎月配賦します。"
+          },
+          "evidence_anchor": "- Nước rửa tay."
+        },
+        {
+          "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+          "source_section": "### 6. Chi phí phân bổ từ hành chính (Administrative Allocation Costs)",
+          "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Khái niệm phân loại chi phí chung",
+            "en": "General Cost Category Concepts",
+            "ja": "共通費用分類コンセプト"
+          },
+          "heading_title": {
+            "vi": "Khái niệm phân bổ chi phí vật tư và sự kiện hành chính",
+            "en": "Administrative Consumables and Event Distribution Concepts",
+            "ja": "総務消耗品およびイベント費用の配賦概念"
+          },
+          "supported_summary": {
+            "vi": "Phân bổ vật tư văn phòng theo nhân sự tháng trước và phân bổ chi phí sự kiện vào các tháng diễn ra thực tế.",
+            "en": "Distributes office consumables using prior month headcount and assigns event expenses to actual occurrence months.",
+            "ja": "前月人員数に基づいて事務消耗品を配賦し、イベント費用は実際の発生月へ割り当てます。"
+          },
+          "evidence_anchor": "- **Chi phí phân bổ 12 tháng**: Áp dụng cho tiền g"
+        },
+        {
+          "source_path": "wiki/timelines/nhap-lieu-nhan-su-master-plan.md",
+          "source_section": "## Summary",
+          "source_sha256": "dd88f9cb69b680fa389e40e0502fdb7f951c0852fddd7fca8ed18ef466abc223",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Kế hoạch nhập liệu nhân sự 12 tháng",
+            "en": "12-Month Staffing Input Master Plan",
+            "ja": "12か月人員データ入力マスタープラン"
+          },
+          "heading_title": {
+            "vi": "Tóm tắt kế hoạch quản lý nhân sự 12 tháng",
+            "en": "12-Month Staffing Management Master Plan Summary",
+            "ja": "12か月人員管理マスタープランの要約"
+          },
+          "supported_summary": {
+            "vi": "Tổng quan về mô hình quản lý dữ liệu nhân sự thống nhất cho toàn bộ 12 tháng trong năm tài chính mục tiêu.",
+            "en": "Overview of the unified staffing data model covering all 12 months for the target fiscal year.",
+            "ja": "対象会計年度における12か月間の統一された人員データ管理モデルの全体概要です。"
+          },
+          "evidence_anchor": "Tài liệu này mô tả các yêu cầu thay đổi cách thức "
+        },
+        {
+          "source_path": "wiki/timelines/nhap-lieu-nhan-su-master-plan.md",
+          "source_section": "## Details",
+          "source_sha256": "dd88f9cb69b680fa389e40e0502fdb7f951c0852fddd7fca8ed18ef466abc223",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Kế hoạch nhập liệu nhân sự 12 tháng",
+            "en": "12-Month Staffing Input Master Plan",
+            "ja": "12か月人員データ入力マスタープラン"
+          },
+          "heading_title": {
+            "vi": "Chi tiết các chỉ tiêu nhân sự trong năm",
+            "en": "Detailed Breakdown of Staffing Metrics and Timelines",
+            "ja": "年次人員指標およびスケジュールの詳細解説"
+          },
+          "supported_summary": {
+            "vi": "Phân tích cách sử dụng số liệu nhân sự chung 12 tháng và xử lý các biến động nhân sự đặc thù theo từng tháng.",
+            "en": "Details how unified 12-month staffing numbers are used and explains month-specific headcount changes.",
+            "ja": "統一された12か月人員データの活用方法および月別の特有の人員変動処理について解説します。"
+          },
+          "evidence_anchor": "Các thay đổi chi tiết về cấu trúc thời gian và số "
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_bus_transportation_cost",
+      "business_area": "staffing",
+      "vi": {
+        "title": "Chi phí xe bus đưa đón nhân viên",
+        "keywords": [
+          "xe bus",
+          "đưa đón",
+          "người biệt phái",
+          "người Nhật",
+          "người Việt",
+          "bus đi làm"
+        ],
+        "answer_context": "Chi phí xe bus đưa đón được tính riêng cho hai nhóm: người biệt phái (người Nhật được cử sang) và người Việt Nam đi xe bus. Công thức: số người đi bus nhân với chi phí tương ứng. Số người đi bus là giá trị nhập riêng cho từng cost center, không phụ thuộc vào tổng nhân sự hay phân loại nam/nữ.",
+        "safe_steps": [
+          "Mở phần nhập dữ liệu nhân sự cho phòng ban.",
+          "Nhập số người biệt phái đi bus và số người Việt đi bus.",
+          "Kiểm tra đơn giá bus đã cập nhật cho năm tài chính.",
+          "Chạy tính toán để áp dụng công thức tự động."
+        ],
+        "aliases": [
+          "chi phí đi lại",
+          "bus biệt phái",
+          "chi phí vận chuyển"
+        ]
+      },
+      "en": {
+        "title": "Employee Bus Transportation Cost",
+        "keywords": [
+          "bus transportation",
+          "shuttle bus",
+          "expat bus",
+          "Japanese staff bus",
+          "Vietnamese staff bus",
+          "commuting cost"
+        ],
+        "answer_context": "Bus transportation cost is calculated separately for two groups: seconded employees (Japanese expatriates) and Vietnamese employees using the bus. Formula: number of bus riders × corresponding unit cost. The bus rider count is a scalar input per cost center, independent of total headcount or gender classification.",
+        "safe_steps": [
+          "Open the staffing input section for the department.",
+          "Enter the number of seconded (expat) bus riders and Vietnamese bus riders.",
+          "Verify that bus unit costs are updated for the current fiscal year.",
+          "Run Calculation to apply the formula automatically."
+        ],
+        "aliases": [
+          "commute cost",
+          "shuttle expense",
+          "transport allowance"
+        ]
+      },
+      "ja": {
+        "title": "従業員バス送迎費用",
+        "keywords": [
+          "バス送迎",
+          "通勤バス",
+          "出向者バス",
+          "日本人バス",
+          "ベトナム人バス",
+          "通勤費"
+        ],
+        "answer_context": "バス送迎費用は出向者（日本人駐在員）とバスを利用するベトナム人従業員の2グループに分けて計算されます。計算式：バス利用人数 × 対応する単価。バス利用人数はコストセンターごとのスカラー入力で、総人員数や男女分類には依存しません。",
+        "safe_steps": [
+          "該当部門の人員入力画面を開いてください。",
+          "出向者のバス利用人数とベトナム人のバス利用人数を入力してください。",
+          "バスの単価が今年度に更新されていることを確認してください。",
+          "「計算を実行」をクリックして数式を自動適用してください。"
+        ],
+        "aliases": [
+          "通勤費用",
+          "送迎バス",
+          "交通手当"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 6. Bus passenger drivers",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 6. Bus passenger drivers",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Định mức phân bổ chi phí xe đưa đón nhân viên",
+            "en": "Shuttle Bus Transportation Allocation Drivers",
+            "ja": "送迎バス費用配賦ドライバー"
+          },
+          "supported_summary": {
+            "vi": "Tính toán chi phí xe bus dựa trên số lượng người đi xe thực tế của nhân sự biệt phái và nhân sự Việt Nam nhân đơn giá tương ứng từng tháng.",
+            "en": "Calculates shuttle bus expenses based on actual passenger counts for seconded expats and local Vietnamese employees multiplied by monthly unit rates.",
+            "ja": "出向者およびベトナム人従業員の実際のバス利用人数に対応する月次単価を乗じて送迎バス費用を計算します。"
+          },
+          "evidence_anchor": "Bus không còn là pending manual event chung. Trạng"
+        },
+        {
+          "source_path": "wiki/timelines/nhap-lieu-nhan-su-master-plan.md",
+          "source_section": "### 1. Dữ liệu nhân sự dùng chung cho cả 12 tháng",
+          "source_sha256": "dd88f9cb69b680fa389e40e0502fdb7f951c0852fddd7fca8ed18ef466abc223",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Kế hoạch nhập liệu nhân sự 12 tháng",
+            "en": "12-Month Staffing Input Master Plan",
+            "ja": "12か月人員データ入力マスタープラン"
+          },
+          "heading_title": {
+            "vi": "Chỉ tiêu nhân sự ổn định áp dụng cho 12 tháng",
+            "en": "Stable Staffing Metrics Applied Across 12 Months",
+            "ja": "12か月間で共通使用される安定人員指標"
+          },
+          "supported_summary": {
+            "vi": "Bao gồm số lượng người đi xe bus, số người tham gia bảo hiểm xã hội được áp dụng ổn định cho các tháng phân bổ chi phí.",
+            "en": "Includes shuttle bus passenger counts and social insurance participants applied stably across allocation months.",
+            "ja": "送迎バス利用者数や社会保険加入者数など、各月の配賦計算で安定して適用される指標を定めています。"
+          },
+          "evidence_anchor": "- **Số người JP (xe bus)**: Số lượng người Nhật Bả"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_new_employee_costs",
+      "business_area": "staffing",
+      "vi": {
+        "title": "Chi phí nhân viên mới (sổ tay, khám sức khỏe tuyển dụng)",
+        "keywords": [
+          "nhân viên mới",
+          "sổ tay nhân viên",
+          "sổ tay công nhân",
+          "khám sức khỏe tuyển dụng",
+          "chi phí tuyển dụng"
+        ],
+        "answer_context": "Chi phí nhân viên mới bao gồm hai hạng mục chính: sổ tay nhân viên/công nhân và chi phí khám sức khỏe tuyển dụng. Sổ tay nhân viên được phân bổ theo số người mới vào tháng tương ứng. Chi phí khám sức khỏe tuyển dụng được phân bổ cho tháng sau khi tuyển. Hệ thống chỉ tính khi có đủ dữ liệu nhân sự hàng tháng; nếu thiếu dữ liệu, chi phí sẽ không được tính thay vì ước lượng.",
+        "safe_steps": [
+          "Nhập đầy đủ nhân sự mới theo tháng trong bảng nhập dữ liệu.",
+          "Xác nhận đơn giá sổ tay và chi phí khám sức khỏe đã cập nhật.",
+          "Lưu ý: chi phí khám sức khỏe phân bổ cho tháng sau khi tuyển.",
+          "Nếu thiếu dữ liệu nhân sự mới, hệ thống sẽ bỏ qua hạng mục này."
+        ],
+        "aliases": [
+          "tuyển dụng mới",
+          "người mới vào",
+          "chi phí onboarding"
+        ]
+      },
+      "en": {
+        "title": "New Employee Costs (Notebook, Medical Check)",
+        "keywords": [
+          "new employee",
+          "employee notebook",
+          "worker notebook",
+          "hiring medical check",
+          "recruitment cost"
+        ],
+        "answer_context": "New employee costs include two main items: staff/worker notebooks and hiring medical check expenses. Notebooks are allocated based on the number of new hires in each month. Medical check costs are allocated to the month after recruitment. The system only calculates when monthly headcount data is available; missing data causes the items to be skipped rather than estimated.",
+        "safe_steps": [
+          "Enter new hire counts by month in the staffing input grid.",
+          "Confirm that notebook and medical check unit prices are updated.",
+          "Note: medical check cost is allocated to the month after hiring.",
+          "If new hire data is missing, the system will skip these items."
+        ],
+        "aliases": [
+          "onboarding cost",
+          "new hire expenses",
+          "recruitment expenses"
+        ]
+      },
+      "ja": {
+        "title": "新入社員費用（手帳、採用時健康診断）",
+        "keywords": [
+          "新入社員",
+          "社員手帳",
+          "作業者手帳",
+          "採用時健康診断",
+          "採用費用"
+        ],
+        "answer_context": "新入社員費用には2つの主要項目があります：社員/作業者手帳と採用時健康診断費用。手帳は各月の新規入社人数に基づいて配賦されます。健康診断費用は採用の翌月に配賦されます。システムは月次人員データがある場合のみ計算し、データが不足している場合は推定せずにスキップします。",
+        "safe_steps": [
+          "人員入力画面で月別の新入社員数を入力してください。",
+          "手帳と健康診断の単価が更新されていることを確認してください。",
+          "注意：健康診断費用は採用の翌月に配賦されます。",
+          "新入社員データが不足している場合、これらの項目はスキップされます。"
+        ],
+        "aliases": [
+          "入社費用",
+          "新規採用費用",
+          "オンボーディング費用"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 12.7. Nhóm chi phí cho người mới",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 12.7. Nhóm chi phí cho người mới",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Nhóm chi phí tiếp nhận nhân sự mới tuyển dụng",
+            "en": "Onboarding Cost Rules for Newly Recruited Employees",
+            "ja": "新入社員受け入れに伴う各種費用配賦ルール"
+          },
+          "supported_summary": {
+            "vi": "Bao gồm chi phí sổ tay, thẻ nhân viên, đồng phục và khám sức khỏe đầu vào được tính theo số lượng tuyển mới thực tế.",
+            "en": "Covers employee handbooks, ID badges, uniforms, and entry health exams computed from actual monthly recruits.",
+            "ja": "入社時手帳、社員証、制服、採用時健診など、実際の月別新規採用者数に基づいて計算される費用群です。"
+          },
+          "evidence_anchor": "Nguồn: Excel gốc sheet `Hạng mục cần cải tiến`, Ro"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 6.4. Input số người mới thay thế logic hiện tại",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Nhập số lượng người mới thay thế tự động tính",
+            "en": "Manual New Hire Input Replacing Automated Calculation",
+            "ja": "自動計算を廃止した新入社員手動入力への刷新"
+          },
+          "supported_summary": {
+            "vi": "Chuyển sang cơ chế nhập số lượng nhân viên mới tuyển dụng thực tế từng tháng thay vì tự động suy luận từ biến động nhân sự.",
+            "en": "Transitions to manual entry of actual monthly new recruits, replacing brittle automated headcount delta inferences.",
+            "ja": "人員増減からの推測計算を廃止し、月別の実際の新規採用者数を直接手動入力する運用へ刷新しました。"
+          },
+          "evidence_anchor": "Thay vì nhập số người của 12 tháng như hiện tại th"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 12.8. Bổ sung hạng mục `Sổ` phân tách nhân viên/công nhân",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Phân định đơn giá sổ tay cho nhân viên và công nhân",
+            "en": "Handbook Cost Distinction for Office Staff vs Factory Workers",
+            "ja": "職員用・作業員用の手帳費用区分仕様"
+          },
+          "supported_summary": {
+            "vi": "Áp dụng đơn giá cấp phát sổ tay khác nhau giữa khối nhân viên văn phòng và khối công nhân trực tiếp sản xuất.",
+            "en": "Applies differentiated handbook unit rates between office personnel and direct factory production workers.",
+            "ja": "事務職員と工場直接作業員の間で異なる手帳支給単価を適用して正確に配賦します。"
+          },
+          "evidence_anchor": "Sổ: chi phí của nhân viên và công nhân khác nhau."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 12.9. Chú ý filter `入社月`",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy tắc lọc theo tháng tiếp nhận nhân sự mới",
+            "en": "Filtering Principles for New Hire Onboarding Months",
+            "ja": "入社月フィルタに関する重要留意事項"
+          },
+          "supported_summary": {
+            "vi": "Lọc chính xác các khoản chi phát sinh theo tháng tiếp nhận nhân viên mới để tránh bị sót các dòng chi phí liên quan.",
+            "en": "Filters onboarding expenses strictly matching the employee's joining month to avoid missing associated items.",
+            "ja": "関連項目の計上漏れを防止するため、新入社員の入社月に厳格に一致させて費用を抽出します。"
+          },
+          "evidence_anchor": "Điểm chung của các chi phí dưới đây là ở cột Tháng"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 12.10. Khám sức khỏe khi tuyển dụng",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Khám sức khỏe tuyển dụng phân bổ vào tháng tiếp theo",
+            "en": "Recruitment Medical Exam Allocated to Following Month",
+            "ja": "採用時健康診断費用の翌月配賦ルール"
+          },
+          "supported_summary": {
+            "vi": "Chi phí khám sức khỏe của người mới vào tháng này được phân bổ vào ngân sách của tháng kế tiếp theo đúng quy định.",
+            "en": "Health exam expenses for new hires entering this month are distributed into the following month's budget.",
+            "ja": "当月に入社した新入社員の採用時健診費用は、規定に基づき翌月の予算へ配賦計上します。"
+          },
+          "evidence_anchor": "Người mới vào tháng này thì chi phí khám sức khỏe "
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md",
+          "source_section": "# G6 to G5 transition handling — specification",
+          "source_sha256": "e52c3552af3bb066fd25367062dd569ee2b8f1b94c9fa76b38754d299fd9a70c",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả chuyển cấp bậc nhân sự mới G6 sang G5",
+            "en": "New Hire Transition G6 to G5 Specification",
+            "ja": "新入社員G6からG5への昇格移行仕様書"
+          },
+          "heading_title": {
+            "vi": "Đặc tả nghiệp vụ chuyển bậc nhân viên mới G6 sang G5",
+            "en": "New Hire Grade G6 to G5 Transition Specification",
+            "ja": "新入社員の等級G6からG5への移行業務仕様"
+          },
+          "supported_summary": {
+            "vi": "Quy định nguyên tắc nhận diện và xử lý dữ liệu khi nhân viên mới chuyển từ cấp bậc G6 lên G5 để không tính trùng chi phí người mới.",
+            "en": "Governs data handling when new employees transition from grade G6 to G5 to avoid double-counting new hire onboarding expenses.",
+            "ja": "新入社員がG6等級からG5等級へ昇格移行する際の人員データ処理を規定し、新入社員費用の二重計上を防止します。"
+          },
+          "evidence_anchor": "Workbook `Cải tiến nhập dữ liệu chung vào file MPn"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md",
+          "source_section": "## Source request",
+          "source_sha256": "e52c3552af3bb066fd25367062dd569ee2b8f1b94c9fa76b38754d299fd9a70c",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả chuyển cấp bậc nhân sự mới G6 sang G5",
+            "en": "New Hire Transition G6 to G5 Specification",
+            "ja": "新入社員G6からG5への昇格移行仕様書"
+          },
+          "heading_title": {
+            "vi": "Nguồn yêu cầu nghiệp vụ chuyển cấp bậc G6 sang G5",
+            "en": "Source Request for G6 to G5 Grade Transition",
+            "ja": "G6からG5への等級移行に関する要件ソース"
+          },
+          "supported_summary": {
+            "vi": "Xuất phát từ phản ánh thực tế về việc nhân sự chuyển cấp bậc bị phần mềm hiểu nhầm là nhân viên mới tuyển dụng thêm trong kỳ.",
+            "en": "Originates from user feedback where transitioning employees were mistakenly identified as newly recruited staff.",
+            "ja": "等級移行した従業員がシステム上で新規採用者として誤判定されていた業務フィードバックに基づいています。"
+          },
+          "evidence_anchor": "Workbook `Cải tiến nhập dữ liệu chung vào file MPn"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md",
+          "source_section": "## Functional requirements",
+          "source_sha256": "e52c3552af3bb066fd25367062dd569ee2b8f1b94c9fa76b38754d299fd9a70c",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả chuyển cấp bậc nhân sự mới G6 sang G5",
+            "en": "New Hire Transition G6 to G5 Specification",
+            "ja": "新入社員G6からG5への昇格移行仕様書"
+          },
+          "heading_title": {
+            "vi": "Yêu cầu chức năng xử lý chuyển cấp bậc G6 sang G5",
+            "en": "Functional Requirements for G6 to G5 Grade Transition",
+            "ja": "G6からG5への等級移行における機能要件"
+          },
+          "supported_summary": {
+            "vi": "Kiểm tra biến động nhân sự giữa các cấp bậc; nếu tổng nhân sự không đổi thì không kích hoạt các chi phí tuyển dụng người mới.",
+            "en": "Evaluates cross-grade staffing deltas; if total headcount is unchanged, new hire onboarding cost triggers remain inactive.",
+            "ja": "等級間の人員増減を検証し、部門総人員数に変動がない場合は新入社員採用費用のトリガーを発生させません。"
+          },
+          "evidence_anchor": "1. The **Nhập nhân sự thủ công** screen shall show"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md",
+          "source_section": "## Acceptance examples",
+          "source_sha256": "e52c3552af3bb066fd25367062dd569ee2b8f1b94c9fa76b38754d299fd9a70c",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả chuyển cấp bậc nhân sự mới G6 sang G5",
+            "en": "New Hire Transition G6 to G5 Specification",
+            "ja": "新入社員G6からG5への昇格移行仕様書"
+          },
+          "heading_title": {
+            "vi": "Ví dụ đối soát và tiêu chí nghiệm thu chuyển bậc G6-G5",
+            "en": "Reconciliation Examples and Acceptance Criteria for G6-G5",
+            "ja": "G6-G5等級移行の照合検証例および検収基準"
+          },
+          "supported_summary": {
+            "vi": "Ví dụ chi tiết khi 1 nhân sự chuyển từ G6 sang G5 vào tháng 7: tổng số người bằng 0 biến động và không phát sinh chi phí sổ tay mới.",
+            "en": "Detailed scenario where 1 employee shifts from G6 to G5 in July: net delta is 0 and no new handbook costs are generated.",
+            "ja": "7月に1名がG6からG5へ移行した具体例において、純増減0名として判定され、新入社員手帳費用は発生しません。"
+          },
+          "evidence_anchor": "For a month with staff 10 -> 15 and workers 100 ->"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md",
+          "source_section": "## Safety boundaries",
+          "source_sha256": "e52c3552af3bb066fd25367062dd569ee2b8f1b94c9fa76b38754d299fd9a70c",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả chuyển cấp bậc nhân sự mới G6 sang G5",
+            "en": "New Hire Transition G6 to G5 Specification",
+            "ja": "新入社員G6からG5への昇格移行仕様書"
+          },
+          "heading_title": {
+            "vi": "Ranh giới an toàn khi xử lý chuyển cấp bậc nhân sự",
+            "en": "Safety Boundaries for Staffing Grade Transition Logic",
+            "ja": "人員等級移行処理における安全境界"
+          },
+          "supported_summary": {
+            "vi": "Chỉ áp dụng quy tắc chuyển bậc cho cùng một Cost Center và không làm sai lệch số liệu nhân sự tổng thể của phòng ban.",
+            "en": "Applies grade shift logic strictly within the same Cost Center, preserving total verified headcount figures.",
+            "ja": "同一コストセンター内でのみ等級移行ルールを適用し、部門全体の確定人員数値に影響を与えません。"
+          },
+          "evidence_anchor": "- Do not alter imported HR/department-plan headcou"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_staffing_override_settings",
+      "business_area": "staffing",
+      "vi": {
+        "title": "Thiết lập ghi đè mốc nhân sự cơ sở",
+        "keywords": [
+          "ghi đè nhân sự",
+          "mốc cơ sở",
+          "thiết lập nhân sự",
+          "cài đặt baseline",
+          "override nhân sự"
+        ],
+        "answer_context": "Khi thiếu dữ liệu nhân sự mốc tháng 3 từ kỳ trước, người dùng có thể thiết lập ghi đè mốc nhân sự cơ sở trong phần Cài đặt của chương trình. Giá trị ghi đè sẽ được dùng thay cho dữ liệu gốc để tính phân bổ chi phí. Nếu không có mốc cơ sở và không có ghi đè, hệ thống sẽ báo lỗi thiếu dữ liệu nhân sự thay vì ước lượng sai.",
+        "safe_steps": [
+          "Mở phần Cài đặt trong ứng dụng MP2027.",
+          "Tìm mục Ghi đè mốc nhân sự cơ sở (Staffing Baseline Override).",
+          "Nhập tổng số người cho tháng cơ sở (thường là tháng 3).",
+          "Lưu cài đặt và chạy lại tính toán."
+        ],
+        "aliases": [
+          "cài đặt nhân sự",
+          "thiết lập mốc",
+          "tùy chỉnh baseline"
+        ]
+      },
+      "en": {
+        "title": "Staffing Baseline Override Settings",
+        "keywords": [
+          "staffing override",
+          "baseline override",
+          "staffing settings",
+          "baseline configuration",
+          "headcount override"
+        ],
+        "answer_context": "When March baseline headcount data from the prior period is unavailable, users can set a staffing baseline override in the application Settings. The override value replaces the original baseline data for cost allocation calculations. If neither baseline data nor override exists, the system reports a missing baseline error rather than making incorrect estimates.",
+        "safe_steps": [
+          "Open Settings in the MP2027 application.",
+          "Find the Staffing Baseline Override section.",
+          "Enter the total headcount for the baseline month (usually March).",
+          "Save the settings and rerun the calculation."
+        ],
+        "aliases": [
+          "headcount settings",
+          "baseline setup",
+          "baseline config"
+        ]
+      },
+      "ja": {
+        "title": "基準人員オーバーライド設定",
+        "keywords": [
+          "人員オーバーライド",
+          "基準オーバーライド",
+          "人員設定",
+          "基準設定",
+          "人員数上書き"
+        ],
+        "answer_context": "前期3月の基準人員データが利用できない場合、アプリケーションの設定で基準人員オーバーライドを設定できます。オーバーライド値は費用配賦計算において元の基準データの代わりに使用されます。基準データもオーバーライドも存在しない場合、システムは不正確な推定を行わず、基準人員不足エラーを報告します。",
+        "safe_steps": [
+          "MP2027アプリケーションの設定を開いてください。",
+          "基準人員オーバーライドセクションを探してください。",
+          "基準月（通常3月）の総人員数を入力してください。",
+          "設定を保存し、計算を再実行してください。"
+        ],
+        "aliases": [
+          "人員設定",
+          "基準セットアップ",
+          "基準構成"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 10. Manual input rules",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 10. Manual input rules",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Quy tắc nhập dữ liệu thủ công an toàn",
+            "en": "Safe Manual Data Input Rules",
+            "ja": "手動データ入力の安全ルール"
+          },
+          "supported_summary": {
+            "vi": "Hướng dẫn nhập bổ sung số liệu nhân sự, sự kiện định kỳ và chi phí đặc thù qua giao diện với cơ chế kiểm tra tính hợp lệ trước khi lưu.",
+            "en": "Guides manual entry of staffing numbers, periodic events, and custom costs via the UI with pre-save validation safeguards.",
+            "ja": "保存前の事前検証ガードを備えたUIを介して、人員数、定期イベント、および個別費用を手動入力する手順を案内します。"
+          },
+          "evidence_anchor": "CC switching trong GUI phải clear giá trị stale. N"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_source_file_order_rule",
+      "business_area": "operations",
+      "vi": {
+        "title": "Quy tắc thứ tự xử lý tệp nguồn và dòng phân cách",
+        "keywords": [
+          "thứ tự file",
+          "thứ tự xử lý",
+          "dòng phân cách",
+          "dòng trống",
+          "file nguồn",
+          "chạy theo thứ tự"
+        ],
+        "answer_context": "Hệ thống xử lý các tệp nguồn theo thứ tự cố định: Cơ sở vật chất → Tài sản cố định → Chi phí hệ thống (3 kỳ) → Hành chính → Sinh nhật → Phân bổ → Giấy tờ NNN → Dữ liệu nhập thủ công. Sau mỗi nhóm nguồn hoàn tất, một dòng trống được chèn vào để phân cách kết quả. Thứ tự này là bắt buộc theo yêu cầu nghiệp vụ, không phải do hệ thống tự quyết định.",
+        "safe_steps": [
+          "Không cần thay đổi thứ tự tệp nguồn; hệ thống tự động xử lý đúng thứ tự.",
+          "Kiểm tra kết quả: mỗi nhóm chi phí phải được phân tách bằng một dòng trống.",
+          "Nếu kết quả bị lẫn lộn thứ tự, kiểm tra lại danh sách tệp nguồn trong thư mục đầu vào."
+        ],
+        "aliases": [
+          "thứ tự file nguồn",
+          "quy tắc sắp xếp",
+          "cách dòng"
+        ]
+      },
+      "en": {
+        "title": "Source File Processing Order and Separator Row Rule",
+        "keywords": [
+          "file order",
+          "processing order",
+          "separator row",
+          "blank row",
+          "source files",
+          "file sequence"
+        ],
+        "answer_context": "The system processes source files in a fixed order: Facility → Fixed Assets → System Cost (3 periods) → Admin/GA → Birthday → Allocation → NNN Paperwork → Manual CSV. After each source group finishes, a blank separator row is inserted in the output. This order is mandated by business requirements, not a system design choice.",
+        "safe_steps": [
+          "No need to change the file order; the system automatically processes in the correct sequence.",
+          "Check results: each cost group should be separated by one blank row.",
+          "If results appear out of order, verify the source file list in the input folder."
+        ],
+        "aliases": [
+          "source file sequence",
+          "processing sequence",
+          "blank row between groups"
+        ]
+      },
+      "ja": {
+        "title": "ソースファイル処理順序と区切り行ルール",
+        "keywords": [
+          "ファイル順序",
+          "処理順序",
+          "区切り行",
+          "空白行",
+          "ソースファイル",
+          "ファイル順番"
+        ],
+        "answer_context": "システムはソースファイルを固定順序で処理します：施設 → 固定資産 → システム費用（3期間）→ 総務 → 誕生日 → 配賦 → NNN書類 → 手動CSV。各ソースグループの完了後、出力に空白の区切り行が挿入されます。この順序は業務要件に基づくもので、システム設計の選択ではありません。",
+        "safe_steps": [
+          "ファイル順序を変更する必要はありません。システムが自動的に正しい順序で処理します。",
+          "結果を確認：各費用グループは1つの空白行で区切られているはずです。",
+          "結果の順序が間違っている場合、入力フォルダのソースファイルリストを確認してください。"
+        ],
+        "aliases": [
+          "ソース順序",
+          "処理シーケンス",
+          "グループ間空白行"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "## 3. File-order output rule",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 3. File-order output rule",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Thứ tự xuất các sheet chi phí trên kết quả",
+            "en": "Export Sequence of Cost Detail Sheets",
+            "ja": "出力ファイルにおける費用シートの出力順序"
+          },
+          "supported_summary": {
+            "vi": "Xuất các khối chi phí theo đúng thứ tự file nguồn: tài sản cố định, chi phí hệ thống, cơ sở vật chất và phân bổ hành chính.",
+            "en": "Writes expense sections following exact source file order: fixed assets, IT systems, facility costs, and administrative allocations.",
+            "ja": "固定資産、ITシステム費、施設費、総務配賦の元ファイル順序を厳格に維持して出力シートへ書き込みます。"
+          },
+          "evidence_anchor": "Requirement states:"
+        },
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 9. Source workbook workflow",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Quy trình xử lý tệp nguồn và thứ tự xuất",
+            "en": "Source Workbook Workflow and Export Sequence",
+            "ja": "元データ処理ワークフローと出力順序"
+          },
+          "supported_summary": {
+            "vi": "Thực hiện nạp tuần tự các tệp bảng tính nguồn, giữ nguyên tính độc lập giữa các sheet chi phí và trích xuất đúng cấu trúc kết quả.",
+            "en": "Governs the sequential ingestion of source workbooks, preserving isolation between cost sheets and exporting structured results.",
+            "ja": "元データファイルの順次読み込み、個別費用シートの独立性保持、および構造化された結果出力を管理します。"
+          },
+          "evidence_anchor": "Pipeline cơ bản:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 2. Danh sách sheet trong file yêu cầu gốc",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Danh sách các sheet trong file yêu cầu gốc",
+            "en": "Master Sheets Inventory in Canonical Requirement Workbook",
+            "ja": "原本要件ワークブックのシート一覧構成"
+          },
+          "supported_summary": {
+            "vi": "Liệt kê đầy đủ 7 sheet nghiệp vụ trong tệp yêu cầu gồm danh mục cải tiến, danh mục phòng ban, tài sản cố định và phân bổ hành chính.",
+            "en": "Catalogs the 7 canonical sheets covering improvements, cost centers, fixed assets, and administrative cost allocations.",
+            "ja": "改善項目、原価センタ、固定資産、総務配賦一覧など、原本要件ファイルに含まれる主要7シートの構成を定義しています。"
+          },
+          "evidence_anchor": "| STT | Sheet | Vai trò |"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 22.6. Không quay lại cách xuất cố định theo từng dòng",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Tuyệt đối không cố định dòng xuất dữ liệu cứng nhắc",
+            "en": "Prohibition Against Hardcoded Fixed Output Row Mapping",
+            "ja": "固定行番号へのマッピングの禁止原則"
+          },
+          "supported_summary": {
+            "vi": "Dữ liệu được xuất động theo các khoản chi thực tế phát sinh, tuyệt đối không gán cứng số dòng trong mã nguồn.",
+            "en": "Renders output lines dynamically based on active transaction data, strictly prohibiting hardcoded row indexes in source code.",
+            "ja": "実際に発生した費用データに基づいて動的に行を出力し、ソースコード内で行番号をハードコードすることを禁止します。"
+          },
+          "evidence_anchor": "Không quay lại logic cũ xuất output cố định theo d"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_uniform_and_folding_cups",
+      "business_area": "staffing",
+      "vi": {
+        "title": "Quy tắc cấp phát đồng phục và cốc xếp định kỳ",
+        "keywords": [
+          "đồng phục",
+          "cốc xếp",
+          "áo ngắn tay",
+          "áo dài tay",
+          "cấp bù áo",
+          "cốc định kỳ",
+          "cột F:U",
+          "dấu tròn",
+          "tháng 2",
+          "tháng 10"
+        ],
+        "answer_context": "Quy tắc cấp phát đồng phục và cốc xếp: (1) Đồng phục đọc dấu tròn 〇 tại cột F:U của sheet 原価センタ, áp dụng chung cho cả nhân viên và công nhân. (2) Cấp bù áo ngắn tay vào tháng 2 và áo dài tay vào tháng 10. (3) Cốc xếp định kỳ được nhập trực tiếp qua kênh Nhập sự kiện tại mục 'Cốc xếp định kỳ' vào tháng 2 hoặc tháng 8.",
+        "safe_steps": [
+          "Kiểm tra cột F:U trên sheet 原価センタ để xác định danh sách phòng ban nhận đồng phục.",
+          "Xác nhận tháng cấp bù áo ngắn tay (tháng 2) và áo dài tay (tháng 10).",
+          "Đối với cốc xếp định kỳ, mở hộp thoại Nhập sự kiện và điền số lượng tại mục Cốc xếp định kỳ."
+        ],
+        "aliases": [
+          "cấp phát áo",
+          "áo bảo hộ",
+          "cốc uống nước"
+        ]
+      },
+      "en": {
+        "title": "Uniform and Folding Cup Allocation Rules",
+        "keywords": [
+          "uniform allocation",
+          "folding cups",
+          "short sleeve uniform",
+          "long sleeve uniform",
+          "periodic cups",
+          "circle mark",
+          "February uniform",
+          "October uniform"
+        ],
+        "answer_context": "Uniform and folding cup allocation rules: (1) Uniform eligibility reads the circle mark 〇 in columns F:U of the Cost Center master sheet, applying equally to staff and workers. (2) Short-sleeve supplemental shirts are allocated in February and long-sleeve shirts in October. (3) Periodic folding cups are entered directly in the Manual Events dialog under 'Periodic Folding Cups' in February or August.",
+        "safe_steps": [
+          "Check columns F:U in the Cost Center master sheet for uniform eligibility marks.",
+          "Verify the months for short-sleeve (February) and long-sleeve (October) supplemental allocations.",
+          "For periodic folding cups, open the Manual Events dialog and enter quantities under Periodic Folding Cups."
+        ],
+        "aliases": [
+          "uniform rule",
+          "workwear distribution",
+          "cup allocation"
+        ]
+      },
+      "ja": {
+        "title": "制服および折りたたみコップの支給ルール",
+        "keywords": [
+          "制服支給",
+          "折りたたみコップ",
+          "半袖制服",
+          "長袖制服",
+          "追加支給",
+          "定期コップ",
+          "F:U列",
+          "〇印",
+          "2月制服",
+          "10月制服"
+        ],
+        "answer_context": "制服および折りたたみコップの支給ルール：(1) 制服対象部門は原価センタマスタのF:U列の〇印を参照し、社員・作業者の区別なく共通適用されます。(2) 半袖制服の追加支給は2月、長袖制服は10月に実施されます。(3) 定期折りたたみコップは手動イベントダイアログの「定期折りたたみコップ」項目から2月または8月に直接入力します。",
+        "safe_steps": [
+          "原価センタマスタのF:U列を確認し、制服支給対象部門の〇印を確認してください。",
+          "半袖制服（2月）および長袖制服（10月）の支給月を確認してください。",
+          "定期折りたたみコップは手動イベント入力ダイアログから数量を入力してください。"
+        ],
+        "aliases": [
+          "制服ルール",
+          "作業着支給",
+          "コップ配賦"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 19. Đồng phục và cốc xếp",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 19. Đồng phục và cốc xếp",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Định mức cấp phát đồng phục và cốc gấp",
+            "en": "Uniform and Folding Cup Distribution Standard",
+            "ja": "制服および折りたたみコップ支給基準"
+          },
+          "supported_summary": {
+            "vi": "Cấp phát đồng phục định kỳ theo quý cho nhân sự chính thức và cấp phát cốc cá nhân khi tiếp nhận nhân viên mới.",
+            "en": "Specifies quarterly uniform allocation cycles for regular staff and personal folding cup issuance upon onboarding new employees.",
+            "ja": "正社員に対する制服の四半期定期支給および新入社員受け入れ時の個人用コップ支給基準を定めています。"
+          },
+          "evidence_anchor": "- Chương trình đọc dấu `〇` tại cột F:U của trang `"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-08-31-uniform-cup-improvement-807-814.md",
+          "source_section": "# Uniform and Cup Improvement 807-814 Specification",
+          "source_sha256": "143e8702719bca6dd343d9c473f5d31f3762b8b98680742b2ec70fbb9deb9537",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả cấp phát đồng phục và cốc gấp định kỳ",
+            "en": "Uniform and Folding Cup Allocation Specification",
+            "ja": "制服および折りたたみコップ定期支給仕様書"
+          },
+          "heading_title": {
+            "vi": "Đặc tả cải tiến phân bổ đồng phục và cốc gấp",
+            "en": "Uniform and Personal Cup Allocation Improvement Specification",
+            "ja": "制服および個人用コップ配賦改善仕様書"
+          },
+          "supported_summary": {
+            "vi": "Chuẩn hóa quy trình phân bổ chi phí đồng phục mùa hè, mùa đông và cấp phát cốc cá nhân theo đúng chu kỳ nghiệp vụ thực tế.",
+            "en": "Standardizes cost distribution for summer/winter uniforms and personal cup issuance aligned with actual business cycles.",
+            "ja": "夏服・冬服の制服費用および個人用コップ支給の配賦処理を、実際の業務サイクルに合わせて標準化します。"
+          },
+          "evidence_anchor": "Implement only the uncompleted improvement registe"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-08-31-uniform-cup-improvement-807-814.md",
+          "source_section": "## Scope",
+          "source_sha256": "143e8702719bca6dd343d9c473f5d31f3762b8b98680742b2ec70fbb9deb9537",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả cấp phát đồng phục và cốc gấp định kỳ",
+            "en": "Uniform and Folding Cup Allocation Specification",
+            "ja": "制服および折りたたみコップ定期支給仕様書"
+          },
+          "heading_title": {
+            "vi": "Phạm vi áp dụng định mức đồng phục và cốc cá nhân",
+            "en": "Scope of Uniform and Personal Cup Distribution Standards",
+            "ja": "制服および個人用コップ支給基準の適用範囲"
+          },
+          "supported_summary": {
+            "vi": "Áp dụng cho toàn bộ nhân sự chính thức và nhân viên mới tuyển dụng tại tất cả các phòng ban trong năm tài chính.",
+            "en": "Applies across all regular employees and new hires across all cost centers during the active fiscal year.",
+            "ja": "当該会計年度におけるすべての部門の正社員および新入社員を対象範囲とします。"
+          },
+          "evidence_anchor": "Implement only the uncompleted improvement registe"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-08-31-uniform-cup-improvement-807-814.md",
+          "source_section": "## Business rules",
+          "source_sha256": "143e8702719bca6dd343d9c473f5d31f3762b8b98680742b2ec70fbb9deb9537",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả cấp phát đồng phục và cốc gấp định kỳ",
+            "en": "Uniform and Folding Cup Allocation Specification",
+            "ja": "制服および折りたたみコップ定期支給仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy tắc phân bổ đồng phục theo quý và cốc cá nhân",
+            "en": "Quarterly Uniform and Personal Cup Allocation Business Rules",
+            "ja": "四半期制服および個人用コップ配賦の業務ルール"
+          },
+          "supported_summary": {
+            "vi": "Phân bổ đồng phục ngắn tay vào các tháng 5 và 11; cấp phát cốc gấp 1 lần duy nhất cho nhân viên mới vào tháng tiếp nhận.",
+            "en": "Distributes short-sleeve uniforms in May and November, while issuing folding cups once to new hires upon their joining month.",
+            "ja": "夏用制服は5月と11月に配賦し、折りたたみコップは新入社員の入社月に1回のみ支給配賦します。"
+          },
+          "evidence_anchor": "1. Cost center `1412000044` must allocate, for eve"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-08-31-uniform-cup-improvement-807-814.md",
+          "source_section": "## Acceptance criteria",
+          "source_sha256": "143e8702719bca6dd343d9c473f5d31f3762b8b98680742b2ec70fbb9deb9537",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả cấp phát đồng phục và cốc gấp định kỳ",
+            "en": "Uniform and Folding Cup Allocation Specification",
+            "ja": "制服および折りたたみコップ定期支給仕様書"
+          },
+          "heading_title": {
+            "vi": "Tiêu chuẩn nghiệm thu chi phí đồng phục và cốc gấp",
+            "en": "Acceptance Criteria for Uniform and Cup Cost Allocations",
+            "ja": "制服およびコップ費用の検収基準"
+          },
+          "supported_summary": {
+            "vi": "Xác nhận số lượng và đơn giá tính toán khớp đúng với bảng phân bổ hành chính và xuất đúng dòng tài khoản kế toán trên bảng tính.",
+            "en": "Verifies that calculated counts and unit prices match administrative allocation tables and map to correct general ledger rows.",
+            "ja": "計算された数量および単価が総務配賦表と完全に一致し、正しい勘定科目行へ出力されていることを検収基準とします。"
+          },
+          "evidence_anchor": "- `1412000044` produces type-1 shoe and electrosta"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_legacy_staffing_exclusion",
+      "business_area": "staffing",
+      "vi": {
+        "title": "Quy tắc không cần điền 2 dữ liệu nhân sự cũ (Biệt phái và Local)",
+        "keywords": [
+          "nhân sự cũ",
+          "loại bỏ nhân sự cũ",
+          "xuất công nhân viên",
+          "local",
+          "biệt phái",
+          "không điền 2 dòng"
+        ],
+        "answer_context": "Theo yêu cầu nghiệp vụ cải tiến nhập liệu chung, hệ thống đã loại bỏ yêu cầu điền 2 dòng dữ liệu nhân sự cũ (xuất công nhân viên / biệt phái và nhân viên địa phương). Người dùng không cần tìm hay nhập lại 2 dòng này trên biểu mẫu đầu ra FORM.",
+        "safe_steps": [
+          "Không cần nhập dữ liệu cho 2 dòng nhân sự biệt phái và local cũ.",
+          "Chỉ cần nhập bảng số lượng nhân sự tổng thể và số lượng đi bus.",
+          "Hệ thống tự động bỏ qua và bảo toàn cấu trúc bảng tính kết quả."
+        ],
+        "aliases": [
+          "loại bỏ 2 dòng nhân sự",
+          "nhân sự biệt phái cũ",
+          "legacy headcount"
+        ]
+      },
+      "en": {
+        "title": "Exclusion Rule for 2 Legacy Staffing Rows (Expat and Local)",
+        "keywords": [
+          "legacy staffing exclusion",
+          "deprecated headcount rows",
+          "seconded staff",
+          "local staff",
+          "no fill legacy"
+        ],
+        "answer_context": "Under the improved common input requirements, the system has deprecated the requirement to populate the 2 legacy staffing rows (seconded/expat employees and local employees). Operators do not need to locate or input data for these 2 rows on the FORM output template.",
+        "safe_steps": [
+          "Do not enter data for the 2 deprecated legacy staffing rows.",
+          "Only enter overall headcount totals and bus rider counts.",
+          "The engine automatically preserves clean output template formatting."
+        ],
+        "aliases": [
+          "exclude legacy headcount",
+          "legacy staffing rule",
+          "deprecated staffing rows"
+        ]
+      },
+      "ja": {
+        "title": "旧人員2行（出向社員・ローカル社員）の入力不要ルール",
+        "keywords": [
+          "旧人員入力不要",
+          "出向社員",
+          "ローカル社員",
+          "人員2行廃止",
+          "入力省略"
+        ],
+        "answer_context": "共通データ入力改善要件に基づき、旧来の人員2行（出向社員およびローカル社員）へのデータ入力要件は廃止されました。運用担当者はFORM出力テンプレートにおいてこれら2行にデータを入力する必要はありません。",
+        "safe_steps": [
+          "旧人員2行（出向・ローカル）にデータを入力する必要はありません。",
+          "総人員数およびバス利用人数の必要項目のみ入力してください。",
+          "システムが自動的にテンプレート書式を保ったまま処理します。"
+        ],
+        "aliases": [
+          "旧人員除外",
+          "出向ローカル廃止",
+          "人員行不要ルール"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 4.1. Không cần điền 2 dữ liệu nhân sự cũ",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 4.1. Không cần điền 2 dữ liệu nhân sự cũ",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Loại trừ 2 chỉ tiêu nhân sự cũ",
+            "en": "Exclusion of Two Deprecated Legacy Staffing Metrics",
+            "ja": "旧人員2項目の完全除外ルール"
+          },
+          "supported_summary": {
+            "vi": "Không điền 2 chỉ tiêu nhân sự cũ từ biểu mẫu trước đây, để trống ô tương ứng trên biểu mẫu xuất mới.",
+            "en": "Omits the two legacy headcount metrics from prior versions, leaving the corresponding cells blank on modern forms.",
+            "ja": "旧バージョンの2つの人員項目を入力せず、新しい出力フォーム上では該当セルを空白とします。"
+          },
+          "evidence_anchor": "Sheet `Hạng mục cần cải tiến` ghi: **Không cần điề"
+        },
+        {
+          "source_path": "docs/MP2027/README_HEADCOUNT_LEGACY.md",
+          "source_section": "# Manual Headcount Legacy File",
+          "source_sha256": "82ef9b3c61f30c6fb61a99f5fb725e37469ad95348acec79d647dc1839a085b9",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định loại trừ nhân sự cũ không sử dụng",
+            "en": "Legacy Staffing Row Exclusion Rule",
+            "ja": "旧人員入力行除外ルール"
+          },
+          "heading_title": {
+            "vi": "Loại bỏ vĩnh viễn tệp nhập nhân sự cũ",
+            "en": "Permanent Deprecation of Legacy Headcount File",
+            "ja": "旧人員入力ファイルの完全廃止"
+          },
+          "supported_summary": {
+            "vi": "Tệp nhân sự cũ chỉ lưu lại làm bằng chứng lịch sử; chương trình chính thức chuyển sang dùng bảng dữ liệu nhân sự 12 tháng duy nhất.",
+            "en": "Legacy headcount file is preserved solely for historical audit; the production system exclusively uses the unified 12-month staffing sheet.",
+            "ja": "旧人員ファイルは過去の監査履歴としてのみ保管され、本番システムは統一された12か月人員データシートのみを使用します。"
+          },
+          "evidence_anchor": "`headcount_manual_LEGACY_DO_NOT_USE.csv` is not an"
+        },
+        {
+          "source_path": "wiki/timelines/nhap-lieu-nhan-su-master-plan.md",
+          "source_section": "### 3. Hạng mục cần xóa bỏ",
+          "source_sha256": "dd88f9cb69b680fa389e40e0502fdb7f951c0852fddd7fca8ed18ef466abc223",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Kế hoạch nhập liệu nhân sự 12 tháng",
+            "en": "12-Month Staffing Input Master Plan",
+            "ja": "12か月人員データ入力マスタープラン"
+          },
+          "heading_title": {
+            "vi": "Loại bỏ các chỉ tiêu nhân sự lỗi thời",
+            "en": "Removal of Deprecated Legacy Staffing Items",
+            "ja": "廃止された旧人員項目の完全除外"
+          },
+          "supported_summary": {
+            "vi": "Xóa bỏ hoàn toàn 2 chỉ tiêu nhân sự cũ không còn áp dụng trên biểu mẫu kết quả ngân sách mới.",
+            "en": "Permanently eliminates the 2 legacy staffing indicators that no longer apply to modern budget forms.",
+            "ja": "新しい予算フォームでは適用されない2つの旧人員項目を完全に削除・除外します。"
+          },
+          "evidence_anchor": "- Xóa các trường nội dung không còn cần thiết hoặc"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_event_driver_standards",
+      "business_area": "staffing",
+      "vi": {
+        "title": "Định mức và động lực phân bổ sự kiện (Event Drivers)",
+        "keywords": [
+          "event drivers",
+          "dinh muc su kien",
+          "dong luc phan bo",
+          "su kien noi bo"
+        ],
+        "answer_context": "Các sự kiện nội bộ theo tháng (du lịch công ty, khám sức khỏe, cấp phát định kỳ) sử dụng động lực phân bổ theo số lượng người tham gia thực tế hoặc định mức sự kiện đã đăng ký. Hãy xác nhận lại trước khi áp dụng vào số liệu thực tế.",
+        "safe_steps": [
+          "Mở hộp thoại nhập liệu sự kiện trong phần mềm.",
+          "Điền số lượng thực tế của từng sự kiện theo tháng.",
+          "Lưu và chạy lại tính toán để cập nhật chi phí."
+        ],
+        "aliases": [
+          "event drivers",
+          "dinh muc su kien"
+        ]
+      },
+      "en": {
+        "title": "Event Driver Standards and Monthly Participation Counts",
+        "keywords": [
+          "event drivers",
+          "event allocation count",
+          "monthly event drivers",
+          "actual participant count"
+        ],
+        "answer_context": "Monthly internal events (company trip, health checks, periodic distributions) use event drivers based on actual registered participant counts rather than overall company headcount. Please confirm before applying to actual operational figures.",
+        "safe_steps": [
+          "Open the event manual input dialog.",
+          "Enter the actual participant count for each monthly event.",
+          "Save and rerun calculation to update allocations."
+        ],
+        "aliases": [
+          "event drivers",
+          "event allocation count"
+        ]
+      },
+      "ja": {
+        "title": "イベントドライバー基準および月別参加人数設定",
+        "keywords": [
+          "イベントドライバー",
+          "イベント参加人数",
+          "月別イベント基準",
+          "実参加人数"
+        ],
+        "answer_context": "月別社内イベント（社員旅行、健康診断、定期支給品）は、全体人員数ではなく登録された実際の参加人数（イベントドライバー）に基づいて配賦されます。実際の業務数値に適用する前に再確認してください。",
+        "safe_steps": [
+          "イベント入力ダイアログを開いてください。",
+          "月別の実参加人数を入力してください。",
+          "保存して再計算を実行し、配賦額を更新してください。"
+        ],
+        "aliases": [
+          "イベントドライバー",
+          "イベント参加人数"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "### Event drivers",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "reference_with_caveat",
+        "review_status": "reference_with_caveat"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "### Event drivers",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "reference_with_caveat",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Định mức số người tham gia sự kiện công ty",
+            "en": "Company Event Driver Standards",
+            "ja": "社内イベント参加者数基準"
+          },
+          "supported_summary": {
+            "vi": "Số lượng người tham gia các sự kiện như quà không đi du lịch, kỷ niệm thành lập chỉ nhập khi có số liệu thực tế được quản lý xác nhận.",
+            "en": "Participant counts for events like non-travel gifts or company anniversaries are entered only upon verified manager confirmation.",
+            "ja": "旅行不参加者ギフトや創立記念などのイベント参加者数は、管理者の承認済み実績がある場合にのみ入力します。"
+          },
+          "evidence_anchor": "cc_code,period,event_name,count,unit_price,amount_"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_special_cost_custom_headcount",
+      "business_area": "staffing",
+      "vi": {
+        "title": "Quy tắc khoản chi phí có số người tham gia riêng",
+        "keywords": [
+          "so nguoi rieng",
+          "chi phi so nguoi rieng",
+          "nhan su dac thu",
+          "custom headcount"
+        ],
+        "answer_context": "Nếu một khoản chi phí có quy định 'số người riêng' (ví dụ chi phí đặc thù theo nhóm), chương trình sẽ dùng số người riêng của khoản đó thay vì số nhân sự chung của phòng ban. Hãy xác nhận lại trước khi áp dụng vào số liệu thực tế.",
+        "safe_steps": [
+          "Kiểm tra xem khoản chi có yêu cầu số người riêng không.",
+          "Nhập số người tham gia thực tế vào kênh dữ liệu tương ứng.",
+          "Nếu chưa có số người riêng, hãy xác nhận lại trước khi chạy tính toán."
+        ],
+        "aliases": [
+          "so nguoi rieng",
+          "chi phi so nguoi rieng"
+        ]
+      },
+      "en": {
+        "title": "Special Cost Allocation with Custom Headcount Rule",
+        "keywords": [
+          "custom headcount",
+          "dedicated participant count",
+          "item specific headcount",
+          "special cost headcount"
+        ],
+        "answer_context": "If a specific cost item has a designated 'custom headcount' (e.g. group-specific special expenses), the program uses that item's specific headcount instead of general departmental headcount. Please confirm before applying to actual operational figures.",
+        "safe_steps": [
+          "Check whether the expense requires a dedicated participant headcount.",
+          "Enter the specific headcount into the appropriate input channel.",
+          "If custom headcount is not yet confirmed, verify before running calculation."
+        ],
+        "aliases": [
+          "custom headcount",
+          "dedicated participant count"
+        ]
+      },
+      "ja": {
+        "title": "個別人員数を指定する特別費用の配賦ルール",
+        "keywords": [
+          "個別人員数",
+          "専用人員数",
+          "特定費用人員",
+          "カスタム人員数"
+        ],
+        "answer_context": "特定の費用項目に「個別人員数」が設定されている場合、部門全体の共通人員数ではなく、その項目専用の人員数を用いて計算します。実際の業務数値に適用する前に再確認してください。",
+        "safe_steps": [
+          "対象費用に個別人員数の指定があるか確認してください。",
+          "対応する入力欄に実際の人員数を入力してください。",
+          "個別人員数が未定の場合は、計算実行前に担当者に確認してください。"
+        ],
+        "aliases": [
+          "個別人員数",
+          "専用人員数"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 27.2. Ngoại lệ: chi phí có \"số người riêng\"",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "reference_with_caveat",
+        "review_status": "reference_with_caveat"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 27.2. Ngoại lệ: chi phí có \"số người riêng\"",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "reference_with_caveat",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Ngoại lệ tạm thời bỏ qua chi phí có số người riêng",
+            "en": "Exception Rule: Deferring Items with Custom Headcounts",
+            "ja": "例外規定: 「個別人数あり」項目の計算一時除外"
+          },
+          "supported_summary": {
+            "vi": "Tạm thời chưa tính các khoản chi phí có ghi chú 'có số người riêng' cho đến khi người dùng cung cấp số liệu chính xác.",
+            "en": "Temporarily defers calculating expense lines marked 'custom headcount' until operators supply verified numbers.",
+            "ja": "「個別人数あり」と明記された費用項目は、ユーザーから確定数値が提供されるまで計算を一時除外します。"
+          },
+          "evidence_anchor": "> **Excel Row 342 cột F**:"
+        }
+      ]
+    }
+  ]
+}

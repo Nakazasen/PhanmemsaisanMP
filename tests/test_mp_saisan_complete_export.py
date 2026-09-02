@@ -162,7 +162,7 @@ def test_complete_v1_missing_reference_map_orchestration_contract(monkeypatch, t
         def export_to_template(self, *args, **kwargs):
             output_path = args[1]
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-            Path(output_path).write_text("placeholder", encoding="utf-8")
+            _wb(Path(output_path))
             export_calls.append((args, kwargs))
             return True
 

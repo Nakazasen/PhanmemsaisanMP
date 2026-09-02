@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 import sqlite3
 from pathlib import Path
 import json
@@ -24,6 +25,17 @@ _FY_SCOPED_MANUAL_TABLES = (
 
 EXPLICIT_BASELINE_SOURCE = "MANUAL_GUI_EXPLICIT_BASELINE_T3"
 APPROVED_APRIL_BASELINE_DESCRIPTION = "USER_APPROVED_BASELINE_T3_FROM_T4"
+LEGACY_UNCONFIRMED_BASELINE_DESCRIPTION = "MANUAL_BASELINE_T3"
+LEGACY_UNCONFIRMED_BASELINE_SOURCE = "MANUAL_GUI"
+
+
+@dataclass(frozen=True)
+class BaselineRecoveryOutcome:
+    """One selected cost center's explicit April-to-March recovery result."""
+
+    cc_code: str
+    status: str
+    reason: str = ""
 
 # Authoritative tables written by the manual-staffing screen that must cross
 # the annual-store -> immutable-run boundary.  Keep this contract explicit so
@@ -409,6 +421,32 @@ def _baseline_row_is_explicit(row: sqlite3.Row | Sequence[object] | None) -> boo
     )
 
 
+def _baseline_row_is_legacy_unconfirmed_zero(
+    row: sqlite3.Row | Sequence[object] | None,
+) -> bool:
+    """Identify only the historic blank-as-zero GUI shape that recovery may replace.
+
+    This does not loosen baseline validity.  It merely lets an explicitly
+    approved same-CC April recovery replace the record that the current
+    validity rule already rejects.
+    """
+    if row is None:
+        return False
+    total, expat, staff, worker, local_total, description, source_file = row
+    values = (total, expat, staff, worker, local_total)
+    if any(value is None for value in values):
+        return False
+    try:
+        numeric_values = tuple(float(value) for value in values)
+    except (TypeError, ValueError):
+        return False
+    return (
+        all(abs(value) <= 1e-6 for value in numeric_values)
+        and str(description or "") == LEGACY_UNCONFIRMED_BASELINE_DESCRIPTION
+        and str(source_file or "") == LEGACY_UNCONFIRMED_BASELINE_SOURCE
+    )
+
+
 def has_valid_manual_baseline(
     conn: sqlite3.Connection,
     fiscal_year: int,
@@ -516,17 +554,40 @@ def copy_missing_baselines_from_april(
         if abs(local_total - (staff + worker)) > 1e-6 or abs(total - (expat + local_total)) > 1e-6:
             raise ValueError(f"Dữ liệu T4 của CC {cc} không cân đối thành phần nhân sự.")
         existing_manual = conn.execute(
-            """SELECT 1 FROM fact_monthly_headcount
+            """SELECT headcount_all,headcount_expat,headcount_staff,headcount_worker,
+                      headcount_local_total,description,source_file
+               FROM fact_monthly_headcount
                WHERE period=? AND source='manual' AND CAST(cc_code AS TEXT)=? LIMIT 1""",
             (baseline, cc),
         ).fetchone()
         existing_saved = conn.execute(
-            """SELECT 1 FROM fact_manual_headcount_baseline_override
+            """SELECT headcount_all,headcount_expat,headcount_staff,headcount_worker,
+                      headcount_local_total,description,source_file
+               FROM fact_manual_headcount_baseline_override
                WHERE fiscal_year=? AND period=? AND CAST(cc_code AS TEXT)=? LIMIT 1""",
             (int(fiscal_year), baseline, cc),
         ).fetchone()
         if existing_manual is not None or existing_saved is not None:
-            continue
+            if has_valid_manual_baseline(conn, fiscal_year, cc):
+                continue
+            records = tuple(
+                record for record in (existing_manual, existing_saved) if record is not None
+            )
+            if not records or not all(
+                _baseline_row_is_legacy_unconfirmed_zero(record) for record in records
+            ):
+                raise ValueError(
+                    f"Dữ liệu mốc T3 của CC {cc} chưa hợp lệ và không phải bản ghi cũ có thể thay bằng T4."
+                )
+            conn.execute(
+                "DELETE FROM fact_monthly_headcount WHERE period=? AND source='manual' AND CAST(cc_code AS TEXT)=?",
+                (baseline, cc),
+            )
+            conn.execute(
+                """DELETE FROM fact_manual_headcount_baseline_override
+                   WHERE fiscal_year=? AND period=? AND CAST(cc_code AS TEXT)=?""",
+                (int(fiscal_year), baseline, cc),
+            )
         conn.execute(
             """INSERT INTO fact_manual_headcount_baseline_override
                (period,cc_code,fiscal_year,headcount_all,headcount_expat,headcount_staff,
@@ -549,6 +610,47 @@ def copy_missing_baselines_from_april(
         copied = [cc for cc in copied if cc == str(target_cc).strip()]
     apply_manual_baseline_overrides(conn, fiscal_year, target_cc=target_cc)
     return copied
+
+
+def recover_missing_baselines_from_april(
+    conn: sqlite3.Connection,
+    fiscal_year: int,
+    missing_ccs: Sequence[object],
+    *,
+    source_conn: sqlite3.Connection | None = None,
+) -> list[BaselineRecoveryOutcome]:
+    """Recover each selected missing baseline independently.
+
+    A missing or invalid April source for one cost center must not suppress
+    recovery for another selected cost center.  The caller retains control of
+    the transaction and presents unresolved outcomes to the user.
+    """
+    outcomes: list[BaselineRecoveryOutcome] = []
+    for raw_cc in dict.fromkeys(str(cc).strip() for cc in missing_ccs if str(cc or "").strip()):
+        if has_valid_manual_baseline(conn, fiscal_year, raw_cc):
+            outcomes.append(BaselineRecoveryOutcome(raw_cc, "already_valid"))
+            continue
+        try:
+            copied = copy_missing_baselines_from_april(
+                conn,
+                fiscal_year,
+                target_cc=raw_cc,
+                source_conn=source_conn,
+            )
+        except ValueError as exc:
+            outcomes.append(BaselineRecoveryOutcome(raw_cc, "unresolved", str(exc)))
+            continue
+        if raw_cc in copied and has_valid_manual_baseline(conn, fiscal_year, raw_cc):
+            outcomes.append(BaselineRecoveryOutcome(raw_cc, "recovered"))
+        else:
+            outcomes.append(
+                BaselineRecoveryOutcome(
+                    raw_cc,
+                    "unresolved",
+                    f"Không có dữ liệu T4 hợp lệ để tạo baseline T3 cho: {raw_cc}",
+                )
+            )
+    return outcomes
 
 
 def find_missing_baseline_ccs(

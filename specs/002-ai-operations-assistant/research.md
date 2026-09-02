@@ -1,35 +1,58 @@
-# Research: AI Operations Assistant
+# Research: C-AGENT Operations Guidance and Gemini Public Experiment
 
-## Decision 1: Use existing run workspaces as the evidence boundary
+## Decision 1: Keep C-AGENT as the only operational provider
 
-**Decision**: A case may read only the workspace for the selected run and its matching entry in `run_history.db`.
+**Decision**: MP2027 calls only the company-provided C-AGENT endpoint for real Operations Assistant AI guidance.
 
-**Rationale**: `src/services/run_history.py` already creates a per-run workspace, immutable terminal status, a run manifest, and `reports/pipeline_stage_evidence.json`. Existing reports include preflight evidence and failure traceback where applicable.
-
-**Alternatives considered**:
-
-- Search arbitrary folders: rejected because it can mix FY/CC evidence and expose unrelated files.
-- Re-run preflight automatically: rejected because an assistant must first explain the selected historical evidence without changing state.
-
-## Decision 2: Start with deterministic knowledge, not a live LLM
-
-**Decision**: The MVP matches a small reviewed error taxonomy and renders approved steps.
-
-**Rationale**: A deterministic catalog is testable, multilingual, local-only, and safe for financial operations. It also creates a benchmark for any later model.
+**Rationale**: The owner explicitly rejected Nakazasen Router because it uses untrusted free sources, rejected BGE-M3 RAG because of machine cost, and needs end users to work without Antigravity IDE. C-AGENT can be governed by the company when its URL, authentication, retention, and data classification are supplied.
 
 **Alternatives considered**:
 
-- Send logs straight to a cloud LLM: rejected until business-data sharing, retention, provider, credentials, and evaluation are approved.
-- Let a model infer repairs from raw logs: rejected because an unsupported conclusion must remain explicitly unconfirmed.
+- Nakazasen Router: rejected; not an approved security boundary.
+- Gemini Web Direct: rejected for operational data; it uses an anonymous, unofficial public web path and does not provide a company-controlled data boundary.
+- Local BGE-M3 RAG: rejected; too heavy for this application and not a generative operations guide.
 
-## Decision 3: Keep immutable evidence and human notes separate
+## Decision 2: Send a selected-run technical packet to the company service
 
-**Decision**: Future resolution notes are separate reviewed records keyed to a run/case; the run evidence is never overwritten.
+**Decision**: Build a separate `CagentGuidancePacket` from verified case facts plus bounded technical evidence from the selected run before the HTTP client can run.
 
-**Rationale**: This preserves auditability and makes it clear whether a repair is confirmed or only a user observation.
+**Rationale**: The owner confirmed that C-AGENT is a company-controlled service and IT owns its data-security controls. The model needs technical context to diagnose unknown failures. A separate packet still prevents accidentally mixing another run, arbitrary external file, credential, or process environment into that request.
 
-## Decision 4: Treat auto-repair as a separate product boundary
+**Alternatives considered**:
 
-**Decision**: No repair command is planned in this feature.
+- Send all local directories or arbitrary user files: rejected; only the selected run workspace is in scope.
+- Send credentials/environment/configuration: rejected; C-AGENT does not need them and they must not enter a packet.
+- Use a generic prompt assembled in the UI: rejected; it couples disclosure policy to widgets and is difficult to test.
 
-**Rationale**: Automatic changes require authority, explicit scope, preview, confirmation, backup, rollback, and regression evidence. These controls must be designed before any write-capable agent is introduced.
+## Decision 3: Retain offline guidance; never silently fall back
+
+**Decision**: A failed or unavailable C-AGENT request leaves the existing local knowledge guidance visible. No other provider is attempted.
+
+**Rationale**: A user must know whether advice came from approved local guidance or company AI. Silent fallback can conceal a provider or data-boundary change.
+
+**Alternatives considered**:
+
+- Automatic Gemini retry: rejected; public-provider data sharing is a different decision.
+- Blank dialog on C-AGENT failure: rejected; removes already useful evidence and safe steps.
+
+## Decision 4: Make Gemini Web Direct a synthetic-only quality probe
+
+**Decision**: The Gemini path uses only a built-in fictional incident, opt-in flag, and explicit experimental screen.
+
+**Rationale**: It lets the owner observe an answer without allowing a selected run, a local path, user free-text, or financial content to leave the workstation.
+
+**Alternatives considered**:
+
+- Add Gemini as a selectable provider in the Operations Assistant: rejected; makes it too easy to send a real run to a public service.
+- Use Gemini as a hidden fallback: rejected; violates disclosure and security boundaries.
+
+## Decision 5: Treat provider details as a deployment gate
+
+**Decision**: Implement a testable provider contract, but do not enable C-AGENT until the company provides endpoint, authentication, request/response schema, retention approval, and allowed data classification.
+
+**Rationale**: The owner can obtain these at the company. Guessing the protocol or storing a token in UI/configuration would be unsafe.
+
+**Alternatives considered**:
+
+- Hard-code a temporary URL or token: rejected; secrets and endpoint ownership cannot enter Git.
+- Permit arbitrary `http://` endpoint entry in the UI: rejected; it weakens transport and makes approval untraceable.

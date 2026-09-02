@@ -10,6 +10,8 @@ from src.services.manual_staffing_overrides import (
     find_missing_baseline_ccs,
     has_valid_manual_baseline,
     normalize_manual_time_rows,
+    recover_missing_baselines_from_april,
+    save_manual_baseline_override,
     save_manual_time_overrides,
 )
 from src.utils.fiscal_periods import fiscal_baseline_period, fiscal_periods
@@ -161,11 +163,73 @@ def test_legacy_blank_zero_baseline_does_not_unlock_calculation(tmp_path):
         conn.close()
 
 
+def test_explicit_t4_recovery_replaces_historical_legacy_zero_baseline(tmp_path):
+    """Reproduce the FY2027 row saved before explicit-zero provenance existed."""
+    conn = make_conn(tmp_path)
+    try:
+        insert_plan_series(conn, cc="1412000006")
+        baseline = fiscal_baseline_period(2027)
+        conn.execute(
+            """INSERT INTO fact_manual_headcount_baseline_override
+               (period,cc_code,fiscal_year,headcount_all,headcount_expat,
+                headcount_staff,headcount_worker,headcount_local_total,
+                description,source_file)
+               VALUES(?,?,2027,0,0,0,0,0,'MANUAL_BASELINE_T3','MANUAL_GUI')""",
+            (baseline, "1412000006"),
+        )
+        conn.execute(
+            """INSERT INTO fact_monthly_headcount
+               (period,cc_code,headcount_all,headcount_expat,headcount_staff,
+                headcount_worker,headcount_local_total,source,split_status,
+                description,source_file)
+               VALUES(?,?,0,0,0,0,0,'manual','READY',
+                      'MANUAL_BASELINE_T3','MANUAL_GUI')""",
+            (baseline, "1412000006"),
+        )
+        conn.commit()
+
+        assert not has_valid_manual_baseline(conn, 2027, "1412000006")
+        assert copy_missing_baselines_from_april(conn, 2027, target_cc="1412000006") == [
+            "1412000006"
+        ]
+        assert has_valid_manual_baseline(conn, 2027, "1412000006")
+        saved = conn.execute(
+            """SELECT description,source_file,headcount_all
+               FROM fact_manual_headcount_baseline_override
+               WHERE period=? AND cc_code='1412000006'""",
+            (baseline,),
+        ).fetchone()
+        assert tuple(saved) == ("USER_APPROVED_BASELINE_T3_FROM_T4", None, 15)
+    finally:
+        conn.close()
+
+
+def test_multi_cc_recovery_reports_unavailable_code_without_blocking_valid_code(tmp_path):
+    annual = make_conn(tmp_path / "annual")
+    source = make_conn(tmp_path / "source")
+    try:
+        insert_plan_series(source, cc="1412000006")
+        outcomes = recover_missing_baselines_from_april(
+            annual,
+            2027,
+            ("1412000006", "1412000070"),
+            source_conn=source,
+        )
+
+        assert [(outcome.cc_code, outcome.status) for outcome in outcomes] == [
+            ("1412000006", "recovered"),
+            ("1412000070", "unresolved"),
+        ]
+        assert has_valid_manual_baseline(annual, 2027, "1412000006")
+        assert not has_valid_manual_baseline(annual, 2027, "1412000070")
+    finally:
+        annual.close()
+        source.close()
+
+
 def test_explicit_zero_baseline_is_valid_after_user_confirms_it(tmp_path):
     conn = make_conn(tmp_path)
     try:
-        from src.services.manual_staffing_overrides import save_manual_baseline_override
-
         save_manual_baseline_override(conn, 2027, "101", 0, 0, 0)
         conn.commit()
 

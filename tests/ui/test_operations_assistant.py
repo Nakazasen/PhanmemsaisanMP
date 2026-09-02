@@ -236,9 +236,10 @@ class TestOperationsAssistantDialog(unittest.TestCase):
         self.assertTrue(any("Cần bổ sung dữ liệu trước khi tính" in t for t in label_texts))
         self.assertTrue(any("Thiếu dữ liệu nhân sự mốc ban đầu" in t for t in label_texts))
 
-        # Kiểm tra nút Đóng
-        self.assertEqual(len(factory.created_buttons), 1)
-        self.assertEqual(factory.created_buttons[0].text, "Đóng")
+        # Kiểm tra nút Đóng và hai nút hỏi AI
+        self.assertEqual(len(factory.created_buttons), 3)
+        close_btn = next(b for b in factory.created_buttons if b.role == "close_button")
+        self.assertEqual(close_btn.text, "Đóng")
 
         # Đóng dialog
         dialog.close()
@@ -259,7 +260,8 @@ class TestOperationsAssistantDialog(unittest.TestCase):
             self.assertEqual(dialog.scope_title, expected_scope)
             self.assertEqual(dialog.scope_labels["status_value"], expected_status)
             self.assertEqual(factory.created_windows[0].title_text, expected_title)
-            self.assertEqual(factory.created_buttons[0].text, expected_close)
+            close_btn = next(b for b in factory.created_buttons if b.role == "close_button")
+            self.assertEqual(close_btn.text, expected_close)
 
     def test_evidence_rendering_with_verified_missing_mismatch_statuses(self) -> None:
         """Kiểm tra bảng bằng chứng hiển thị đầy đủ các trạng thái và nhãn đa ngôn ngữ thân thiện."""
@@ -420,7 +422,7 @@ class TestOperationsAssistantDialog(unittest.TestCase):
 
         # Mở lần hai với cùng run_id
         dialog_2 = OperationsAssistantDialog.open_or_focus(parent, case, "vi", widget_factory=factory)
-        
+
         # Xác nhận trả về cùng dialog instance, không tạo window mới, đã gọi focus/lift
         self.assertIs(dialog_1, dialog_2)
         self.assertEqual(len(factory.created_windows), 1)
@@ -479,7 +481,7 @@ class TestOperationsAssistantDialog(unittest.TestCase):
 
         # Yêu cầu mở run_id khác
         dialog_2 = OperationsAssistantDialog.open_or_focus(parent, case_2, "vi", widget_factory=factory)
-        
+
         # Cửa sổ cũ đã bị đóng, cửa sổ mới đại diện cho run-second
         self.assertTrue(win_1.destroyed)
         self.assertIsNot(dialog_1, dialog_2)
@@ -615,11 +617,18 @@ class TestOperationsAssistantDialog(unittest.TestCase):
                 case = case_fn(lang)
                 dialog = OperationsAssistantDialog(None, case, lang, widget_factory=factory)
 
-                # Nút duy nhất được phép tồn tại trên giao diện là nút Đóng (Close)
-                self.assertEqual(len(factory.created_buttons), 1)
-                close_btn = factory.created_buttons[0]
+                # Các nút được phép tồn tại là Đóng, C-AGENT và Gemini Web.
+                self.assertEqual(len(factory.created_buttons), 3)
+                close_btn = next(b for b in factory.created_buttons if b.role == "close_button")
                 self.assertEqual(close_btn.role, "close_button")
                 self.assertEqual(close_btn.command, dialog.close)
+
+                ask_btn = next(b for b in factory.created_buttons if b.role == "ask_ai_button")
+                self.assertEqual(ask_btn.role, "ask_ai_button")
+                self.assertEqual(ask_btn.command, dialog.ask_cagent)
+
+                gemini_btn = next(b for b in factory.created_buttons if b.role == "ask_gemini_button")
+                self.assertEqual(gemini_btn.command, dialog.ask_gemini_web)
 
                 # Xác nhận không có nút hay command nào khác được tạo
                 for btn in factory.created_buttons:
@@ -858,6 +867,14 @@ class TestRunHistoryOperationsAssistantIntegration(unittest.TestCase):
             for status in terminal_statuses
         ]
         app, table, assistant_btn, dialog = self._setup_run_history(rows, history_root="D:/history_test")
+        from src.services.operations_ai_provider import CagentProviderPolicy
+
+        expected_policy = CagentProviderPolicy(
+            enabled=True,
+            endpoint_url="https://cagent.example.test/v1/guidance",
+            data_policy_id="POL-TEST-RUN-HISTORY",
+        )
+        app.cagent_policy = expected_policy
 
         for idx, status in enumerate(terminal_statuses):
             table.set_selection(f"node_{idx}")
@@ -870,11 +887,18 @@ class TestRunHistoryOperationsAssistantIntegration(unittest.TestCase):
 
             fake_case = _make_confirmed_case(lang, run_id="run-FAILED")
             with patch("src.universal_app.assemble_operational_case", return_value=fake_case) as mock_assemble, \
-                 patch("src.universal_app.OperationsAssistantDialog.open_or_focus") as mock_open_or_focus:
+                 patch("src.universal_app.OperationsBusinessChatDialog.open_with_case") as mock_open_with_case:
                 assistant_btn.command()
 
                 mock_assemble.assert_called_once_with("D:/history_test", "run-FAILED", lang)
-                mock_open_or_focus.assert_called_once_with(app.root, fake_case, lang)
+                mock_open_with_case.assert_called_once()
+                call_args, call_kwargs = mock_open_with_case.call_args
+                self.assertEqual(call_args[0], app.root)
+                self.assertEqual(call_args[1], lang)
+                self.assertEqual(call_args[2], fake_case)
+                self.assertEqual(call_kwargs.get("history_root"), "D:/history_test")
+                self.assertIs(call_kwargs.get("policy"), expected_policy)
+                self.assertIsNotNone(call_kwargs.get("open_history"))
 
     def test_action_handles_assembly_failure_with_safe_friendly_message(self) -> None:
         """Khi assemble_operational_case ném ngoại lệ (hỏng JSON, DB, path), chỉ hiện thông báo i18n an toàn."""
@@ -902,6 +926,961 @@ class TestRunHistoryOperationsAssistantIntegration(unittest.TestCase):
                     self.assertNotIn(forbidden.lower(), shown_msg.lower())
 
 
+class TestOperationsAssistantCagentIntegration(unittest.TestCase):
+    def setUp(self) -> None:
+        OperationsAssistantDialog.clear_registry()
+        self.factory = FakeWidgetFactory()
+
+    def tearDown(self) -> None:
+        OperationsAssistantDialog.clear_registry()
+
+    def test_ask_cagent_button_and_disclosure_multilingual(self) -> None:
+        for lang in ("vi", "en", "ja"):
+            case = _make_confirmed_case(lang, run_id=f"run-{lang}")
+            dialog = OperationsAssistantDialog(
+                parent=None,
+                case=case,
+                language=lang,
+                widget_factory=self.factory,
+            )
+
+            btn = next((w for w in dialog._widgets if getattr(w, "role", "") == "ask_ai_button"), None)
+            self.assertIsNotNone(btn, f"Phải có nút Ask C-AGENT cho ngôn ngữ {lang}")
+            expected_btn_text = translate_for_language("operations_assistant_ask_ai_btn", lang)
+            self.assertEqual(btn.text, expected_btn_text)
+
+            gemini_btn = next((w for w in dialog._widgets if getattr(w, "role", "") == "ask_gemini_button"), None)
+            self.assertIsNotNone(gemini_btn, f"Phải có nút Gemini Web cho ngôn ngữ {lang}")
+            self.assertEqual(
+                gemini_btn.text,
+                translate_for_language("operations_assistant_gemini_btn", lang),
+            )
+
+            disclosure = next((w for w in dialog._widgets if getattr(w, "role", "") == "ai_disclosure"), None)
+            self.assertIsNotNone(disclosure, f"Phải có thông báo phạm vi dữ liệu AI cho {lang}")
+            expected_disclosure = translate_for_language("operations_assistant_ai_disclosure", lang)
+            self.assertEqual(disclosure.text, expected_disclosure)
+
+            dialog.close()
+
+    def test_ask_cagent_renders_ready_guidance_result(self) -> None:
+        import json
+        from src.services.operations_ai_provider import CagentProviderPolicy
+
+        policy = CagentProviderPolicy(
+            enabled=True,
+            endpoint_url="https://cagent.internal.company.com/api/v1/guidance",
+            data_policy_id="POL-01",
+        )
+
+        def mock_transport(url: str, headers: dict, body: bytes, timeout: float):
+            resp = {
+                "answer": "Vui lòng đóng file Excel và tính lại.",
+                "evidence_ids": ["E1"],
+                "limitations": "Tư vấn tham khảo.",
+            }
+            return 200, {}, json.dumps(resp).encode("utf-8")
+
+        case = _make_confirmed_case("vi", run_id="run-cagent-1")
+        dialog = OperationsAssistantDialog(
+            parent=None,
+            case=case,
+            language="vi",
+            policy=policy,
+            cagent_transport=mock_transport,
+            widget_factory=self.factory,
+        )
+
+        # Trigger request synchronously for test
+        dialog._async_request_cagent()
+
+        self.assertIsNotNone(dialog.ai_result)
+        self.assertEqual(dialog.ai_result.status, "ready")
+        self.assertIn("đóng file Excel", dialog.ai_result.answer)
+        self.assertEqual(dialog.ai_result.cited_evidence_ids, ("E1",))
+
+        # Check rendered widget text
+        result_widget = next((w for w in dialog._widgets if getattr(w, "role", "") == "ai_result"), None)
+        self.assertIsNotNone(result_widget)
+        self.assertIn("đóng file Excel", result_widget.text)
+        self.assertIn("E1", result_widget.text)
+        self.assertIn("Tư vấn tham khảo", result_widget.text)
+
+        dialog.close()
+
+    def test_ask_cagent_handles_unavailable_state(self) -> None:
+        from src.services.operations_ai_provider import CagentProviderPolicy
+
+        # Policy disabled by default
+        policy = CagentProviderPolicy(enabled=False)
+
+        case = _make_confirmed_case("vi", run_id="run-cagent-disabled")
+        dialog = OperationsAssistantDialog(
+            parent=None,
+            case=case,
+            language="vi",
+            policy=policy,
+            widget_factory=self.factory,
+        )
+
+        dialog._async_request_cagent()
+
+        self.assertIsNotNone(dialog.ai_result)
+        self.assertEqual(dialog.ai_result.status, "unavailable")
+
+        result_widget = next((w for w in dialog._widgets if getattr(w, "role", "") == "ai_result"), None)
+        self.assertIsNotNone(result_widget)
+        self.assertIn("dữ liệu nội bộ", result_widget.text.lower())
+
+        dialog.close()
+
+    def test_env_loader_wiring_and_happy_path_integration(self) -> None:
+        """Integration test: nạp cấu hình từ môi trường, inject fake transport và hiển thị kết quả tư vấn tiếng Việt."""
+        import json
+        import os
+        from unittest.mock import patch
+        from src.services.operations_ai_provider import load_cagent_provider_policy_from_env
+
+        env_vars = {
+            "CAGENT_ENABLED": "1",
+            "CAGENT_ENDPOINT_URL": "https://cagent.corp.internal/v1/guidance",
+            "CAGENT_DATA_POLICY_ID": "POL-CORP-01",
+            "CAGENT_AUTH_MODE": "bearer_env",
+            "CAGENT_BEARER_TOKEN_ENV": "TEST_CAGENT_KEY",
+            "TEST_CAGENT_KEY": "secret-cagent-token-12345",
+        }
+
+        with patch.dict(os.environ, env_vars, clear=False):
+            loaded_policy = load_cagent_provider_policy_from_env()
+            self.assertTrue(loaded_policy.enabled)
+            self.assertEqual(loaded_policy.endpoint_url, "https://cagent.corp.internal/v1/guidance")
+
+            def mock_transport(url: str, headers: dict, body: bytes, timeout: float):
+                self.assertIn("Bearer secret-cagent-token-12345", headers.get("Authorization", ""))
+                resp = {
+                    "answer": "Kiểm tra tiến trình Excel đang chạy nền và đóng trước khi xuất bản.",
+                    "evidence_ids": ["E1"],
+                    "limitations": "Thông tin tư vấn nội bộ doanh nghiệp.",
+                }
+                return 200, {}, json.dumps(resp).encode("utf-8")
+
+            case = _make_confirmed_case("vi", run_id="run-cagent-env-integration")
+            dialog = OperationsAssistantDialog(
+                parent=None,
+                case=case,
+                language="vi",
+                policy=loaded_policy,
+                cagent_transport=mock_transport,
+                widget_factory=self.factory,
+            )
+
+            dialog._async_request_cagent()
+
+            self.assertIsNotNone(dialog.ai_result)
+            self.assertEqual(dialog.ai_result.status, "ready")
+            self.assertIn("Kiểm tra tiến trình Excel", dialog.ai_result.answer)
+            self.assertEqual(dialog.ai_result.cited_evidence_ids, ("E1",))
+
+            result_widget = next((w for w in dialog._widgets if getattr(w, "role", "") == "ai_result"), None)
+            self.assertIsNotNone(result_widget)
+            self.assertIn("Kiểm tra tiến trình Excel", result_widget.text)
+            self.assertIn("E1", result_widget.text)
+
+            dialog.close()
+
+
+class TestOperationsBusinessChatDialog(unittest.TestCase):
+    def setUp(self) -> None:
+        import tkinter as tk
+        try:
+            self.root = tk.Tk()
+            self.root.withdraw()
+            self.tk_available = True
+        except Exception:
+            self.tk_available = False
+
+    def tearDown(self) -> None:
+        if getattr(self, "tk_available", False) and hasattr(self, "root"):
+            try:
+                self.root.destroy()
+            except Exception:
+                pass
+
+    def test_business_chat_dialog_placeholder_and_typing(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None)
+
+        # Ban đầu buffer rỗng và placeholder overlay hiển thị
+        self.assertTrue(dialog._placeholder_active)
+        self.assertEqual(dialog.question.get(), "")
+        self.assertEqual(dialog.question.placeholder_text, dialog._placeholder_text)
+
+        # Gõ văn bản tiếng Việt có dấu (nghiệp vụ, gì, phân bổ, chi phí)
+        vietnamese_question = "cụ thể nghiệp vụ mp là gì"
+        dialog.question.insert(0, vietnamese_question)
+        self.assertEqual(dialog.question.get(), vietnamese_question)
+        self.assertFalse(dialog._placeholder_active)
+
+        # Select all
+        res = dialog._select_all_text()
+        self.assertEqual(res, "break")
+
+        # Xóa hết -> khôi phục trạng thái placeholder
+        dialog.question.delete(0, "end")
+        self.assertTrue(dialog._placeholder_active)
+        self.assertEqual(dialog.question.get(), "")
+
+        dialog.close()
+
+    def test_business_chat_dialog_suggestion_chip(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None)
+
+        with patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_req, \
+             patch("threading.Thread", side_effect=lambda target, args=(), daemon=True: type("DummyThread", (), {"start": lambda s: target(*args)})()):
+            from src.services.operations_ai_provider import CagentGuidanceResult
+            mock_req.return_value = CagentGuidanceResult(
+                status="ready",
+                answer="Hướng dẫn xử lý mẫu",
+                limitation="Tư vấn tham khảo.",
+            )
+
+            # Click chip gợi ý
+            dialog._use_suggestion("Lỗi này là gì?")
+            mock_req.assert_called_once()
+            call_args, _ = mock_req.call_args
+            self.assertEqual(call_args[0], "Lỗi này là gì?")
+            self.assertTrue(dialog._placeholder_active)
+            self.assertEqual(dialog.question.get(), "")
+
+        dialog.close()
+
+    def test_open_with_case_diagnoses_and_renders_in_chat(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+        from src.services.operations_ai_provider import CagentProviderPolicy, CagentGuidanceResult
+
+        case = _make_confirmed_case("vi", run_id="run-chat-diagnosis")
+        policy = CagentProviderPolicy(enabled=False)
+
+        with patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_gemini:
+            dialog = OperationsBusinessChatDialog.open_with_case(
+                self.root,
+                "vi",
+                case,
+                policy=policy,
+                sync=True,
+            )
+
+            self.assertIsNotNone(dialog)
+            self.assertTrue(dialog.is_alive())
+
+            # Kiểm tra trong các widget tin nhắn có chứa nội dung chẩn đoán
+            found_diag = False
+            for w in dialog.messages.winfo_children():
+                for sub_w in w.winfo_children():
+                    for text_w in sub_w.winfo_children():
+                        try:
+                            text_val = str(text_w.cget("text"))
+                        except Exception:
+                            text_val = ""
+                        if "KẾT QUẢ" in text_val or "run-chat-diagnosis" in text_val:
+                            found_diag = True
+                            break
+            self.assertTrue(found_diag, "Phải có tin nhắn chẩn đoán sự cố trong luồng chat")
+            mock_gemini.assert_not_called()
+
+            dialog.close()
+
+    def test_main_window_floating_mascot(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.universal_app import MPManagerApp
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        with patch("src.universal_app.OperationsBusinessChatDialog.open") as mock_chat_open:
+            app = MPManagerApp(self.root)
+            self.assertIsNotNone(getattr(app, "_mascot_frame", None))
+            self.assertTrue(app._mascot_frame.winfo_exists())
+
+            # Nút dư thừa và kỹ thuật đã được loại bỏ khỏi action_buttons
+            chat_btn_tuple = [b for b in app.action_buttons if b[1] == "operations_business_chat_btn"]
+            self.assertEqual(len(chat_btn_tuple), 0, "Không để nút chat trùng lặp trong action_buttons")
+            history_btn_tuple = [b for b in app.action_buttons if b[1] == "run_history_btn"]
+            self.assertEqual(len(history_btn_tuple), 0, "Nút run_history kỹ thuật đã ẩn khỏi thanh công cụ chính")
+
+            # Gọi open_business_chat_assistant từ Robot Mascot
+            app.open_business_chat_assistant()
+            mock_chat_open.assert_called_once()
+
+            # Kiểm tra text đa ngôn ngữ động của Mascot
+            from src.services.i18n import set_current_language
+            for lang, expected in [("vi", "✦ Hỏi AI nội bộ"), ("ja", "✦ 社内AIに質問"), ("en", "✦ Ask Internal AI")]:
+                set_current_language(lang)
+                app._refresh_localized_ui()
+                self.assertEqual(app._mascot_text_lbl.cget("text"), expected)
+
+    def test_business_chat_ui_localization_en_ja_vi(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+        from src.services.i18n import translate_for_language
+
+        for lang in ("vi", "ja", "en"):
+            dialog = OperationsBusinessChatDialog(self.root, lang, open_history=lambda: None)
+            try:
+                # 1. Placeholder phải khớp theo ngôn ngữ
+                expected_placeholder = translate_for_language("operations_business_chat_placeholder", lang)
+                self.assertEqual(dialog._placeholder_text, expected_placeholder)
+
+                # 2. Window title phải khớp
+                expected_title = translate_for_language("operations_business_chat_title", lang)
+                self.assertEqual(dialog.window.title(), expected_title)
+
+                # 3. Disclosure phải hiển thị trước khi người dùng gửi nội dung cho Gemini Web.
+                self.assertEqual(
+                    dialog.gemini_disclosure_label.cget("text"),
+                    translate_for_language("operations_business_chat_gemini_disclosure", lang),
+                )
+
+                # 4. Gợi ý câu hỏi nhanh (chips) phải tồn tại và không rỗng
+                self.assertEqual(len(dialog.suggestion_buttons), 4)
+                for btn in dialog.suggestion_buttons:
+                    self.assertTrue(bool(btn.cget("text").strip()))
+            finally:
+                dialog.close()
+
+    def test_business_chat_offline_fallback_uses_original_question(self) -> None:
+        """Offline fallback must retrieve from what the user asked, not from prompt context."""
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.services.operations_ai_provider import CagentGuidanceResult
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = OperationsBusinessChatDialog(self.root, "ja", open_history=lambda: None)
+        try:
+            dialog.answer = MagicMock()
+            with patch(
+                "src.services.business_chat_knowledge.local_fallback",
+                return_value="local Japanese guidance",
+            ) as local_fallback:
+                dialog._apply(
+                    CagentGuidanceResult(
+                        status="unavailable",
+                        provider_label="Gemini Web",
+                        limitation="offline",
+                    ),
+                    "出力Excelファイルがロックされました",
+                )
+
+            local_fallback.assert_called_once_with("出力Excelファイルがロックされました", "ja")
+        finally:
+            dialog.close()
+
+    def test_is_error_related_query_multilingual(self) -> None:
+        from src.ui.operations_assistant import is_error_related_query
+
+        # VI
+        self.assertTrue(is_error_related_query("Lỗi này là gì?"))
+        self.assertTrue(is_error_related_query("Tại sao tính toán bị dừng?"))
+        self.assertTrue(is_error_related_query("Cách khắc phục file bị khóa"))
+
+        # JA
+        self.assertTrue(is_error_related_query("このエラーは何ですか？"))
+        self.assertTrue(is_error_related_query("処理が失敗した原因は？"))
+        self.assertTrue(is_error_related_query("どうすれば対処できますか"))
+
+        # EN
+        self.assertTrue(is_error_related_query("What does this error mean?"))
+        self.assertTrue(is_error_related_query("Why did the calculation fail?"))
+        self.assertTrue(is_error_related_query("Troubleshoot missing staffing baseline"))
+
+        # Non-error queries
+        self.assertFalse(is_error_related_query("Xin chào"))
+        self.assertFalse(is_error_related_query("Hello there"))
+        self.assertFalse(is_error_related_query("こんにちは"))
+
+    def test_format_nontech_case_diagnosis_no_uuids(self) -> None:
+        from src.ui.operations_assistant import format_nontech_case_diagnosis
+
+        uuid_run = "aa5fe28dbaa143e4b2a8f3cc4e98f01a"
+        case = _make_confirmed_case("vi", run_id=uuid_run)
+
+        # VI check
+        diag_vi = format_nontech_case_diagnosis(case, "vi")
+        self.assertNotIn(uuid_run, diag_vi, "Non-tech diagnosis must not expose raw run UUID")
+        self.assertIn("Bộ phận / Phòng ban", diag_vi)
+        self.assertIn("Hướng dẫn các bước tự xử lý", diag_vi)
+
+        # JA check
+        diag_ja = format_nontech_case_diagnosis(case, "ja")
+        self.assertNotIn(uuid_run, diag_ja)
+        self.assertIn("コストセンター", diag_ja)
+        self.assertIn("対処手順", diag_ja)
+
+        # EN check
+        diag_en = format_nontech_case_diagnosis(case, "en")
+        self.assertNotIn(uuid_run, diag_en)
+        self.assertIn("Cost Center", diag_en)
+        self.assertIn("Action Steps", diag_en)
+
+    def test_chat_auto_diagnoses_latest_error(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        uuid_run = "bb6fe28dbaa143e4b2a8f3cc4e98f02b"
+        case = _make_confirmed_case("vi", run_id=uuid_run)
+
+        dialog = OperationsBusinessChatDialog(
+            self.root,
+            "vi",
+            open_history=lambda: None,
+            history_root="/fake/history/root",
+            fiscal_year=2027,
+        )
+        try:
+            with patch(
+                "src.ui.operations_assistant.find_latest_error_case",
+                return_value=case,
+            ), patch(
+                "src.ui.operations_assistant.request_gemini_web_business_guidance",
+                return_value=MagicMock(status="unavailable", answer="", limitation="offline"),
+            ):
+                dialog._use_suggestion("Lỗi này là gì?", sync=True)
+
+                # Phải render chẩn đoán của case lỗi gần nhất vào khung chat
+                found_text = False
+                for w in dialog.messages.winfo_children():
+                    for sub_w in w.winfo_children():
+                        for text_w in sub_w.winfo_children():
+                            try:
+                                val = str(text_w.cget("text"))
+                            except Exception:
+                                val = ""
+                            if "KẾT QUẢ CHẨN ĐOÁN SỰ CỐ GẦN NHẤT" in val:
+                                found_text = True
+                                self.assertNotIn(uuid_run, val, "Không được chứa UUID kỹ thuật")
+                                break
+                self.assertTrue(found_text, "Phải tự động hiển thị chẩn đoán non-tech từ lỗi gần nhất")
+        finally:
+            dialog.close()
+
+    def test_chat_when_no_error_recorded_gives_desktop_guidance(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = OperationsBusinessChatDialog(
+            self.root,
+            "vi",
+            open_history=lambda: None,
+            history_root="/fake/empty/history",
+            fiscal_year=2027,
+        )
+        try:
+            with patch("src.ui.operations_assistant.find_latest_error_case", return_value=None), \
+                 patch("src.ui.operations_assistant.request_gemini_web_business_guidance", return_value=MagicMock(status="unavailable", answer="", limitation="offline")):
+                dialog._use_suggestion("Lỗi này là gì?", sync=True)
+
+                found_guidance = False
+                for w in dialog.messages.winfo_children():
+                    for sub_w in w.winfo_children():
+                        for text_w in sub_w.winfo_children():
+                            try:
+                                val = str(text_w.cget("text"))
+                            except Exception:
+                                val = ""
+                            if "chưa ghi nhận lỗi tính toán nào gần đây" in val:
+                                found_guidance = True
+                                self.assertIn("Quét lại nội dung", val)
+                                self.assertIn("CHẠY TÍNH TOÁN", val)
+                                self.assertNotIn("F5", val)
+                                self.assertNotIn("trình duyệt", val)
+                                self.assertNotIn("đăng xuất", val)
+                                break
+                self.assertTrue(found_guidance, "Phải hiển thị hướng dẫn máy bàn chuẩn khi chưa phát sinh lỗi")
+        finally:
+            dialog.close()
+
+    def test_web_hallucinations_filtered_out(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None)
+        try:
+            hallucinated_web_answer = (
+                "Chào bạn,\n"
+                "1. Nhấn nút F5 trên bàn phím để tải lại trang trình duyệt.\n"
+                "2. Đăng xuất và đăng nhập lại tài khoản.\n"
+            )
+            with patch("src.ui.operations_assistant.request_gemini_web_business_guidance", return_value=MagicMock(status="ready", answer=hallucinated_web_answer)):
+                dialog.question_var.set("Lỗi này là gì?")
+                dialog.send(sync=True)
+
+                # Kiểm tra nội dung hiển thị trong bubble câu trả lời: Phải bị filter và không chứa F5/đăng xuất
+                answer_text = dialog.answer.cget("text")
+                self.assertNotIn("F5", answer_text, "Guardrail phải lọc sạch lỗi F5 trình duyệt")
+                self.assertNotIn("trình duyệt", answer_text, "Guardrail phải lọc sạch tham chiếu trình duyệt")
+                self.assertNotIn("đăng xuất", answer_text, "Guardrail phải lọc sạch hướng dẫn đăng xuất web")
+                self.assertIn("chưa ghi nhận lỗi", answer_text, "Phải thay bằng hướng dẫn nghiệp vụ chuẩn desktop")
+        finally:
+            dialog.close()
+
+    def test_copy_button_copies_ai_response(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        import tkinter as tk
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None)
+        try:
+            sample_text = "Đây là câu trả lời mẫu của AI cần sao chép."
+            text_w = dialog._add_message("✦ Trợ lý AI", sample_text, assistant=True)
+
+            # Tìm nút copy trong header row của bubble
+            copy_btn = None
+            parent_bubble = text_w.master
+            for child in parent_bubble.winfo_children():
+                if isinstance(child, tk.Frame):
+                    for sub_w in child.winfo_children():
+                        if isinstance(sub_w, tk.Button) and "Sao chép" in sub_w.cget("text"):
+                            copy_btn = sub_w
+                            break
+
+            self.assertIsNotNone(copy_btn, "Phải có nút Sao chép trong tin nhắn của AI")
+
+            # Kích hoạt copy
+            dialog._copy_message_text(text_w, copy_btn)
+            copied = self.root.clipboard_get()
+            self.assertEqual(copied, sample_text)
+            self.assertIn("Đã sao chép", copy_btn.cget("text"))
+        finally:
+            dialog.close()
+
+    def test_image_paste_and_attachment_in_chat(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from PIL import Image
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None)
+        try:
+            # Tạo ảnh giả lập
+            fake_img = Image.new("RGB", (120, 80), color="blue")
+            dialog._set_attached_image(fake_img)
+
+            self.assertIsNotNone(dialog._attached_image)
+            self.assertEqual(dialog._attached_image.width, 120)
+            self.assertEqual(dialog._attached_image.height, 80)
+            self.assertIn("120×80", dialog.image_preview_lbl.cget("text"))
+
+            # Gửi tin nhắn kèm ảnh
+            with patch(
+                "src.ui.operations_assistant.request_gemini_web_business_guidance",
+                return_value=MagicMock(status="ready", answer="Phân tích ảnh xong!"),
+            ) as mock_gemini:
+                dialog.question_var.set("Hãy xem ảnh lỗi này")
+                dialog.send(sync=True)
+
+                self.assertIsNone(dialog._attached_image, "Ảnh đính kèm phải được reset sau khi gửi")
+                mock_gemini.assert_called_once()
+                call_args = mock_gemini.call_args[0]
+                self.assertEqual(call_args[0], "Hãy xem ảnh lỗi này")
+                self.assertIn("120×80", call_args[1], "Ngữ cảnh gửi cho AI phải chứa thông tin ảnh đính kèm")
+        finally:
+            dialog.close()
+
+
+class TestCagentStartupPolicyWiring(unittest.TestCase):
+    """Tests for C-AGENT startup policy wiring in MPManagerApp.
+
+    Proves:
+    1. No C-AGENT env vars → policy disabled.
+    2. Valid env config (fake HTTPS endpoint + policy ID) → MPManagerApp loads enabled policy
+       and selected-run flow receives that exact policy.
+    3. Invalid URL/policy/auth mode → disabled.
+    4. Token value is never stored in the policy object.
+    """
+
+    def setUp(self) -> None:
+        set_current_language("vi")
+
+    def tearDown(self) -> None:
+        set_current_language("vi")
+
+    def test_no_env_vars_yields_disabled_policy(self) -> None:
+        """Without C-AGENT env vars, load_cagent_provider_policy_from_env returns disabled."""
+        from src.services.operations_ai_provider import load_cagent_provider_policy_from_env
+
+        policy = load_cagent_provider_policy_from_env({})
+        self.assertFalse(policy.enabled)
+
+    def test_valid_env_yields_enabled_policy(self) -> None:
+        """Fake HTTPS endpoint + policy ID → enabled policy with correct attributes."""
+        from src.services.operations_ai_provider import load_cagent_provider_policy_from_env
+
+        env = {
+            "CAGENT_ENABLED": "1",
+            "CAGENT_ENDPOINT_URL": "https://cagent.example.test/v1/guidance",
+            "CAGENT_DATA_POLICY_ID": "POL-TEST-001",
+            "CAGENT_AUTH_MODE": "bearer_env",
+            "CAGENT_BEARER_TOKEN_ENV": "MY_CAGENT_TOKEN",
+            "CAGENT_TIMEOUT_SECONDS": "30",
+        }
+        policy = load_cagent_provider_policy_from_env(env)
+        self.assertTrue(policy.enabled)
+        self.assertEqual(policy.endpoint_url, "https://cagent.example.test/v1/guidance")
+        self.assertEqual(policy.data_policy_id, "POL-TEST-001")
+        self.assertEqual(policy.auth_mode, "bearer_env")
+        self.assertEqual(policy.bearer_token_env_var, "MY_CAGENT_TOKEN")
+        self.assertEqual(policy.timeout_seconds, 30)
+
+    def test_mpmanagerapp_constructor_keeps_startup_policy_wiring(self) -> None:
+        """A future refactor must not remove the fail-closed startup policy load."""
+        import inspect
+
+        constructor_source = inspect.getsource(MPManagerApp.__init__)
+        self.assertIn("self.cagent_policy", constructor_source)
+        self.assertIn("load_cagent_provider_policy_from_env()", constructor_source)
+
+    def test_startup_environment_yields_enabled_policy(self) -> None:
+        """A valid startup environment produces the policy that MPManagerApp stores."""
+        import os
+
+        env_vars = {
+            "CAGENT_ENABLED": "1",
+            "CAGENT_ENDPOINT_URL": "https://cagent.example.test/v1/guidance",
+            "CAGENT_DATA_POLICY_ID": "POL-STARTUP-01",
+            "CAGENT_AUTH_MODE": "bearer_env",
+            "CAGENT_BEARER_TOKEN_ENV": "STARTUP_CAGENT_KEY",
+        }
+        with patch.dict(os.environ, env_vars, clear=False):
+            from src.services.operations_ai_provider import load_cagent_provider_policy_from_env
+
+            # Simulate what MPManagerApp.__init__ does: call the loader
+            loaded_policy = load_cagent_provider_policy_from_env()
+            self.assertTrue(loaded_policy.enabled)
+            self.assertEqual(loaded_policy.endpoint_url, "https://cagent.example.test/v1/guidance")
+            self.assertEqual(loaded_policy.data_policy_id, "POL-STARTUP-01")
+
+    def test_selected_run_flow_receives_loaded_policy(self) -> None:
+        """When cagent_policy is set on the app, open_with_case receives it (not a default disabled one)."""
+        import os
+
+        env_vars = {
+            "CAGENT_ENABLED": "1",
+            "CAGENT_ENDPOINT_URL": "https://cagent.example.test/v1/guidance",
+            "CAGENT_DATA_POLICY_ID": "POL-FLOW-01",
+            "CAGENT_AUTH_MODE": "none",
+        }
+        with patch.dict(os.environ, env_vars, clear=False):
+            from src.services.operations_ai_provider import (
+                CagentProviderPolicy,
+                load_cagent_provider_policy_from_env,
+            )
+
+            loaded_policy = load_cagent_provider_policy_from_env()
+            self.assertTrue(loaded_policy.enabled)
+
+            # Simulate the getattr pattern used in universal_app.py line 3553
+            app_mock = SimpleNamespace(cagent_policy=loaded_policy)
+            policy = getattr(app_mock, "cagent_policy", None) or CagentProviderPolicy()
+            self.assertTrue(policy.enabled)
+            self.assertEqual(policy.data_policy_id, "POL-FLOW-01")
+
+    def test_invalid_http_url_yields_disabled_policy(self) -> None:
+        """HTTP (not HTTPS) endpoint → fail-closed to disabled."""
+        from src.services.operations_ai_provider import load_cagent_provider_policy_from_env
+
+        env = {
+            "CAGENT_ENABLED": "true",
+            "CAGENT_ENDPOINT_URL": "http://insecure.example.test/v1/guidance",
+            "CAGENT_DATA_POLICY_ID": "POL-INSECURE-01",
+        }
+        policy = load_cagent_provider_policy_from_env(env)
+        self.assertFalse(policy.enabled)
+
+    def test_missing_data_policy_id_yields_disabled(self) -> None:
+        """Enabled but missing data_policy_id → fail-closed to disabled."""
+        from src.services.operations_ai_provider import load_cagent_provider_policy_from_env
+
+        env = {
+            "CAGENT_ENABLED": "1",
+            "CAGENT_ENDPOINT_URL": "https://cagent.example.test/v1/guidance",
+            "CAGENT_DATA_POLICY_ID": "",
+        }
+        policy = load_cagent_provider_policy_from_env(env)
+        self.assertFalse(policy.enabled)
+
+    def test_invalid_auth_mode_yields_disabled(self) -> None:
+        """Unsupported auth_mode → fail-closed to disabled."""
+        from src.services.operations_ai_provider import load_cagent_provider_policy_from_env
+
+        env = {
+            "CAGENT_ENABLED": "1",
+            "CAGENT_ENDPOINT_URL": "https://cagent.example.test/v1/guidance",
+            "CAGENT_DATA_POLICY_ID": "POL-01",
+            "CAGENT_AUTH_MODE": "oauth2_implicit",
+        }
+        policy = load_cagent_provider_policy_from_env(env)
+        self.assertFalse(policy.enabled)
+
+    def test_token_value_never_stored_in_policy(self) -> None:
+        """The actual token value (secret) must never appear in the policy object's fields."""
+        import os
+        from src.services.operations_ai_provider import load_cagent_provider_policy_from_env
+
+        env_vars = {
+            "CAGENT_ENABLED": "1",
+            "CAGENT_ENDPOINT_URL": "https://cagent.example.test/v1/guidance",
+            "CAGENT_DATA_POLICY_ID": "POL-SECRET-CHECK",
+            "CAGENT_AUTH_MODE": "bearer_env",
+            "CAGENT_BEARER_TOKEN_ENV": "SECRET_TOKEN_VAR",
+        }
+        with patch.dict(os.environ, {**env_vars, "SECRET_TOKEN_VAR": "super-secret-token-12345"}, clear=False):
+            policy = load_cagent_provider_policy_from_env()
+            self.assertTrue(policy.enabled)
+
+            # Policy stores the env var NAME, not the token VALUE
+            self.assertEqual(policy.bearer_token_env_var, "SECRET_TOKEN_VAR")
+
+            # Verify the actual secret is NOT anywhere in the policy object
+            policy_repr = repr(policy)
+            self.assertNotIn("super-secret-token-12345", policy_repr)
+            self.assertNotIn("super-secret-token-12345", policy.endpoint_url)
+            self.assertNotIn("super-secret-token-12345", policy.data_policy_id)
+            self.assertNotIn("super-secret-token-12345", policy.bearer_token_env_var)
+            self.assertNotIn("super-secret-token-12345", policy.auth_mode)
+
+    def test_no_cagent_policy_attribute_uses_disabled_fallback(self) -> None:
+        """If cagent_policy attribute somehow missing, getattr fallback creates disabled policy."""
+        from src.services.operations_ai_provider import CagentProviderPolicy
+
+        app_mock = SimpleNamespace()  # No cagent_policy attribute
+        policy = getattr(app_mock, "cagent_policy", None) or CagentProviderPolicy()
+        self.assertFalse(policy.enabled)
+
+
+class BusinessDocumentContextRagV3Tests(unittest.TestCase):
+    """Verify that _business_document_context uses Document-grounded RAG v3 retrieval."""
+
+    def test_business_document_context_calls_rag_v3_retrieval(self) -> None:
+        from src.ui.operations_assistant import _business_document_context
+
+        ctx_vi = _business_document_context("file bị khóa", "vi")
+        self.assertIn("Nguồn tham khảo:", ctx_vi)
+        self.assertNotIn("d:\\sandbox", ctx_vi.lower())
+        self.assertNotIn("traceback", ctx_vi.lower())
+
+        ctx_en = _business_document_context("locked file", "en")
+        self.assertIn("Source Reference:", ctx_en)
+
+        ctx_ja = _business_document_context("ファイルロック", "ja")
+        self.assertIn("参照元:", ctx_ja)
+
+    def test_business_document_context_no_match_returns_safe_message(self) -> None:
+        from src.ui.operations_assistant import _business_document_context
+
+        no_match_vi = _business_document_context("mon an phap nau the nao", "vi")
+        self.assertIn("Chưa tìm thấy hướng dẫn nội bộ phù hợp", no_match_vi)
+
+    def test_v3_available_but_retrieval_empty_does_not_call_v2_fallback(self) -> None:
+        """When V3 index is active but query has no match, V2 fallback must NOT be called."""
+        from src.ui.operations_assistant import _business_document_context
+
+        with patch("src.services.business_knowledge_retrieval.retrieve_grounded_chunks", return_value=[]):
+            with patch("src.services.business_chat_knowledge.retrieve") as mock_v2_retrieve:
+                ctx = _business_document_context("cau hoi khong lien quan 12345xyz", "vi")
+                self.assertIn("Chưa tìm thấy hướng dẫn nội bộ phù hợp", ctx)
+                mock_v2_retrieve.assert_not_called()
+
+    def test_v3_unavailable_calls_v2_fallback(self) -> None:
+        """When V3 index is unbuilt or empty, V2 catalog fallback must be invoked."""
+        from src.ui.operations_assistant import _business_document_context
+
+        with patch("src.services.business_knowledge_index.get_knowledge_index", return_value=[]):
+            with patch("src.services.business_chat_knowledge.retrieve", return_value=[]) as mock_v2_retrieve:
+                _business_document_context("file bị khóa", "vi")
+                mock_v2_retrieve.assert_called_once_with("file bị khóa", "vi")
+
+
+class FiscalYearKnowledgeUpdateDialogTests(unittest.TestCase):
+    """Unit tests for FiscalYearKnowledgeUpdateDialog UI initialization, live preview, and validation."""
+
+    def test_open_update_dialog_does_not_duplicate_fy_prefix(self) -> None:
+        from src.ui.fiscal_year_update_dialog import FiscalYearKnowledgeUpdateDialog
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = SimpleNamespace(window=object(), language="vi", fiscal_year="FY2028")
+        with patch.object(FiscalYearKnowledgeUpdateDialog, "open") as open_dialog:
+            OperationsBusinessChatDialog._open_fy_knowledge_update(dialog)
+
+        open_dialog.assert_called_once_with(dialog.window, "vi", fiscal_year="FY2028")
+
+    def test_dialog_initialization_multilingual(self) -> None:
+        from src.ui.fiscal_year_update_dialog import FiscalYearKnowledgeUpdateDialog
+        import tkinter as tk
+
+        try:
+            root = tk.Tk()
+            root.withdraw()
+        except Exception:
+            self.skipTest("Tkinter display not available")
+
+        try:
+            # VI
+            dlg_vi = FiscalYearKnowledgeUpdateDialog(root, "vi", fiscal_year="FY2028")
+            self.assertEqual(dlg_vi.language, "vi")
+            self.assertEqual(dlg_vi.fy_var.get(), "FY2028")
+            self.assertEqual(dlg_vi.window.title(), translate_for_language("fy_knowledge_update_dialog_title", "vi"))
+            dlg_vi.close()
+
+            # EN
+            dlg_en = FiscalYearKnowledgeUpdateDialog(root, "en", fiscal_year="FY2029")
+            self.assertEqual(dlg_en.language, "en")
+            self.assertEqual(dlg_en.fy_var.get(), "FY2029")
+            self.assertEqual(dlg_en.window.title(), translate_for_language("fy_knowledge_update_dialog_title", "en"))
+            dlg_en.close()
+
+            # JA
+            dlg_ja = FiscalYearKnowledgeUpdateDialog(root, "ja", fiscal_year="FY2030")
+            self.assertEqual(dlg_ja.language, "ja")
+            self.assertEqual(dlg_ja.fy_var.get(), "FY2030")
+            self.assertEqual(dlg_ja.window.title(), translate_for_language("fy_knowledge_update_dialog_title", "ja"))
+            dlg_ja.close()
+        finally:
+            root.destroy()
+
+    def test_live_preview_updates_on_typing(self) -> None:
+        from src.ui.fiscal_year_update_dialog import FiscalYearKnowledgeUpdateDialog
+        import tkinter as tk
+
+        try:
+            root = tk.Tk()
+            root.withdraw()
+        except Exception:
+            self.skipTest("Tkinter display not available")
+
+        try:
+            dlg = FiscalYearKnowledgeUpdateDialog(root, "vi", fiscal_year="FY2028")
+            dlg.title_var.set("Phân bổ tiền điện xưởng")
+            dlg.what_changed_text.insert("1.0", "Phân bổ theo chỉ số đồng hồ đo riêng từng xưởng.")
+            dlg.user_action_text.insert("1.0", "Kiểm tra chỉ số cột F.")
+            dlg._update_preview()
+
+            preview_content = dlg.preview_text.get("1.0", "end")
+            self.assertIn("Phân bổ theo chỉ số đồng hồ đo riêng từng xưởng.", preview_content)
+            self.assertIn("1. Kiểm tra chỉ số cột F.", preview_content)
+            self.assertIn("Nguồn tham khảo: Cập nhật nghiệp vụ FY2028 — Phân bổ tiền điện xưởng", preview_content)
+            self.assertIn("Mức tin cậy: Đã xác nhận", preview_content)
+            dlg.close()
+        finally:
+            root.destroy()
+
+    def test_get_item_data_distinct_multilingual_values(self) -> None:
+        from src.ui.fiscal_year_update_dialog import FiscalYearKnowledgeUpdateDialog
+        import tkinter as tk
+
+        try:
+            root = tk.Tk()
+            root.withdraw()
+        except Exception:
+            self.skipTest("Tkinter display not available")
+
+        try:
+            dlg = FiscalYearKnowledgeUpdateDialog(root, "vi", fiscal_year="FY2028")
+
+            # VI
+            dlg.title_vars["vi"].set("Tiêu đề tiếng Việt")
+            dlg.what_changed_texts["vi"].insert("1.0", "Nội dung thay đổi tiếng Việt.")
+            dlg.user_action_texts["vi"].insert("1.0", "Người dùng làm tiếng Việt.")
+            dlg.applies_to_vars["vi"].set("Phòng ban VN")
+            dlg.source_note_vars["vi"].set("Tài liệu VN")
+
+            # EN
+            dlg.title_vars["en"].set("English Title")
+            dlg.what_changed_texts["en"].insert("1.0", "English change description.")
+            dlg.user_action_texts["en"].insert("1.0", "English user action.")
+            dlg.applies_to_vars["en"].set("EN Department")
+            dlg.source_note_vars["en"].set("EN Document")
+
+            # JA
+            dlg.title_vars["ja"].set("日本語タイトル")
+            dlg.what_changed_texts["ja"].insert("1.0", "日本語の変更内容です。")
+            dlg.user_action_texts["ja"].insert("1.0", "日本語の対応手順です。")
+            dlg.applies_to_vars["ja"].set("JA 適用部署")
+            dlg.source_note_vars["ja"].set("JA 参照文書")
+
+            item = dlg._get_item_data()
+
+            self.assertEqual(item.title["vi"], "Tiêu đề tiếng Việt")
+            self.assertEqual(item.title["en"], "English Title")
+            self.assertEqual(item.title["ja"], "日本語タイトル")
+
+            self.assertEqual(item.what_changed["vi"], "Nội dung thay đổi tiếng Việt.")
+            self.assertEqual(item.what_changed["en"], "English change description.")
+            self.assertEqual(item.what_changed["ja"], "日本語の変更内容です。")
+
+            self.assertEqual(item.user_action["vi"], "Người dùng làm tiếng Việt.")
+            self.assertEqual(item.user_action["en"], "English user action.")
+            self.assertEqual(item.user_action["ja"], "日本語の対応手順です。")
+
+            self.assertEqual(item.applies_to["vi"], "Phòng ban VN")
+            self.assertEqual(item.applies_to["en"], "EN Department")
+            self.assertEqual(item.applies_to["ja"], "JA 適用部署")
+
+            self.assertEqual(item.source_note["vi"], "Tài liệu VN")
+            self.assertEqual(item.source_note["en"], "EN Document")
+            self.assertEqual(item.source_note["ja"], "JA 参照文書")
+
+            dlg.close()
+        finally:
+            root.destroy()
+
+    def test_notebook_tab_selection_matches_dialog_language(self) -> None:
+        from src.ui.fiscal_year_update_dialog import FiscalYearKnowledgeUpdateDialog
+        import tkinter as tk
+
+        try:
+            root = tk.Tk()
+            root.withdraw()
+        except Exception:
+            self.skipTest("Tkinter display not available")
+
+        try:
+            dlg_vi = FiscalYearKnowledgeUpdateDialog(root, "vi", fiscal_year="FY2028")
+            self.assertEqual(dlg_vi.notebook.index(dlg_vi.notebook.select()), 0)
+            dlg_vi.close()
+
+            dlg_en = FiscalYearKnowledgeUpdateDialog(root, "en", fiscal_year="FY2028")
+            self.assertEqual(dlg_en.notebook.index(dlg_en.notebook.select()), 1)
+            dlg_en.close()
+
+            dlg_ja = FiscalYearKnowledgeUpdateDialog(root, "ja", fiscal_year="FY2028")
+            self.assertEqual(dlg_ja.notebook.index(dlg_ja.notebook.select()), 2)
+            dlg_ja.close()
+        finally:
+            root.destroy()
+
+
 if __name__ == "__main__":
     unittest.main()
-

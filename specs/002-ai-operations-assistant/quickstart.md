@@ -1,56 +1,43 @@
-# Quickstart Validation: Read-only Operations Assistant
+# Quickstart Validation: C-AGENT Operations Guidance
 
 ## Prerequisites
 
-- A disposable test history root with known failed or incomplete run fixtures.
-- The existing CI-safe pytest environment (Python 3.10+).
+- CI-safe temporary `RUN_HISTORY` fixtures; never a real workbook, report, or company log.
+- Python environment used by the repository test suite.
+- For manual C-AGENT acceptance only: company-approved endpoint, authentication method, data-policy reference, and a disposable/synthetic test case. Do not place the URL or token in this document, source, or Git.
 
-## Scenario A: Known failure
+## Scenario A: Offline local guidance remains useful
 
-1. Build a case for a fixture with an approved error classification (`missing_staffing_baseline`, `blocked_output_file_lock`, or `preflight_source_validation_failure`).
-2. Verify FY, CC scope, run ID, stage, evidence links, confidence, and Vietnamese guidance.
-3. Repeat in English and Japanese.
-4. Verify the fixture files, SQLite catalog, source files, and output workbooks have unchanged checksums.
+1. Open a known and an unknown terminal fixture with no C-AGENT configuration.
+2. Verify existing local evidence-backed guidance remains visible.
+3. Verify the C-AGENT action explains it is unavailable and creates no HTTP call.
+4. Verify no selected-run file, catalog database, configuration, or output checksum changes.
 
-## Scenario B: Unknown failure
+## Scenario B: C-AGENT packet and response
 
-1. Build a case for a fixture with an unmatched error.
-2. Verify the result says the cause is unconfirmed.
-3. Verify it lists available evidence and no automated repair action.
+1. Use a fake approved C-AGENT transport and a terminal fixture.
+2. Review the generated packet: it contains only the selected run's verified facts, technical excerpts, paths/locators, and opaque `E*` evidence IDs.
+3. Assert it excludes a credential, process environment value, evidence from another run, arbitrary external file, and missing/mismatched evidence; assert technical excerpt and packet totals respect their size limits.
+4. Return a well-formed advisory answer and verify the UI labels it as company AI guidance, displays its limits, and preserves the local guidance beside it.
+5. Return timeout, HTTP error, malformed JSON, and unknown evidence IDs; verify each leaves local guidance intact and calls no Gemini/other provider.
 
-## Scenario C: Bad evidence
+## Scenario C: Gemini public experiment isolation
 
-1. Use a fixture whose report path is missing or points outside the selected workspace.
-2. Verify the result marks evidence missing/mismatched and refuses a confirmed diagnosis.
+1. With the flag absent, verify the experiment is unavailable.
+2. With the flag present, submit the built-in fictional scenario through fake transport.
+3. Verify the client cannot accept an `OperationalCase`, `run_id`, path, history root, free-text, or evidence payload.
+4. Verify its result carries the experimental/public-data warning and no fallback path can reach it.
 
-## Scenario D: UI Orchestration & Singleton Guard
-
-1. Open Run History window and verify the "Trợ lý xử lý lỗi" action button state is disabled without selection.
-2. Select a `RUNNING` row and verify the button remains disabled and no service call occurs.
-3. Select a terminal run (`FAILED`, `PRECHECK_FAILED`, `SUCCEEDED`, `SUCCEEDED_INCOMPLETE`, `LEGACY_FY2027`) and verify the button is enabled.
-4. Verify that opening the dialog with the active language (`vi`, `en`, `ja`) correctly propagates and renders the dialog in that language.
-5. Verify repeated open requests for the same run reuse the existing dialog and focus the window.
-
-## Verified CI-Safe Test Suite (Passed Commands)
+## CI-Safe Commands
 
 ```powershell
-# 1. Compilation & Syntax Verification
 py -3 -m compileall -q src tests
-
-# 2. Focused Test Suite for AI Operations Assistant Feature
-py -3 -m pytest tests/test_i18n.py tests/ui/test_operations_assistant.py tests/services/test_operations_knowledge.py tests/services/test_operations_case_service.py tests/test_run_history.py tests/test_repo_handover_docs.py -q
-
-# 3. Git Format & Whitespace Check
+py -3 -m pytest tests/test_i18n.py tests/ui/test_operations_assistant.py tests/services/test_operations_case_service.py tests/services/test_operations_knowledge.py tests/services/test_operations_ai_packet.py tests/services/test_operations_cagent_client.py tests/services/test_operations_gemini_experiment.py tests/test_run_history.py -q
 git diff --check
 ```
 
-**Verification Results**:
-- `compileall`: Passed (exit code 0, 0 errors).
-- `pytest` suite: **135 passed in 9.66s** (100% pass rate).
-- `git diff --check`: Clean (exit code 0).
+## Manual Acceptance (not evidence for CI)
 
-## Unrun Acceptance Checks (Deferred / Manual Only)
-
-- **T027 Human Acceptance Review**: A responsible reviewer must still run and record one known-error case and one unknown-error case. The fixture and fake-widget tests do not substitute for this review.
-- **Manual Interactive Desktop Session**: Manual visual inspection on physical Windows monitors across different DPI scalings and dark/light Windows themes (automated tests use fake widget & headless mock harnesses).
-- **Future Cloud/Autonomous Repair**: Deferred to future spec (AR001–AR005); not run or tested in MVP.
+- C-AGENT: On the company network, use only a disposable synthetic incident. Verify approved URL/auth, packet preview, Vietnamese response quality, timeout behaviour, and that no real operational content was sent. Record only the pass/fail outcome and policy reference in the operations runbook.
+- Gemini experiment: Run only the built-in fictional scenario after explicit enablement. Record provider availability and answer quality as an experiment; never claim it is production-ready or transfer a selected run.
+- Existing T027 read-only human acceptance remains required and is not replaced by these checks.

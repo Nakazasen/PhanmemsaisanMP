@@ -146,7 +146,11 @@ def test_complete_v1_single_export_finalizes_source_order_after_reference_layer(
 
         def export_to_template(self, template_path, output_path, cc_code=None):
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-            Path(output_path).write_text("placeholder", encoding="utf-8")
+            from openpyxl import Workbook
+
+            workbook = Workbook()
+            workbook.save(output_path)
+            workbook.close()
             calls.append("export")
             return True
 
@@ -270,7 +274,11 @@ def test_complete_v1_single_export_without_reference_still_finalizes_source_orde
 
         def export_to_template(self, template_path, output_path, cc_code=None):
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-            Path(output_path).write_text("placeholder", encoding="utf-8")
+            from openpyxl import Workbook
+
+            workbook = Workbook()
+            workbook.save(output_path)
+            workbook.close()
             calls.append("export")
             return True
 

@@ -114,7 +114,11 @@ Luồng dòng lệnh `scripts/run_e2e.py` dùng cùng parser, service, database 
 | `src/services/content_packs.py` | Cài và kiểm tra gói rule dữ liệu bằng manifest/hash. |
 | `src/services/operations_case_service.py` | Lắp ráp tình huống vận hành (OperationalCase) chỉ đọc từ bằng chứng RUN_HISTORY. |
 | `src/services/operations_knowledge.py` | Kho tri thức lỗi chuẩn tắc bất biến, hỗ trợ giải thích đa ngôn ngữ (VI/EN/JA). |
-| `src/ui/operations_assistant.py` | Hộp thoại Trợ lý Vận hành & Xử lý Lỗi (presentation-only shell, singleton guard). |
+| `src/services/operations_ai_provider.py` | Mô hình dữ liệu bất biến cho C-AGENT (Policy, Packet, SafeEvidenceItem, Result). |
+| `src/services/operations_ai_packet.py` | Trình tạo gói tin C-AGENT trích xuất bằng chứng kỹ thuật từ workspace lần chạy đã chọn. |
+| `src/services/operations_cagent_client.py` | HTTP client và hàm điều phối gọi dịch vụ tư vấn nội bộ C-AGENT có kiểm thực phản hồi. |
+| `src/ui/operations_assistant.py` | Hộp thoại Trợ lý Vận hành & Xử lý Lỗi (presentation shell, hành động Hỏi AI nội bộ, singleton guard). |
+| `tests/services/test_operations_case_service.py`, `tests/services/test_operations_knowledge.py`, `tests/services/test_operations_ai_packet.py`, `tests/services/test_operations_cagent_client.py`, `tests/services/test_operations_nowrite.py`, `tests/ui/test_operations_assistant.py`, `tests/test_i18n.py` | Bằng chứng kiểm thử CI-safe cho Trợ lý Vận hành & C-AGENT: chỉ đọc, an toàn dữ liệu, đa ngôn ngữ VI/EN/JA, và không có lệnh sửa/chạy tự động. |
 | `src/ui/tabs/variance_tab.py` | Tab giao diện điều phối phân tích so sánh biến động chi phí YoY. |
 | `src/ui/variance_chart.py` | Cửa sổ biểu đồ Top 12 biến động Matplotlib, tự tìm font đa ngôn ngữ (NotoSans, Meiryo, YuGothic). |
 

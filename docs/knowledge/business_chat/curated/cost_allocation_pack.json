@@ -1,0 +1,2478 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "cost_allocation_pack",
+  "status": "approved",
+  "review_status": "approved",
+  "business_area": "cost_allocation",
+  "authority": "canonical",
+  "external_shareable": true,
+  "source_ref_ids": [
+    "curated_cost_allocation_guidance"
+  ],
+  "entries": [
+    {
+      "topic_id": "cur_saisan_purpose_and_workflow",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Quy trình tính toán phân bổ chi phí MP Saisan",
+        "keywords": [
+          "mp saisan",
+          "quy trinh phan bo",
+          "tinh toan chi phi",
+          "muc dich",
+          "bang tinh"
+        ],
+        "answer_context": "MP Saisan là quy trình tính toán tự động và sinh bảng tính phân bổ chi phí theo từng cost center và phòng ban cho năm tài chính MP2027. Bảng tính chi tiết chứa thông tin tài khoản, mô tả chi phí và vector phân bổ theo 12 tháng từ tháng 4 đến tháng 3 năm sau.",
+        "safe_steps": [
+          "Kiểm tra đầy đủ các tệp nguồn đầu vào theo đúng năm tài chính.",
+          "Mở màn hình MP2027 và chọn phòng ban/cost center cần tính.",
+          "Bấm Quét lại nội dung và bấm Chạy tính toán để sinh bảng kết quả."
+        ],
+        "aliases": [
+          "quy trinh saisan",
+          "muc dich saisan"
+        ]
+      },
+      "en": {
+        "title": "MP Saisan Cost Allocation Workflow and Purpose",
+        "keywords": [
+          "mp saisan",
+          "allocation workflow",
+          "cost calculation",
+          "purpose",
+          "workbook generation"
+        ],
+        "answer_context": "MP Saisan is the automated cost allocation calculation and workbook generation workflow per cost center and department for MP2027. The detailed sheets contain general ledger accounts, cost descriptions, and 12-month monthly vectors from April through March.",
+        "safe_steps": [
+          "Verify that all input source workbooks match the active fiscal year.",
+          "Open the MP2027 screen and select the target departments or cost centers.",
+          "Click Rescan Sources and click Run Calculation to generate result sheets."
+        ],
+        "aliases": [
+          "saisan workflow",
+          "saisan purpose"
+        ]
+      },
+      "ja": {
+        "title": "MP Saisan 費用配賦計算ワークフローと目的",
+        "keywords": [
+          "mp saisan",
+          "費用配賦",
+          "計算ワークフロー",
+          "目的",
+          "配賦計算"
+        ],
+        "answer_context": "MP Saisanは、MP2027年度の各コストセンターおよび部門別に費用配賦計算を行い、詳細ワークブックを自動生成するワークフローです。詳細シートには勘定科目、費用内訳、および4月から翌年3月までの12か月ベクトルが含まれます。",
+        "safe_steps": [
+          "すべての入力元データファイルが対象年度に一致していることを確認してください。",
+          "MP2027画面で計算対象の部門またはコストセンターを選択してください。",
+          "「内容を再確認」をクリック後、「計算を実行」をクリックして結果を生成してください。"
+        ],
+        "aliases": [
+          "配賦ワークフロー",
+          "saisan目的"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "## 1. Purpose and current truth",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 1. Purpose and current truth",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Mục đích và căn cứ nghiệp vụ hiện hành",
+            "en": "System Purpose and Current Operational Truth",
+            "ja": "システムの目的と現行業務の正本基準"
+          },
+          "supported_summary": {
+            "vi": "Xác lập file Excel nghiệm thu chuẩn là chân lý nghiệp vụ cao nhất để đối chiếu và tự động hóa việc tính toán chi phí ngân sách.",
+            "en": "Establishes the canonical approved Excel workbook as the supreme operational truth for automating budget cost distribution.",
+            "ja": "承認済み原本Excelファイルを最高位の業務基準として位置づけ、予算配賦計算の完全自動化を行います。"
+          },
+          "evidence_anchor": "MP Saisan là workflow sinh workbook MP FY2027 theo"
+        },
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 1. Mục tiêu chương trình",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Mục tiêu chương trình tự động hóa phân bổ",
+            "en": "MP2027 Program Objectives",
+            "ja": "MP2027プログラムの目的"
+          },
+          "supported_summary": {
+            "vi": "Tự động hóa hoàn toàn quy trình phân bổ chi phí chung và kết xuất bảng tính ngân sách chi tiết cho từng phòng ban theo đúng năm tài chính mục tiêu.",
+            "en": "Fully automates overhead cost distribution and generates detailed department budget spreadsheets for the target fiscal year.",
+            "ja": "対象会計年度において共通費用の配賦計算を完全自動化し、部門別の詳細な予算スプレッドシートを出力します。"
+          },
+          "evidence_anchor": "MP2027 Manager là ứng dụng Windows desktop dùng Py"
+        },
+        {
+          "source_path": "README.md",
+          "source_section": "# MP2027 Manager",
+          "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Tài liệu hướng dẫn tổng quan MP2027",
+            "en": "MP2027 Overview and User Manual",
+            "ja": "MP2027 概要および操作マニュアル"
+          },
+          "heading_title": {
+            "vi": "Tổng quan ứng dụng quản lý phân bổ MP2027",
+            "en": "MP2027 Cost Allocation Application Overview",
+            "ja": "MP2027 費用配賦管理アプリケーションの概要"
+          },
+          "supported_summary": {
+            "vi": "Ứng dụng máy tính chuyên dụng phân bổ chi phí ngân sách tự động cho từng phòng ban từ các bảng tính nguồn Excel với đầy đủ nhật ký kiểm toán.",
+            "en": "Dedicated desktop application automating department budget cost allocation from Excel source workbooks with complete audit trails.",
+            "ja": "Excel元データから各部門への予算費用配賦を完全自動化し、監査証跡を備えたデスクトップ業務アプリケーションです。"
+          },
+          "evidence_anchor": "MP2027 Manager là phần mềm desktop Windows viết bằ"
+        },
+        {
+          "source_path": "README.md",
+          "source_section": "## Ai dùng chương trình này",
+          "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Tài liệu hướng dẫn tổng quan MP2027",
+            "en": "MP2027 Overview and User Manual",
+            "ja": "MP2027 概要および操作マニュアル"
+          },
+          "heading_title": {
+            "vi": "Đối tượng người dùng và vai trò vận hành",
+            "en": "Target User Roles and Operating Stakeholders",
+            "ja": "対象ユーザーと運用役割"
+          },
+          "supported_summary": {
+            "vi": "Phục vụ chuyên viên kế toán quản trị, trưởng bộ phận và ban giám đốc trong kỳ lập ngân sách và kiểm tra đối soát chi phí hàng năm.",
+            "en": "Designed for management accountants, department managers, and directors during annual budget consolidation and cost audit cycles.",
+            "ja": "年次予算編成および費用監査において、管理会計担当者、部門責任者、および経営陣を対象としています。"
+          },
+          "evidence_anchor": "- Người phụ trách lập/nghiệm thu budget MP FY2027."
+        },
+        {
+          "source_path": "README.md",
+          "source_section": "## Luồng sử dụng chính",
+          "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Tài liệu hướng dẫn tổng quan MP2027",
+            "en": "MP2027 Overview and User Manual",
+            "ja": "MP2027 概要および操作マニュアル"
+          },
+          "heading_title": {
+            "vi": "Luồng thao tác 3 bước chính của người dùng",
+            "en": "Three-Step Core Operational Workflow",
+            "ja": "3ステップの主要操作フロー"
+          },
+          "supported_summary": {
+            "vi": "Quy trình vận hành gồm 3 bước: chọn năm tài chính, kiểm tra tệp dữ liệu đầu vào và nhấn nút tính toán để xuất báo cáo chi tiết.",
+            "en": "Standard three-step operation: select fiscal year, verify input source workbooks, and click calculate to export detailed reports.",
+            "ja": "会計年度の選択、入力元ファイルの確認、計算実行ボタンのクリックによる詳細レポート出力の3ステップで運用します。"
+          },
+          "evidence_anchor": "1. Mở app bằng `run_MP2027.bat`."
+        },
+        {
+          "source_path": "README.md",
+          "source_section": "## Input chính",
+          "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Tài liệu hướng dẫn tổng quan MP2027",
+            "en": "MP2027 Overview and User Manual",
+            "ja": "MP2027 概要および操作マニュアル"
+          },
+          "heading_title": {
+            "vi": "Danh mục tệp dữ liệu bảng tính đầu vào",
+            "en": "Mandatory Input Source Workbooks Inventory",
+            "ja": "必須入力データワークブック一覧"
+          },
+          "supported_summary": {
+            "vi": "Yêu cầu đầy đủ các tệp Excel phân bổ chi phí hành chính, danh mục tài sản cố định, chi phí hệ thống và số liệu nhân sự 12 tháng.",
+            "en": "Requires complete Excel files for admin allocation, fixed assets, IT system costs, and 12-month staffing numbers.",
+            "ja": "総務配賦一覧、固定資産一覧、ITシステム費、および12か月人員データを含むExcel元ファイル一式が必要です。"
+          },
+          "evidence_anchor": "Các input đang được repo kỳ vọng gồm:"
+        },
+        {
+          "source_path": "README.md",
+          "source_section": "## Output chính",
+          "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Tài liệu hướng dẫn tổng quan MP2027",
+            "en": "MP2027 Overview and User Manual",
+            "ja": "MP2027 概要および操作マニュアル"
+          },
+          "heading_title": {
+            "vi": "Cấu trúc tệp bảng tính kết quả xuất ra",
+            "en": "Generated Output Workbook File Structure",
+            "ja": "出力ワークブックのファイル構成"
+          },
+          "supported_summary": {
+            "vi": "Kết xuất tệp bảng tính ngân sách riêng cho từng Cost Center cùng bảng tổng hợp toàn công ty theo đúng định dạng biểu mẫu chuẩn.",
+            "en": "Generates individual budget workbooks per Cost Center along with company-wide summary sheets formatted to exact standards.",
+            "ja": "コストセンターごとの個別予算ワークブックおよび全社サマリーシートを、規定の標準フォーマットに従って出力します。"
+          },
+          "evidence_anchor": "Output runtime mặc định không nên commit:"
+        },
+        {
+          "source_path": "README.md",
+          "source_section": "## Tính năng nâng cao nổi bật",
+          "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Tài liệu hướng dẫn tổng quan MP2027",
+            "en": "MP2027 Overview and User Manual",
+            "ja": "MP2027 概要および操作マニュアル"
+          },
+          "heading_title": {
+            "vi": "Các tính năng nâng cao và trải nghiệm người dùng",
+            "en": "Advanced Highlights and Interactive Features",
+            "ja": "高度なハイライト機能およびユーザー体験"
+          },
+          "supported_summary": {
+            "vi": "Cung cấp tính năng tìm kiếm tức thời phòng ban, kéo thả sắp xếp dòng chi phí và nhúng biểu đồ so sánh biến động ngân sách cùng kỳ YoY.",
+            "en": "Provides real-time department filtering, drag-and-drop cost row reordering, and native embedded YoY budget variance charts.",
+            "ja": "部門の即時検索、ドラッグ＆ドロップによる費用行の並び替え、および前年同期比（YoY）予算変動グラフの自動埋め込みを提供します。"
+          },
+          "evidence_anchor": "- **Kế thừa & Bảo tồn chi phí riêng**: Tự động giữ"
+        },
+        {
+          "source_path": "README.md",
+          "source_section": "## Nguyên tắc nghiệp vụ an toàn",
+          "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Tài liệu hướng dẫn tổng quan MP2027",
+            "en": "MP2027 Overview and User Manual",
+            "ja": "MP2027 概要および操作マニュアル"
+          },
+          "heading_title": {
+            "vi": "Nguyên tắc nghiệp vụ và ranh giới an toàn",
+            "en": "Safe Business Principles and Operational Boundaries",
+            "ja": "安全な業務原則と運用境界"
+          },
+          "supported_summary": {
+            "vi": "Chương trình chạy hoàn toàn offline trên mạng nội bộ, tuyệt đối không chỉnh sửa tệp gốc và tự động sao lưu trước khi xuất dữ liệu.",
+            "en": "Operates fully offline on the local network, never modifies original sources, and creates automatic backups before exporting.",
+            "ja": "ローカルネットワーク上で完全オフライン稼働し、元ファイルを一切変更せず、出力前に自動バックアップを作成します。"
+          },
+          "evidence_anchor": "- Không tự bịa dữ liệu."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "# Cải tiến nhập dữ liệu chung vào file MPnew.xlsx — bản kế hoạch đã kiểm tra, sửa và bổ sung",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Kế hoạch cải tiến nhập dữ liệu chung MPnew",
+            "en": "MPnew General Data Entry Improvement Master Plan",
+            "ja": "MPnew共通データ入力改善マスタープラン"
+          },
+          "supported_summary": {
+            "vi": "Tài liệu đặc tả toàn diện việc tự động hóa tính toán và phân bổ chi phí chung vào file kết quả ngân sách từng phòng ban.",
+            "en": "Comprehensive master plan automating overhead calculation and cost distribution into department budget workbooks.",
+            "ja": "部門別予算ワークブックへの共通費用の計算と配賦処理を完全自動化するための包括的な改善計画書です。"
+          },
+          "evidence_anchor": "Ngày reconcile local: `2026-07-07 06:39:28` (histo"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 1. Mục tiêu tổng thể của yêu cầu",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Mục tiêu tổng thể cải tiến nhập liệu",
+            "en": "Overall Objectives of Data Entry Improvement",
+            "ja": "データ入力改善の全体目標"
+          },
+          "supported_summary": {
+            "vi": "Tự động hóa hoàn toàn quy trình phân bổ chi phí chung cho các phòng ban, loại bỏ thao tác thủ công dễ gây nhầm lẫn.",
+            "en": "Fully automates overhead cost distribution across departments, eliminating error-prone manual spreadsheets.",
+            "ja": "部門への共通費用配賦処理を完全自動化し、人為的ミスの発生しやすい手動入力を排除します。"
+          },
+          "evidence_anchor": "Người dùng muốn cải tiến chương trình để tự động n"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 1.1. Mục tiêu không phải chỉ là copy/paste",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Bản chất tính toán thay vì sao chép dữ liệu",
+            "en": "Dynamic Calculation Rather Than Static Copy-Paste",
+            "ja": "単なるコピー＆ペーストではない動的計算の本質"
+          },
+          "supported_summary": {
+            "vi": "Hệ thống phải thực hiện tính toán định mức, nhân tỷ giá và đối soát logic kế toán thay vì chỉ sao chép dữ liệu tĩnh.",
+            "en": "The system performs dynamic rate conversions, quota calculations, and ledger accounting checks rather than static cell copying.",
+            "ja": "単にセルを複製するのではなく、為替レート換算、基準値計算、および会計照合を動的に実行します。"
+          },
+          "evidence_anchor": "Yêu cầu này không đơn giản là copy dữ liệu từ Exce"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 5. Sheet `Sheet1` — tổng quan yêu cầu",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Tổng quan yêu cầu từ Sheet1",
+            "en": "Overview of Requirements from Sheet1",
+            "ja": "Sheet1における要件概要"
+          },
+          "supported_summary": {
+            "vi": "Tổng hợp danh mục 8 nhóm chi phí lớn cần phân bổ và quy trình đọc tuần tự các tệp nguồn để trích xuất số liệu.",
+            "en": "Summarizes the 8 primary cost categories to allocate and establishes the sequential source file ingestion procedure.",
+            "ja": "配賦対象となる主要8費用項目の構成および元ファイルの順次読み込み手順の全体像をまとめています。"
+          },
+          "evidence_anchor": "Hình tổng quan file MP từ Sheet1:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 5.2. Cách làm tổng quát",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Phương pháp tiếp cận tổng quát khi phân bổ",
+            "en": "General Workflow Methodology for Cost Distribution",
+            "ja": "費用配賦における全体処理アプローチ"
+          },
+          "supported_summary": {
+            "vi": "Nạp dữ liệu từng file nguồn, lọc theo Cost Center và tài khoản kế toán, sau đó ghi trực tiếp vào các dòng tương ứng của biểu mẫu.",
+            "en": "Ingests each source file, filters by Cost Center and account code, then populates corresponding master form rows directly.",
+            "ja": "元ファイルを順次読み込み、原価センタと勘定科目で絞り込みを行った上で、マスターフォームの該当行へ直接書き込みます。"
+          },
+          "evidence_anchor": "① Filter \"code phòng chịu chi phí\" trong các file "
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 6. Sheet `Hạng mục cần cải tiến` — danh sách cải tiến chung",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Danh mục các cải tiến nghiệp vụ chung",
+            "en": "General Business Improvements Master Catalog",
+            "ja": "全体業務改善項目のマスターリスト"
+          },
+          "supported_summary": {
+            "vi": "Tổng hợp các phản ánh và yêu cầu cải tiến về công thức tính, sửa lỗi nhân trùng và bổ sung các dòng chi phí mới.",
+            "en": "Catalogs stakeholder feedback and improvement specifications regarding formula fixes, duplicate removals, and new expense lines.",
+            "ja": "数式の是正、重複計算の排除、および新規費用行の追加に関する業務改善要求を総括した一覧です。"
+          },
+          "evidence_anchor": "1. Không cần điền 2 dữ liệu nhân sự cũ vào file."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 6.1. Các mục cải tiến ban đầu",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Các hạng mục cải tiến giai đoạn đầu",
+            "en": "Initial Phase Business Improvements Catalog",
+            "ja": "初期フェーズの改善項目一覧"
+          },
+          "supported_summary": {
+            "vi": "Bao gồm yêu cầu bổ sung dòng chi phí du lịch, khám sức khỏe và cấp phát bảo hộ lao động vào bảng phân bổ hành chính.",
+            "en": "Includes requests to add company trip, medical examination, and safety gear lines into administrative distribution sheets.",
+            "ja": "社員旅行、健康診断、および安全保護具支給行を総務配賦シートへ追加する初期改善要件を定めています。"
+          },
+          "evidence_anchor": "1. Không cần điền 2 dữ liệu nhân sự cũ vào file."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 21. Tóm tắt ngắn cho người không chuyên",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Tóm tắt nghiệp vụ phân bổ cho người không chuyên",
+            "en": "Non-Technical Summary of Cost Allocation System",
+            "ja": "非専門家向け費用配賦システムの要約解説"
+          },
+          "supported_summary": {
+            "vi": "Giải thích đơn giản về cách chương trình tự động lấy số liệu từ các bảng tính nguồn và điền vào báo cáo chi phí phòng ban.",
+            "en": "Provides a straightforward explanation of how the system ingests source tables and populates department budget reports.",
+            "ja": "システムが元データを読み込み、各部門の予算レポートへ自動的にデータを配置する仕組みを平易に解説しています。"
+          },
+          "evidence_anchor": "File yêu cầu này muốn chương trình MP2027 làm tự đ"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 22.5. Workbook Excel gốc thắng markdown khi mâu thuẫn",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "File Excel gốc giữ quyền quyết định cao nhất khi có mâu thuẫn",
+            "en": "Canonical Excel Workbook Holds Supreme Precedence Over Markdown",
+            "ja": "原本ExcelファイルがMarkdownより最優先される原則"
+          },
+          "supported_summary": {
+            "vi": "Khi có bất kỳ sự sai khác nào giữa tài liệu văn bản và file Excel gốc, số liệu và công thức trên file Excel luôn là chân lý.",
+            "en": "In case of any conflict between documentation and canonical Excel workbooks, workbook figures and formulas always prevail.",
+            "ja": "ドキュメントと原本Excelファイルとの間に相違がある場合、Excelファイルの数値および数式が常に最優先されます。"
+          },
+          "evidence_anchor": "Khi có mâu thuẫn giữa tài liệu markdown này và wor"
+        },
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "# MP Saisan Business Knowledge Base v2 - Full Business Specification",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Đặc tả toàn diện nghiệp vụ MP Saisan phiên bản 2",
+            "en": "Comprehensive MP Saisan v2 Business Specification",
+            "ja": "MP Saisan v2 業務仕様完全版"
+          },
+          "supported_summary": {
+            "vi": "Tổng hợp toàn bộ quy tắc phân bổ ngân sách, công thức tính toán và chuẩn hóa dữ liệu tài chính cho hệ thống MP Saisan v2.",
+            "en": "Comprehensive reference of all budget allocation rules, calculation formulas, and financial standards for MP Saisan v2.",
+            "ja": "MP Saisan v2におけるすべての予算配賦ルール、計算数式、および財務データ標準仕様を網羅したナレッジベースです。"
+          },
+          "evidence_anchor": "MP Saisan là workflow sinh workbook MP FY2027 theo"
+        },
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 4. Module detail matrix",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Ma trận chi tiết các module tính toán chi phí",
+            "en": "Detailed Cost Calculation Modules Matrix",
+            "ja": "費用計算モジュールの詳細マトリクス"
+          },
+          "supported_summary": {
+            "vi": "Tổng hợp ma trận đối chiếu mục đích nghiệp vụ, tệp bảng tính nguồn và dải dòng kết quả cho toàn bộ 8 module tính toán.",
+            "en": "Presents the traceability matrix linking business purposes, source files, and output row ranges across all 8 modules.",
+            "ja": "全8つの計算モジュールについて、業務目的、元ファイル、出力対象行範囲を網羅した照合マトリクスです。"
+          },
+          "evidence_anchor": "Business purpose"
+        },
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 7. Primary and secondary reference pool",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Phân loại kho tài liệu nguồn chính và phụ",
+            "en": "Primary and Secondary Evidence Sources Pool",
+            "ja": "正本および副次参照ソースの分類基準"
+          },
+          "supported_summary": {
+            "vi": "Phân định rõ tài liệu nguồn chính thức có tính quyết định cao nhất và các tài liệu tham khảo bổ trợ khi đối soát.",
+            "en": "Distinguishes canonical primary sources holding supreme authority from secondary supporting reference files.",
+            "ja": "最高位の決定権を持つ正本ソースと、照合時の補助的な副次参考ファイルを明確に区分します。"
+          },
+          "evidence_anchor": "42N2D inventory summary:"
+        },
+        {
+          "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+          "source_section": "## Summary",
+          "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Khái niệm phân loại chi phí chung",
+            "en": "General Cost Category Concepts",
+            "ja": "共通費用分類コンセプト"
+          },
+          "heading_title": {
+            "vi": "Tóm tắt các khái niệm phân bổ chi phí chung",
+            "en": "Overhead Cost Allocation Concepts Summary",
+            "ja": "共通費用配賦コンセプトの要約"
+          },
+          "supported_summary": {
+            "vi": "Tổng quan về cơ chế tự động hóa phân bổ 6 nhóm chi phí chung chính vào từng phòng ban trên hệ thống MP2027.",
+            "en": "Overview of the automated allocation mechanism distributing 6 primary overhead expense groups to departments.",
+            "ja": "MP2027において主要な6つの共通費用グループを各部門へ自動配賦する仕組みの全体概要です。"
+          },
+          "evidence_anchor": "Tài liệu này chi tiết các yêu cầu cải tiến quy trì"
+        },
+        {
+          "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+          "source_section": "## Details",
+          "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Khái niệm phân loại chi phí chung",
+            "en": "General Cost Category Concepts",
+            "ja": "共通費用分類コンセプト"
+          },
+          "heading_title": {
+            "vi": "Chi tiết các nhóm chi phí phân bổ chính",
+            "en": "Detailed Breakdown of Primary Overhead Cost Groups",
+            "ja": "主要な配賦費用グループの詳細解説"
+          },
+          "supported_summary": {
+            "vi": "Phân tích chuyên sâu về căn cứ tính toán, tài khoản kế toán và nguồn dữ liệu cho từng nhóm chi phí phân bổ.",
+            "en": "Detailed breakdown of calculation foundations, accounting codes, and source data files for each cost category.",
+            "ja": "各費用分類における計算根拠、勘定科目コード、および元データファイルに関する詳細解説です。"
+          },
+          "evidence_anchor": "Hệ thống chi phí chung cần cải tiến bao gồm 7 hạng"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_saisan_cost_center_hierarchy",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Cấu trúc Cost Center và phòng ban (CC 1412000040 / Ban Kỹ thuật Điện)",
+        "keywords": [
+          "cost center",
+          "1412000040",
+          "phong ban",
+          "dien san xuat",
+          "ky thuat dien",
+          "ma phong ban"
+        ],
+        "answer_context": "Mỗi phòng ban trong MP2027 được định danh bằng một mã Cost Center duy nhất, ví dụ CC 1412000040 đại diện cho Ban Kỹ thuật Sản xuất Điện. Hệ thống áp dụng bảng quy tắc và công thức phân bổ riêng biệt cho từng Cost Center để đảm bảo tính đúng và đủ chi phí.",
+        "safe_steps": [
+          "Kiểm tra mã Cost Center của phòng ban trên thông báo hệ thống hoặc danh sách chọn.",
+          "Đảm bảo dữ liệu nhân sự và các kênh nhập thủ công đã gán đúng mã Cost Center tương ứng.",
+          "Chọn đúng Cost Center khi chạy tính toán để xuất kết quả bảng tính chính xác."
+        ],
+        "aliases": [
+          "ma cost center",
+          "cc 1412000040",
+          "ban ky thuat dien"
+        ]
+      },
+      "en": {
+        "title": "Cost Center Hierarchy and Department Codes (CC 1412000040)",
+        "keywords": [
+          "cost center",
+          "1412000040",
+          "department code",
+          "manufacturing technology",
+          "electrical engineering"
+        ],
+        "answer_context": "Each department in MP2027 is identified by a unique Cost Center code, such as CC 1412000040 for the Electrical Manufacturing Technology department. The system applies dedicated allocation rules and formulas for each Cost Center to ensure accurate expense distribution.",
+        "safe_steps": [
+          "Check the Cost Center code shown on the screen or in the selection list.",
+          "Verify that staffing data and manual input entries match the target Cost Center.",
+          "Select the specific Cost Center when running the calculation to export the correct workbook."
+        ],
+        "aliases": [
+          "cc code",
+          "1412000040",
+          "electrical department"
+        ]
+      },
+      "ja": {
+        "title": "コストセンター階層と部門コード（CC 1412000040 / 電気製造技術課）",
+        "keywords": [
+          "コストセンター",
+          "1412000040",
+          "電気製造技術課",
+          "部門コード",
+          "製造技術"
+        ],
+        "answer_context": "MP2027の各部門は固有のコストセンターコードで管理されています（例：CC 1412000040 は電気製造技術課）。システムはコストセンターごとに定義された配賦ルールと計算式を適用し、正確な費用配賦を行います。",
+        "safe_steps": [
+          "画面上または選択リストで対象部門のコストセンターコードを確認してください。",
+          "人員データおよび手動入力項目が対象コストセンターに正しく設定されていることを確認してください。",
+          "計算実行時に対象のコストセンターを選択して計算結果を出力してください。"
+        ],
+        "aliases": [
+          "コストセンター1412000040",
+          "電気製造技術課"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "## 6. Account code and Cost Center rules",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 6. Account code and Cost Center rules",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Quy tắc mã tài khoản và mã Cost Center",
+            "en": "Account Code and Cost Center Identifiers Rules",
+            "ja": "勘定科目コードおよび原価センタの識別ルール"
+          },
+          "supported_summary": {
+            "vi": "Mã Cost Center 10 chữ số định danh phòng ban và mã tài khoản 10 chữ số định danh dòng chi phí kế toán bất biến.",
+            "en": "10-digit Cost Center codes identify departments, while 10-digit account codes serve as invariant general ledger keys.",
+            "ja": "10桁の原価センタコードで部門を特定し、10桁の勘定科目コードで不変の費用科目を識別します。"
+          },
+          "evidence_anchor": "CC means cost center. Current target is `141200004"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 3.1. Cost Center / 原価センタ / code phòng chịu chi phí",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Mã Cost Center và phòng chịu chi phí",
+            "en": "Cost Center Code and Incurring Department Definition",
+            "ja": "原価センタコードと費用負担部門の定義"
+          },
+          "supported_summary": {
+            "vi": "Mã Cost Center đại diện cho phòng ban chịu chi phí, dùng để định tuyến chính xác dữ liệu vào sheet kết quả tương ứng.",
+            "en": "Cost Center identifies the department incurring expenses, routing calculated figures to the appropriate output sheet.",
+            "ja": "費用を負担する部門を表す原価センタコードを定義し、該当する部門シートへ正確にデータを配置します。"
+          },
+          "evidence_anchor": "Đây là mã phòng/bộ phận chịu chi phí."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 14. Sheet `原価センタ` — Cost Center master",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Danh mục mã phòng ban Cost Center chuẩn",
+            "en": "Cost Center Master Directory Specifications",
+            "ja": "原価センタマスターディレクトリ仕様"
+          },
+          "supported_summary": {
+            "vi": "Danh sách toàn bộ các mã phòng ban chính thức kèm tên tiếng Nhật, tên tiếng Việt và phân loại chi phí quản trị.",
+            "en": "Complete directory of official Cost Centers with Japanese/Vietnamese names and managerial classifications.",
+            "ja": "日本語・ベトナム語名称および管理会計区分を含む正式な原価センタマスターの一覧です。"
+          },
+          "evidence_anchor": "Sheet `原価センタ` dùng để xác định nhóm chi phí/accoun"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 14.1. Vai trò",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Vai trò của danh mục phòng ban Cost Center",
+            "en": "Role of the Centralized Cost Center Directory",
+            "ja": "原価センタマスターディレクトリの役割"
+          },
+          "supported_summary": {
+            "vi": "Xác định chính xác đơn vị chịu chi phí và thiết lập liên kết với các bảng tính ngân sách đầu ra.",
+            "en": "Uniquely identifies expense-incurring units and establishes structural links with output budget workbooks.",
+            "ja": "費用負担部門を一意に特定し、出力予算ワークブックとの構造的紐付けを確立します。"
+          },
+          "evidence_anchor": "Sheet `原価センタ` dùng để xác định nhóm chi phí/accoun"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 14.2. Rule chính",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy tắc tra cứu phân loại phòng ban từ Cost Center",
+            "en": "Primary Rules for Deriving Divisions from Cost Centers",
+            "ja": "原価センタに基づく部門区分判定の主要ルール"
+          },
+          "supported_summary": {
+            "vi": "Từ mã Cost Center tra cứu ra nhóm 採算区分 và nhóm 原価区分 để quyết định quy tắc tính toán phân bổ phù hợp.",
+            "en": "Derives profitability and cost divisions from Cost Center codes to select the appropriate distribution algorithms.",
+            "ja": "原価センタコードから採算区分および原価区分を判定し、適切な配賦計算ロジックを選択・適用します。"
+          },
+          "evidence_anchor": "Cost Center -> lấy 原価区分"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 28. Cập nhật master `原価センタ` — 5 Cost Center mới",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Cập nhật danh mục master với 5 Cost Center mới",
+            "en": "Master Directory Update: Five New Cost Centers",
+            "ja": "原価センタマスター更新: 新設5部門の追加仕様"
+          },
+          "supported_summary": {
+            "vi": "Bổ sung 5 mã Cost Center mới vào bảng master kèm phân loại 採算区分 và 原価区分 chuẩn để xuất đúng báo cáo.",
+            "en": "Adds 5 new Cost Centers into the master list with standard profitability and cost divisions for report routing.",
+            "ja": "新設された5つの原価センタをマスターに追加し、標準の採算区分と原価区分を設定してレポートを出力します。"
+          },
+          "evidence_anchor": "> **Nguồn**: Excel gốc sheet `原価センタ`, Row 62-66."
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_saisan_account_lookup_chain",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Quy trình 5 bước xác định mã tài khoản kế toán",
+        "keywords": [
+          "ma tai khoan",
+          "account code",
+          "5 buoc",
+          "tra ma",
+          "nguyen gia",
+          "phan loai chi phi"
+        ],
+        "answer_context": "Hệ thống xác định mã tài khoản kế toán thông qua chuỗi phân cấp 5 bước: (1) Xác định Cost Center nguồn -> (2) Xác định Nguyên giá tài sản -> (3) Phân loại nhóm chi phí -> (4) Đối chiếu bảng ánh xạ tài khoản -> (5) Gán mã tài khoản kế toán chi tiết tương ứng.",
+        "safe_steps": [
+          "Kiểm tra nhóm chi phí và nguyên giá được ghi nhận trên tệp nguồn.",
+          "Đối chiếu bảng phân loại tài khoản theo Cost Center tương ứng.",
+          "Nếu phát sinh chi phí mới chưa có mã, thực hiện bổ sung qua kênh chi phí đặc thù đã duyệt."
+        ],
+        "aliases": [
+          "tra cuu tai khoan",
+          "quy tac tai khoan",
+          "chuoi phan cap tai khoan"
+        ]
+      },
+      "en": {
+        "title": "5-Step Account Code Lookup Hierarchy",
+        "keywords": [
+          "account code",
+          "lookup rules",
+          "5 steps",
+          "cost category",
+          "hierarchy",
+          "account resolution"
+        ],
+        "answer_context": "The engine resolves general ledger account codes through a 5-step hierarchy: (1) Identify source Cost Center -> (2) Check acquisition/original cost -> (3) Classify cost category -> (4) Match against mapping table -> (5) Assign corresponding detailed account code.",
+        "safe_steps": [
+          "Verify the cost category and acquisition value recorded in the source workbook.",
+          "Check the account classification table for the designated Cost Center.",
+          "If an unmapped expense occurs, register it through the approved manual special cost channel."
+        ],
+        "aliases": [
+          "account lookup chain",
+          "account resolution",
+          "5 step account lookup"
+        ]
+      },
+      "ja": {
+        "title": "勘定科目コード特定の5段階ルール",
+        "keywords": [
+          "勘定科目コード",
+          "特定ルール",
+          "5段階",
+          "原価区分",
+          "階層構造",
+          "科目マッピング"
+        ],
+        "answer_context": "システムは5段階の階層ルールに従って勘定科目コードを特定します：(1) 対象コストセンターの特定 -> (2) 取得原価の確認 -> (3) 費用区分の分類 -> (4) 科目マッピング表との照合 -> (5) 該当する詳細勘定科目コードの割り当て。",
+        "safe_steps": [
+          "入力元ファイルに記載された費用区分および取得原価を確認してください。",
+          "対象コストセンターに対応する勘定科目分類表と照合してください。",
+          "未登録の費用が発生した場合は、承認済みの特別費用手動入力チャネルから登録してください。"
+        ],
+        "aliases": [
+          "勘定科目特定ルール",
+          "科目特定5ステップ"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "### Account Lookup Rule",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "### Account Lookup Rule",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Quy tắc tra cứu mã tài khoản kế toán",
+            "en": "General Ledger Account Code Lookup Rule",
+            "ja": "勘定科目コードの特定および参照ルール"
+          },
+          "supported_summary": {
+            "vi": "Tra cứu mã tài khoản 10 chữ số dựa trên tên chi phí và phân loại phòng ban (sản xuất hoặc gián tiếp) để điền đúng vào biểu mẫu.",
+            "en": "Identifies 10-digit account codes using expense name and department classification (manufacturing or indirect) for form mapping.",
+            "ja": "費用項目名と部門分類（製造または間接）に基づいて10桁の勘定科目コードを特定し、フォームへ正しく配置します。"
+          },
+          "evidence_anchor": "Khi cần xác định `account_code`, không lookup trực"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 3. Thuật ngữ bắt buộc dùng đúng khi viết code",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Thuật ngữ nghiệp vụ kế toán bắt buộc",
+            "en": "Mandatory Financial and Accounting Business Terminology",
+            "ja": "厳格に遵守すべき財務会計用語の定義"
+          },
+          "supported_summary": {
+            "vi": "Quy định sử dụng thống nhất các thuật ngữ tài chính như Cost Center, Account Code và phân loại phòng ban trong toàn bộ hệ thống.",
+            "en": "Mandates consistent financial terminology including Cost Centers, Account Codes, and departmental divisions across all logic.",
+            "ja": "システム全体で原価センタ、勘定科目コード、部門区分などの財務用語を統一して使用することを定めています。"
+          },
+          "evidence_anchor": "Đây là mã phòng/bộ phận chịu chi phí."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 3.2. Account Code / 勘定科目",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Mã tài khoản kế toán 10 chữ số",
+            "en": "10-Digit General Ledger Account Code Standards",
+            "ja": "10桁の勘定科目コードの標準仕様"
+          },
+          "supported_summary": {
+            "vi": "Sử dụng mã tài khoản kế toán 10 chữ số để khớp và điền chính xác vào từng dòng chi phí trên biểu mẫu kết quả.",
+            "en": "Employs 10-digit account codes to accurately match and populate cost rows on the output workbook.",
+            "ja": "出力フォーム上の各費用行と照合して正確に入力するために、10桁の勘定科目コードを使用します。"
+          },
+          "evidence_anchor": "Đây là mã tài khoản kế toán."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 3.3. `採算区分` và `原価区分`",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Phân biệt 採算区分 và 原価区分",
+            "en": "Distinction Between Profitability and Cost Divisions",
+            "ja": "採算区分と原価区分の区別基準"
+          },
+          "supported_summary": {
+            "vi": "Phân định rõ nhóm 採算区分 (sản xuất, gián tiếp) và 原価区分 (chế tạo, bán hàng) để tra cứu đúng cột tài khoản kế toán.",
+            "en": "Distinguishes profitability divisions from cost divisions to ensure looking up the correct general ledger account column.",
+            "ja": "正しい勘定科目列を参照するために、採算区分（製造、間接）と原価区分（製造原価、販管費）を明確に区別します。"
+          },
+          "evidence_anchor": "Trong sheet `原価センタ` có 2 cột dễ nhầm:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 13. Sheet `勘定科目` — account master",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Danh mục tài khoản kế toán chuẩn",
+            "en": "General Ledger Accounts Master Directory Specifications",
+            "ja": "勘定科目マスターディレクトリ仕様"
+          },
+          "supported_summary": {
+            "vi": "Danh mục các mã tài khoản kế toán 10 chữ số dùng để đối chiếu và định tuyến chi phí vào các dòng biểu mẫu.",
+            "en": "Directory of standard 10-digit ledger account codes used to validate and route expenses into template lines.",
+            "ja": "費用行へのマッピングと照合に使用される標準10桁勘定科目コードのマスター一覧です。"
+          },
+          "evidence_anchor": "Sheet `勘定科目` là master để tra mã tài khoản kế toán"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 13.1. Vai trò",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Vai trò của danh mục tài khoản kế toán",
+            "en": "Role of the Canonical Accounts Master Directory",
+            "ja": "勘定科目マスターディレクトリの役割"
+          },
+          "supported_summary": {
+            "vi": "Đảm bảo mọi khoản chi phí được hạch toán đúng mã tài khoản kế toán theo quy chuẩn báo cáo tài chính nội bộ.",
+            "en": "Ensures every expense line is booked to the correct ledger account per internal financial reporting standards.",
+            "ja": "社内財務報告基準に従い、すべての費用行が正しい勘定科目コードへ計上されることを保証します。"
+          },
+          "evidence_anchor": "Sheet `勘定科目` là master để tra mã tài khoản kế toán"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 13.2. Rule tra account",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy trình tra cứu mã tài khoản kế toán",
+            "en": "Account Code Lookup and Verification Procedure",
+            "ja": "勘定科目コードの特定・検証手順"
+          },
+          "supported_summary": {
+            "vi": "Tra cứu dựa trên tên chi phí tiếng Nhật và phân loại 原価区分 của phòng ban để chọn đúng cột tài khoản kế toán.",
+            "en": "Looks up account codes using Japanese expense titles and department cost divisions to select the correct account column.",
+            "ja": "日本語費用項目名と部門の原価区分に基づいて照合を行い、正しい勘定科目列を選択します。"
+          },
+          "evidence_anchor": "JP_Name hoặc tên account lấy từ FY2027配賦額一覧."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 13.3. Không dùng sai cột",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Ngăn ngừa tra cứu nhầm cột tài khoản kế toán",
+            "en": "Preventing Erroneous Account Column Lookups",
+            "ja": "勘定科目列の誤参照防止ルール"
+          },
+          "supported_summary": {
+            "vi": "Cấm sử dụng nhầm giữa cột tài khoản chế tạo và cột tài khoản quản lý bán hàng khi tra cứu mã tài khoản.",
+            "en": "Prohibits cross-referencing between manufacturing and SG&A columns during account code determination.",
+            "ja": "勘定科目コードの特定において、製造原価列と販売管理費列の誤ったクロス参照を厳格に禁止します。"
+          },
+          "evidence_anchor": "Trong bản Gemini có đoạn “Cột F, H, H tương ứng vớ"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 13.4. Nếu account trống",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Xử lý ngoại lệ khi chưa có mã tài khoản kế toán",
+            "en": "Handling Edge Cases with Missing Account Codes",
+            "ja": "勘定科目コード未設定時の例外処理"
+          },
+          "supported_summary": {
+            "vi": "Khi không tìm thấy mã tài khoản tương ứng, hệ thống ghi nhận mã cảnh báo và yêu cầu kế toán bổ sung thay vì tự đoán.",
+            "en": "When no account code is found, the system flags a missing code warning, requesting accountant review instead of guessing.",
+            "ja": "対応する勘定科目が見つからない場合、推測による処理を行わず、未設定警告を記録して担当者へ確認を求めます。"
+          },
+          "evidence_anchor": "Nếu cột tương ứng trống:"
+        },
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 6. Account code and Cost Center rules",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Quy tắc mã tài khoản và mã Cost Center",
+            "en": "Account Code and Cost Center Identifiers Rules",
+            "ja": "勘定科目コードおよび原価センタの識別ルール"
+          },
+          "supported_summary": {
+            "vi": "Mã Cost Center 10 chữ số định danh phòng ban và mã tài khoản 10 chữ số định danh dòng chi phí kế toán bất biến.",
+            "en": "10-digit Cost Center codes identify departments, while 10-digit account codes serve as invariant general ledger keys.",
+            "ja": "10桁の原価センタコードで部門を特定し、10桁の勘定科目コードで不変の費用科目を識別します。"
+          },
+          "evidence_anchor": "CC means cost center. Current target is `141200004"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_saisan_manual_input_channels",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Các kênh nhập liệu thủ công cho sự kiện và chi phí đặc thù",
+        "keywords": [
+          "nhap thu cong",
+          "su kien",
+          "chi phi dac thu",
+          "du lich cong ty",
+          "xe buyt",
+          "coc gap",
+          "ky niem"
+        ],
+        "answer_context": "Ngoài dữ liệu tự động từ các tệp nguồn, MP2027 cung cấp các kênh nhập liệu thủ công trên giao diện: (1) Nhập sự kiện (du lịch công ty, xe buýt đưa đón, cốc gập, kỷ niệm thành lập), (2) Nhập chi phí đặc thù bổ sung, (3) Nhập số lượng nhân sự 12 tháng.",
+        "safe_steps": [
+          "Bấm nút Nhập sự kiện bổ sung hoặc Nhập nhân sự trên màn hình chính.",
+          "Điền thông tin số lượng, số tiền và tháng phát sinh theo hướng dẫn của biểu mẫu.",
+          "Bấm Lưu để ghi nhận dữ liệu trước khi bấm Chạy tính toán."
+        ],
+        "aliases": [
+          "kenh nhap thu cong",
+          "su kien phan bo",
+          "chi phi dac biet"
+        ]
+      },
+      "en": {
+        "title": "Manual Data Entry Channels for Events and Special Costs",
+        "keywords": [
+          "manual entry",
+          "event drivers",
+          "special cost",
+          "company trip",
+          "bus",
+          "folding cups",
+          "anniversary"
+        ],
+        "answer_context": "Alongside automated source processing, MP2027 provides dedicated manual input dialogs on the UI: (1) Event drivers (company trip, shuttle bus, folding cups, anniversary), (2) Supplementary special cost adjustments, (3) 12-month staffing grid input.",
+        "safe_steps": [
+          "Click Manual Event Drivers or Staffing Input on the main window.",
+          "Fill in quantities, amounts, and effective months as prompted by the dialog form.",
+          "Click Save to persist the data before clicking Run Calculation."
+        ],
+        "aliases": [
+          "manual event entry",
+          "special cost channels",
+          "event input"
+        ]
+      },
+      "ja": {
+        "title": "イベントおよび特別費用の手動入力チャネル",
+        "keywords": [
+          "手動入力",
+          "イベントドライバー",
+          "特別費用",
+          "社員旅行",
+          "バス",
+          "記念行事",
+          "折りたたみコップ"
+        ],
+        "answer_context": "自動データ処理に加え、MP2027は画面上から以下の手動入力チャネルを提供しています：(1) イベントドライバー（社員旅行、送迎バス、折りたたみコップ、創立記念等）、(2) 特別費用の追加調整、(3) 12か月の人員数入力グリッド。",
+        "safe_steps": [
+          "メイン画面の「手動イベント入力」または「手動人員入力」をクリックしてください。",
+          "フォームの案内に従って数量、金額、および対象月を入力してください。",
+          "「保存」をクリックしてデータを確定させた後、「計算を実行」してください。"
+        ],
+        "aliases": [
+          "手動イベント入力",
+          "特別費用入力"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 4. Runtime directory model",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 4. Runtime directory model",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Mô hình thư mục và đường dẫn nhập thủ công",
+            "en": "Runtime Directory Model and Manual Inputs",
+            "ja": "ランタイムディレクトリ構成と手動入力"
+          },
+          "supported_summary": {
+            "vi": "Cấu trúc thư mục làm việc của chương trình gồm các tệp bảng tính đầu vào bắt buộc và các kênh nhập bổ sung thủ công.",
+            "en": "Defines the runtime folder layout, mandatory input workbooks, and supplementary manual input channels.",
+            "ja": "プログラムの作業フォルダ構成、必須の入力ワークブック、および補助的な手動入力チャネルを規定しています。"
+          },
+          "evidence_anchor": "| Thành phần | Active path | Ghi chú |"
+        },
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 10. Manual input rules",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Quy tắc nhập dữ liệu thủ công an toàn",
+            "en": "Safe Manual Data Input Rules",
+            "ja": "手動データ入力の安全ルール"
+          },
+          "supported_summary": {
+            "vi": "Hướng dẫn nhập bổ sung số liệu nhân sự, sự kiện định kỳ và chi phí đặc thù qua giao diện với cơ chế kiểm tra tính hợp lệ trước khi lưu.",
+            "en": "Guides manual entry of staffing numbers, periodic events, and custom costs via the UI with pre-save validation safeguards.",
+            "ja": "保存前の事前検証ガードを備えたUIを介して、人員数、定期イベント、および個別費用を手動入力する手順を案内します。"
+          },
+          "evidence_anchor": "CC switching trong GUI phải clear giá trị stale. N"
+        },
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "### 4.8 Manual CSV channels",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Module các kênh nhập bổ sung thủ công",
+            "en": "Supplementary Manual Data Input Channels Module",
+            "ja": "補助手動データ入力チャネルモジュール"
+          },
+          "supported_summary": {
+            "vi": "Cho phép nhập bổ sung định mức sự kiện, chi phí riêng và số lượng phát thực tế qua các tệp dữ liệu giao diện.",
+            "en": "Supports entering custom event drivers, special department costs, and actual distribution counts via input tables.",
+            "ja": "イベント基準、部門個別費用、および実配布数を入力テーブルを介して手動補完できます。"
+          },
+          "evidence_anchor": "Manual input files:"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_saisan_facility_cost_rules",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Quy tắc phân bổ chi phí cơ sở vật chất và tiện ích",
+        "keywords": [
+          "co so vat chat",
+          "tien ich",
+          "toa nha",
+          "dien nuoc",
+          "khau hao",
+          "mat bang"
+        ],
+        "answer_context": "Chi phí cơ sở vật chất bao gồm khấu hao nhà xưởng, tiền thuê đất, điện nước và các dịch vụ tiện ích dùng chung. Hệ thống phân bổ các khoản chi này tới từng phòng ban căn cứ theo diện tích sử dụng hoặc tỷ lệ nhân sự bình quân được phê duyệt.",
+        "safe_steps": [
+          "Kiểm tra tệp bảng tính cơ sở vật chất đã có đầy đủ dữ liệu trong thư mục nguồn.",
+          "Đảm bảo tỷ lệ phân bổ diện tích giữa các phòng ban không bị trùng lặp hoặc thiếu.",
+          "Chạy tính toán và đối soát kết quả tại dòng chi phí cơ sở vật chất trên bảng phân bổ."
+        ],
+        "aliases": [
+          "chi phi co so vat chat",
+          "dien nuoc nha xuong",
+          "tien ich"
+        ]
+      },
+      "en": {
+        "title": "Facility and Utilities Cost Allocation Rules",
+        "keywords": [
+          "facility cost",
+          "utilities",
+          "building depreciation",
+          "rent",
+          "power",
+          "water"
+        ],
+        "answer_context": "Facility costs include building depreciation, land rent, power, water, and shared utilities. The engine allocates these expenses to individual departments based on allocated floor area or approved staffing headcounts.",
+        "safe_steps": [
+          "Ensure the facility workbook is present and accessible in the source directory.",
+          "Verify that department area ratios are complete and non-overlapping.",
+          "Run calculation and cross-check facility expense line items on the summary report."
+        ],
+        "aliases": [
+          "facility allocation",
+          "building utilities",
+          "plant cost"
+        ]
+      },
+      "ja": {
+        "title": "施設および光熱費・用役費の配賦ルール",
+        "keywords": [
+          "施設費",
+          "光熱費",
+          "建物減価償却",
+          "賃料",
+          "用役費",
+          "電気代"
+        ],
+        "answer_context": "施設費には建物の減価償却費、土地賃料、電力・水道等の共有用役費が含まれます。システムはこれらの費用を利用面積比率または承認済み人員比率に基づいて各部門へ配賦します。",
+        "safe_steps": [
+          "元データフォルダ内に施設関連ファイルが存在し、開ける状態であることを確認してください。",
+          "各部門の利用面積比率が漏れなく設定されていることを確認してください。",
+          "計算を実行し、配賦結果シートの施設費項目と照合してください。"
+        ],
+        "aliases": [
+          "施設配賦ルール",
+          "光熱費配賦"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "### 4.1 Facility / 施設課",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "### 4.1 Facility / 施設課",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Module chi phí cơ sở vật chất và tiện ích",
+            "en": "Facility and Utilities Calculation Module",
+            "ja": "施設費およびユーティリティ計算モジュール"
+          },
+          "supported_summary": {
+            "vi": "Tính toán khấu hao nhà xưởng, tiền thuê đất và điện nước, chuyển toàn bộ vào tài khoản chi phí của phòng cơ sở vật chất 1412000040.",
+            "en": "Calculates factory depreciation, land leases, electricity, and water, routing figures to facility department 1412000040.",
+            "ja": "工場減価償却、土地賃料、電気代、水道代を集計し、施設課コード1412000040へ配賦計上します。"
+          },
+          "evidence_anchor": "Historical fixed-row note: Facility rows `200-205`"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 8. Sheet `Chi phí khấu hao, lãi nhà đất`",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy chuẩn chi phí cơ sở vật chất và tiện ích",
+            "en": "Facility, Factory Depreciation, and Utilities Specifications",
+            "ja": "施設費、工場減価償却およびユーティリティ仕様"
+          },
+          "supported_summary": {
+            "vi": "Toàn bộ chi phí khấu hao công trình xây dựng, tiền thuê đất và điện nước được phân bổ cho phòng cơ sở vật chất 1412000040.",
+            "en": "Allocates factory depreciation, land leases, electricity, and water bills entirely to facility department code 1412000040.",
+            "ja": "工場建物減価償却、土地賃料、電気代、水道代の全額を施設課コード1412000040へ配賦します。"
+          },
+          "evidence_anchor": "Hình tổng quan từ sheet `Chi phí khấu hao, lãi nhà"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 8.1. Mục tiêu",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Mục tiêu phân bổ chi phí cơ sở vật chất",
+            "en": "Objectives of Facility Overhead Allocation",
+            "ja": "施設共通費用配賦の目的"
+          },
+          "supported_summary": {
+            "vi": "Tập trung toàn bộ chi phí vận hành nhà xưởng và mặt bằng vào một đầu mối quản lý duy nhất để dễ dàng theo dõi.",
+            "en": "Consolidates all plant and facility operational overhead into a single management unit for clear oversight.",
+            "ja": "工場および拠点の施設運用共通費を一元管理部門へ集約し、明確な予実管理を可能にします。"
+          },
+          "evidence_anchor": "Nhập tự động nhóm chi phí từ file Facility:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 8.3. Quy tắc filter",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy tắc lọc dữ liệu chi phí cơ sở vật chất",
+            "en": "Filtering Rules for Facility Expense Records",
+            "ja": "施設費用レコードの抽出・フィルタ条件"
+          },
+          "supported_summary": {
+            "vi": "Lọc các dòng chi phí thuộc nhóm cơ sở vật chất từ bảng tổng hợp của năm tài chính tương ứng.",
+            "en": "Filters facility cost records from the master annual consolidation sheet matching department code 1412000040.",
+            "ja": "対象年度の総合配賦表から施設課コード1412000040に該当する施設費用レコードを抽出します。"
+          },
+          "evidence_anchor": "Tìm \"code phòng chịu chi phí\" để lấy dữ liệu."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 8.4. Tháng áp dụng",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Lịch phân bổ 12 tháng cho chi phí cơ sở vật chất",
+            "en": "12-Month Allocation Schedule for Facility Costs",
+            "ja": "施設費用の12か月配賦スケジュール"
+          },
+          "supported_summary": {
+            "vi": "Chi phí cơ sở vật chất phát sinh đều đặn hàng tháng và được điền đầy đủ vào tất cả 12 cột tháng của năm.",
+            "en": "Facility overhead occurs continuously every month, populating all 12 monthly columns across the fiscal year.",
+            "ja": "施設共通費は毎月定常的に発生するため、会計年度の全12か月の月別列へ均等に計上されます。"
+          },
+          "evidence_anchor": "Phải nhập cho tất cả các tháng."
+        },
+        {
+          "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+          "source_section": "### 2. Chi phí khấu hao và lãi nhà đất (Depreciation & Land Interest)",
+          "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Khái niệm phân loại chi phí chung",
+            "en": "General Cost Category Concepts",
+            "ja": "共通費用分類コンセプト"
+          },
+          "heading_title": {
+            "vi": "Khái niệm chi phí cơ sở vật chất và tiện ích",
+            "en": "Facility, Depreciation, and Land Interest Cost Concepts",
+            "ja": "施設費、減価償却および土地賃料の概念"
+          },
+          "supported_summary": {
+            "vi": "Khấu hao nhà xưởng, chi phí thuê đất và điện nước được chuyển toàn bộ vào phòng ban cơ sở vật chất mã 1412000040.",
+            "en": "Factory depreciation, land leases, electricity, and water are assigned entirely to facility department code 1412000040.",
+            "ja": "工場減価償却、土地賃料、電気代、水道代は施設課コード1412000040へ一括配賦されます。"
+          },
+          "evidence_anchor": "- **Vấn đề**: Việc lọc (filter) code phòng chịu ch"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_manual_special_cost_inheritance",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Kế thừa và bảo tồn chi phí riêng theo năm tài chính",
+        "keywords": [
+          "kế thừa chi phí riêng",
+          "bảo tồn chi phí riêng",
+          "chi phí riêng nhập tay",
+          "chuyển năm tài chính",
+          "năm tài chính mới",
+          "xóa trắng số tiền",
+          "giữ nguyên cấu trúc dòng"
+        ],
+        "answer_context": "Hệ thống tự động bảo toàn các dòng chi phí riêng nhập tay của từng phòng ban khi tính toán lại hoặc chuyển sang năm tài chính mới. Dòng chi phí riêng tự động xếp dưới nhóm chi phí chung. Khi chạy lại trong cùng năm tài chính, hệ thống giữ nguyên số tiền và công thức. Khi kế thừa sang năm tài chính mới, hệ thống giữ nguyên cấu trúc dòng, tên hạng mục và công thức, nhưng tự động xóa trắng các ô số tiền để người dùng nhập dự toán mới.",
+        "safe_steps": [
+          "Kiểm tra các dòng chi phí riêng đã nhập trong bảng tính chi tiết phòng ban.",
+          "Khi chạy lại trong cùng năm, xác nhận số tiền và công thức chi phí riêng được giữ nguyên.",
+          "Khi chuyển sang năm tài chính mới, cấu trúc dòng được giữ và các ô số tiền sẽ để trống để nhập mới."
+        ],
+        "aliases": [
+          "kế thừa dự toán riêng",
+          "bảo tồn dòng chi phí riêng",
+          "chuyển tiếp chi phí riêng"
+        ]
+      },
+      "en": {
+        "title": "Manual Special Cost Inheritance Across Fiscal Years",
+        "keywords": [
+          "special cost inheritance",
+          "manual cost preservation",
+          "fiscal year transition",
+          "preserve line structure",
+          "clear amount cells",
+          "new fiscal year"
+        ],
+        "answer_context": "The system preserves department-specific manual expense rows across recalculations and fiscal year transitions. Manual cost rows are placed below general allocated expenses. In the same fiscal year, existing amounts and formulas are preserved. When rolling over to a new fiscal year, row structure and formulas are retained while amount cells are cleared for fresh budget entry.",
+        "safe_steps": [
+          "Review department-specific manual expense rows in the detailed output sheet.",
+          "During same-year reruns, verify that amounts and formulas remain intact.",
+          "During new fiscal year transitions, confirm line items are kept and amount cells are cleared for new entries."
+        ],
+        "aliases": [
+          "cost inheritance",
+          "manual line preservation",
+          "fiscal year rollover"
+        ]
+      },
+      "ja": {
+        "title": "年度間における個別手動費用の継承と保持",
+        "keywords": [
+          "個別費用継承",
+          "手動費用保持",
+          "年度切替",
+          "行構造保持",
+          "金額クリア",
+          "新年度継承"
+        ],
+        "answer_context": "システムは部門別の手動入力個別費用行を再計算時や新年度への移行時に自動保持します。個別費用行は共通配賦費用の下に配置されます。同一年内の再計算では金額と数式が保持されます。新年度への移行時には、行構造と数式を維持したまま金額セルがクリアされ、新規予算の入力が可能になります。",
+        "safe_steps": [
+          "部門詳細シートの個別手動費用行を確認してください。",
+          "同年度内の再実行時、金額と数式が保持されていることを確認してください。",
+          "新年度移行時、行項目が維持され金額セルが空白になっていることを確認してください。"
+        ],
+        "aliases": [
+          "個別費用引き継ぎ",
+          "手動行保持",
+          "新年度移行"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 20. Kế thừa và bảo tồn chi phí riêng theo năm tài chính",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 20. Kế thừa và bảo tồn chi phí riêng theo năm tài chính",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Kế thừa chi phí riêng phòng ban qua các năm",
+            "en": "Department Custom Cost Inheritance Across Years",
+            "ja": "部門個別費用の年度間継承"
+          },
+          "supported_summary": {
+            "vi": "Tự động kế thừa mô tả và công thức các dòng chi phí riêng của từng phòng ban khi chuyển giao sang năm tài chính mới.",
+            "en": "Automatically retains custom expense descriptions and formula links per cost center when transitioning to a new fiscal year.",
+            "ja": "新年度への移行時に、各部門の個別費用行の説明文および数式リンクを自動的に引き継ぎます。"
+          },
+          "evidence_anchor": "- **Mục đích**: Bảo toàn các dòng chi phí riêng nh"
+        },
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "### Special costs",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Nhập chi phí riêng đặc thù của phòng ban",
+            "en": "Department Custom Cost Input Channel",
+            "ja": "部門個別費用の手動入力チャネル"
+          },
+          "supported_summary": {
+            "vi": "Chỉ nhập các khoản chi phí riêng vào bảng tính khi đã xác định chính xác số tiền và dòng tài khoản đích tương ứng trên biểu mẫu.",
+            "en": "Department custom costs are recorded only when both the exact amount and target general ledger line on the form are confirmed.",
+            "ja": "部門の個別費用は、正確な金額およびフォーム上の対象勘定科目行が確定している場合にのみ記録します。"
+          },
+          "evidence_anchor": "Dùng khi có amount và row FORM chính xác. Nếu chưa"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-09-01-manual-special-cost-inheritance.md",
+          "source_section": "# Kế thừa chi phí riêng theo CC",
+          "source_sha256": "5aa78c16c9247c5de6250d75defa8c48e0f4af100af60a9f39b17e926cd4c214",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả kế thừa chi phí riêng theo năm tài chính",
+            "en": "Department Special Cost Inheritance Specification",
+            "ja": "部門個別費用年度別継承仕様書"
+          },
+          "heading_title": {
+            "vi": "Đặc tả kế thừa chi phí riêng theo phòng ban",
+            "en": "Department Special Cost Inheritance Across Fiscal Years",
+            "ja": "部門個別費用の年度間データ継承仕様"
+          },
+          "supported_summary": {
+            "vi": "Đảm bảo các khoản chi phí riêng do người dùng nhập thủ công cho từng phòng ban được tự động giữ lại khi chuyển sang năm tài chính mới.",
+            "en": "Ensures manually entered department-specific custom costs are automatically carried over when transitioning to a new fiscal year.",
+            "ja": "ユーザーが部門ごとに手動入力した個別費用データを、新年度への更新時にも自動的に引き継いで保持します。"
+          },
+          "evidence_anchor": "Mỗi workbook kết quả của một Trung tâm chi phí (CC"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-09-01-manual-special-cost-inheritance.md",
+          "source_section": "## Mục tiêu",
+          "source_sha256": "5aa78c16c9247c5de6250d75defa8c48e0f4af100af60a9f39b17e926cd4c214",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả kế thừa chi phí riêng theo năm tài chính",
+            "en": "Department Special Cost Inheritance Specification",
+            "ja": "部門個別費用年度別継承仕様書"
+          },
+          "heading_title": {
+            "vi": "Mục tiêu tự động hóa kế thừa chi phí đặc thù",
+            "en": "Objectives of Automated Special Cost Inheritance",
+            "ja": "個別費用自動継承の目的"
+          },
+          "supported_summary": {
+            "vi": "Giảm thiểu công sức nhập liệu lặp lại hàng năm và ngăn ngừa sai sót quên nhập các khoản chi phí đặc thù của phòng ban.",
+            "en": "Minimizes redundant annual data entry effort and prevents accidental omission of department-specific expense items.",
+            "ja": "年度ごとの重複入力作業を削減し、部門特有の費用項目の入力漏れを防止することを目的とします。"
+          },
+          "evidence_anchor": "Mỗi workbook kết quả của một Trung tâm chi phí (CC"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-09-01-manual-special-cost-inheritance.md",
+          "source_section": "## Quy tắc đã chốt",
+          "source_sha256": "5aa78c16c9247c5de6250d75defa8c48e0f4af100af60a9f39b17e926cd4c214",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả kế thừa chi phí riêng theo năm tài chính",
+            "en": "Department Special Cost Inheritance Specification",
+            "ja": "部門個別費用年度別継承仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy tắc kế thừa và đối soát chi phí riêng phòng ban",
+            "en": "Agreed Business Rules for Special Cost Carryover",
+            "ja": "部門個別費用の確定継承ルール"
+          },
+          "supported_summary": {
+            "vi": "Giữ nguyên mã phòng ban, tên khoản chi và công thức tính; người dùng chỉ cần cập nhật lại số tiền nếu có thay đổi trong năm mới.",
+            "en": "Retains cost center codes, line descriptions, and formula structures, requiring users only to update amounts if changes occur.",
+            "ja": "コストセンターコード、項目名、数式構造を保持し、新年度で変更がある場合にのみ金額を修正する運用とします。"
+          },
+          "evidence_anchor": "1. Không có số dòng ranh giới dùng chung giữa các "
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_output_cost_row_reordering",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Tùy biến sắp xếp thứ tự dòng chi phí kéo-thả",
+        "keywords": [
+          "sắp xếp thứ tự dòng",
+          "kéo thả dòng chi phí",
+          "đổi vị trí dòng",
+          "hộp thoại sắp xếp",
+          "chi tiết MP",
+          "bảo toàn thứ tự"
+        ],
+        "answer_context": "Người dùng có thể tùy ý điều chỉnh thứ tự hiển thị các dòng chi phí trên sheet Chi tiết MP trực tiếp qua giao diện. Mở hộp thoại 'Sắp xếp thứ tự dòng chi phí' từ menu chính, kéo thả hoặc dùng nút Lên/Xuống để đổi vị trí, rồi bấm 'Lưu thứ tự'. Thứ tự được ghi nhận vào sheet ẩn và tự động áp dụng khi chạy lại tính toán.",
+        "safe_steps": [
+          "Mở hộp thoại Sắp xếp thứ tự dòng chi phí từ menu giao diện chính.",
+          "Chọn dòng chi phí cần đổi vị trí, kéo thả hoặc bấm nút Lên/Xuống.",
+          "Bấm Lưu thứ tự để hệ thống ghi nhớ và tự động áp dụng cho các lần xuất tiếp theo."
+        ],
+        "aliases": [
+          "đổi thứ tự dòng",
+          "sắp xếp dòng chi phí",
+          "reorder cost rows"
+        ]
+      },
+      "en": {
+        "title": "Custom Drag-and-Drop Cost Row Reordering",
+        "keywords": [
+          "row reordering",
+          "drag and drop rows",
+          "cost row order",
+          "reorder dialog",
+          "MP detail sheet",
+          "preserve custom order"
+        ],
+        "answer_context": "Users can customize the display order of cost rows on the MP Detail sheet directly via the GUI. Open the 'Reorder Cost Rows' dialog from the main menu, drag and drop or use the Up/Down buttons to adjust positions, and click 'Save Order'. The saved sequence is stored in hidden metadata and applied automatically on future runs.",
+        "safe_steps": [
+          "Open the Reorder Cost Rows dialog from the application menu.",
+          "Select the target row and drag-and-drop or use Up/Down buttons to reorder.",
+          "Click Save Order to persist the custom sequence for all subsequent exports."
+        ],
+        "aliases": [
+          "reorder rows",
+          "custom row order",
+          "drag drop sequence"
+        ]
+      },
+      "ja": {
+        "title": "ドラッグ＆ドロップによる費用行順序のカスタマイズ",
+        "keywords": [
+          "行順序変更",
+          "ドラッグアンドドロップ",
+          "費用行順序",
+          "並び替えダイアログ",
+          "内訳リスト",
+          "順序保持"
+        ],
+        "answer_context": "画面上からMP内訳リストの費用行表示順序を自由に調整できます。メインメニューから「費用行順序の並び替え」ダイアログを開き、ドラッグ＆ドロップまたは上/下ボタンで行を移動して「順序を保存」をクリックします。保存された順序は隠しメタデータに記録され、再計算時にも自動適用されます。",
+        "safe_steps": [
+          "メインメニューから「費用行順序の並び替え」ダイアログを開いてください。",
+          "対象行を選択し、ドラッグ＆ドロップまたは上/下ボタンで位置を変更してください。",
+          "「順序を保存」をクリックして設定を確定してください。"
+        ],
+        "aliases": [
+          "行並び替え",
+          "費用順序調整",
+          "行順序カスタム"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 21. Tùy biến sắp xếp thứ tự dòng chi phí kéo-thả",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 21. Tùy biến sắp xếp thứ tự dòng chi phí kéo-thả",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Sắp xếp thứ tự dòng chi phí trực quan kéo-thả",
+            "en": "Interactive Drag-and-Drop Cost Row Reordering",
+            "ja": "ドラッグ＆ドロップによる費用行並び替え"
+          },
+          "supported_summary": {
+            "vi": "Cho phép người dùng thay đổi thứ tự xuất hiện của các dòng chi phí trên bảng tính chi tiết thông qua hộp thoại kéo thả trực quan.",
+            "en": "Enables users to customize expense row presentation order on detail sheets using the interactive drag-and-drop dialog.",
+            "ja": "直感的なドラッグ＆ドロップダイアログを使用して、詳細シート上の費用行の表示順序を自由に並び替えることができます。"
+          },
+          "evidence_anchor": "- **Mục đích**: Cho phép người dùng tùy ý điều chỉ"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+          "source_section": "# Sắp xếp dòng chi phí trên file MP — Thiết kế",
+          "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả sắp xếp thứ tự dòng chi phí kết quả",
+            "en": "Output Cost Row Ordering Specification",
+            "ja": "出力費用行並び替え仕様書"
+          },
+          "heading_title": {
+            "vi": "Thiết kế tùy biến thứ tự dòng chi phí trên file kết quả",
+            "en": "Output Cost Row Ordering and Layout Customization Design",
+            "ja": "出力費用行の並び順カスタマイズ設計"
+          },
+          "supported_summary": {
+            "vi": "Cho phép tùy chỉnh thứ tự hiển thị các dòng chi phí trên file Excel kết quả thông qua giao diện trực quan kéo-thả.",
+            "en": "Allows users to customize expense row presentation order on output Excel workbooks using an intuitive drag-and-drop dialog.",
+            "ja": "直感的なドラッグ＆ドロップUIを通じて、出力Excelファイル上の費用行の表示順序を自由にカスタマイズ可能にします。"
+          },
+          "evidence_anchor": "Người dùng có một nút riêng để mở một file `MP_CC_"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+          "source_section": "## Mục tiêu",
+          "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả sắp xếp thứ tự dòng chi phí kết quả",
+            "en": "Output Cost Row Ordering Specification",
+            "ja": "出力費用行並び替え仕様書"
+          },
+          "heading_title": {
+            "vi": "Mục tiêu thiết kế tính năng sắp xếp dòng chi phí",
+            "en": "Objectives of Cost Row Ordering Feature",
+            "ja": "費用行並び替え機能の設計目的"
+          },
+          "supported_summary": {
+            "vi": "Tạo sự linh hoạt cho người dùng sắp xếp các dòng chi phí theo thói quen theo dõi mà không làm sai lệch công thức tính tổng.",
+            "en": "Provides flexible row reordering matching user reporting preferences while preserving total formula integrity.",
+            "ja": "合計計算数式の整合性を保ちながら、ユーザーの確認習慣に応じた柔軟な行並び替えを可能にします。"
+          },
+          "evidence_anchor": "Người dùng có một nút riêng để mở một file `MP_CC_"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+          "source_section": "## Quy tắc nghiệp vụ đã chốt",
+          "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả sắp xếp thứ tự dòng chi phí kết quả",
+            "en": "Output Cost Row Ordering Specification",
+            "ja": "出力費用行並び替え仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy tắc bảo toàn dữ liệu khi thay đổi thứ tự dòng",
+            "en": "Business Rules for Safe Cost Row Reordering",
+            "ja": "費用行並び替えにおける確定業務ルール"
+          },
+          "supported_summary": {
+            "vi": "Việc thay đổi thứ tự dòng chỉ áp dụng cho vùng dữ liệu từ dòng 38; các dòng tiêu đề và công thức tổng cộng phía trên giữ nguyên tuyệt đối.",
+            "en": "Row reordering applies strictly to data lines starting from row 38; header rows and summary formulas above remain untouched.",
+            "ja": "行の並び替えは38行目以降のデータ領域にのみ適用され、上部のヘッダー行および合計数式は完全に保護されます。"
+          },
+          "evidence_anchor": "1. Chi phí chung được tính lại từ nguồn dữ liệu củ"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+          "source_section": "## Phạm vi giao diện",
+          "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả sắp xếp thứ tự dòng chi phí kết quả",
+            "en": "Output Cost Row Ordering Specification",
+            "ja": "出力費用行並び替え仕様書"
+          },
+          "heading_title": {
+            "vi": "Phạm vi màn hình và tương tác hộp thoại sắp xếp",
+            "en": "UI Scope and Drag-and-Drop Dialog Interaction",
+            "ja": "UI画面範囲および並び替えダイアログの操作仕様"
+          },
+          "supported_summary": {
+            "vi": "Hộp thoại sắp xếp hiển thị danh sách các dòng chi phí kèm nút di chuyển Lên/Xuống và hỗ trợ khôi phục thứ tự mặc định ban đầu.",
+            "en": "The dialog displays cost row lists with Up/Down buttons and supports resetting back to the canonical default order.",
+            "ja": "ダイアログ上には費用行一覧と上下移動ボタンが配置され、原本のデフォルト順序へのリセット操作にも対応します。"
+          },
+          "evidence_anchor": "Thêm nút **Sắp xếp dòng chi phí** cạnh các thao tá"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+          "source_section": "## Luồng lưu thứ tự",
+          "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả sắp xếp thứ tự dòng chi phí kết quả",
+            "en": "Output Cost Row Ordering Specification",
+            "ja": "出力費用行並び替え仕様書"
+          },
+          "heading_title": {
+            "vi": "Luồng lưu cấu hình thứ tự dòng vào bộ nhớ máy",
+            "en": "Configuration Persistence Workflow for Row Order",
+            "ja": "費用行順序設定の保存ワークフロー"
+          },
+          "supported_summary": {
+            "vi": "Thứ tự tùy biến được lưu vào tệp cấu hình cục bộ của ứng dụng để tự động áp dụng cho các lần xuất báo cáo tiếp theo.",
+            "en": "Custom row orders are persisted into local application settings and automatically applied across subsequent report runs.",
+            "ja": "カスタマイズされた行順序はローカル設定ファイルに保存され、次回のレポート出力時にも自動的に適用されます。"
+          },
+          "evidence_anchor": "1. Đọc workbook, metadata thứ tự (nếu có) và metad"
+        },
+        {
+          "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+          "source_section": "## Luồng chạy lại và tạo FY mới",
+          "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Đặc tả sắp xếp thứ tự dòng chi phí kết quả",
+            "en": "Output Cost Row Ordering Specification",
+            "ja": "出力費用行並び替え仕様書"
+          },
+          "heading_title": {
+            "vi": "Quy trình chạy lại và kế thừa thứ tự dòng sang năm mới",
+            "en": "Rerun and New Fiscal Year Ordering Preservation Workflow",
+            "ja": "再実行および新年度作成時の行順序継承ワークフロー"
+          },
+          "supported_summary": {
+            "vi": "Hệ thống chụp lại trạng thái tệp nguồn trước khi xuất và tự động áp dụng cấu hình thứ tự dòng khi tạo năm tài chính mới.",
+            "en": "Captures source file snapshots before export and seamlessly inherits row order configurations when generating a new fiscal year.",
+            "ja": "出力前に元ファイルの状態を保存し、新年度作成時にもカスタマイズされた費用行順序設定をシームレスに引き継ぎます。"
+          },
+          "evidence_anchor": "Trước khi export có thể thay workbook hiện có, pip"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_quick_search_departments",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Tìm kiếm nhanh phòng ban trên màn hình chính",
+        "keywords": [
+          "tìm kiếm nhanh phòng ban",
+          "lọc phòng ban",
+          "ô tìm kiếm",
+          "mã cost center",
+          "tên phòng tiếng nhật",
+          "tên phòng tiếng việt"
+        ],
+        "answer_context": "Để tìm nhanh một phòng ban trong danh sách hàng trăm phòng, người dùng chỉ cần nhập mã số phòng ban (ví dụ: 1412000040) hoặc tên phòng ban (tiếng Nhật hoặc tiếng Việt) vào ô tìm kiếm nhanh phía trên danh sách. Bảng danh sách phòng ban sẽ tự động lọc tức thì theo từ khóa được nhập.",
+        "safe_steps": [
+          "Nhấp chuột vào ô tìm kiếm nhanh ở phía trên danh sách phòng ban.",
+          "Gõ mã Cost Center hoặc tên phòng ban cần tìm.",
+          "Danh sách hiển thị kết quả lọc realtime; chọn phòng ban mong muốn để tiếp tục."
+        ],
+        "aliases": [
+          "tra cứu phòng ban",
+          "lọc nhanh phòng ban",
+          "search cost center"
+        ]
+      },
+      "en": {
+        "title": "Quick Department Search on Main Screen",
+        "keywords": [
+          "quick department search",
+          "filter departments",
+          "search box",
+          "cost center code",
+          "japanese department name",
+          "vietnamese department name"
+        ],
+        "answer_context": "To quickly locate a department among hundreds of entries, users can type the Cost Center code (e.g., 1412000040) or department name (in Japanese or Vietnamese) into the search field above the list. The department list filters in real time according to the entered keywords.",
+        "safe_steps": [
+          "Click the quick search field above the department list on the main screen.",
+          "Type the Cost Center code or department name.",
+          "The list filters in real time; select the target department to proceed."
+        ],
+        "aliases": [
+          "department lookup",
+          "filter cost centers",
+          "search department"
+        ]
+      },
+      "ja": {
+        "title": "メイン画面での部門クイック検索機能",
+        "keywords": [
+          "部門クイック検索",
+          "部門フィルター",
+          "検索ボックス",
+          "コストセンターコード",
+          "日本語部門名",
+          "リアルタイム検索"
+        ],
+        "answer_context": "多数の部門リストから対象部門を素早く見つけるには、部門一覧上部の検索欄にコストセンターコード（例：1412000040）または部門名（日本語・ベトナム語）を入力します。入力されたキーワードに応じて一覧がリアルタイムに絞り込まれます。",
+        "safe_steps": [
+          "メイン画面の部門リスト上部にあるクイック検索欄をクリックしてください。",
+          "コストセンターコードまたは部門名を入力してください。",
+          "リアルタイムに絞り込まれた一覧から対象部門を選択してください。"
+        ],
+        "aliases": [
+          "部門検索",
+          "コストセンター絞り込み",
+          "部門検索機能"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 22. Tìm kiếm nhanh phòng ban trên màn hình chính",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 22. Tìm kiếm nhanh phòng ban trên màn hình chính",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Tìm kiếm nhanh mã phòng ban trên giao diện chính",
+            "en": "Quick Department Search on Main Screen",
+            "ja": "メイン画面での部門クイック検索"
+          },
+          "supported_summary": {
+            "vi": "Thanh tìm kiếm tức thời hỗ trợ tra cứu nhanh phòng ban theo mã Cost Center hoặc tên bộ phận ngay trên màn hình làm việc chính.",
+            "en": "Real-time search bar allowing instant department filtering by Cost Center code or department name directly on the main screen.",
+            "ja": "メイン画面上でコストセンターコードまたは部門名による即時絞り込み検索が可能です。"
+          },
+          "evidence_anchor": "- **Mục đích**: Tìm kiếm tức thì trung tâm chi phí"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_budget_variance_yoy_analysis",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "So sánh biến động ngân sách cùng kỳ (YoY) và biểu đồ trực quan",
+        "keywords": [
+          "so sánh biến động",
+          "biến động cùng kỳ",
+          "yoy",
+          "biểu đồ biến động",
+          "top 12 hạng mục",
+          "nhúng biểu đồ excel",
+          "giải công thức ast"
+        ],
+        "answer_context": "Tính năng so sánh biến động cùng kỳ (YoY) tự động đối chiếu chênh lệch dự toán ngân sách giữa các lần chạy hoặc giữa hai năm tài chính. Tính năng bao gồm bộ giải công thức độc lập, cửa sổ biểu đồ tương tác Top 12 hạng mục tăng/giảm mạnh nhất với font đa ngữ, và tự động nhúng biểu đồ native BarChart vào file Excel kết quả so sánh.",
+        "safe_steps": [
+          "Mở tab So sánh biến động trên màn hình chính.",
+          "Chọn hai lần chạy hoặc hai năm tài chính cần đối chiếu.",
+          "Bấm Xem biểu đồ biến động để mở giao diện trực quan hoặc bấm Xuất file so sánh để nhận file Excel có nhúng biểu đồ."
+        ],
+        "aliases": [
+          "phân tích yoy",
+          "biểu đồ ngân sách",
+          "đối chiếu cùng kỳ"
+        ]
+      },
+      "en": {
+        "title": "Year-over-Year (YoY) Budget Variance Analysis and Charts",
+        "keywords": [
+          "variance analysis",
+          "year over year",
+          "yoy comparison",
+          "variance charts",
+          "top 12 items",
+          "embedded excel chart",
+          "formula resolver"
+        ],
+        "answer_context": "The YoY variance analyzer automatically computes budget differences across calculation runs or fiscal years. It features an independent formula resolver, an interactive Top 12 variance chart window with multilingual typography, and automatic embedding of native Excel BarChart objects into exported comparison workbooks.",
+        "safe_steps": [
+          "Open the Variance Comparison tab on the main screen.",
+          "Select the two calculation runs or fiscal years to compare.",
+          "Click View Variance Chart to open the visual display or Export Comparison to produce an Excel file with native charts."
+        ],
+        "aliases": [
+          "yoy analysis",
+          "budget variance",
+          "variance chart"
+        ]
+      },
+      "ja": {
+        "title": "前年同期比（YoY）予算変動分析と視覚的グラフ",
+        "keywords": [
+          "変動分析",
+          "前年同期比",
+          "yoy比較",
+          "変動グラフ",
+          "トップ12項目",
+          "excelグラフ埋め込み",
+          "数式リゾルバー"
+        ],
+        "answer_context": "前年同期比（YoY）変動分析機能は、実行間または2つの会計年度間での予算差額を自動計算します。独立した数式リゾルバー、多言語フォント対応のTop 12変動グラフ画面、および比較出力ExcelファイルへのネイティブBarChart自動埋め込み機能を備えています。",
+        "safe_steps": [
+          "メイン画面の「変動比較」タブを開いてください。",
+          "比較対象の2つの実行または会計年度を選択してください。",
+          "「変動グラフを表示」で視覚画面を開くか、「比較ファイル出力」でネイティブグラフ付きExcelを出力してください。"
+        ],
+        "aliases": [
+          "yoy分析",
+          "予算変動比較",
+          "変動グラフ機能"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 23. So sánh biến động ngân sách cùng kỳ (YoY) và biểu đồ trực quan",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 23. So sánh biến động ngân sách cùng kỳ (YoY) và biểu đồ trực quan",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Phân tích biến động ngân sách cùng kỳ (YoY)",
+            "en": "Year-over-Year (YoY) Budget Variance Analysis",
+            "ja": "前年同期比（YoY）予算変動分析"
+          },
+          "supported_summary": {
+            "vi": "Tự động lập bảng phân tích chênh lệch ngân sách giữa các năm tài chính và nhúng biểu đồ so sánh trực quan vào file kết quả Excel.",
+            "en": "Automatically generates comparative budget variance tables across fiscal years and embeds native visual charts into output Excel workbooks.",
+            "ja": "年度間の予算変動分析表を自動生成し、出力Excelファイル内に視覚的な比較グラフを埋め込みます。"
+          },
+          "evidence_anchor": "- **Mục đích**: Tự động so sánh chênh lệch dự toán"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_module_implementation_status",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Trạng thái theo dõi các phân hệ phân bổ chi phí MP2027",
+        "keywords": [
+          "trang thai module",
+          "tien do phan he",
+          "module saisan",
+          "hoan thien tinh toan"
+        ],
+        "answer_context": "Bảng theo dõi trạng thái các module phân bổ chi phí (Hành chính, Cơ sở vật chất, Tài sản cố định, Hệ thống IT, Sinh nhật, v.v.). Đây là thông tin tham khảo nội bộ để nắm tiến độ hoàn thiện từng phân hệ trong năm tài chính. Hãy xác nhận lại trước khi áp dụng vào số liệu thực tế.",
+        "safe_steps": [
+          "Tra cứu phân hệ cần kiểm tra trên màn hình tổng quan.",
+          "Đối chiếu trạng thái dữ liệu đã nạp của từng module.",
+          "Xác nhận với phụ trách nghiệp vụ trước khi chốt số."
+        ],
+        "aliases": [
+          "trang thai module",
+          "tien do phan he"
+        ]
+      },
+      "en": {
+        "title": "MP2027 Cost Allocation Module Implementation Status",
+        "keywords": [
+          "module status",
+          "implementation status",
+          "allocation modules",
+          "module readiness"
+        ],
+        "answer_context": "Internal tracking summary for cost allocation modules (Admin, Facilities, Fixed Assets, System IT, Birthday, etc.). This is internal reference guidance on module readiness. Please confirm before applying to actual operational figures.",
+        "safe_steps": [
+          "Review the module overview screen.",
+          "Check data readiness for each allocation area.",
+          "Verify with team leads before finalizing figures."
+        ],
+        "aliases": [
+          "module status",
+          "implementation status"
+        ]
+      },
+      "ja": {
+        "title": "MP2027 費用配賦モジュール開発・運用状況",
+        "keywords": [
+          "モジュール状況",
+          "開発状況",
+          "配賦モジュール",
+          "進捗確認"
+        ],
+        "answer_context": "各費用配賦モジュール（管理部、施設課、固定資産、システム費、誕生日等）の進捗状況まとめです。社内参考情報として機能の整備状況を確認できます。実際の業務数値に適用する前に再確認してください。",
+        "safe_steps": [
+          "モジュール一覧で対象機能を確認してください。",
+          "各配賦項目のデータ整備状況を照合してください。",
+          "確定前に担当者に再確認してください。"
+        ],
+        "aliases": [
+          "モジュール状況",
+          "開発状況"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 3. Trạng thái module hiện tại",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "reference_with_caveat",
+        "review_status": "reference_with_caveat"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 3. Trạng thái module hiện tại",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "reference_with_caveat",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Trạng thái hoàn thiện các module tính toán",
+            "en": "Calculation Module Implementation Status",
+            "ja": "計算モジュールの実装ステータス"
+          },
+          "supported_summary": {
+            "vi": "Ghi nhận mức độ hoàn thiện thực tế của từng module tính toán chi phí phục vụ theo dõi vận hành nội bộ.",
+            "en": "Internal status tracking the practical completeness of each calculation module for operational monitoring.",
+            "ja": "社内運用の進捗管理のために、各計算モジュールの実際の実装完了度を記録しています。"
+          },
+          "evidence_anchor": "Không dùng phần trăm ước lượng cho readiness. Dùng"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_roadmap_operational_priorities",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Danh mục ưu tiên hoàn thiện nghiệp vụ vận hành MP2027",
+        "keywords": [
+          "viec uu tien",
+          "ke hoach uu tien",
+          "lo trinh van hanh",
+          "dau viec tiep theo"
+        ],
+        "answer_context": "Danh mục các đầu việc ưu tiên theo dõi và hoàn thiện dữ liệu trong chu trình phân bổ MP2027 (nhập số người, đối chiếu chi phí hệ thống, rà soát khấu hao). Đây là kế hoạch tham khảo nội bộ. Hãy xác nhận lại trước khi áp dụng vào kế hoạch thực tế.",
+        "safe_steps": [
+          "Kiểm tra danh mục đầu việc theo thứ tự ưu tiên.",
+          "Thực hiện rà soát các nguồn dữ liệu tương ứng.",
+          "Báo cáo quản lý khi có thay đổi kế hoạch."
+        ],
+        "aliases": [
+          "viec uu tien",
+          "ke hoach uu tien"
+        ]
+      },
+      "en": {
+        "title": "MP2027 Operational Next Priorities Roadmap",
+        "keywords": [
+          "next priorities",
+          "operational roadmap",
+          "action items",
+          "allocation priorities"
+        ],
+        "answer_context": "Internal roadmap of next operational priorities for cost allocation (headcount validation, IT system cost reconciliation, depreciation review). Please confirm before applying to actual planning schedules.",
+        "safe_steps": [
+          "Review task items in priority order.",
+          "Reconcile respective input data sources.",
+          "Coordinate with management on any adjustments."
+        ],
+        "aliases": [
+          "next priorities",
+          "operational roadmap"
+        ]
+      },
+      "ja": {
+        "title": "MP2027 業務優先対応タスク・ロードマップ",
+        "keywords": [
+          "優先タスク",
+          "対応ロードマップ",
+          "優先項目",
+          "次期計画"
+        ],
+        "answer_context": "費用配賦業務における今後の優先対応項目（人員数確認、システム費照合、減価償却確認）のまとめです。社内参考情報です。実際の業務スケジュールに適用する前に再確認してください。",
+        "safe_steps": [
+          "優先順位に従ってタスクを確認してください。",
+          "対応する入力データ元を照合してください。",
+          "変更時は管理担当者に確認してください。"
+        ],
+        "aliases": [
+          "優先タスク",
+          "対応ロードマップ"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 17. Việc ưu tiên tiếp theo",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "reference_with_caveat",
+        "review_status": "reference_with_caveat"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 17. Việc ưu tiên tiếp theo",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "reference_with_caveat",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Lộ trình ưu tiên vận hành nội bộ",
+            "en": "Internal Operational Roadmap Priorities",
+            "ja": "社内運用の次期優先事項"
+          },
+          "supported_summary": {
+            "vi": "Ghi chú tham khảo nội bộ về các hạng mục cần lưu ý đối soát trong các kỳ lập ngân sách thực tế tiếp theo.",
+            "en": "Internal reference notes highlighting reconciliation checkpoints for upcoming budget consolidation cycles.",
+            "ja": "次回の本番予算集計サイクルに向けた照合チェックポイントを記載した社内参考メモです。"
+          },
+          "evidence_anchor": "Fixed-assets deep audit:"
+        },
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 11. Current continuation route",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Lộ trình đối soát và bàn giao vận hành",
+            "en": "Operational Verification and Handover Route",
+            "ja": "業務照合および引き継ぎロードマップ"
+          },
+          "supported_summary": {
+            "vi": "Hướng dẫn thứ tự đối soát kết quả với người dùng và quy trình bàn giao vận hành trong kỳ lập ngân sách.",
+            "en": "Guides verification steps with stakeholders and defines handover procedures for live budget cycles.",
+            "ja": "関係者との結果照合手順および本番予算運用における引き継ぎプロセスを案内します。"
+          },
+          "evidence_anchor": "Do not use this knowledge document as a task list."
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_target_output_cell_ranges",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Vùng ô và dòng kết quả trên biểu mẫu phân bổ MP Saisan",
+        "keywords": [
+          "vung o form",
+          "vung o va dong ket qua form",
+          "target rows cell ranges",
+          "dong ket qua saisan",
+          "dong 38 cot f den q",
+          "layout xuat"
+        ],
+        "answer_context": "Các dòng kết quả chi phí chi tiết được xuất bắt đầu từ dòng 38 trở đi trên biểu mẫu FORM, trải dài 12 cột từ cột F (tháng 4) đến cột Q (tháng 3 năm sau). Thông tin vùng ô giúp người dùng kiểm tra nhanh vị trí dữ liệu. Hãy xác nhận lại trước khi áp dụng vào số liệu thực tế.",
+        "safe_steps": [
+          "Mở trang tính kết quả FORM đã xuất.",
+          "Kiểm tra dữ liệu chi phí chi tiết từ dòng 38 trở xuống.",
+          "Đối chiếu tổng cộng 12 tháng tại các cột F đến Q."
+        ],
+        "aliases": [
+          "vung o form",
+          "dong ket qua saisan"
+        ]
+      },
+      "en": {
+        "title": "MP Saisan Target Rows and Output Cell Ranges",
+        "keywords": [
+          "output cell ranges",
+          "target rows form",
+          "row 38",
+          "columns f to q",
+          "form layout"
+        ],
+        "answer_context": "Detailed cost allocation results start from row 38 downwards on the output FORM worksheet, across 12 monthly columns from F (April) to Q (March). This helps operators visually inspect exported data. Please confirm before applying to actual operational figures.",
+        "safe_steps": [
+          "Open the generated FORM result sheet.",
+          "Inspect cost line items starting from row 38.",
+          "Verify the 12-month values across columns F through Q."
+        ],
+        "aliases": [
+          "output cell ranges",
+          "target rows form"
+        ]
+      },
+      "ja": {
+        "title": "MP Saisan 出力先セル範囲および対象行ガイド",
+        "keywords": [
+          "セル範囲",
+          "出力行",
+          "38行目",
+          "F列からQ列",
+          "FORMレイアウト"
+        ],
+        "answer_context": "詳細な費用配賦結果はFORMシートの38行目以降に出力され、4月（F列）から翌年3月（Q列）までの12か月データとして展開されます。出力位置の目視確認に役立ちます。実際の業務数値に適用する前に再確認してください。",
+        "safe_steps": [
+          "出力されたFORMシートを開いてください。",
+          "38行目以降の費用明細行を確認してください。",
+          "F列からQ列の12か月データが正しく入力されているか確認してください。"
+        ],
+        "aliases": [
+          "セル範囲",
+          "出力行"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "## 5. Target rows / cell ranges known so far",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "reference_with_caveat",
+        "review_status": "reference_with_caveat"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 5. Target rows / cell ranges known so far",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "reference_with_caveat",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Dải dòng xuất dữ liệu và vùng bảo toàn công thức",
+            "en": "Target Output Row Ranges and Formula Boundaries",
+            "ja": "出力対象行範囲と数式保護境界"
+          },
+          "supported_summary": {
+            "vi": "Bắt đầu xuất dữ liệu từ dòng 38; bảo toàn toàn bộ định dạng và công thức liên kết tại các dòng phía trên.",
+            "en": "Begins writing data from row 38 onward while protecting master formatting and formula links in upper lines.",
+            "ja": "38行目からデータ出力を開始し、上部行のマスター書式および数式リンクを完全に保護します。"
+          },
+          "evidence_anchor": "Rows `200-212` below are historical file-order-v1 "
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_saisan_implementation_dashboard",
+      "business_area": "cost_allocation",
+      "vi": {
+        "title": "Bảng trạng thái hoàn thiện tổng thể MP Saisan",
+        "keywords": [
+          "dashboard saisan",
+          "tong the saisan",
+          "tien do saisan",
+          "bang tong hop saisan"
+        ],
+        "answer_context": "Bảng tổng kết trạng thái thực hiện các phân hệ phân bổ chi phí MP Saisan (Facility, Admin, System, Fixed Assets, Birthday, NNN, Allocation). Tài liệu dùng để đối soát tính sẵn sàng của hệ thống. Hãy xác nhận lại trước khi áp dụng vào số liệu thực tế.",
+        "safe_steps": [
+          "Tra cứu trạng thái của từng phân hệ trên bảng tổng hợp.",
+          "Đối chiếu phiên bản tệp mẫu tương ứng.",
+          "Kiểm tra lại kết quả trước khi phát hành báo cáo."
+        ],
+        "aliases": [
+          "dashboard saisan",
+          "tong the saisan"
+        ]
+      },
+      "en": {
+        "title": "MP Saisan Implementation Status Dashboard",
+        "keywords": [
+          "saisan dashboard",
+          "saisan implementation status",
+          "allocation readiness",
+          "saisan overview"
+        ],
+        "answer_context": "Overall status dashboard of MP Saisan allocation modules (Facility, Admin, System, Fixed Assets, Birthday, NNN, Allocation). Used to verify system readiness. Please confirm before applying to actual operational figures.",
+        "safe_steps": [
+          "Check the status of each allocation module.",
+          "Verify matching template versions.",
+          "Review results before publishing reports."
+        ],
+        "aliases": [
+          "saisan dashboard",
+          "saisan implementation status"
+        ]
+      },
+      "ja": {
+        "title": "MP Saisan 全体実装ステータスダッシュボード",
+        "keywords": [
+          "採算ダッシュボード",
+          "実装ステータス",
+          "配賦モジュール概要",
+          "システム準備状況"
+        ],
+        "answer_context": "MP Saisanの各配賦モジュール（施設、管理、システム、固定資産、誕生日、NNN、共通配賦）の実装ステータス概要です。システムの整備状況確認用です。実際の業務数値に適用する前に再確認してください。",
+        "safe_steps": [
+          "ダッシュボードで各モジュールの整備状況を確認してください。",
+          "対応するテンプレートのバージョンを照合してください。",
+          "レポート確定前に結果を再確認してください。"
+        ],
+        "aliases": [
+          "採算ダッシュボード",
+          "実装ステータス"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "## 10. Implementation status dashboard",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "reference_with_caveat",
+        "review_status": "reference_with_caveat"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 10. Implementation status dashboard",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "reference_with_caveat",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Bảng theo dõi tiến độ hoàn thiện các tính năng",
+            "en": "Feature Completeness Tracking Dashboard",
+            "ja": "機能実装ステータス管理ダッシュボード"
+          },
+          "supported_summary": {
+            "vi": "Ghi nhận mức độ sẵn sàng và trạng thái kiểm thử của từng thành phần tính toán trong hệ thống phân bổ.",
+            "en": "Tracks readiness and testing verification status for each calculation component in the distribution system.",
+            "ja": "配賦システムにおける各計算コンポーネントの実装完了度および検証状態を記録・管理します。"
+          },
+          "evidence_anchor": "| Capability | Flag / module | Status | Rows affec"
+        }
+      ]
+    }
+  ]
+}

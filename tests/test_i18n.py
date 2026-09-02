@@ -310,19 +310,19 @@ class TestI18nLocalization(unittest.TestCase):
         """Xác thực chuyển đổi ngôn ngữ cho nút bấm và tiêu đề cửa sổ của trợ lý."""
         # 1. Tiếng Việt
         set_current_language("vi")
-        self.assertEqual(t("operations_assistant_btn"), "Trợ lý xử lý lỗi")
+        self.assertEqual(t("operations_assistant_btn"), "✨ HỎI AI NỘI BỘ")
         self.assertEqual(t("operations_assistant_window_title"), "Trợ lý Vận hành & Xử lý Lỗi")
         self.assertEqual(t("operations_assistant_close_btn"), "Đóng")
 
         # 2. Tiếng Nhật
         set_current_language("ja")
-        self.assertEqual(t("operations_assistant_btn"), "エラー対応アシスタント")
+        self.assertEqual(t("operations_assistant_btn"), "✨ 社内AIに相談")
         self.assertEqual(t("operations_assistant_window_title"), "運用・エラー対応アシスタント")
         self.assertEqual(t("operations_assistant_close_btn"), "閉じる")
 
         # 3. Tiếng Anh
         set_current_language("en")
-        self.assertEqual(t("operations_assistant_btn"), "Operations Assistant")
+        self.assertEqual(t("operations_assistant_btn"), "✨ ASK INTERNAL AI")
         self.assertEqual(t("operations_assistant_window_title"), "Operations & Error Assistant")
         self.assertEqual(t("operations_assistant_close_btn"), "Close")
 
@@ -334,13 +334,13 @@ class TestI18nLocalization(unittest.TestCase):
 
         # Tra cứu tiếng Nhật nhưng global vẫn là tiếng Việt
         ja_btn = translate_for_language("operations_assistant_btn", "ja")
-        self.assertEqual(ja_btn, "エラー対応アシスタント")
+        self.assertEqual(ja_btn, "✨ 社内AIに相談")
         self.assertEqual(get_current_language(), "vi")
-        self.assertEqual(t("operations_assistant_btn"), "Trợ lý xử lý lỗi")
+        self.assertEqual(t("operations_assistant_btn"), "✨ HỎI AI NỘI BỘ")
 
         # Tra cứu tiếng Anh
         en_btn = translate_for_language("operations_assistant_btn", "en")
-        self.assertEqual(en_btn, "Operations Assistant")
+        self.assertEqual(en_btn, "✨ ASK INTERNAL AI")
 
         # Từ chối ngôn ngữ không hỗ trợ
         with self.assertRaises(ValueError):

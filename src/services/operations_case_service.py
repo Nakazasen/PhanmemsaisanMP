@@ -67,7 +67,7 @@ class OperationalCase:
     case_id: str  # Định danh duy nhất: "case-<run_id>"
     run_id: str  # Mã lần chạy (run_id) từ catalog/workspace
     fiscal_year: int  # Năm tài chính (FY)
-    cost_center_scope: str  # Mã Cost Center (ví dụ "1412000040") hoặc "ALL"
+    cost_center_scope: str  # Mã Cost Center hoặc "ALL"
     status: str  # Trạng thái kết thúc: "FAILED" | "PRECHECK_FAILED" | "SUCCEEDED" | "SUCCEEDED_INCOMPLETE"
     stage: str  # Giai đoạn lỗi/cuối cùng theo evidence, hoặc "unavailable"
     classification: str  # Mã phân loại lỗi hoặc "unknown"

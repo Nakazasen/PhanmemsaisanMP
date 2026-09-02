@@ -1,0 +1,3555 @@
+{
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## Vận hành nhiều năm tài chính": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Vận hành nhiều năm tài chính độc lập",
+      "Multi-Year Fiscal Operation",
+      "複数年度の独立運用"
+    ],
+    "summary": [
+      "Hệ thống hỗ trợ chạy độc lập nhiều năm tài chính như FY2027 và FY2028; mỗi năm có bộ dữ liệu nguồn và thư mục kết quả riêng biệt, tuyệt đối không ghi đè dữ liệu giữa các năm.",
+      "The system supports independent execution across multiple fiscal years like FY2027 and FY2028, requiring isolated source workbooks and separate output folders without cross-year overwriting.",
+      "システムはFY2027やFY2028などの複数年度の独立実行に対応しており、年度間でデータを上書きすることなく、年度別の元データと出力先フォルダを使用します。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 1. Mục tiêu chương trình": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Mục tiêu chương trình tự động hóa phân bổ",
+      "MP2027 Program Objectives",
+      "MP2027プログラムの目的"
+    ],
+    "summary": [
+      "Tự động hóa hoàn toàn quy trình phân bổ chi phí chung và kết xuất bảng tính ngân sách chi tiết cho từng phòng ban theo đúng năm tài chính mục tiêu.",
+      "Fully automates overhead cost distribution and generates detailed department budget spreadsheets for the target fiscal year.",
+      "対象会計年度において共通費用の配賦計算を完全自動化し、部門別の詳細な予算スプレッドシートを出力します。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 2. Nguồn yêu cầu và bằng chứng": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Nguồn yêu cầu và thứ bậc tin cậy",
+      "Requirement Sources and Trust Hierarchy",
+      "要件ソースおよび信頼性ルール"
+    ],
+    "summary": [
+      "File Excel yêu cầu gốc giữ quyền quyết định cao nhất khi có sai khác; tài liệu văn bản đóng vai trò giải thích hỗ trợ đối soát.",
+      "The canonical Excel requirement workbook holds supreme authority when discrepancies arise, with markdown documentation serving as supporting explanation.",
+      "差異が発生した場合は原本Excel要件ファイルが最優先の決定権を持ち、Markdownドキュメントは照合時の補助的な解説として機能します。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 3. Trạng thái module hiện tại": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Trạng thái hoàn thiện các module tính toán",
+      "Calculation Module Implementation Status",
+      "計算モジュールの実装ステータス"
+    ],
+    "summary": [
+      "Ghi nhận mức độ hoàn thiện thực tế của từng module tính toán chi phí phục vụ theo dõi vận hành nội bộ.",
+      "Internal status tracking the practical completeness of each calculation module for operational monitoring.",
+      "社内運用の進捗管理のために、各計算モジュールの実際の実装完了度を記録しています。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 4. Runtime directory model": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Mô hình thư mục và đường dẫn nhập thủ công",
+      "Runtime Directory Model and Manual Inputs",
+      "ランタイムディレクトリ構成と手動入力"
+    ],
+    "summary": [
+      "Cấu trúc thư mục làm việc của chương trình gồm các tệp bảng tính đầu vào bắt buộc và các kênh nhập bổ sung thủ công.",
+      "Defines the runtime folder layout, mandatory input workbooks, and supplementary manual input channels.",
+      "プログラムの作業フォルダ構成、必須の入力ワークブック、および補助的な手動入力チャネルを規定しています。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 5. Active và legacy headcount": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Quản lý nhân sự hiện hữu và loại trừ dòng cũ",
+      "Active Headcount and Legacy Row Exclusion",
+      "現行人員管理と旧行の除外"
+    ],
+    "summary": [
+      "Chỉ sử dụng dữ liệu nhân sự 12 tháng đang hoạt động và loại bỏ vĩnh viễn 2 dòng nhân sự cũ không còn áp dụng trên biểu mẫu mới.",
+      "Uses only active 12-month staffing numbers and permanently excludes the 2 legacy headcount rows from the output workbook.",
+      "有効な12か月の人員データのみを使用し、出力フォームから2つの旧人員行を恒久的に除外します。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 6. Bus passenger drivers": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Định mức phân bổ chi phí xe đưa đón nhân viên",
+      "Shuttle Bus Transportation Allocation Drivers",
+      "送迎バス費用配賦ドライバー"
+    ],
+    "summary": [
+      "Tính toán chi phí xe bus dựa trên số lượng người đi xe thực tế của nhân sự biệt phái và nhân sự Việt Nam nhân đơn giá tương ứng từng tháng.",
+      "Calculates shuttle bus expenses based on actual passenger counts for seconded expats and local Vietnamese employees multiplied by monthly unit rates.",
+      "出向者およびベトナム人従業員の実際のバス利用人数に対応する月次単価を乗じて送迎バス費用を計算します。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 7. Six-claim acceptance status": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Nghiệm thu xử lý 6 phản ánh nghiệp vụ",
+      "Six User Claims Acceptance Status",
+      "ユーザーフィードバック6件の検収ステータス"
+    ],
+    "summary": [
+      "Tổng kết kết quả nghiệm thu 6 phản ánh nghiệp vụ quan trọng gồm bỏ cột E, nhân sự mốc tháng 3 và khử trùng lặp chi phí khám sức khỏe.",
+      "Summarizes acceptance results for 6 key claims including Column E omission, March baseline headcount, and health check deduplication.",
+      "列Eの削除、3月基準人員、健康診断費用の重複排除など、主要な6件の業務フィードバックの検収結果をまとめています。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 8. Row mapping labels": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Nhãn hiển thị phân loại dòng chi phí",
+      "Cost Row Classification Display Labels",
+      "費用行分類の表示ラベル"
+    ],
+    "summary": [
+      "Thiết lập các nhãn hiển thị trực quan (tài sản cố định, hệ thống, cơ sở vật chất, hành chính) giúp người dùng dễ dàng kiểm tra nguồn gốc từng dòng chi phí.",
+      "Defines friendly display labels (fixed assets, system cost, facility, admin) enabling operators to easily verify the origin of each cost row.",
+      "各費用行の発生元を容易に確認できるように、わかりやすい表示ラベル（固定資産、システム費、施設費、総務費）を定義しています。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 9. Source workbook workflow": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Quy trình xử lý tệp nguồn và thứ tự xuất",
+      "Source Workbook Workflow and Export Sequence",
+      "元データ処理ワークフローと出力順序"
+    ],
+    "summary": [
+      "Thực hiện nạp tuần tự các tệp bảng tính nguồn, giữ nguyên tính độc lập giữa các sheet chi phí và trích xuất đúng cấu trúc kết quả.",
+      "Governs the sequential ingestion of source workbooks, preserving isolation between cost sheets and exporting structured results.",
+      "元データファイルの順次読み込み、個別費用シートの独立性保持、および構造化された結果出力を管理します。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::### Audit tài sản cố định và lịch sử giải thích": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Lịch sử kiểm toán tài sản cố định và khấu hao",
+      "Fixed Assets Depreciation Audit History",
+      "固定資産減価償却の監査履歴"
+    ],
+    "summary": [
+      "Ghi chép lịch sử kiểm toán đối soát khấu hao tài sản cố định và lưu vết các quyết định phân loại chênh lệch giữa các lần chạy số liệu.",
+      "Maintains audit history for fixed asset depreciation reconciliation and records classification decisions for cross-run variances.",
+      "固定資産減価償却の照合監査履歴を保持し、実行回ごとの差異分類の判断履歴を記録しています。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 10. Manual input rules": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Quy tắc nhập dữ liệu thủ công an toàn",
+      "Safe Manual Data Input Rules",
+      "手動データ入力の安全ルール"
+    ],
+    "summary": [
+      "Hướng dẫn nhập bổ sung số liệu nhân sự, sự kiện định kỳ và chi phí đặc thù qua giao diện với cơ chế kiểm tra tính hợp lệ trước khi lưu.",
+      "Guides manual entry of staffing numbers, periodic events, and custom costs via the UI with pre-save validation safeguards.",
+      "保存前の事前検証ガードを備えたUIを介して、人員数、定期イベント、および個別費用を手動入力する手順を案内します。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::### Headcount": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Quy định nhập số lượng nhân sự thủ công",
+      "Manual Headcount Entry Policy",
+      "手動人員入力ポリシー"
+    ],
+    "summary": [
+      "Số liệu nhân sự mốc tháng 3 dùng để tính biến động từ tháng 4; khi đổi phòng ban trên giao diện, ứng dụng tự động xóa dữ liệu cũ để tránh nhầm lẫn.",
+      "The March baseline headcount serves solely to calculate monthly deltas from April; switching cost centers in the UI clears stale inputs.",
+      "3月基準人員は4月以降の増減計算のみに使用され、UI上で部門を切り替えると古い入力値が自動クリアされます。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::### Event drivers": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Định mức số người tham gia sự kiện công ty",
+      "Company Event Driver Standards",
+      "社内イベント参加者数基準"
+    ],
+    "summary": [
+      "Số lượng người tham gia các sự kiện như quà không đi du lịch, kỷ niệm thành lập chỉ nhập khi có số liệu thực tế được quản lý xác nhận.",
+      "Participant counts for events like non-travel gifts or company anniversaries are entered only upon verified manager confirmation.",
+      "旅行不参加者ギフトや創立記念などのイベント参加者数は、管理者の承認済み実績がある場合にのみ入力します。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::### Special costs": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Nhập chi phí riêng đặc thù của phòng ban",
+      "Department Custom Cost Input Channel",
+      "部門個別費用の手動入力チャネル"
+    ],
+    "summary": [
+      "Chỉ nhập các khoản chi phí riêng vào bảng tính khi đã xác định chính xác số tiền và dòng tài khoản đích tương ứng trên biểu mẫu.",
+      "Department custom costs are recorded only when both the exact amount and target general ledger line on the form are confirmed.",
+      "部門の個別費用は、正確な金額およびフォーム上の対象勘定科目行が確定している場合にのみ記録します。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 11. Distribution rules": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "23 quy tắc tính toán phân bổ chi phí chung",
+      "23 Overhead Cost Distribution Rules",
+      "共通費用の23配賦ルール"
+    ],
+    "summary": [
+      "Tổng hợp chi tiết 23 quy tắc tính toán phân bổ cho các nhóm chi phí hệ thống, cơ sở vật chất, hành chính và sự kiện định kỳ.",
+      "Comprehensive specification of 23 calculation rules for IT systems, facility utilities, administration, and periodic corporate events.",
+      "ITシステム費、施設費、総務費、定期社内イベントに対する23の配賦計算ルールの詳細仕様をまとめています。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 12. Công thức output": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Công thức và bảo toàn định dạng kết quả",
+      "Output Formula and Format Preservation",
+      "出力数式およびフォーマット保持仕様"
+    ],
+    "summary": [
+      "Quy định bắt đầu ghi dữ liệu từ dòng 38, giữ nền trắng cho các cột định danh A-D và bảo toàn nguyên vẹn các công thức liên kết.",
+      "Mandates writing output rows starting from row 38, keeping white background for columns A-D, and preserving all formula links intact.",
+      "38行目からのデータ出力、A〜D列の白背景維持、およびリンク数式の完全保持を規定しています。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 13. Dashboard và audit": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Bảng điều khiển và đèn tín hiệu kiểm toán",
+      "Dashboard and Audit Reconciliation Indicators",
+      "ダッシュボードと監査照合シグナル"
+    ],
+    "summary": [
+      "Hệ thống đèn tín hiệu Xanh/Vàng/Đỏ trên bảng điều khiển giúp người dùng nhận biết ngay trạng thái cân đối số liệu sau mỗi lần tính toán.",
+      "The Green/Yellow/Red indicator system on the dashboard allows users to immediately verify reconciliation status after every calculation run.",
+      "ダッシュボード上の緑/黄/赤のシグナル表示により、計算実行後のデータバランス状態を即座に確認できます。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 14. UI/UX and localization": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Chính sách giao diện đa ngôn ngữ",
+      "Multilingual User Interface Policy",
+      "多言語ユーザーインターフェース方針"
+    ],
+    "summary": [
+      "Giao diện ứng dụng hỗ trợ chuyển đổi linh hoạt giữa Tiếng Việt, Tiếng Anh và Tiếng Nhật với thuật ngữ tài chính thống nhất.",
+      "The application interface supports seamless switching between Vietnamese, English, and Japanese with consistent financial terminology.",
+      "統一された財務会計用語を用いて、ベトナム語、英語、日本語のシームレスなUI切り替えを提供します。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 15. Validation and safety checks": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Kiểm tra an toàn trước khi chạy tính toán",
+      "Pre-Execution Safety and Validation Checks",
+      "計算実行前の安全性および事前検証"
+    ],
+    "summary": [
+      "Tự động kiểm tra tính đầy đủ của file nguồn, khớp năm tài chính và phát hiện sớm tệp Excel đang bị khóa trước khi bắt đầu tính toán.",
+      "Automatically verifies source workbook completeness, fiscal year alignment, and detects locked files prior to running calculations.",
+      "計算開始前に、元データファイルの完全性、会計年度の一致、およびファイルのロック状態を自動検証します。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 17. Việc ưu tiên tiếp theo": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Lộ trình ưu tiên vận hành nội bộ",
+      "Internal Operational Roadmap Priorities",
+      "社内運用の次期優先事項"
+    ],
+    "summary": [
+      "Ghi chú tham khảo nội bộ về các hạng mục cần lưu ý đối soát trong các kỳ lập ngân sách thực tế tiếp theo.",
+      "Internal reference notes highlighting reconciliation checkpoints for upcoming budget consolidation cycles.",
+      "次回の本番予算集計サイクルに向けた照合チェックポイントを記載した社内参考メモです。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 19. Đồng phục và cốc xếp": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Định mức cấp phát đồng phục và cốc gấp",
+      "Uniform and Folding Cup Distribution Standard",
+      "制服および折りたたみコップ支給基準"
+    ],
+    "summary": [
+      "Cấp phát đồng phục định kỳ theo quý cho nhân sự chính thức và cấp phát cốc cá nhân khi tiếp nhận nhân viên mới.",
+      "Specifies quarterly uniform allocation cycles for regular staff and personal folding cup issuance upon onboarding new employees.",
+      "正社員に対する制服の四半期定期支給および新入社員受け入れ時の個人用コップ支給基準を定めています。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 20. Kế thừa và bảo tồn chi phí riêng theo năm tài chính": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Kế thừa chi phí riêng phòng ban qua các năm",
+      "Department Custom Cost Inheritance Across Years",
+      "部門個別費用の年度間継承"
+    ],
+    "summary": [
+      "Tự động kế thừa mô tả và công thức các dòng chi phí riêng của từng phòng ban khi chuyển giao sang năm tài chính mới.",
+      "Automatically retains custom expense descriptions and formula links per cost center when transitioning to a new fiscal year.",
+      "新年度への移行時に、各部門の個別費用行の説明文および数式リンクを自動的に引き継ぎます。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 21. Tùy biến sắp xếp thứ tự dòng chi phí kéo-thả": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Sắp xếp thứ tự dòng chi phí trực quan kéo-thả",
+      "Interactive Drag-and-Drop Cost Row Reordering",
+      "ドラッグ＆ドロップによる費用行並び替え"
+    ],
+    "summary": [
+      "Cho phép người dùng thay đổi thứ tự xuất hiện của các dòng chi phí trên bảng tính chi tiết thông qua hộp thoại kéo thả trực quan.",
+      "Enables users to customize expense row presentation order on detail sheets using the interactive drag-and-drop dialog.",
+      "直感的なドラッグ＆ドロップダイアログを使用して、詳細シート上の費用行の表示順序を自由に並び替えることができます。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 22. Tìm kiếm nhanh phòng ban trên màn hình chính": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Tìm kiếm nhanh mã phòng ban trên giao diện chính",
+      "Quick Department Search on Main Screen",
+      "メイン画面での部門クイック検索"
+    ],
+    "summary": [
+      "Thanh tìm kiếm tức thời hỗ trợ tra cứu nhanh phòng ban theo mã Cost Center hoặc tên bộ phận ngay trên màn hình làm việc chính.",
+      "Real-time search bar allowing instant department filtering by Cost Center code or department name directly on the main screen.",
+      "メイン画面上でコストセンターコードまたは部門名による即時絞り込み検索が可能です。"
+    ]
+  },
+  "QUY_TRINH_NGHIEP_VU_MP2027.md:::## 23. So sánh biến động ngân sách cùng kỳ (YoY) và biểu đồ trực quan": {
+    "display": [
+      "Quy trình nghiệp vụ MP2027",
+      "MP2027 Business Operations Guide",
+      "MP2027 業務プロセス手順書"
+    ],
+    "heading": [
+      "Phân tích biến động ngân sách cùng kỳ (YoY)",
+      "Year-over-Year (YoY) Budget Variance Analysis",
+      "前年同期比（YoY）予算変動分析"
+    ],
+    "summary": [
+      "Tự động lập bảng phân tích chênh lệch ngân sách giữa các năm tài chính và nhúng biểu đồ so sánh trực quan vào file kết quả Excel.",
+      "Automatically generates comparative budget variance tables across fiscal years and embeds native visual charts into output Excel workbooks.",
+      "年度間の予算変動分析表を自動生成し、出力Excelファイル内に視覚的な比較グラフを埋め込みます。"
+    ]
+  },
+  "README.md:::# MP2027 Manager": {
+    "display": [
+      "Tài liệu hướng dẫn tổng quan MP2027",
+      "MP2027 Overview and User Manual",
+      "MP2027 概要および操作マニュアル"
+    ],
+    "heading": [
+      "Tổng quan ứng dụng quản lý phân bổ MP2027",
+      "MP2027 Cost Allocation Application Overview",
+      "MP2027 費用配賦管理アプリケーションの概要"
+    ],
+    "summary": [
+      "Ứng dụng máy tính chuyên dụng phân bổ chi phí ngân sách tự động cho từng phòng ban từ các bảng tính nguồn Excel với đầy đủ nhật ký kiểm toán.",
+      "Dedicated desktop application automating department budget cost allocation from Excel source workbooks with complete audit trails.",
+      "Excel元データから各部門への予算費用配賦を完全自動化し、監査証跡を備えたデスクトップ業務アプリケーションです。"
+    ]
+  },
+  "README.md:::## Ai dùng chương trình này": {
+    "display": [
+      "Tài liệu hướng dẫn tổng quan MP2027",
+      "MP2027 Overview and User Manual",
+      "MP2027 概要および操作マニュアル"
+    ],
+    "heading": [
+      "Đối tượng người dùng và vai trò vận hành",
+      "Target User Roles and Operating Stakeholders",
+      "対象ユーザーと運用役割"
+    ],
+    "summary": [
+      "Phục vụ chuyên viên kế toán quản trị, trưởng bộ phận và ban giám đốc trong kỳ lập ngân sách và kiểm tra đối soát chi phí hàng năm.",
+      "Designed for management accountants, department managers, and directors during annual budget consolidation and cost audit cycles.",
+      "年次予算編成および費用監査において、管理会計担当者、部門責任者、および経営陣を対象としています。"
+    ]
+  },
+  "README.md:::## Luồng sử dụng chính": {
+    "display": [
+      "Tài liệu hướng dẫn tổng quan MP2027",
+      "MP2027 Overview and User Manual",
+      "MP2027 概要および操作マニュアル"
+    ],
+    "heading": [
+      "Luồng thao tác 3 bước chính của người dùng",
+      "Three-Step Core Operational Workflow",
+      "3ステップの主要操作フロー"
+    ],
+    "summary": [
+      "Quy trình vận hành gồm 3 bước: chọn năm tài chính, kiểm tra tệp dữ liệu đầu vào và nhấn nút tính toán để xuất báo cáo chi tiết.",
+      "Standard three-step operation: select fiscal year, verify input source workbooks, and click calculate to export detailed reports.",
+      "会計年度の選択、入力元ファイルの確認、計算実行ボタンのクリックによる詳細レポート出力の3ステップで運用します。"
+    ]
+  },
+  "README.md:::## Input chính": {
+    "display": [
+      "Tài liệu hướng dẫn tổng quan MP2027",
+      "MP2027 Overview and User Manual",
+      "MP2027 概要および操作マニュアル"
+    ],
+    "heading": [
+      "Danh mục tệp dữ liệu bảng tính đầu vào",
+      "Mandatory Input Source Workbooks Inventory",
+      "必須入力データワークブック一覧"
+    ],
+    "summary": [
+      "Yêu cầu đầy đủ các tệp Excel phân bổ chi phí hành chính, danh mục tài sản cố định, chi phí hệ thống và số liệu nhân sự 12 tháng.",
+      "Requires complete Excel files for admin allocation, fixed assets, IT system costs, and 12-month staffing numbers.",
+      "総務配賦一覧、固定資産一覧、ITシステム費、および12か月人員データを含むExcel元ファイル一式が必要です。"
+    ]
+  },
+  "README.md:::## Output chính": {
+    "display": [
+      "Tài liệu hướng dẫn tổng quan MP2027",
+      "MP2027 Overview and User Manual",
+      "MP2027 概要および操作マニュアル"
+    ],
+    "heading": [
+      "Cấu trúc tệp bảng tính kết quả xuất ra",
+      "Generated Output Workbook File Structure",
+      "出力ワークブックのファイル構成"
+    ],
+    "summary": [
+      "Kết xuất tệp bảng tính ngân sách riêng cho từng Cost Center cùng bảng tổng hợp toàn công ty theo đúng định dạng biểu mẫu chuẩn.",
+      "Generates individual budget workbooks per Cost Center along with company-wide summary sheets formatted to exact standards.",
+      "コストセンターごとの個別予算ワークブックおよび全社サマリーシートを、規定の標準フォーマットに従って出力します。"
+    ]
+  },
+  "README.md:::## Tính năng nâng cao nổi bật": {
+    "display": [
+      "Tài liệu hướng dẫn tổng quan MP2027",
+      "MP2027 Overview and User Manual",
+      "MP2027 概要および操作マニュアル"
+    ],
+    "heading": [
+      "Các tính năng nâng cao và trải nghiệm người dùng",
+      "Advanced Highlights and Interactive Features",
+      "高度なハイライト機能およびユーザー体験"
+    ],
+    "summary": [
+      "Cung cấp tính năng tìm kiếm tức thời phòng ban, kéo thả sắp xếp dòng chi phí và nhúng biểu đồ so sánh biến động ngân sách cùng kỳ YoY.",
+      "Provides real-time department filtering, drag-and-drop cost row reordering, and native embedded YoY budget variance charts.",
+      "部門の即時検索、ドラッグ＆ドロップによる費用行の並び替え、および前年同期比（YoY）予算変動グラフの自動埋め込みを提供します。"
+    ]
+  },
+  "README.md:::## Nguyên tắc nghiệp vụ an toàn": {
+    "display": [
+      "Tài liệu hướng dẫn tổng quan MP2027",
+      "MP2027 Overview and User Manual",
+      "MP2027 概要および操作マニュアル"
+    ],
+    "heading": [
+      "Nguyên tắc nghiệp vụ và ranh giới an toàn",
+      "Safe Business Principles and Operational Boundaries",
+      "安全な業務原則と運用境界"
+    ],
+    "summary": [
+      "Chương trình chạy hoàn toàn offline trên mạng nội bộ, tuyệt đối không chỉnh sửa tệp gốc và tự động sao lưu trước khi xuất dữ liệu.",
+      "Operates fully offline on the local network, never modifies original sources, and creates automatic backups before exporting.",
+      "ローカルネットワーク上で完全オフライン稼働し、元ファイルを一切変更せず、出力前に自動バックアップを作成します。"
+    ]
+  },
+  "docs/MP2027/README_HEADCOUNT_LEGACY.md:::# Manual Headcount Legacy File": {
+    "display": [
+      "Quy định loại trừ nhân sự cũ không sử dụng",
+      "Legacy Staffing Row Exclusion Rule",
+      "旧人員入力行除外ルール"
+    ],
+    "heading": [
+      "Loại bỏ vĩnh viễn tệp nhập nhân sự cũ",
+      "Permanent Deprecation of Legacy Headcount File",
+      "旧人員入力ファイルの完全廃止"
+    ],
+    "summary": [
+      "Tệp nhân sự cũ chỉ lưu lại làm bằng chứng lịch sử; chương trình chính thức chuyển sang dùng bảng dữ liệu nhân sự 12 tháng duy nhất.",
+      "Legacy headcount file is preserved solely for historical audit; the production system exclusively uses the unified 12-month staffing sheet.",
+      "旧人員ファイルは過去の監査履歴としてのみ保管され、本番システムは統一された12か月人員データシートのみを使用します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::# MP Saisan Business Knowledge Base v2 - Full Business Specification": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Đặc tả toàn diện nghiệp vụ MP Saisan phiên bản 2",
+      "Comprehensive MP Saisan v2 Business Specification",
+      "MP Saisan v2 業務仕様完全版"
+    ],
+    "summary": [
+      "Tổng hợp toàn bộ quy tắc phân bổ ngân sách, công thức tính toán và chuẩn hóa dữ liệu tài chính cho hệ thống MP Saisan v2.",
+      "Comprehensive reference of all budget allocation rules, calculation formulas, and financial standards for MP Saisan v2.",
+      "MP Saisan v2におけるすべての予算配賦ルール、計算数式、および財務データ標準仕様を網羅したナレッジベースです。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::## 1. Purpose and current truth": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Mục đích và căn cứ nghiệp vụ hiện hành",
+      "System Purpose and Current Operational Truth",
+      "システムの目的と現行業務の正本基準"
+    ],
+    "summary": [
+      "Xác lập file Excel nghiệm thu chuẩn là chân lý nghiệp vụ cao nhất để đối chiếu và tự động hóa việc tính toán chi phí ngân sách.",
+      "Establishes the canonical approved Excel workbook as the supreme operational truth for automating budget cost distribution.",
+      "承認済み原本Excelファイルを最高位の業務基準として位置づけ、予算配賦計算の完全自動化を行います。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::## 2. Source hierarchy and trust rules": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Thứ bậc tin cậy của các nguồn tài liệu",
+      "Source Authority Hierarchy and Trust Rules",
+      "資料ソースの優先順位と信頼性ルール"
+    ],
+    "summary": [
+      "Quy định thứ tự ưu tiên: file Excel mẫu của người dùng đứng đầu, tiếp đến bảng phân bổ chính thức, và tài liệu văn bản đóng vai trò hỗ trợ.",
+      "Prioritizes canonical user Excel workbooks first, official allocation tables second, and markdown documentation as supporting evidence.",
+      "ユーザー原本Excelを最優先とし、次いで公式配賦一覧表、Markdownドキュメントを補助証拠とする優先順位を定めています。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::### Account Lookup Rule": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Quy tắc tra cứu mã tài khoản kế toán",
+      "General Ledger Account Code Lookup Rule",
+      "勘定科目コードの特定および参照ルール"
+    ],
+    "summary": [
+      "Tra cứu mã tài khoản 10 chữ số dựa trên tên chi phí và phân loại phòng ban (sản xuất hoặc gián tiếp) để điền đúng vào biểu mẫu.",
+      "Identifies 10-digit account codes using expense name and department classification (manufacturing or indirect) for form mapping.",
+      "費用項目名と部門分類（製造または間接）に基づいて10桁の勘定科目コードを特定し、フォームへ正しく配置します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::## 3. File-order output rule": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Thứ tự xuất các sheet chi phí trên kết quả",
+      "Export Sequence of Cost Detail Sheets",
+      "出力ファイルにおける費用シートの出力順序"
+    ],
+    "summary": [
+      "Xuất các khối chi phí theo đúng thứ tự file nguồn: tài sản cố định, chi phí hệ thống, cơ sở vật chất và phân bổ hành chính.",
+      "Writes expense sections following exact source file order: fixed assets, IT systems, facility costs, and administrative allocations.",
+      "固定資産、ITシステム費、施設費、総務配賦の元ファイル順序を厳格に維持して出力シートへ書き込みます。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::## 4. Module detail matrix": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Ma trận chi tiết các module tính toán chi phí",
+      "Detailed Cost Calculation Modules Matrix",
+      "費用計算モジュールの詳細マトリクス"
+    ],
+    "summary": [
+      "Tổng hợp ma trận đối chiếu mục đích nghiệp vụ, tệp bảng tính nguồn và dải dòng kết quả cho toàn bộ 8 module tính toán.",
+      "Presents the traceability matrix linking business purposes, source files, and output row ranges across all 8 modules.",
+      "全8つの計算モジュールについて、業務目的、元ファイル、出力対象行範囲を網羅した照合マトリクスです。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::### 4.1 Facility / 施設課": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Module chi phí cơ sở vật chất và tiện ích",
+      "Facility and Utilities Calculation Module",
+      "施設費およびユーティリティ計算モジュール"
+    ],
+    "summary": [
+      "Tính toán khấu hao nhà xưởng, tiền thuê đất và điện nước, chuyển toàn bộ vào tài khoản chi phí của phòng cơ sở vật chất 1412000040.",
+      "Calculates factory depreciation, land leases, electricity, and water, routing figures to facility department 1412000040.",
+      "工場減価償却、土地賃料、電気代、水道代を集計し、施設課コード1412000040へ配賦計上します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::### 4.2 Admin / GA consumables": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Module chi phí vật tư và sự kiện hành chính",
+      "Administrative Supplies and Events Module",
+      "総務消耗品およびイベント費用計算モジュール"
+    ],
+    "summary": [
+      "Phân bổ chi phí vật tư tiêu hao hàng tháng theo số nhân sự và chi phí sự kiện vào đúng tháng tổ chức thực tế.",
+      "Allocates monthly consumables using headcount numbers and assigns event expenses to actual occurrence months.",
+      "人員数に基づき月次消耗品を配賦し、社内イベント費用は実際の開催月へ正確に計上します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::### 4.3 System Cost": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Module chi phí hệ thống phần mềm và máy chủ",
+      "IT System and Infrastructure Cost Module",
+      "ITシステムおよびインフラ費用計算モジュール"
+    ],
+    "summary": [
+      "Tổng hợp chi phí bản quyền IT từ 3 tệp mô phỏng theo quý, nhân tỷ giá ô B2 và điền vào các dòng tương ứng của phòng ban.",
+      "Aggregates software license costs from 3 quarterly simulation files, applies rate B2, and populates department rows.",
+      "四半期シミュレーションからITライセンス費を集計し、B2レートを乗じて各部門の該当行へ入力します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::### 4.4 Fixed Assets / 固定資産": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Module trích khấu hao tài sản cố định",
+      "Fixed Asset Monthly Depreciation Module",
+      "固定資産減価償却費計算モジュール"
+    ],
+    "summary": [
+      "Trích khấu hao từng tháng cho từng tài sản và tự động dừng trích sau khi đến tháng khấu hao cuối cùng.",
+      "Calculates monthly depreciation per asset and automatically halts allocation once the final depreciation month is reached.",
+      "資産ごとの月次減価償却費を計算し、最終償却月に達した後は自動的に計上を停止します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::### 4.5 Birthday / Sinh nhật": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Module tính chi phí sinh nhật nhân viên",
+      "Employee Birthday Benefit Cost Module",
+      "社員誕生日祝金計算モジュール"
+    ],
+    "summary": [
+      "Tính chi phí sinh nhật bằng số người sinh nhật trong tháng nhân đơn giá 152.000 VNĐ và ghi vào dòng 59 trên biểu mẫu.",
+      "Computes birthday costs by multiplying monthly celebrant counts by 152,000 VND unit rate, mapped to form row 59.",
+      "月別誕生日人数に単価152,000 VNDを乗じて誕生日祝金を算出し、フォームの59行目へ配置します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::### 4.6 NNN paperwork": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Module chi phí thủ tục chuyên gia nước ngoài",
+      "Foreign Expert Paperwork Expense Module",
+      "外国人専門家書類手続き費用モジュール"
+    ],
+    "summary": [
+      "Tập hợp chi phí visa, giấy phép lao động cho chuyên gia nước ngoài và ghi nhận vào dòng 137 trên biểu mẫu kết quả.",
+      "Consolidates visa and work permit expenses for foreign expats, populating destination row 137 on output forms.",
+      "外国人専門家のビザおよび労働許可証費用を集計し、出力フォームの137行目に計上します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::### 4.7 Allocation / 配賦": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Module 23 quy tắc phân bổ chi phí chung",
+      "23 Overhead Allocation Rules Execution Module",
+      "共通費用23配賦ルール実行モジュール"
+    ],
+    "summary": [
+      "Thực thi tính toán chi tiết 23 quy tắc phân bổ chi phí vật tư, bảo hộ lao động và sự kiện định kỳ cho từng phòng ban.",
+      "Executes detailed calculations for 23 distribution rules covering consumables, protective gear, and periodic events.",
+      "事務用品、保護具、定期イベントに関する23の配賦ルールを各部門に対して詳細計算します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::### 4.8 Manual CSV channels": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Module các kênh nhập bổ sung thủ công",
+      "Supplementary Manual Data Input Channels Module",
+      "補助手動データ入力チャネルモジュール"
+    ],
+    "summary": [
+      "Cho phép nhập bổ sung định mức sự kiện, chi phí riêng và số lượng phát thực tế qua các tệp dữ liệu giao diện.",
+      "Supports entering custom event drivers, special department costs, and actual distribution counts via input tables.",
+      "イベント基準、部門個別費用、および実配布数を入力テーブルを介して手動補完できます。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::## 5. Target rows / cell ranges known so far": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Dải dòng xuất dữ liệu và vùng bảo toàn công thức",
+      "Target Output Row Ranges and Formula Boundaries",
+      "出力対象行範囲と数式保護境界"
+    ],
+    "summary": [
+      "Bắt đầu xuất dữ liệu từ dòng 38; bảo toàn toàn bộ định dạng và công thức liên kết tại các dòng phía trên.",
+      "Begins writing data from row 38 onward while protecting master formatting and formula links in upper lines.",
+      "38行目からデータ出力を開始し、上部行のマスター書式および数式リンクを完全に保護します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::## 6. Account code and Cost Center rules": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Quy tắc mã tài khoản và mã Cost Center",
+      "Account Code and Cost Center Identifiers Rules",
+      "勘定科目コードおよび原価センタの識別ルール"
+    ],
+    "summary": [
+      "Mã Cost Center 10 chữ số định danh phòng ban và mã tài khoản 10 chữ số định danh dòng chi phí kế toán bất biến.",
+      "10-digit Cost Center codes identify departments, while 10-digit account codes serve as invariant general ledger keys.",
+      "10桁の原価センタコードで部門を特定し、10桁の勘定科目コードで不変の費用科目を識別します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::## 7. Primary and secondary reference pool": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Phân loại kho tài liệu nguồn chính và phụ",
+      "Primary and Secondary Evidence Sources Pool",
+      "正本および副次参照ソースの分類基準"
+    ],
+    "summary": [
+      "Phân định rõ tài liệu nguồn chính thức có tính quyết định cao nhất và các tài liệu tham khảo bổ trợ khi đối soát.",
+      "Distinguishes canonical primary sources holding supreme authority from secondary supporting reference files.",
+      "最高位の決定権を持つ正本ソースと、照合時の補助的な副次参考ファイルを明確に区分します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::## 8. Gap accounting and what not to say": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Đối chiếu chênh lệch số lượng dòng chi phí",
+      "Cost Row Discrepancy Analysis and Audit Guidance",
+      "費用行の差異分析と監査対応ガイド"
+    ],
+    "summary": [
+      "Giải thích nguyên nhân chênh lệch số dòng giữa các phiên bản do loại bỏ các dòng nhân sự cũ không còn áp dụng.",
+      "Explains row count deltas across versions resulting from permanent exclusion of legacy staffing rows.",
+      "旧人員行の完全除外に伴うバージョン間の行数差異の要因を解説し、適切な監査対応を案内します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::## 9. Provenance policy": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Chính sách nguồn gốc và tính hợp lệ của dữ liệu",
+      "Data Provenance and Lineage Policy",
+      "データ来歴および出力適格性ポリシー"
+    ],
+    "summary": [
+      "Mọi dòng số liệu xuất ra đều phải có nguồn gốc chứng từ rõ ràng từ các tệp bảng tính nguồn đã được phê duyệt.",
+      "Every exported numeric figure must trace back to verifiable evidence in approved master source workbooks.",
+      "出力されるすべての数値データは、承認済み元ファイル内の検証可能な証拠に遡って追跡可能でなければなりません。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::## 10. Implementation status dashboard": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Bảng theo dõi tiến độ hoàn thiện các tính năng",
+      "Feature Completeness Tracking Dashboard",
+      "機能実装ステータス管理ダッシュボード"
+    ],
+    "summary": [
+      "Ghi nhận mức độ sẵn sàng và trạng thái kiểm thử của từng thành phần tính toán trong hệ thống phân bổ.",
+      "Tracks readiness and testing verification status for each calculation component in the distribution system.",
+      "配賦システムにおける各計算コンポーネントの実装完了度および検証状態を記録・管理します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::## 11. Current continuation route": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Lộ trình đối soát và bàn giao vận hành",
+      "Operational Verification and Handover Route",
+      "業務照合および引き継ぎロードマップ"
+    ],
+    "summary": [
+      "Hướng dẫn thứ tự đối soát kết quả với người dùng và quy trình bàn giao vận hành trong kỳ lập ngân sách.",
+      "Guides verification steps with stakeholders and defines handover procedures for live budget cycles.",
+      "関係者との結果照合手順および本番予算運用における引き継ぎプロセスを案内します。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::## 12. Glossary": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Thuật ngữ tài chính và từ viết tắt kế toán",
+      "Financial Terminology and Abbreviations Glossary",
+      "財務会計用語および略語集"
+    ],
+    "summary": [
+      "Định nghĩa các từ viết tắt như CC, Account Code, 採算区分, 原価区分 dùng thống nhất trong toàn bộ hệ thống.",
+      "Defines acronyms including CC, Account Codes, profitability, and cost divisions used across the codebase.",
+      "原価センタ、勘定科目コード、採算区分、原価区分など、システム内で使用される主要略語を定義しています。"
+    ]
+  },
+  "docs/knowledge/mp_saisan_business_knowledge_base_v2.md:::## 13. Source documents used": {
+    "display": [
+      "Knowledge Base MP Saisan",
+      "MP Saisan Business Knowledge Base",
+      "MP Saisan 業務ナレッジベース"
+    ],
+    "heading": [
+      "Danh mục các tài liệu và tệp dữ liệu đã kiểm tra",
+      "Catalog of Audited Source Documents and Spreadsheets",
+      "監査済み元ドキュメントおよびワークブック一覧"
+    ],
+    "summary": [
+      "Liệt kê toàn bộ các tài liệu đặc tả, bảng phân bổ chi phí và tệp Excel thực tế được sử dụng làm căn cứ đối soát.",
+      "Catalogs all specification documents, cost allocation sheets, and live workbooks utilized for reconciliation.",
+      "照合根拠として使用された仕様書、費用配賦表、および本番Excelファイルの一覧です。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant.md:::## 1. Tổng quan & Mục đích (Overview)": {
+    "display": [
+      "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+      "AI Operations Assistant and Diagnostics Guide",
+      "AIアシスタント運用および障害診断ガイド"
+    ],
+    "heading": [
+      "Tổng quan và mục đích Trợ lý AI MP2027",
+      "AI Operations Assistant Overview and Purpose",
+      "AIオペレーションアシスタントの概要と目的"
+    ],
+    "summary": [
+      "Trợ lý AI hỗ trợ người dùng tra cứu quy định tài chính, giải thích kết quả tính toán và hướng dẫn khắc phục sự cố ngay trên ứng dụng.",
+      "The AI assistant enables operators to query financial rules, understand cost outputs, and resolve operational issues within the app.",
+      "アプリ内で財務ルールの照会、配賦計算結果の解説、および障害復旧手順の案内を提供する業務支援AIです。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant.md:::## 2. Quy trình thao tác của người dùng (User Workflow)": {
+    "display": [
+      "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+      "AI Operations Assistant and Diagnostics Guide",
+      "AIアシスタント運用および障害診断ガイド"
+    ],
+    "heading": [
+      "Quy trình tương tác và đặt câu hỏi với AI",
+      "User Interaction and Query Workflow",
+      "AIとの対話および質問操作ワークフロー"
+    ],
+    "summary": [
+      "Người dùng nhập câu hỏi bằng tiếng Việt, tiếng Anh hoặc tiếng Nhật để nhận câu trả lời kèm trích dẫn tài liệu gốc đã được xác thực.",
+      "Users submit queries in Vietnamese, English, or Japanese to receive grounded answers with verified source document citations.",
+      "ベトナム語、英語、日本語で質問を入力し、検証済みの原本ドキュメントの引用付き回答を受け取ります。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant.md:::## 3. Chính sách đa ngôn ngữ (Language Policy)": {
+    "display": [
+      "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+      "AI Operations Assistant and Diagnostics Guide",
+      "AIアシスタント運用および障害診断ガイド"
+    ],
+    "heading": [
+      "Chính sách hỗ trợ đa ngôn ngữ của Trợ lý AI",
+      "AI Multilingual Support and Localization Policy",
+      "AI多言語サポートおよびローカライゼーション方針"
+    ],
+    "summary": [
+      "Trợ lý AI tự động phản hồi theo ngôn ngữ của câu hỏi hoặc ngôn ngữ giao diện được chọn, sử dụng thuật ngữ kế toán chuẩn mực.",
+      "The AI assistant responds in the query language or selected UI language while maintaining precise financial accounting terminology.",
+      "質問の言語または選択されたUI言語に合わせて自動応答し、正確な財務会計用語を一貫して使用します。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant.md:::## 4. Phân định Ngôn ngữ Nghiệp vụ & Chi tiết Kỹ thuật (Separation of Concerns)": {
+    "display": [
+      "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+      "AI Operations Assistant and Diagnostics Guide",
+      "AIアシスタント運用および障害診断ガイド"
+    ],
+    "heading": [
+      "Phân định ngôn ngữ nghiệp vụ và kỹ thuật",
+      "Separation of Business Language and Technical Details",
+      "業務説明と技術詳細の分離原則"
+    ],
+    "summary": [
+      "Câu trả lời cho người dùng chỉ sử dụng ngôn từ nghiệp vụ thân thiện; chi tiết kỹ thuật như đường dẫn máy tính hay mã code bị ẩn hoàn toàn.",
+      "User-facing answers use intuitive business language, strictly hiding internal details like computer drive paths and source code.",
+      "ユーザー向け回答はわかりやすい業務用語のみを用い、ローカルパスやソースコードなどの内部技術情報は完全に隠蔽します。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant.md:::## 5. Ranh giới & Giới hạn Bằng chứng (Evidence Limits)": {
+    "display": [
+      "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+      "AI Operations Assistant and Diagnostics Guide",
+      "AIアシスタント運用および障害診断ガイド"
+    ],
+    "heading": [
+      "Ranh giới an toàn và giới hạn bằng chứng của AI",
+      "Safety Boundaries and Evidence Grounding Limits",
+      "安全境界とエビデンス根拠の限界"
+    ],
+    "summary": [
+      "AI chỉ đưa ra câu trả lời khi có bằng chứng rõ ràng từ tài liệu đã duyệt; nếu thiếu dữ liệu, AI sẽ thông báo rõ ràng thay vì tự suy diễn.",
+      "The AI answers strictly based on verified evidence in approved sources, explicitly noting when information is absent instead of speculating.",
+      "承認済みソースに明確なエビデンスがある場合にのみ回答し、根拠情報が不足している場合は推測せず明確にその旨を伝えます。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant.md:::## 6. Mức độ chắc chắn (Confidence Levels)": {
+    "display": [
+      "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+      "AI Operations Assistant and Diagnostics Guide",
+      "AIアシスタント運用および障害診断ガイド"
+    ],
+    "heading": [
+      "Các cấp độ tin cậy của thông tin trích dẫn",
+      "Citation Confidence Levels and Verification Status",
+      "引用情報の信頼度レベルと検証ステータス"
+    ],
+    "summary": [
+      "Phân định 2 mức độ chắc chắn: 'Đã xác nhận' cho các quy tắc chính thức và 'Tham khảo nội bộ' cho các phản ánh hoặc ghi chú đang hoàn thiện.",
+      "Differentiates 2 confidence levels: 'Confirmed' for official business rules and 'Internal Reference' for evolving feedback.",
+      "公式業務ルールに対する「確定」と、検討中メモ等に対する「社内参考」の2つの信頼度レベルを明確に区分します。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant.md:::## 7. Ba lớp lỗi đã được phê duyệt (Supported Error Classes)": {
+    "display": [
+      "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+      "AI Operations Assistant and Diagnostics Guide",
+      "AIアシスタント運用および障害診断ガイド"
+    ],
+    "heading": [
+      "Ba nhóm lỗi vận hành được hỗ trợ xử lý",
+      "Three Supported Operational Error Classes",
+      "サポート対象の3大運用障害分類"
+    ],
+    "summary": [
+      "Bao gồm lỗi file bị khóa khi ghi kết quả, lỗi thiếu mốc nhân sự tháng 3 và lỗi kiểm tra dữ liệu nguồn đầu vào không hợp lệ.",
+      "Covers output Excel file locks, missing March baseline staffing figures, and preflight source workbook validation failures.",
+      "出力ファイルのロック、3月基準人員の欠落、および元ファイル事前検証エラーの3つの障害分類をサポートします。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant.md:::### 1. `missing_staffing_baseline` (Thiếu dữ liệu nhân sự mốc ban đầu)": {
+    "display": [
+      "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+      "AI Operations Assistant and Diagnostics Guide",
+      "AIアシスタント運用および障害診断ガイド"
+    ],
+    "heading": [
+      "Lỗi thiếu số liệu nhân sự mốc tháng 3",
+      "Missing March Staffing Baseline Resolution",
+      "3月基準人員データの欠落エラー対処手順"
+    ],
+    "summary": [
+      "Bổ sung số liệu nhân sự tháng 3 vào bảng nhân sự hoặc nhập trực tiếp giá trị cơ sở trong phần cài đặt trước khi tính toán.",
+      "Supply March headcount numbers in the staffing sheet or enter the baseline count in settings before running calculations.",
+      "人員データシートに3月人員数を補完するか、計算前に設定画面で基準人員数を直接入力してください。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant.md:::### 2. `blocked_output_file_lock` (Tệp kết quả đầu ra đang bị khóa)": {
+    "display": [
+      "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+      "AI Operations Assistant and Diagnostics Guide",
+      "AIアシスタント運用および障害診断ガイド"
+    ],
+    "heading": [
+      "Lỗi tệp bảng tính đầu ra đang bị khóa",
+      "Blocked Output Excel File Lock Resolution",
+      "出力Excelファイルのロックエラー対処手順"
+    ],
+    "summary": [
+      "Đóng tệp Excel kết quả đang mở trước khi chạy lại hoặc đổi thư mục lưu kết quả để tiếp tục quá trình xuất báo cáo.",
+      "Close open output Excel workbooks before calculating or select a different output directory to continue exporting.",
+      "再実行する前に対象の出力Excelファイルを閉じるか、別の出力先フォルダを指定して処理を続行してください。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant.md:::### 3. `preflight_source_validation_failure` (Kiểm tra dữ liệu nguồn thất bại)": {
+    "display": [
+      "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+      "AI Operations Assistant and Diagnostics Guide",
+      "AIアシスタント運用および障害診断ガイド"
+    ],
+    "heading": [
+      "Lỗi tệp nguồn thiếu sheet hoặc sai định dạng",
+      "Source Workbook Validation Failure Resolution",
+      "元ファイルのシート欠落・形式不正エラー対処手順"
+    ],
+    "summary": [
+      "Kiểm tra lại danh mục các tệp bảng tính nguồn và đảm bảo các sheet chi phí bắt buộc có mặt đầy đủ với đúng tên quy định.",
+      "Verify input source workbooks and ensure all mandatory expense sheets are present with correct canonical naming.",
+      "入力元ファイルの一覧を再確認し、必要なすべての費用シートが規定の名称で存在することを確認してください。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant.md:::## 8. Luồng xử lý khi Lỗi chưa xác nhận (`unknown`)": {
+    "display": [
+      "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+      "AI Operations Assistant and Diagnostics Guide",
+      "AIアシスタント運用および障害診断ガイド"
+    ],
+    "heading": [
+      "Quy trình xử lý khi gặp sự cố chưa xác định",
+      "Handling Procedures for Unrecognized Operational Issues",
+      "未特定障害発生時の安全なハンドリング手順"
+    ],
+    "summary": [
+      "Khi gặp lỗi chưa nằm trong danh mục, AI hướng dẫn kiểm tra nhật ký và liên hệ bộ phận hỗ trợ kỹ thuật mà không đưa ra chỉ dẫn sai lệch.",
+      "When unclassified errors occur, the AI advises checking logs and contacting IT support without providing misleading guidance.",
+      "未分類の障害が発生した場合、AIはログ確認とITサポートへの連絡を案内し、不確かな誤誘導を防止します。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant.md:::## 9. Giới hạn & Các điều cấm tuyệt đối (Explicit Non-Capabilities)": {
+    "display": [
+      "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+      "AI Operations Assistant and Diagnostics Guide",
+      "AIアシスタント運用および障害診断ガイド"
+    ],
+    "heading": [
+      "Các giới hạn và điều cấm tuyệt đối của AI",
+      "Explicit Limitations and Security Invariants",
+      "AIの明確な制限事項およびセキュリティ禁止事項"
+    ],
+    "summary": [
+      "AI hoạt động ở chế độ chỉ đọc, tuyệt đối không tự sửa file, không chạy lệnh hệ thống và không gửi dữ liệu ra ngoài mạng nội bộ.",
+      "Operates strictly in read-only mode, never modifying files, executing system commands, or sending data outside the local LAN.",
+      "読み取り専用モードで稼働し、ファイルの直接改変、システムコマンド実行、および社外への通信は厳格に禁止されています。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant.md:::### Nguyên tắc vận hành": {
+    "display": [
+      "Hướng dẫn vận hành Trợ lý AI và xử lý lỗi",
+      "AI Operations Assistant and Diagnostics Guide",
+      "AIアシスタント運用および障害診断ガイド"
+    ],
+    "heading": [
+      "Nguyên tắc vận hành an toàn dịch vụ AI nội bộ",
+      "Safe Operational Principles for Enterprise AI Service",
+      "社内AIサービスの安全運用原則"
+    ],
+    "summary": [
+      "Dịch vụ AI được quản lý và bảo trì bởi bộ phận CNTT nội bộ, tuân thủ nghiêm ngặt chính sách bảo mật thông tin doanh nghiệp.",
+      "The AI service is managed internally by corporate IT, adhering strictly to enterprise data protection policies.",
+      "社内IT部門によって管理・運用され、企業のセキュリティポリシーに厳格に準拠して運用されます。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant_scope.md:::# Phạm vi tính năng: Trợ lý Vận hành & Xử lý Lỗi (AI Operations Assistant - MVP Read-only)": {
+    "display": [
+      "Phạm vi tính năng và ranh giới an toàn Trợ lý AI",
+      "AI Assistant Feature Scope and Safety Boundary",
+      "AIアシスタント機能範囲と安全境界仕様"
+    ],
+    "heading": [
+      "Đặc tả phạm vi hoạt động của Trợ lý AI",
+      "AI Operations Assistant Operational Scope",
+      "AIオペレーションアシスタントの機能範囲定義"
+    ],
+    "summary": [
+      "Quy định ranh giới tính năng của Trợ lý AI: hoạt động ở chế độ chỉ đọc, tập trung hỗ trợ hướng dẫn vận hành và chẩn đoán sự cố nội bộ.",
+      "Defines operational boundaries for the AI Assistant: read-only mode focused on operational guidance and internal issue diagnostics.",
+      "AIアシスタントの運用範囲を規定し、業務ガイダンスおよび社内障害診断に特化した読み取り専用モードとして機能します。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant_scope.md:::## 1. Tôn chỉ cốt lõi & Ranh giới an toàn (Safety Boundary)": {
+    "display": [
+      "Phạm vi tính năng và ranh giới an toàn Trợ lý AI",
+      "AI Assistant Feature Scope and Safety Boundary",
+      "AIアシスタント機能範囲と安全境界仕様"
+    ],
+    "heading": [
+      "Tôn chỉ cốt lõi và ranh giới an toàn của AI",
+      "Core Philosophy and Safety Boundaries for AI Assistant",
+      "AIアシスタントの基本理念と安全境界"
+    ],
+    "summary": [
+      "AI không tự ý sửa đổi file dữ liệu nguồn, không kết nối dịch vụ ngoài mạng nội bộ và tuyệt đối bảo mật số liệu tài chính.",
+      "The AI never alters source files, connects to external services, and strictly protects proprietary financial figures.",
+      "AIは元データファイルを一切改変せず、社外外部サービスへの通信を行わず、機密財務データを厳格に保護します。"
+    ]
+  },
+  "docs/operations/ai_operations_assistant_scope.md:::## 2. Các chức năng trong phạm vi (In-Scope for MVP)": {
+    "display": [
+      "Phạm vi tính năng và ranh giới an toàn Trợ lý AI",
+      "AI Assistant Feature Scope and Safety Boundary",
+      "AIアシスタント機能範囲と安全境界仕様"
+    ],
+    "heading": [
+      "Danh mục các tính năng được phê duyệt cho AI",
+      "Approved In-Scope Feature Catalog for AI Assistant",
+      "AIアシスタントの承認済み対象機能一覧"
+    ],
+    "summary": [
+      "Bao gồm tra cứu quy tắc phân bổ, giải thích công thức tính, chẩn đoán lỗi tệp bảng tính và hỗ trợ hỏi đáp đa ngôn ngữ.",
+      "Covers allocation rule queries, calculation formula explanations, workbook error diagnostics, and multilingual Q&A support.",
+      "配賦ルールの照会、計算式の解説、ワークブックのエラー診断、および多言語Q&Aサポートが機能範囲に含まれます。"
+    ]
+  },
+  "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md:::# G6 to G5 transition handling — specification": {
+    "display": [
+      "Đặc tả chuyển cấp bậc nhân sự mới G6 sang G5",
+      "New Hire Transition G6 to G5 Specification",
+      "新入社員G6からG5への昇格移行仕様書"
+    ],
+    "heading": [
+      "Đặc tả nghiệp vụ chuyển bậc nhân viên mới G6 sang G5",
+      "New Hire Grade G6 to G5 Transition Specification",
+      "新入社員の等級G6からG5への移行業務仕様"
+    ],
+    "summary": [
+      "Quy định nguyên tắc nhận diện và xử lý dữ liệu khi nhân viên mới chuyển từ cấp bậc G6 lên G5 để không tính trùng chi phí người mới.",
+      "Governs data handling when new employees transition from grade G6 to G5 to avoid double-counting new hire onboarding expenses.",
+      "新入社員がG6等級からG5等級へ昇格移行する際の人員データ処理を規定し、新入社員費用の二重計上を防止します。"
+    ]
+  },
+  "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md:::## Source request": {
+    "display": [
+      "Đặc tả chuyển cấp bậc nhân sự mới G6 sang G5",
+      "New Hire Transition G6 to G5 Specification",
+      "新入社員G6からG5への昇格移行仕様書"
+    ],
+    "heading": [
+      "Nguồn yêu cầu nghiệp vụ chuyển cấp bậc G6 sang G5",
+      "Source Request for G6 to G5 Grade Transition",
+      "G6からG5への等級移行に関する要件ソース"
+    ],
+    "summary": [
+      "Xuất phát từ phản ánh thực tế về việc nhân sự chuyển cấp bậc bị phần mềm hiểu nhầm là nhân viên mới tuyển dụng thêm trong kỳ.",
+      "Originates from user feedback where transitioning employees were mistakenly identified as newly recruited staff.",
+      "等級移行した従業員がシステム上で新規採用者として誤判定されていた業務フィードバックに基づいています。"
+    ]
+  },
+  "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md:::## Functional requirements": {
+    "display": [
+      "Đặc tả chuyển cấp bậc nhân sự mới G6 sang G5",
+      "New Hire Transition G6 to G5 Specification",
+      "新入社員G6からG5への昇格移行仕様書"
+    ],
+    "heading": [
+      "Yêu cầu chức năng xử lý chuyển cấp bậc G6 sang G5",
+      "Functional Requirements for G6 to G5 Grade Transition",
+      "G6からG5への等級移行における機能要件"
+    ],
+    "summary": [
+      "Kiểm tra biến động nhân sự giữa các cấp bậc; nếu tổng nhân sự không đổi thì không kích hoạt các chi phí tuyển dụng người mới.",
+      "Evaluates cross-grade staffing deltas; if total headcount is unchanged, new hire onboarding cost triggers remain inactive.",
+      "等級間の人員増減を検証し、部門総人員数に変動がない場合は新入社員採用費用のトリガーを発生させません。"
+    ]
+  },
+  "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md:::## Acceptance examples": {
+    "display": [
+      "Đặc tả chuyển cấp bậc nhân sự mới G6 sang G5",
+      "New Hire Transition G6 to G5 Specification",
+      "新入社員G6からG5への昇格移行仕様書"
+    ],
+    "heading": [
+      "Ví dụ đối soát và tiêu chí nghiệm thu chuyển bậc G6-G5",
+      "Reconciliation Examples and Acceptance Criteria for G6-G5",
+      "G6-G5等級移行の照合検証例および検収基準"
+    ],
+    "summary": [
+      "Ví dụ chi tiết khi 1 nhân sự chuyển từ G6 sang G5 vào tháng 7: tổng số người bằng 0 biến động và không phát sinh chi phí sổ tay mới.",
+      "Detailed scenario where 1 employee shifts from G6 to G5 in July: net delta is 0 and no new handbook costs are generated.",
+      "7月に1名がG6からG5へ移行した具体例において、純増減0名として判定され、新入社員手帳費用は発生しません。"
+    ]
+  },
+  "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md:::## Safety boundaries": {
+    "display": [
+      "Đặc tả chuyển cấp bậc nhân sự mới G6 sang G5",
+      "New Hire Transition G6 to G5 Specification",
+      "新入社員G6からG5への昇格移行仕様書"
+    ],
+    "heading": [
+      "Ranh giới an toàn khi xử lý chuyển cấp bậc nhân sự",
+      "Safety Boundaries for Staffing Grade Transition Logic",
+      "人員等級移行処理における安全境界"
+    ],
+    "summary": [
+      "Chỉ áp dụng quy tắc chuyển bậc cho cùng một Cost Center và không làm sai lệch số liệu nhân sự tổng thể của phòng ban.",
+      "Applies grade shift logic strictly within the same Cost Center, preserving total verified headcount figures.",
+      "同一コストセンター内でのみ等級移行ルールを適用し、部門全体の確定人員数値に影響を与えません。"
+    ]
+  },
+  "docs/superpowers/specs/2026-08-31-uniform-cup-improvement-807-814.md:::# Uniform and Cup Improvement 807-814 Specification": {
+    "display": [
+      "Đặc tả cấp phát đồng phục và cốc gấp định kỳ",
+      "Uniform and Folding Cup Allocation Specification",
+      "制服および折りたたみコップ定期支給仕様書"
+    ],
+    "heading": [
+      "Đặc tả cải tiến phân bổ đồng phục và cốc gấp",
+      "Uniform and Personal Cup Allocation Improvement Specification",
+      "制服および個人用コップ配賦改善仕様書"
+    ],
+    "summary": [
+      "Chuẩn hóa quy trình phân bổ chi phí đồng phục mùa hè, mùa đông và cấp phát cốc cá nhân theo đúng chu kỳ nghiệp vụ thực tế.",
+      "Standardizes cost distribution for summer/winter uniforms and personal cup issuance aligned with actual business cycles.",
+      "夏服・冬服の制服費用および個人用コップ支給の配賦処理を、実際の業務サイクルに合わせて標準化します。"
+    ]
+  },
+  "docs/superpowers/specs/2026-08-31-uniform-cup-improvement-807-814.md:::## Scope": {
+    "display": [
+      "Đặc tả cấp phát đồng phục và cốc gấp định kỳ",
+      "Uniform and Folding Cup Allocation Specification",
+      "制服および折りたたみコップ定期支給仕様書"
+    ],
+    "heading": [
+      "Phạm vi áp dụng định mức đồng phục và cốc cá nhân",
+      "Scope of Uniform and Personal Cup Distribution Standards",
+      "制服および個人用コップ支給基準の適用範囲"
+    ],
+    "summary": [
+      "Áp dụng cho toàn bộ nhân sự chính thức và nhân viên mới tuyển dụng tại tất cả các phòng ban trong năm tài chính.",
+      "Applies across all regular employees and new hires across all cost centers during the active fiscal year.",
+      "当該会計年度におけるすべての部門の正社員および新入社員を対象範囲とします。"
+    ]
+  },
+  "docs/superpowers/specs/2026-08-31-uniform-cup-improvement-807-814.md:::## Business rules": {
+    "display": [
+      "Đặc tả cấp phát đồng phục và cốc gấp định kỳ",
+      "Uniform and Folding Cup Allocation Specification",
+      "制服および折りたたみコップ定期支給仕様書"
+    ],
+    "heading": [
+      "Quy tắc phân bổ đồng phục theo quý và cốc cá nhân",
+      "Quarterly Uniform and Personal Cup Allocation Business Rules",
+      "四半期制服および個人用コップ配賦の業務ルール"
+    ],
+    "summary": [
+      "Phân bổ đồng phục ngắn tay vào các tháng 5 và 11; cấp phát cốc gấp 1 lần duy nhất cho nhân viên mới vào tháng tiếp nhận.",
+      "Distributes short-sleeve uniforms in May and November, while issuing folding cups once to new hires upon their joining month.",
+      "夏用制服は5月と11月に配賦し、折りたたみコップは新入社員の入社月に1回のみ支給配賦します。"
+    ]
+  },
+  "docs/superpowers/specs/2026-08-31-uniform-cup-improvement-807-814.md:::## Acceptance criteria": {
+    "display": [
+      "Đặc tả cấp phát đồng phục và cốc gấp định kỳ",
+      "Uniform and Folding Cup Allocation Specification",
+      "制服および折りたたみコップ定期支給仕様書"
+    ],
+    "heading": [
+      "Tiêu chuẩn nghiệm thu chi phí đồng phục và cốc gấp",
+      "Acceptance Criteria for Uniform and Cup Cost Allocations",
+      "制服およびコップ費用の検収基準"
+    ],
+    "summary": [
+      "Xác nhận số lượng và đơn giá tính toán khớp đúng với bảng phân bổ hành chính và xuất đúng dòng tài khoản kế toán trên bảng tính.",
+      "Verifies that calculated counts and unit prices match administrative allocation tables and map to correct general ledger rows.",
+      "計算された数量および単価が総務配賦表と完全に一致し、正しい勘定科目行へ出力されていることを検収基準とします。"
+    ]
+  },
+  "docs/superpowers/specs/2026-09-01-manual-special-cost-inheritance.md:::# Kế thừa chi phí riêng theo CC": {
+    "display": [
+      "Đặc tả kế thừa chi phí riêng theo năm tài chính",
+      "Department Special Cost Inheritance Specification",
+      "部門個別費用年度別継承仕様書"
+    ],
+    "heading": [
+      "Đặc tả kế thừa chi phí riêng theo phòng ban",
+      "Department Special Cost Inheritance Across Fiscal Years",
+      "部門個別費用の年度間データ継承仕様"
+    ],
+    "summary": [
+      "Đảm bảo các khoản chi phí riêng do người dùng nhập thủ công cho từng phòng ban được tự động giữ lại khi chuyển sang năm tài chính mới.",
+      "Ensures manually entered department-specific custom costs are automatically carried over when transitioning to a new fiscal year.",
+      "ユーザーが部門ごとに手動入力した個別費用データを、新年度への更新時にも自動的に引き継いで保持します。"
+    ]
+  },
+  "docs/superpowers/specs/2026-09-01-manual-special-cost-inheritance.md:::## Mục tiêu": {
+    "display": [
+      "Đặc tả kế thừa chi phí riêng theo năm tài chính",
+      "Department Special Cost Inheritance Specification",
+      "部門個別費用年度別継承仕様書"
+    ],
+    "heading": [
+      "Mục tiêu tự động hóa kế thừa chi phí đặc thù",
+      "Objectives of Automated Special Cost Inheritance",
+      "個別費用自動継承の目的"
+    ],
+    "summary": [
+      "Giảm thiểu công sức nhập liệu lặp lại hàng năm và ngăn ngừa sai sót quên nhập các khoản chi phí đặc thù của phòng ban.",
+      "Minimizes redundant annual data entry effort and prevents accidental omission of department-specific expense items.",
+      "年度ごとの重複入力作業を削減し、部門特有の費用項目の入力漏れを防止することを目的とします。"
+    ]
+  },
+  "docs/superpowers/specs/2026-09-01-manual-special-cost-inheritance.md:::## Quy tắc đã chốt": {
+    "display": [
+      "Đặc tả kế thừa chi phí riêng theo năm tài chính",
+      "Department Special Cost Inheritance Specification",
+      "部門個別費用年度別継承仕様書"
+    ],
+    "heading": [
+      "Quy tắc kế thừa và đối soát chi phí riêng phòng ban",
+      "Agreed Business Rules for Special Cost Carryover",
+      "部門個別費用の確定継承ルール"
+    ],
+    "summary": [
+      "Giữ nguyên mã phòng ban, tên khoản chi và công thức tính; người dùng chỉ cần cập nhật lại số tiền nếu có thay đổi trong năm mới.",
+      "Retains cost center codes, line descriptions, and formula structures, requiring users only to update amounts if changes occur.",
+      "コストセンターコード、項目名、数式構造を保持し、新年度で変更がある場合にのみ金額を修正する運用とします。"
+    ]
+  },
+  "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md:::# Sắp xếp dòng chi phí trên file MP — Thiết kế": {
+    "display": [
+      "Đặc tả sắp xếp thứ tự dòng chi phí kết quả",
+      "Output Cost Row Ordering Specification",
+      "出力費用行並び替え仕様書"
+    ],
+    "heading": [
+      "Thiết kế tùy biến thứ tự dòng chi phí trên file kết quả",
+      "Output Cost Row Ordering and Layout Customization Design",
+      "出力費用行の並び順カスタマイズ設計"
+    ],
+    "summary": [
+      "Cho phép tùy chỉnh thứ tự hiển thị các dòng chi phí trên file Excel kết quả thông qua giao diện trực quan kéo-thả.",
+      "Allows users to customize expense row presentation order on output Excel workbooks using an intuitive drag-and-drop dialog.",
+      "直感的なドラッグ＆ドロップUIを通じて、出力Excelファイル上の費用行の表示順序を自由にカスタマイズ可能にします。"
+    ]
+  },
+  "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md:::## Mục tiêu": {
+    "display": [
+      "Đặc tả sắp xếp thứ tự dòng chi phí kết quả",
+      "Output Cost Row Ordering Specification",
+      "出力費用行並び替え仕様書"
+    ],
+    "heading": [
+      "Mục tiêu thiết kế tính năng sắp xếp dòng chi phí",
+      "Objectives of Cost Row Ordering Feature",
+      "費用行並び替え機能の設計目的"
+    ],
+    "summary": [
+      "Tạo sự linh hoạt cho người dùng sắp xếp các dòng chi phí theo thói quen theo dõi mà không làm sai lệch công thức tính tổng.",
+      "Provides flexible row reordering matching user reporting preferences while preserving total formula integrity.",
+      "合計計算数式の整合性を保ちながら、ユーザーの確認習慣に応じた柔軟な行並び替えを可能にします。"
+    ]
+  },
+  "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md:::## Quy tắc nghiệp vụ đã chốt": {
+    "display": [
+      "Đặc tả sắp xếp thứ tự dòng chi phí kết quả",
+      "Output Cost Row Ordering Specification",
+      "出力費用行並び替え仕様書"
+    ],
+    "heading": [
+      "Quy tắc bảo toàn dữ liệu khi thay đổi thứ tự dòng",
+      "Business Rules for Safe Cost Row Reordering",
+      "費用行並び替えにおける確定業務ルール"
+    ],
+    "summary": [
+      "Việc thay đổi thứ tự dòng chỉ áp dụng cho vùng dữ liệu từ dòng 38; các dòng tiêu đề và công thức tổng cộng phía trên giữ nguyên tuyệt đối.",
+      "Row reordering applies strictly to data lines starting from row 38; header rows and summary formulas above remain untouched.",
+      "行の並び替えは38行目以降のデータ領域にのみ適用され、上部のヘッダー行および合計数式は完全に保護されます。"
+    ]
+  },
+  "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md:::## Phạm vi giao diện": {
+    "display": [
+      "Đặc tả sắp xếp thứ tự dòng chi phí kết quả",
+      "Output Cost Row Ordering Specification",
+      "出力費用行並び替え仕様書"
+    ],
+    "heading": [
+      "Phạm vi màn hình và tương tác hộp thoại sắp xếp",
+      "UI Scope and Drag-and-Drop Dialog Interaction",
+      "UI画面範囲および並び替えダイアログの操作仕様"
+    ],
+    "summary": [
+      "Hộp thoại sắp xếp hiển thị danh sách các dòng chi phí kèm nút di chuyển Lên/Xuống và hỗ trợ khôi phục thứ tự mặc định ban đầu.",
+      "The dialog displays cost row lists with Up/Down buttons and supports resetting back to the canonical default order.",
+      "ダイアログ上には費用行一覧と上下移動ボタンが配置され、原本のデフォルト順序へのリセット操作にも対応します。"
+    ]
+  },
+  "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md:::## Luồng lưu thứ tự": {
+    "display": [
+      "Đặc tả sắp xếp thứ tự dòng chi phí kết quả",
+      "Output Cost Row Ordering Specification",
+      "出力費用行並び替え仕様書"
+    ],
+    "heading": [
+      "Luồng lưu cấu hình thứ tự dòng vào bộ nhớ máy",
+      "Configuration Persistence Workflow for Row Order",
+      "費用行順序設定の保存ワークフロー"
+    ],
+    "summary": [
+      "Thứ tự tùy biến được lưu vào tệp cấu hình cục bộ của ứng dụng để tự động áp dụng cho các lần xuất báo cáo tiếp theo.",
+      "Custom row orders are persisted into local application settings and automatically applied across subsequent report runs.",
+      "カスタマイズされた行順序はローカル設定ファイルに保存され、次回のレポート出力時にも自動的に適用されます。"
+    ]
+  },
+  "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md:::## Luồng chạy lại và tạo FY mới": {
+    "display": [
+      "Đặc tả sắp xếp thứ tự dòng chi phí kết quả",
+      "Output Cost Row Ordering Specification",
+      "出力費用行並び替え仕様書"
+    ],
+    "heading": [
+      "Quy trình chạy lại và kế thừa thứ tự dòng sang năm mới",
+      "Rerun and New Fiscal Year Ordering Preservation Workflow",
+      "再実行および新年度作成時の行順序継承ワークフロー"
+    ],
+    "summary": [
+      "Hệ thống chụp lại trạng thái tệp nguồn trước khi xuất và tự động áp dụng cấu hình thứ tự dòng khi tạo năm tài chính mới.",
+      "Captures source file snapshots before export and seamlessly inherits row order configurations when generating a new fiscal year.",
+      "出力前に元ファイルの状態を保存し、新年度作成時にもカスタマイズされた費用行順序設定をシームレスに引き継ぎます。"
+    ]
+  },
+  "src/services/operations_knowledge.py:::ENTRY_BLOCKED_OUTPUT_FILE_LOCK": {
+    "display": [
+      "Từ điển lỗi vận hành chuẩn hóa MP2027",
+      "MP2027 Canonical Operational Error Knowledge",
+      "MP2027 標準運用障害ナレッジ"
+    ],
+    "heading": [
+      "Mô hình tri thức lỗi tệp kết quả bị khóa",
+      "Knowledge Model: Output File Lock Conflict",
+      "出力ファイルロック競合のナレッジモデル"
+    ],
+    "summary": [
+      "Mô tả nguyên nhân và giải pháp chuẩn khi tệp Excel kết quả đang bị phần mềm khác mở khóa làm gián đoạn quá trình ghi file.",
+      "Explains causes and standard solutions when output Excel workbooks are locked by another process during export.",
+      "出力Excelファイルが他プロセスによってオープン・ロックされている原因と標準復旧手順を定義したナレッジです。"
+    ]
+  },
+  "src/services/operations_knowledge.py:::ENTRY_MISSING_STAFFING_BASELINE": {
+    "display": [
+      "Từ điển lỗi vận hành chuẩn hóa MP2027",
+      "MP2027 Canonical Operational Error Knowledge",
+      "MP2027 標準運用障害ナレッジ"
+    ],
+    "heading": [
+      "Mô hình tri thức lỗi thiếu nhân sự cơ sở",
+      "Knowledge Model: Missing Staffing Baseline",
+      "基準人員データ欠落のナレッジモデル"
+    ],
+    "summary": [
+      "Mô tả nguyên nhân và giải pháp chuẩn khi không tìm thấy số liệu nhân sự mốc tháng 3 để tính biến động phân bổ chi phí.",
+      "Explains causes and solutions when March reference headcount is absent for monthly cost distribution delta calculations.",
+      "月次費用配賦の増減計算に必要な3月基準人員データが見つからない場合の標準復旧手順を定義しています。"
+    ]
+  },
+  "src/services/operations_knowledge.py:::ENTRY_PREFLIGHT_SOURCE_VALIDATION_FAILURE": {
+    "display": [
+      "Từ điển lỗi vận hành chuẩn hóa MP2027",
+      "MP2027 Canonical Operational Error Knowledge",
+      "MP2027 標準運用障害ナレッジ"
+    ],
+    "heading": [
+      "Mô hình tri thức lỗi tệp nguồn không hợp lệ",
+      "Knowledge Model: Source File Preflight Validation Failure",
+      "元ファイル事前検証エラーのナレッジモデル"
+    ],
+    "summary": [
+      "Mô tả nguyên nhân và giải pháp khi tệp bảng tính đầu vào thiếu sheet, sai tên cột hoặc không đúng định dạng năm tài chính.",
+      "Explains causes and solutions when source workbooks miss required sheets, have incorrect headers, or mismatch fiscal years.",
+      "元データファイルで必要なシートの欠落、列ヘッダーの不正、年度不一致が発生した場合の標準対処ナレッジです。"
+    ]
+  },
+  "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md:::## Summary": {
+    "display": [
+      "Khái niệm phân loại chi phí chung",
+      "General Cost Category Concepts",
+      "共通費用分類コンセプト"
+    ],
+    "heading": [
+      "Tóm tắt các khái niệm phân bổ chi phí chung",
+      "Overhead Cost Allocation Concepts Summary",
+      "共通費用配賦コンセプトの要約"
+    ],
+    "summary": [
+      "Tổng quan về cơ chế tự động hóa phân bổ 6 nhóm chi phí chung chính vào từng phòng ban trên hệ thống MP2027.",
+      "Overview of the automated allocation mechanism distributing 6 primary overhead expense groups to departments.",
+      "MP2027において主要な6つの共通費用グループを各部門へ自動配賦する仕組みの全体概要です。"
+    ]
+  },
+  "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md:::## Details": {
+    "display": [
+      "Khái niệm phân loại chi phí chung",
+      "General Cost Category Concepts",
+      "共通費用分類コンセプト"
+    ],
+    "heading": [
+      "Chi tiết các nhóm chi phí phân bổ chính",
+      "Detailed Breakdown of Primary Overhead Cost Groups",
+      "主要な配賦費用グループの詳細解説"
+    ],
+    "summary": [
+      "Phân tích chuyên sâu về căn cứ tính toán, tài khoản kế toán và nguồn dữ liệu cho từng nhóm chi phí phân bổ.",
+      "Detailed breakdown of calculation foundations, accounting codes, and source data files for each cost category.",
+      "各費用分類における計算根拠、勘定科目コード、および元データファイルに関する詳細解説です。"
+    ]
+  },
+  "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md:::### 1. Chi phí hệ thống (System Cost)": {
+    "display": [
+      "Khái niệm phân loại chi phí chung",
+      "General Cost Category Concepts",
+      "共通費用分類コンセプト"
+    ],
+    "heading": [
+      "Khái niệm phân bổ chi phí hệ thống phần mềm",
+      "IT System and Software License Cost Allocation Concepts",
+      "ITシステムおよびソフトウェアライセンス費用の配賦概念"
+    ],
+    "summary": [
+      "Tập hợp chi phí hạ tầng máy chủ và bản quyền phần mềm từ các file mô phỏng theo quý, áp dụng tỷ giá ô B2 để phân bổ.",
+      "Consolidates server infrastructure and software licenses from quarterly simulation files, applying rate B2 for allocation.",
+      "四半期シミュレーションからサーバーおよびライセンス費用を集計し、B2レートを適用して配賦します。"
+    ]
+  },
+  "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md:::### 2. Chi phí khấu hao và lãi nhà đất (Depreciation & Land Interest)": {
+    "display": [
+      "Khái niệm phân loại chi phí chung",
+      "General Cost Category Concepts",
+      "共通費用分類コンセプト"
+    ],
+    "heading": [
+      "Khái niệm chi phí cơ sở vật chất và tiện ích",
+      "Facility, Depreciation, and Land Interest Cost Concepts",
+      "施設費、減価償却および土地賃料の概念"
+    ],
+    "summary": [
+      "Khấu hao nhà xưởng, chi phí thuê đất và điện nước được chuyển toàn bộ vào phòng ban cơ sở vật chất mã 1412000040.",
+      "Factory depreciation, land leases, electricity, and water are assigned entirely to facility department code 1412000040.",
+      "工場減価償却、土地賃料、電気代、水道代は施設課コード1412000040へ一括配賦されます。"
+    ]
+  },
+  "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md:::### 3. Chi phí tài sản cố định (Fixed Assets)": {
+    "display": [
+      "Khái niệm phân loại chi phí chung",
+      "General Cost Category Concepts",
+      "共通費用分類コンセプト"
+    ],
+    "heading": [
+      "Khái niệm khấu hao tài sản cố định theo tháng",
+      "Fixed Asset Monthly Depreciation Allocation Concepts",
+      "固定資産の月次減価償却配賦概念"
+    ],
+    "summary": [
+      "Trích khấu hao từng tháng theo bảng danh mục tài sản và tự động ngắt tính toán sau tháng kết thúc khấu hao.",
+      "Calculates monthly asset depreciation and automatically ceases allocation after the final depreciation month.",
+      "固定資産一覧に基づいて月次減価償却費を計上し、最終償却月の経過後は自動的に計算を停止します。"
+    ]
+  },
+  "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md:::### 4. Chi phí làm giấy tờ cho người nước ngoài (Foreigners Paperwork Costs)": {
+    "display": [
+      "Khái niệm phân loại chi phí chung",
+      "General Cost Category Concepts",
+      "共通費用分類コンセプト"
+    ],
+    "heading": [
+      "Khái niệm chi phí thủ tục visa chuyên gia nước ngoài",
+      "Foreign Expert Visa and Paperwork Cost Concepts",
+      "外国人専門家のビザ・書類手続き費用概念"
+    ],
+    "summary": [
+      "Chi phí visa và giấy phép lao động của chuyên gia được tổng hợp và ghi nhận vào dòng 137 trên biểu mẫu kết quả.",
+      "Visa and work permit fees for foreign experts are consolidated into line 137 on the output form.",
+      "外国人専門家のビザおよび労働許可証費用を集計し、出力フォームの137行目に計上します。"
+    ]
+  },
+  "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md:::### 5. Chi phí sinh nhật (Birthday Costs)": {
+    "display": [
+      "Khái niệm phân loại chi phí chung",
+      "General Cost Category Concepts",
+      "共通費用分類コンセプト"
+    ],
+    "heading": [
+      "Khái niệm tính chi phí sinh nhật nhân viên",
+      "Employee Birthday Benefit Cost Allocation Concepts",
+      "社員誕生日祝金費用の計算概念"
+    ],
+    "summary": [
+      "Chi phí sinh nhật tính bằng số lượng người sinh nhật trong tháng nhân đơn giá 152.000 VNĐ và điền vào dòng 59.",
+      "Birthday costs equal monthly celebrant count multiplied by 152,000 VND unit rate, mapped to row 59.",
+      "月別誕生日人数に単価152,000 VNDを乗じて誕生日費用を算出し、59行目へ配置します。"
+    ]
+  },
+  "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md:::### 6. Chi phí phân bổ từ hành chính (Administrative Allocation Costs)": {
+    "display": [
+      "Khái niệm phân loại chi phí chung",
+      "General Cost Category Concepts",
+      "共通費用分類コンセプト"
+    ],
+    "heading": [
+      "Khái niệm phân bổ chi phí vật tư và sự kiện hành chính",
+      "Administrative Consumables and Event Distribution Concepts",
+      "総務消耗品およびイベント費用の配賦概念"
+    ],
+    "summary": [
+      "Phân bổ vật tư văn phòng theo nhân sự tháng trước và phân bổ chi phí sự kiện vào các tháng diễn ra thực tế.",
+      "Distributes office consumables using prior month headcount and assigns event expenses to actual occurrence months.",
+      "前月人員数に基づいて事務消耗品を配賦し、イベント費用は実際の発生月へ割り当てます。"
+    ]
+  },
+  "wiki/timelines/nhap-lieu-nhan-su-master-plan.md:::## Summary": {
+    "display": [
+      "Kế hoạch nhập liệu nhân sự 12 tháng",
+      "12-Month Staffing Input Master Plan",
+      "12か月人員データ入力マスタープラン"
+    ],
+    "heading": [
+      "Tóm tắt kế hoạch quản lý nhân sự 12 tháng",
+      "12-Month Staffing Management Master Plan Summary",
+      "12か月人員管理マスタープランの要約"
+    ],
+    "summary": [
+      "Tổng quan về mô hình quản lý dữ liệu nhân sự thống nhất cho toàn bộ 12 tháng trong năm tài chính mục tiêu.",
+      "Overview of the unified staffing data model covering all 12 months for the target fiscal year.",
+      "対象会計年度における12か月間の統一された人員データ管理モデルの全体概要です。"
+    ]
+  },
+  "wiki/timelines/nhap-lieu-nhan-su-master-plan.md:::## Details": {
+    "display": [
+      "Kế hoạch nhập liệu nhân sự 12 tháng",
+      "12-Month Staffing Input Master Plan",
+      "12か月人員データ入力マスタープラン"
+    ],
+    "heading": [
+      "Chi tiết các chỉ tiêu nhân sự trong năm",
+      "Detailed Breakdown of Staffing Metrics and Timelines",
+      "年次人員指標およびスケジュールの詳細解説"
+    ],
+    "summary": [
+      "Phân tích cách sử dụng số liệu nhân sự chung 12 tháng và xử lý các biến động nhân sự đặc thù theo từng tháng.",
+      "Details how unified 12-month staffing numbers are used and explains month-specific headcount changes.",
+      "統一された12か月人員データの活用方法および月別の特有の人員変動処理について解説します。"
+    ]
+  },
+  "wiki/timelines/nhap-lieu-nhan-su-master-plan.md:::### 1. Dữ liệu nhân sự dùng chung cho cả 12 tháng": {
+    "display": [
+      "Kế hoạch nhập liệu nhân sự 12 tháng",
+      "12-Month Staffing Input Master Plan",
+      "12か月人員データ入力マスタープラン"
+    ],
+    "heading": [
+      "Chỉ tiêu nhân sự ổn định áp dụng cho 12 tháng",
+      "Stable Staffing Metrics Applied Across 12 Months",
+      "12か月間で共通使用される安定人員指標"
+    ],
+    "summary": [
+      "Bao gồm số lượng người đi xe bus, số người tham gia bảo hiểm xã hội được áp dụng ổn định cho các tháng phân bổ chi phí.",
+      "Includes shuttle bus passenger counts and social insurance participants applied stably across allocation months.",
+      "送迎バス利用者数や社会保険加入者数など、各月の配賦計算で安定して適用される指標を定めています。"
+    ]
+  },
+  "wiki/timelines/nhap-lieu-nhan-su-master-plan.md:::### 2. Dữ liệu nhân sự đặc thù theo từng tháng": {
+    "display": [
+      "Kế hoạch nhập liệu nhân sự 12 tháng",
+      "12-Month Staffing Input Master Plan",
+      "12か月人員データ入力マスタープラン"
+    ],
+    "heading": [
+      "Chỉ tiêu nhân sự biến động và tuyển mới theo tháng",
+      "Monthly Variable Headcount and New Hire Metrics",
+      "月別の変動人員および新入社員指標"
+    ],
+    "summary": [
+      "Ghi nhận số lượng nhân viên mới tuyển dụng, người sinh nhật và người đi khám sức khỏe riêng biệt theo từng tháng.",
+      "Tracks new recruit numbers, birthday celebrants, and medical check participants separately for each month.",
+      "新入社員数、誕生日対象者数、健康診断受診者数を月ごとに個別に記録・管理します。"
+    ]
+  },
+  "wiki/timelines/nhap-lieu-nhan-su-master-plan.md:::### 3. Hạng mục cần xóa bỏ": {
+    "display": [
+      "Kế hoạch nhập liệu nhân sự 12 tháng",
+      "12-Month Staffing Input Master Plan",
+      "12か月人員データ入力マスタープラン"
+    ],
+    "heading": [
+      "Loại bỏ các chỉ tiêu nhân sự lỗi thời",
+      "Removal of Deprecated Legacy Staffing Items",
+      "廃止された旧人員項目の完全除外"
+    ],
+    "summary": [
+      "Xóa bỏ hoàn toàn 2 chỉ tiêu nhân sự cũ không còn áp dụng trên biểu mẫu kết quả ngân sách mới.",
+      "Permanently eliminates the 2 legacy staffing indicators that no longer apply to modern budget forms.",
+      "新しい予算フォームでは適用されない2つの旧人員項目を完全に削除・除外します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::# Cải tiến nhập dữ liệu chung vào file MPnew.xlsx — bản kế hoạch đã kiểm tra, sửa và bổ sung": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Kế hoạch cải tiến nhập dữ liệu chung MPnew",
+      "MPnew General Data Entry Improvement Master Plan",
+      "MPnew共通データ入力改善マスタープラン"
+    ],
+    "summary": [
+      "Tài liệu đặc tả toàn diện việc tự động hóa tính toán và phân bổ chi phí chung vào file kết quả ngân sách từng phòng ban.",
+      "Comprehensive master plan automating overhead calculation and cost distribution into department budget workbooks.",
+      "部門別予算ワークブックへの共通費用の計算と配賦処理を完全自動化するための包括的な改善計画書です。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 1. Mục tiêu tổng thể của yêu cầu": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Mục tiêu tổng thể cải tiến nhập liệu",
+      "Overall Objectives of Data Entry Improvement",
+      "データ入力改善の全体目標"
+    ],
+    "summary": [
+      "Tự động hóa hoàn toàn quy trình phân bổ chi phí chung cho các phòng ban, loại bỏ thao tác thủ công dễ gây nhầm lẫn.",
+      "Fully automates overhead cost distribution across departments, eliminating error-prone manual spreadsheets.",
+      "部門への共通費用配賦処理を完全自動化し、人為的ミスの発生しやすい手動入力を排除します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 1.1. Mục tiêu không phải chỉ là copy/paste": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Bản chất tính toán thay vì sao chép dữ liệu",
+      "Dynamic Calculation Rather Than Static Copy-Paste",
+      "単なるコピー＆ペーストではない動的計算の本質"
+    ],
+    "summary": [
+      "Hệ thống phải thực hiện tính toán định mức, nhân tỷ giá và đối soát logic kế toán thay vì chỉ sao chép dữ liệu tĩnh.",
+      "The system performs dynamic rate conversions, quota calculations, and ledger accounting checks rather than static cell copying.",
+      "単にセルを複製するのではなく、為替レート換算、基準値計算、および会計照合を動的に実行します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 2. Danh sách sheet trong file yêu cầu gốc": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Danh sách các sheet trong file yêu cầu gốc",
+      "Master Sheets Inventory in Canonical Requirement Workbook",
+      "原本要件ワークブックのシート一覧構成"
+    ],
+    "summary": [
+      "Liệt kê đầy đủ 7 sheet nghiệp vụ trong tệp yêu cầu gồm danh mục cải tiến, danh mục phòng ban, tài sản cố định và phân bổ hành chính.",
+      "Catalogs the 7 canonical sheets covering improvements, cost centers, fixed assets, and administrative cost allocations.",
+      "改善項目、原価センタ、固定資産、総務配賦一覧など、原本要件ファイルに含まれる主要7シートの構成を定義しています。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 3. Thuật ngữ bắt buộc dùng đúng khi viết code": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Thuật ngữ nghiệp vụ kế toán bắt buộc",
+      "Mandatory Financial and Accounting Business Terminology",
+      "厳格に遵守すべき財務会計用語の定義"
+    ],
+    "summary": [
+      "Quy định sử dụng thống nhất các thuật ngữ tài chính như Cost Center, Account Code và phân loại phòng ban trong toàn bộ hệ thống.",
+      "Mandates consistent financial terminology including Cost Centers, Account Codes, and departmental divisions across all logic.",
+      "システム全体で原価センタ、勘定科目コード、部門区分などの財務用語を統一して使用することを定めています。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 3.1. Cost Center / 原価センタ / code phòng chịu chi phí": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Mã Cost Center và phòng chịu chi phí",
+      "Cost Center Code and Incurring Department Definition",
+      "原価センタコードと費用負担部門の定義"
+    ],
+    "summary": [
+      "Mã Cost Center đại diện cho phòng ban chịu chi phí, dùng để định tuyến chính xác dữ liệu vào sheet kết quả tương ứng.",
+      "Cost Center identifies the department incurring expenses, routing calculated figures to the appropriate output sheet.",
+      "費用を負担する部門を表す原価センタコードを定義し、該当する部門シートへ正確にデータを配置します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 3.2. Account Code / 勘定科目": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Mã tài khoản kế toán 10 chữ số",
+      "10-Digit General Ledger Account Code Standards",
+      "10桁の勘定科目コードの標準仕様"
+    ],
+    "summary": [
+      "Sử dụng mã tài khoản kế toán 10 chữ số để khớp và điền chính xác vào từng dòng chi phí trên biểu mẫu kết quả.",
+      "Employs 10-digit account codes to accurately match and populate cost rows on the output workbook.",
+      "出力フォーム上の各費用行と照合して正確に入力するために、10桁の勘定科目コードを使用します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 3.3. `採算区分` và `原価区分`": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Phân biệt 採算区分 và 原価区分",
+      "Distinction Between Profitability and Cost Divisions",
+      "採算区分と原価区分の区別基準"
+    ],
+    "summary": [
+      "Phân định rõ nhóm 採算区分 (sản xuất, gián tiếp) và 原価区分 (chế tạo, bán hàng) để tra cứu đúng cột tài khoản kế toán.",
+      "Distinguishes profitability divisions from cost divisions to ensure looking up the correct general ledger account column.",
+      "正しい勘定科目列を参照するために、採算区分（製造、間接）と原価区分（製造原価、販管費）を明確に区別します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 4. Yêu cầu chung trên toàn bộ output FORM": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Nguyên tắc chung trên toàn bộ biểu mẫu kết quả",
+      "Core Requirements Across All Output Master Templates",
+      "出力マスターテンプレート全体の共通要件"
+    ],
+    "summary": [
+      "Bắt đầu ghi dữ liệu từ dòng 38, bảo toàn các cột định danh A-D, giữ nguyên định dạng kẻ khung và công thức liên kết Excel.",
+      "Writes data from row 38, preserves metadata columns A-D, protects template gridlines, and retains verifiable Excel formula links.",
+      "38行目からのデータ出力、A〜D列の識別情報保護、罫線維持、および検証用Excel数式リンクの保持を規定しています。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 4.1. Không cần điền 2 dữ liệu nhân sự cũ": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Loại trừ 2 chỉ tiêu nhân sự cũ",
+      "Exclusion of Two Deprecated Legacy Staffing Metrics",
+      "旧人員2項目の完全除外ルール"
+    ],
+    "summary": [
+      "Không điền 2 chỉ tiêu nhân sự cũ từ biểu mẫu trước đây, để trống ô tương ứng trên biểu mẫu xuất mới.",
+      "Omits the two legacy headcount metrics from prior versions, leaving the corresponding cells blank on modern forms.",
+      "旧バージョンの2つの人員項目を入力せず、新しい出力フォーム上では該当セルを空白とします。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 4.2. Đẩy dữ liệu về đúng cột theo FORM": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Căn chỉnh dữ liệu vào các cột tháng của biểu mẫu",
+      "Aligning 12-Month Expense Data to Correct Form Columns",
+      "フォームの月別列へのデータ正確配置"
+    ],
+    "summary": [
+      "Điền số tiền chi phí 12 tháng vào dải cột từ cột E trở đi, bảo toàn nguyên vẹn các cột định danh A đến D.",
+      "Populates 12-month expense amounts into columns starting from Column E while protecting metadata columns A through D.",
+      "A〜D列の識別情報を保護したまま、12か月の費用金額をE列以降の正しい月別列へ配置します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 4.3. Giữ màu và định dạng FORM gốc": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Bảo tồn định dạng kẻ khung và màu nền biểu mẫu gốc",
+      "Preserving Master Template Formatting, Gridlines, and Fills",
+      "原本テンプレートの罫線・フォント・背景色の保持"
+    ],
+    "summary": [
+      "Giữ nguyên phông chữ, đường kẻ ô và màu nền của biểu mẫu gốc khi xuất tệp kết quả cho các phòng ban.",
+      "Preserves original fonts, grid borders, and cell background colors from master templates when exporting workbooks.",
+      "部門別ワークブックの出力時に、原本テンプレートのフォント、罫線、およびセル背景色をそのまま保持します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 4.4. Để lại tất cả công thức tính": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Bảo toàn công thức liên kết kiểm chứng trên Excel",
+      "Preserving Verifiable Formula Links in Excel Outputs",
+      "Excel出力における検証用数式リンクの完全保持"
+    ],
+    "summary": [
+      "Giữ nguyên công thức tính toán và liên kết ô tỷ giá B2 trên Excel để người dùng có thể dễ dàng kiểm tra số liệu.",
+      "Retains calculation formulas and exchange rate cell B2 references in Excel so auditors can verify figure origins.",
+      "数値の根拠を照合できるように、計算数式およびB2セルの為替レート参照をExcel上に保持します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 5. Sheet `Sheet1` — tổng quan yêu cầu": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Tổng quan yêu cầu từ Sheet1",
+      "Overview of Requirements from Sheet1",
+      "Sheet1における要件概要"
+    ],
+    "summary": [
+      "Tổng hợp danh mục 8 nhóm chi phí lớn cần phân bổ và quy trình đọc tuần tự các tệp nguồn để trích xuất số liệu.",
+      "Summarizes the 8 primary cost categories to allocate and establishes the sequential source file ingestion procedure.",
+      "配賦対象となる主要8費用項目の構成および元ファイルの順次読み込み手順の全体像をまとめています。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 5.2. Cách làm tổng quát": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Phương pháp tiếp cận tổng quát khi phân bổ",
+      "General Workflow Methodology for Cost Distribution",
+      "費用配賦における全体処理アプローチ"
+    ],
+    "summary": [
+      "Nạp dữ liệu từng file nguồn, lọc theo Cost Center và tài khoản kế toán, sau đó ghi trực tiếp vào các dòng tương ứng của biểu mẫu.",
+      "Ingests each source file, filters by Cost Center and account code, then populates corresponding master form rows directly.",
+      "元ファイルを順次読み込み、原価センタと勘定科目で絞り込みを行った上で、マスターフォームの該当行へ直接書き込みます。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 6. Sheet `Hạng mục cần cải tiến` — danh sách cải tiến chung": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Danh mục các cải tiến nghiệp vụ chung",
+      "General Business Improvements Master Catalog",
+      "全体業務改善項目のマスターリスト"
+    ],
+    "summary": [
+      "Tổng hợp các phản ánh và yêu cầu cải tiến về công thức tính, sửa lỗi nhân trùng và bổ sung các dòng chi phí mới.",
+      "Catalogs stakeholder feedback and improvement specifications regarding formula fixes, duplicate removals, and new expense lines.",
+      "数式の是正、重複計算の排除、および新規費用行の追加に関する業務改善要求を総括した一覧です。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 6.1. Các mục cải tiến ban đầu": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Các hạng mục cải tiến giai đoạn đầu",
+      "Initial Phase Business Improvements Catalog",
+      "初期フェーズの改善項目一覧"
+    ],
+    "summary": [
+      "Bao gồm yêu cầu bổ sung dòng chi phí du lịch, khám sức khỏe và cấp phát bảo hộ lao động vào bảng phân bổ hành chính.",
+      "Includes requests to add company trip, medical examination, and safety gear lines into administrative distribution sheets.",
+      "社員旅行、健康診断、および安全保護具支給行を総務配賦シートへ追加する初期改善要件を定めています。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 6.2. Ghi chú màu trong file yêu cầu": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Ý nghĩa các màu đánh dấu trong file yêu cầu",
+      "Color Code Conventions in Requirement Workbooks",
+      "要件ファイルにおけるカラーハイライトの意味定義"
+    ],
+    "summary": [
+      "Giải thích quy ước đánh dấu màu vàng cho các hạng mục bổ sung mới và màu đỏ cho các điểm sai lệch cần khắc phục triệt để.",
+      "Explains highlighting conventions: yellow indicates newly added expense lines, while red denotes defects requiring resolution.",
+      "黄色は新規追加項目、赤色は根本是正が必要な不具合箇所を示すなど、要件ファイル内の色分けルールを解説しています。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 6.4. Input số người mới thay thế logic hiện tại": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Nhập số lượng người mới thay thế tự động tính",
+      "Manual New Hire Input Replacing Automated Calculation",
+      "自動計算を廃止した新入社員手動入力への刷新"
+    ],
+    "summary": [
+      "Chuyển sang cơ chế nhập số lượng nhân viên mới tuyển dụng thực tế từng tháng thay vì tự động suy luận từ biến động nhân sự.",
+      "Transitions to manual entry of actual monthly new recruits, replacing brittle automated headcount delta inferences.",
+      "人員増減からの推測計算を廃止し、月別の実際の新規採用者数を直接手動入力する運用へ刷新しました。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 7. Sheet `Chi phí hệ thống`": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy chuẩn phân bổ chi phí hệ thống",
+      "IT System Cost Master Allocation Specifications",
+      "ITシステム費用の標準配賦仕様"
+    ],
+    "summary": [
+      "Tổng hợp chi phí bản quyền phần mềm và máy chủ từ 3 tệp mô phỏng theo quý, nhân tỷ giá ô B2 và phân bổ cho các phòng ban.",
+      "Consolidates software licenses and server costs from 3 quarterly simulation files, multiplied by rate B2 per cost center.",
+      "3つの四半期シミュレーションからソフトウェアおよびサーバー費用を集計し、B2レートを乗じて各部門へ配賦します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 7.1. Mục tiêu": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Mục tiêu phân bổ chi phí hệ thống",
+      "Objectives of IT System Cost Distribution",
+      "ITシステム費用配賦の目的"
+    ],
+    "summary": [
+      "Phân bổ chính xác chi phí bản quyền CNTT cho từng phòng ban sử dụng theo quý mà không làm sai lệch số tiền ngoại tệ gốc.",
+      "Accurately allocates quarterly IT software licenses to incurring departments while preserving original foreign currency amounts.",
+      "原本の外貨金額を維持しながら、四半期ごとに利用部門へITライセンス費用を正確に配賦することを目的とします。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 7.2. File nguồn hệ thống": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Danh mục 3 tệp nguồn chi phí hệ thống theo quý",
+      "Three Quarterly IT System Cost Source Workbooks",
+      "ITシステム費用の四半期別3元ファイル構成"
+    ],
+    "summary": [
+      "Xác định 3 tệp bảng tính mô phỏng chi phí hệ thống quý 1, quý 2-3 và quý 4 dùng làm căn cứ trích xuất số liệu.",
+      "Specifies the 3 quarterly simulation workbooks for Q1, Q2-Q3, and Q4 used as authoritative sources for IT cost extraction.",
+      "第1四半期、第2-3四半期、第4四半期の3つのシミュレーションファイルをIT費用の抽出元として指定します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 7.3. Công thức chi tiết": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Công thức tính chi phí hệ thống theo tỷ giá B2",
+      "Detailed IT Cost Formula with Rate Cell B2",
+      "B2レートを乗算するIT費用の詳細計算式"
+    ],
+    "summary": [
+      "Số tiền = Chi phí ngoại tệ trên file mô phỏng × Tỷ giá ô B2 của biểu mẫu, áp dụng riêng cho từng quý.",
+      "Amount = Foreign currency cost in simulation × Rate cell B2 on form, applied independently per quarter.",
+      "金額 ＝ シミュレーションの外貨費用 × フォームB2セルの為替レート（四半期ごとに適用）。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 7.4. Công thức tổng hệ thống": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Công thức tổng hợp chi phí hệ thống cả năm",
+      "Annual IT System Cost Consolidation Formula",
+      "年間ITシステム費用の総合集計数式"
+    ],
+    "summary": [
+      "Tổng hợp toàn bộ chi phí 4 quý vào dòng tài khoản hệ thống của phòng ban trên biểu mẫu kết quả ngân sách.",
+      "Consolidates all 4 quarterly amounts into the designated IT expense line of the department budget workbook.",
+      "4四半期の全金額を、部門予算ワークブックの所定のITシステム費用行へ統合計上します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 7.5. Rule đối chiếu và điều chỉnh": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy tắc đối soát chi phí hệ thống giữa các quý",
+      "Quarterly IT Reconciliation and Adjustment Rules",
+      "四半期間のIT費用照合および調整ルール"
+    ],
+    "summary": [
+      "Đối chiếu số tiền giữa các quý để đảm bảo không bỏ sót quý nào và khớp đúng tổng chi phí được phê duyệt.",
+      "Reconciles quarterly figures to ensure no missing periods and validates alignment with approved total budgets.",
+      "四半期間のデータを照合して計上漏れを防止し、承認済み総予算枠との整合性を検証します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 7.6. Nhập vào FORM": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Định tuyến chi phí hệ thống vào biểu mẫu kết quả",
+      "Routing IT System Costs into Output Forms",
+      "ITシステム費用の出力フォームへのマッピング"
+    ],
+    "summary": [
+      "Điền số tiền chi phí hệ thống vào đúng các cột tháng tương ứng với quý phát sinh trên bảng tính chi tiết.",
+      "Populates IT cost figures into the exact monthly columns matching their active quarter on detail sheets.",
+      "発生四半期に対応する詳細シート上の月別列へ、ITシステム費用金額を正確に入力します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 7.7. Account code đúng cho chi phí hệ thống": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Mã tài khoản kế toán chuẩn cho chi phí hệ thống",
+      "Canonical Account Codes for IT System Expenses",
+      "ITシステム費用の標準勘定科目コード定義"
+    ],
+    "summary": [
+      "Sử dụng mã 5005246282 cho quý 1 và các mã tài khoản chuẩn tương ứng cho các quý tiếp theo.",
+      "Assigns account 5005246282 for Q1 and appropriate standard account codes for subsequent quarters.",
+      "第1四半期にはコード5005246282を割り当て、後続四半期には所定の標準勘定科目を適用します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 7.8. Tháng áp dụng": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Lịch trình các tháng áp dụng chi phí hệ thống",
+      "Active Months Schedule for IT System Costs",
+      "ITシステム費用の適用月スケジュール"
+    ],
+    "summary": [
+      "Chi phí hệ thống được phân bổ vào các tháng 4-6 cho quý 1, tháng 7-12 cho quý 2-3 và tháng 1-3 cho quý 4.",
+      "Schedules IT costs into Apr-Jun for Q1, Jul-Dec for Q2-Q3, and Jan-Mar for Q4.",
+      "Q1は4〜6月、Q2-Q3は7〜12月、Q4は1〜3月の月別列へそれぞれ配賦計上します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 8. Sheet `Chi phí khấu hao, lãi nhà đất`": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy chuẩn chi phí cơ sở vật chất và tiện ích",
+      "Facility, Factory Depreciation, and Utilities Specifications",
+      "施設費、工場減価償却およびユーティリティ仕様"
+    ],
+    "summary": [
+      "Toàn bộ chi phí khấu hao công trình xây dựng, tiền thuê đất và điện nước được phân bổ cho phòng cơ sở vật chất 1412000040.",
+      "Allocates factory depreciation, land leases, electricity, and water bills entirely to facility department code 1412000040.",
+      "工場建物減価償却、土地賃料、電気代、水道代の全額を施設課コード1412000040へ配賦します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 8.1. Mục tiêu": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Mục tiêu phân bổ chi phí cơ sở vật chất",
+      "Objectives of Facility Overhead Allocation",
+      "施設共通費用配賦の目的"
+    ],
+    "summary": [
+      "Tập trung toàn bộ chi phí vận hành nhà xưởng và mặt bằng vào một đầu mối quản lý duy nhất để dễ dàng theo dõi.",
+      "Consolidates all plant and facility operational overhead into a single management unit for clear oversight.",
+      "工場および拠点の施設運用共通費を一元管理部門へ集約し、明確な予実管理を可能にします。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 8.2. Thứ tự chi phí": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Thứ tự xuất các dòng chi phí cơ sở vật chất",
+      "Export Sequence of Facility Expense Rows",
+      "施設費用行の出力順序定義"
+    ],
+    "summary": [
+      "Xuất các dòng khấu hao nhà đất trước, tiếp theo là tiền thuê đất, tiền điện và tiền nước theo đúng mẫu biểu gốc.",
+      "Writes land depreciation rows first, followed sequentially by land lease, electricity, and water lines.",
+      "土地・建物減価償却行を最初に出力し、次いで土地賃料、電気代、水道代の順で出力します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 8.3. Quy tắc filter": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy tắc lọc dữ liệu chi phí cơ sở vật chất",
+      "Filtering Rules for Facility Expense Records",
+      "施設費用レコードの抽出・フィルタ条件"
+    ],
+    "summary": [
+      "Lọc các dòng chi phí thuộc nhóm cơ sở vật chất từ bảng tổng hợp của năm tài chính tương ứng.",
+      "Filters facility cost records from the master annual consolidation sheet matching department code 1412000040.",
+      "対象年度の総合配賦表から施設課コード1412000040に該当する施設費用レコードを抽出します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 8.4. Tháng áp dụng": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Lịch phân bổ 12 tháng cho chi phí cơ sở vật chất",
+      "12-Month Allocation Schedule for Facility Costs",
+      "施設費用の12か月配賦スケジュール"
+    ],
+    "summary": [
+      "Chi phí cơ sở vật chất phát sinh đều đặn hàng tháng và được điền đầy đủ vào tất cả 12 cột tháng của năm.",
+      "Facility overhead occurs continuously every month, populating all 12 monthly columns across the fiscal year.",
+      "施設共通費は毎月定常的に発生するため、会計年度の全12か月の月別列へ均等に計上されます。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 8.5. Công thức phải để lại": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Bảo toàn công thức liên kết chi phí cơ sở vật chất",
+      "Preserving Facility Cost Formula Links",
+      "施設費用のリンク数式完全保持仕様"
+    ],
+    "summary": [
+      "Giữ nguyên công thức liên kết giữa các dòng chi phí cơ sở vật chất với bảng tính tổng hợp để phục vụ đối soát.",
+      "Retains dynamic formula references between facility lines and the master consolidation sheet for auditability.",
+      "監査での検証性を担保するため、施設費用行と総合集計表間の動的リンク数式を保持します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 9. Sheet `Chi phí tài sản cố định`": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy chuẩn trích khấu hao tài sản cố định",
+      "Fixed Asset Monthly Depreciation Specifications",
+      "固定資産減価償却費の標準仕様"
+    ],
+    "summary": [
+      "Trích khấu hao từng tháng theo từng tài sản và tự động ngừng trích sau khi đến tháng kết thúc khấu hao.",
+      "Computes monthly depreciation per asset and automatically ceases allocation after the final depreciation month.",
+      "資産ごとの月次減価償却費を計算し、最終償却月に達した後は自動的に計上を終了します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 9.1. Mục tiêu": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Mục tiêu tự động hóa tính khấu hao tài sản",
+      "Objectives of Automated Asset Depreciation Allocation",
+      "固定資産減価償却自動計算の目的"
+    ],
+    "summary": [
+      "Tự động hóa tính toán chi phí khấu hao cho hàng trăm tài sản cố định của từng phòng ban một cách chính xác tuyệt đối.",
+      "Automates monthly depreciation allocations for hundreds of fixed assets per department with absolute accuracy.",
+      "各部門が保有する数百件の固定資産について、月次減価償却費の配賦計算を完全自動化します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 9.2. Cột nguồn quan trọng": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Các cột dữ liệu trọng yếu trong bảng khấu hao",
+      "Critical Source Columns in Depreciation Table",
+      "減価償却台帳における重要元データ列"
+    ],
+    "summary": [
+      "Xác định các cột nguyên giá, thời gian trích, mã Cost Center và giá trị khấu hao từng tháng trên bảng tài sản.",
+      "Identifies key columns for initial cost, amortization duration, Cost Center code, and monthly depreciation figures.",
+      "取得価額、償却期間、原価センタコード、および月次減価償却額の重要元データ列を定義しています。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 9.3. Vùng FORM đích": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Định tuyến khấu hao vào vùng dòng biểu mẫu",
+      "Target Output Row Range for Fixed Assets Depreciation",
+      "固定資産減価償却の出力対象行範囲"
+    ],
+    "summary": [
+      "Xuất số liệu khấu hao vào các dòng chi phí khấu hao tài sản tương ứng của Cost Center trên bảng tính chi tiết.",
+      "Maps depreciation totals into the designated fixed asset expense rows for each Cost Center on detail sheets.",
+      "詳細シート上の各コストセンターの該当する固定資産減価償却行へデータを配置します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 9.4. Rule tổng quát": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy tắc tổng quát tính toán khấu hao tài sản",
+      "General Calculation Rules for Monthly Depreciation",
+      "月次減価償却計算の全体原則"
+    ],
+    "summary": [
+      "Trích xuất khấu hao hàng tháng và đối chiếu mã tài sản để đảm bảo số tiền khớp đúng với bảng cân đối kế toán.",
+      "Extracts monthly depreciation and validates asset identifiers to ensure figures align with ledger balances.",
+      "月次減価償却額を抽出し、資産コードと照合して試算表残高との完全な整合性を保証します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 9.5. Nếu tháng khấu hao cuối cùng KHÔNG nằm trong FY2027": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Khấu hao tài sản kéo dài trọn vẹn cả năm",
+      "Handling Depreciation Extending Throughout Fiscal Year",
+      "会計年度全体にわたる継続償却の処理"
+    ],
+    "summary": [
+      "Tài sản có thời hạn khấu hao kéo dài qua năm tài chính tiếp theo được trích đều đặn trong cả 12 tháng của năm.",
+      "Assets whose depreciation extends beyond the fiscal year are allocated continuously across all 12 months.",
+      "償却期間が翌年度以降に及ぶ資産は、当該年度の全12か月すべてに均等に減価償却費を計上します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 9.6. Nếu tháng khấu hao cuối cùng nằm trong FY2027": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Ngắt trích khấu hao sau tháng cuối cùng",
+      "Halting Depreciation After Final Month in Fiscal Year",
+      "年度内最終償却月経過後の計上停止処理"
+    ],
+    "summary": [
+      "Khi tài sản kết thúc khấu hao trong năm, các tháng sau tháng cuối cùng được ghi nhận giá trị bằng 0.",
+      "When an asset amortizes fully within the fiscal year, months following the final month are set to zero.",
+      "資産が年度内に償却完了する場合、最終償却月より後の残存月は配賦額を0として処理します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 9.7. Aggregation": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Tổng hợp khấu hao nhiều tài sản vào một Cost Center",
+      "Aggregating Multiple Asset Depreciations per Cost Center",
+      "部門単位での複数資産減価償却集計"
+    ],
+    "summary": [
+      "Cộng dồn toàn bộ các khoản trích khấu hao của các tài sản thuộc cùng một Cost Center thành tổng chi phí hàng tháng.",
+      "Sums monthly depreciation across all individual assets belonging to the same Cost Center into total figures.",
+      "同一原価センタに所属するすべての個別資産の月次減価償却額を合算して部門合計を算出します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 10. Sheet `Chi phí làm giấy tờ cho NNN`": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy chuẩn chi phí thủ tục chuyên gia nước ngoài",
+      "Foreign Expat Paperwork Expense Specifications",
+      "外国人専門家書類手続き費用の標準仕様"
+    ],
+    "summary": [
+      "Tổng hợp chi phí visa, giấy phép lao động cho chuyên gia Nhật Bản và ghi nhận vào dòng 137 trên biểu mẫu kết quả.",
+      "Consolidates visa and work permit fees for Japanese expats, populating destination row 137 on output forms.",
+      "日本人専門家のビザおよび労働許可証費用を集計し、出力フォームの137行目に計上します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 10.1. Mục tiêu": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Mục tiêu phân bổ chi phí thủ tục chuyên gia",
+      "Objectives of Expat Paperwork Cost Allocation",
+      "外国人手続き費用配賦の目的"
+    ],
+    "summary": [
+      "Hạch toán đầy đủ các chi phí pháp lý và thủ tục cư trú cho chuyên gia nước ngoài vào ngân sách quản lý.",
+      "Accurately accounts for legal compliance and residency paperwork costs for foreign experts within management budgets.",
+      "外国人専門家の法的手続きおよび在留資格関連費用を管理予算へ正確に計上することを目的とします。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 10.2. Vùng FORM đích": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Định tuyến dòng 137 cho chi phí thủ tục chuyên gia",
+      "Target Master Form Row 137 for Expat Expenses",
+      "外国人手続き費用のマスターフォーム137行目マッピング"
+    ],
+    "summary": [
+      "Điền số tiền chi phí làm giấy tờ vào đúng dòng 137 của phòng ban quản lý chuyên gia trên bảng tính kết quả.",
+      "Populates expat paperwork expenses into row 137 of the managing department on output workbooks.",
+      "専門家管理部門の出力ワークブック137行目へ外国人書類手続き費用を入力します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 10.3. Cách filter đúng": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Phương pháp lọc đúng bản ghi chi phí chuyên gia",
+      "Filtering Criteria for Foreign Expert Paperwork Records",
+      "外国人手続き費用の適正抽出・フィルタ条件"
+    ],
+    "summary": [
+      "Lọc các khoản chi phí liên quan đến visa, thẻ tạm trú và gia hạn giấy phép lao động từ bảng kê chi tiết.",
+      "Filters expense records for visas, temporary residence cards, and work permits from the tracking sheet.",
+      "管理台帳からビザ、一時滞在許可カード、および労働許可証更新に関する費用レコードを抽出します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 10.4. Cách cộng dữ liệu": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Cộng dồn chi phí chuyên gia theo từng tháng",
+      "Monthly Aggregation Method for Expat Paperwork Costs",
+      "月別外国人手続き費用の合算集計手法"
+    ],
+    "summary": [
+      "Cộng toàn bộ các khoản phí phát sinh của các chuyên gia trong tháng để ghi một số tiền tổng vào dòng 137.",
+      "Sums all expat procedural fees incurred in the month into a unified monthly total on line 137.",
+      "該当月に発生したすべての専門家手続き費用を月ごとに合算し、137行目へ統合計上します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 10.5. Công thức hay giá trị?": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy định xuất giá trị và giữ công thức liên kết",
+      "Value Output and Formula Preservation Guidelines",
+      "値出力およびリンク数式保持の適用指針"
+    ],
+    "summary": [
+      "Điền số tiền thực tế và liên kết công thức tổng cộng nếu chi phí được tổng hợp từ nhiều chứng từ con.",
+      "Writes actual numeric amounts and preserves sum formulas when expenses consolidate multiple sub-vouchers.",
+      "実発生額を数値入力し、複数のサブ伝票から集計される場合は合計リンク数式を保持します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 11. Sheet `Chi phí sinh nhật`": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy chuẩn tính chi phí sinh nhật cán bộ nhân viên",
+      "Employee Birthday Benefit Cost Specifications",
+      "社員誕生日祝金費用の標準仕様"
+    ],
+    "summary": [
+      "Chi phí sinh nhật được tính bằng số người sinh nhật trong tháng nhân đơn giá 152.000 VNĐ và điền vào dòng 59 của biểu mẫu.",
+      "Calculates birthday costs by multiplying monthly celebrant counts by the 152,000 VND unit rate, mapped to row 59.",
+      "月別対象人数に単価152,000 VNDを乗じて誕生日祝金を算出し、フォームの59行目へ配置します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 11.1. Mục tiêu": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Mục tiêu phân bổ chi phí sinh nhật nhân viên",
+      "Objectives of Employee Birthday Benefit Allocation",
+      "誕生日祝金配賦の目的"
+    ],
+    "summary": [
+      "Tự động tính toán khoản phúc lợi sinh nhật cho nhân viên theo từng tháng dựa trên danh sách nhân sự chính thức.",
+      "Automates monthly employee birthday welfare calculations based on verified regular staffing rolls.",
+      "正社員名簿に基づいて、月別の社員誕生日福利厚生費の計算を自動化します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 11.2. Cách làm": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy trình 3 bước tính toán chi phí sinh nhật",
+      "Three-Step Workflow for Birthday Cost Calculation",
+      "誕生日祝金計算の3ステップ処理手順"
+    ],
+    "summary": [
+      "Lọc Cost Center, đếm số người sinh nhật trong tháng, nhân với đơn giá 152.000 VNĐ và điền vào dòng 59.",
+      "Filters Cost Center, counts monthly celebrants, multiplies by 152,000 VND rate, and maps to line 59.",
+      "原価センタを絞り込み、月別誕生日対象者数をカウントし、単価152,000 VNDを乗じて59行目へ入力します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 11.3. Rule cộng người mới": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy tắc tính gộp nhân viên mới có sinh nhật trong tháng",
+      "Inclusion Rule for New Hires Celebrating Birthdays",
+      "入社月に誕生日を迎える新入社員の合算ルール"
+    ],
+    "summary": [
+      "Nhân viên mới tuyển dụng có sinh nhật trong tháng tiếp nhận được cộng chung vào danh sách sinh nhật của tháng đó.",
+      "New recruits celebrating birthdays in their hiring month are included directly in that month's celebrant roll.",
+      "入社当月に誕生日を迎える新入社員は、該当月の誕生日対象者リストへそのまま合算計上します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 11.4. Đơn giá": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Định mức đơn giá chi phí sinh nhật 152.000 VNĐ",
+      "Standard Birthday Benefit Unit Rate 152,000 VND",
+      "誕生日祝金の標準単価152,000 VND基準"
+    ],
+    "summary": [
+      "Áp dụng đơn giá quy định 152.000 VNĐ cho mỗi nhân viên sinh nhật theo đúng bảng phân bổ hành chính đã duyệt.",
+      "Applies the approved 152,000 VND rate per birthday celebrant from the canonical administrative allocation master.",
+      "承認済み総務配賦マスターに準拠し、誕生日対象者1名につき単価152,000 VNDを適用します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 11.5. Xung đột dòng FORM: dòng 63 hay dòng 59": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Giải quyết xung đột dòng biểu mẫu sinh nhật 59 vs 63",
+      "Resolution of Birthday Form Line Conflict (Row 59 vs 63)",
+      "誕生日祝金フォーム行の競合解消仕様（59行目 vs 63行目）"
+    ],
+    "summary": [
+      "Xác nhận dòng 59 là vị trí chính thức trên biểu mẫu kết quả mới thay vì dòng 63 của biểu mẫu cũ.",
+      "Confirms row 59 as the canonical target line on the modern form, superseding historical line 63.",
+      "旧フォームの63行目を廃止し、最新の出力フォームでは59行目を正式な計上行として確定しました。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 12. Sheet `Chi phí phân bổ từ hành chính`": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy chuẩn phân bổ chi phí hành chính và sự kiện",
+      "Administrative Consumables and Events Master Specifications",
+      "総務消耗品およびイベント費用の標準仕様"
+    ],
+    "summary": [
+      "Phân bổ vật tư tiêu hao theo nhân sự tháng trước và phân bổ các sự kiện định kỳ (du lịch, khám sức khỏe) theo tháng phát sinh thực tế.",
+      "Allocates consumables based on prior month headcount and distributes periodic events (trips, health checks) to actual event months.",
+      "前月人員数に基づいて消耗品を配賦し、定期イベント（社員旅行、健康診断）は実際の発生月へ配賦します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 12.1. Nhóm 1 — chi phí phân bổ cho cả 12 tháng": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Phân bổ chi phí vật tư tiêu hao đều đặn 12 tháng",
+      "Group 1: 12-Month Continuous Administrative Consumables",
+      "グループ1: 12か月定常総務消耗品の均等配賦"
+    ],
+    "summary": [
+      "Phân bổ tiền gas, nước rửa tay, giấy vệ sinh và vệ sinh văn phòng theo số lượng nhân sự của tháng trước.",
+      "Allocates gas, hand soap, toilet paper, and cleaning overhead monthly based on prior month headcount.",
+      "ガス代、ハンドソープ、トイレットペーパー、清掃費を前月人員数に基づいて毎月配賦します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 12.2. Nhóm 2 — chi phí đặc thù theo từng tháng": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Phân bổ các khoản chi phí sự kiện đặc thù theo tháng",
+      "Group 2: Month-Specific Periodic Corporate Events",
+      "グループ2: 発生月指定の定期社内イベント費用配賦"
+    ],
+    "summary": [
+      "Lấy mã tài khoản kế toán từ danh mục master và phân bổ chi phí vào đúng tháng diễn ra sự kiện theo số người tham gia.",
+      "Looks up account codes in master directories and allocates expenses into active event months based on participant counts.",
+      "マスターから勘定科目を参照し、参加人数に基づいてイベント開催月へ正確に配賦計上します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 12.3. Lưu ý filter nội dung": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Lưu ý lọc chính xác tên hạng mục trước dấu hai chấm",
+      "Content Filtering Rules Matching Text Before Colons",
+      "コロン前の項目名に基づく抽出・フィルタ基準"
+    ],
+    "summary": [
+      "Lọc đúng chuỗi văn bản tiêu đề trước dấu hai chấm để khớp chính xác với dòng chi phí trên bảng phân bổ.",
+      "Filters exact header text preceding colons to match corresponding expense lines on allocation tables.",
+      "コロン前の正確なヘッダーテキストを抽出条件として使用し、配賦表の費用行と正確に照合します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 12.4. Ví dụ `社員旅行 / Du lịch công ty`": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Ví dụ phân bổ chi phí du lịch công ty vào tháng 5",
+      "Case Study: Allocating Company Trip Expenses to May",
+      "具体例: 5月社員旅行費用の配賦処理手順"
+    ],
+    "summary": [
+      "Ví dụ phân bổ chi phí du lịch công ty cho phòng sản xuất mã 1412000089 vào cột tháng 5 theo mã tài khoản 5005246281.",
+      "Demonstrates mapping May company trip costs for manufacturing unit 1412000089 to account 5005246281.",
+      "製造部門1412000089に対する5月の社員旅行費用を勘定科目5005246281へ配賦する具体例です。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 12.5. Danh sách event/hạng mục đặc thù theo tháng": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Danh mục các sự kiện nội bộ định kỳ trong năm",
+      "Catalog of Periodic Events and Month-Specific Drivers",
+      "定期社内イベントおよび月別ドライバー一覧"
+    ],
+    "summary": [
+      "Tổng hợp danh sách các sự kiện gồm tiệc chúc mừng, du lịch công ty, tiệc thành lập và tiệc tất niên kèm tháng tổ chức.",
+      "Catalogs corporate events including kickoff parties, company trips, anniversary gifts, and year-end celebrations.",
+      "決起コンパ、社員旅行、創立記念品、忘年会など、開催月と対象イベントを網羅した一覧です。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 12.6. Khám sức khỏe định kỳ nam/nữ": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy tắc phân bổ chi phí khám sức khỏe định kỳ nam/nữ",
+      "Periodic Medical Check Cost Rules for Male and Female Staff",
+      "男女別定期健康診断費用の配賦ルール"
+    ],
+    "summary": [
+      "Tính chi phí khám sức khỏe định kỳ bằng số lượng nhân viên nam và nữ nhân đơn giá tương ứng và ghi vào tháng tổ chức khám.",
+      "Computes periodic medical check costs using male/female counts multiplied by specific rates into the checkup month.",
+      "男女別の人員数にそれぞれの所定単価を乗じて定期健康診断費用を算出し、実施月へ計上します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 12.7. Nhóm chi phí cho người mới": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Nhóm chi phí tiếp nhận nhân sự mới tuyển dụng",
+      "Onboarding Cost Rules for Newly Recruited Employees",
+      "新入社員受け入れに伴う各種費用配賦ルール"
+    ],
+    "summary": [
+      "Bao gồm chi phí sổ tay, thẻ nhân viên, đồng phục và khám sức khỏe đầu vào được tính theo số lượng tuyển mới thực tế.",
+      "Covers employee handbooks, ID badges, uniforms, and entry health exams computed from actual monthly recruits.",
+      "入社時手帳、社員証、制服、採用時健診など、実際の月別新規採用者数に基づいて計算される費用群です。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 12.8. Bổ sung hạng mục `Sổ` phân tách nhân viên/công nhân": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Phân định đơn giá sổ tay cho nhân viên và công nhân",
+      "Handbook Cost Distinction for Office Staff vs Factory Workers",
+      "職員用・作業員用の手帳費用区分仕様"
+    ],
+    "summary": [
+      "Áp dụng đơn giá cấp phát sổ tay khác nhau giữa khối nhân viên văn phòng và khối công nhân trực tiếp sản xuất.",
+      "Applies differentiated handbook unit rates between office personnel and direct factory production workers.",
+      "事務職員と工場直接作業員の間で異なる手帳支給単価を適用して正確に配賦します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 12.9. Chú ý filter `入社月`": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy tắc lọc theo tháng tiếp nhận nhân sự mới",
+      "Filtering Principles for New Hire Onboarding Months",
+      "入社月フィルタに関する重要留意事項"
+    ],
+    "summary": [
+      "Lọc chính xác các khoản chi phát sinh theo tháng tiếp nhận nhân viên mới để tránh bị sót các dòng chi phí liên quan.",
+      "Filters onboarding expenses strictly matching the employee's joining month to avoid missing associated items.",
+      "関連項目の計上漏れを防止するため、新入社員の入社月に厳格に一致させて費用を抽出します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 12.10. Khám sức khỏe khi tuyển dụng": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Khám sức khỏe tuyển dụng phân bổ vào tháng tiếp theo",
+      "Recruitment Medical Exam Allocated to Following Month",
+      "採用時健康診断費用の翌月配賦ルール"
+    ],
+    "summary": [
+      "Chi phí khám sức khỏe của người mới vào tháng này được phân bổ vào ngân sách của tháng kế tiếp theo đúng quy định.",
+      "Health exam expenses for new hires entering this month are distributed into the following month's budget.",
+      "当月に入社した新入社員の採用時健診費用は、規定に基づき翌月の予算へ配賦計上します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 13. Sheet `勘定科目` — account master": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Danh mục tài khoản kế toán chuẩn",
+      "General Ledger Accounts Master Directory Specifications",
+      "勘定科目マスターディレクトリ仕様"
+    ],
+    "summary": [
+      "Danh mục các mã tài khoản kế toán 10 chữ số dùng để đối chiếu và định tuyến chi phí vào các dòng biểu mẫu.",
+      "Directory of standard 10-digit ledger account codes used to validate and route expenses into template lines.",
+      "費用行へのマッピングと照合に使用される標準10桁勘定科目コードのマスター一覧です。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 13.1. Vai trò": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Vai trò của danh mục tài khoản kế toán",
+      "Role of the Canonical Accounts Master Directory",
+      "勘定科目マスターディレクトリの役割"
+    ],
+    "summary": [
+      "Đảm bảo mọi khoản chi phí được hạch toán đúng mã tài khoản kế toán theo quy chuẩn báo cáo tài chính nội bộ.",
+      "Ensures every expense line is booked to the correct ledger account per internal financial reporting standards.",
+      "社内財務報告基準に従い、すべての費用行が正しい勘定科目コードへ計上されることを保証します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 13.2. Rule tra account": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy trình tra cứu mã tài khoản kế toán",
+      "Account Code Lookup and Verification Procedure",
+      "勘定科目コードの特定・検証手順"
+    ],
+    "summary": [
+      "Tra cứu dựa trên tên chi phí tiếng Nhật và phân loại 原価区分 của phòng ban để chọn đúng cột tài khoản kế toán.",
+      "Looks up account codes using Japanese expense titles and department cost divisions to select the correct account column.",
+      "日本語費用項目名と部門の原価区分に基づいて照合を行い、正しい勘定科目列を選択します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 13.3. Không dùng sai cột": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Ngăn ngừa tra cứu nhầm cột tài khoản kế toán",
+      "Preventing Erroneous Account Column Lookups",
+      "勘定科目列の誤参照防止ルール"
+    ],
+    "summary": [
+      "Cấm sử dụng nhầm giữa cột tài khoản chế tạo và cột tài khoản quản lý bán hàng khi tra cứu mã tài khoản.",
+      "Prohibits cross-referencing between manufacturing and SG&A columns during account code determination.",
+      "勘定科目コードの特定において、製造原価列と販売管理費列の誤ったクロス参照を厳格に禁止します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 13.4. Nếu account trống": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Xử lý ngoại lệ khi chưa có mã tài khoản kế toán",
+      "Handling Edge Cases with Missing Account Codes",
+      "勘定科目コード未設定時の例外処理"
+    ],
+    "summary": [
+      "Khi không tìm thấy mã tài khoản tương ứng, hệ thống ghi nhận mã cảnh báo và yêu cầu kế toán bổ sung thay vì tự đoán.",
+      "When no account code is found, the system flags a missing code warning, requesting accountant review instead of guessing.",
+      "対応する勘定科目が見つからない場合、推測による処理を行わず、未設定警告を記録して担当者へ確認を求めます。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 14. Sheet `原価センタ` — Cost Center master": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Danh mục mã phòng ban Cost Center chuẩn",
+      "Cost Center Master Directory Specifications",
+      "原価センタマスターディレクトリ仕様"
+    ],
+    "summary": [
+      "Danh sách toàn bộ các mã phòng ban chính thức kèm tên tiếng Nhật, tên tiếng Việt và phân loại chi phí quản trị.",
+      "Complete directory of official Cost Centers with Japanese/Vietnamese names and managerial classifications.",
+      "日本語・ベトナム語名称および管理会計区分を含む正式な原価センタマスターの一覧です。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 14.1. Vai trò": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Vai trò của danh mục phòng ban Cost Center",
+      "Role of the Centralized Cost Center Directory",
+      "原価センタマスターディレクトリの役割"
+    ],
+    "summary": [
+      "Xác định chính xác đơn vị chịu chi phí và thiết lập liên kết với các bảng tính ngân sách đầu ra.",
+      "Uniquely identifies expense-incurring units and establishes structural links with output budget workbooks.",
+      "費用負担部門を一意に特定し、出力予算ワークブックとの構造的紐付けを確立します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 14.2. Rule chính": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy tắc tra cứu phân loại phòng ban từ Cost Center",
+      "Primary Rules for Deriving Divisions from Cost Centers",
+      "原価センタに基づく部門区分判定の主要ルール"
+    ],
+    "summary": [
+      "Từ mã Cost Center tra cứu ra nhóm 採算区分 và nhóm 原価区分 để quyết định quy tắc tính toán phân bổ phù hợp.",
+      "Derives profitability and cost divisions from Cost Center codes to select the appropriate distribution algorithms.",
+      "原価センタコードから採算区分および原価区分を判定し、適切な配賦計算ロジックを選択・適用します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 21. Tóm tắt ngắn cho người không chuyên": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Tóm tắt nghiệp vụ phân bổ cho người không chuyên",
+      "Non-Technical Summary of Cost Allocation System",
+      "非専門家向け費用配賦システムの要約解説"
+    ],
+    "summary": [
+      "Giải thích đơn giản về cách chương trình tự động lấy số liệu từ các bảng tính nguồn và điền vào báo cáo chi phí phòng ban.",
+      "Provides a straightforward explanation of how the system ingests source tables and populates department budget reports.",
+      "システムが元データを読み込み、各部門の予算レポートへ自動的にデータを配置する仕組みを平易に解説しています。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 22.1. Dữ liệu output bắt đầu từ dòng 38": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Dữ liệu kết quả bắt đầu ghi từ dòng 38",
+      "Output Data Population Begins at Row 38",
+      "出力データは38行目より開始する仕様"
+    ],
+    "summary": [
+      "Theo biểu mẫu chuẩn mới, toàn bộ dữ liệu chi phí phân bổ được ghi bắt đầu từ dòng 38 trở đi trên file kết quả.",
+      "Under the approved master form, all allocated cost lines are written starting from row 38 onward on output workbooks.",
+      "承認済み最新マスターフォームに従い、配賦費用データはすべて出力ファイルの38行目以降に書き込まれます。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 22.2. Cột A đến D từ dòng 38 trở đi phải màu trắng": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Giữ nền trắng cho các cột A đến D từ dòng 38",
+      "Preserving White Background for Columns A-D from Row 38",
+      "38行目以降のA〜D列を白背景に維持する仕様"
+    ],
+    "summary": [
+      "Các cột mã tài khoản và tên chi phí A đến D từ dòng 38 trở đi phải có nền trắng, không tô màu nền khác.",
+      "Columns A through D from row 38 onward must maintain a clean white background without arbitrary fill colors.",
+      "38行目以降のA〜D列（勘定科目・費用名）は、不要な背景色を排して白背景を維持します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 22.3. Cột E từ dòng 38 trở xuống không được có giải thích": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Cột E từ dòng 38 trở xuống tuyệt đối không chứa chữ giải thích",
+      "Column E Below Row 38 Must Omit Explanatory Text",
+      "38行目以降のE列における説明文完全排除仕様"
+    ],
+    "summary": [
+      "Cột E từ dòng 38 trở xuống không được chứa văn bản giải thích; đây là dải cột điền số tiền chi phí của các tháng.",
+      "Column E below row 38 must never contain explanatory text, as it serves as the beginning column for monthly amounts.",
+      "38行目以降のE列には説明テキストを一切含めず、月別金額データの開始列として数値のみを入力します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 22.4. Giải thích/diễn giải phải lấy từ cột B của sheet `*配賦額一覧`": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Lấy nội dung giải thích từ cột B của bảng phân bổ",
+      "Extracting Explanatory Descriptions from Column B",
+      "配賦一覧シートB列からの説明文抽出仕様"
+    ],
+    "summary": [
+      "Nếu cần hiển thị mô tả giải thích, hệ thống phải trích xuất chính xác từ cột B của sheet phân bổ gốc.",
+      "Whenever explanatory descriptions are required, the system extracts them verbatim from Column B of the source allocation table.",
+      "説明文が必要な場合は、原本配賦一覧シートのB列から正確にテキストを抽出して使用します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 22.5. Workbook Excel gốc thắng markdown khi mâu thuẫn": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "File Excel gốc giữ quyền quyết định cao nhất khi có mâu thuẫn",
+      "Canonical Excel Workbook Holds Supreme Precedence Over Markdown",
+      "原本ExcelファイルがMarkdownより最優先される原則"
+    ],
+    "summary": [
+      "Khi có bất kỳ sự sai khác nào giữa tài liệu văn bản và file Excel gốc, số liệu và công thức trên file Excel luôn là chân lý.",
+      "In case of any conflict between documentation and canonical Excel workbooks, workbook figures and formulas always prevail.",
+      "ドキュメントと原本Excelファイルとの間に相違がある場合、Excelファイルの数値および数式が常に最優先されます。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 22.6. Không quay lại cách xuất cố định theo từng dòng": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Tuyệt đối không cố định dòng xuất dữ liệu cứng nhắc",
+      "Prohibition Against Hardcoded Fixed Output Row Mapping",
+      "固定行番号へのマッピングの禁止原則"
+    ],
+    "summary": [
+      "Dữ liệu được xuất động theo các khoản chi thực tế phát sinh, tuyệt đối không gán cứng số dòng trong mã nguồn.",
+      "Renders output lines dynamically based on active transaction data, strictly prohibiting hardcoded row indexes in source code.",
+      "実際に発生した費用データに基づいて動的に行を出力し、ソースコード内で行番号をハードコードすることを禁止します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 22.9. Xóa nội dung cũ trước khi xuất output mới": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Xóa sạch vùng dữ liệu cũ trước khi xuất kết quả mới",
+      "Purging Stale Output Area Prior to New Export",
+      "新規出力前の旧データ領域完全クリア仕様"
+    ],
+    "summary": [
+      "Tự động xóa sạch toàn bộ nội dung từ dòng 38 trở đi trên biểu mẫu trước khi ghi các dòng chi phí mới.",
+      "Automatically clears all existing cell data from row 38 onward on the template before writing new cost lines.",
+      "古いデータの残存による誤りを防ぐため、新規書き込み前にテンプレートの38行目以降を完全にクリアします。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 24. Regression guard — các bug đã biết từ Excel gốc": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Danh mục phòng ngừa tái phát các lỗi đã xử lý",
+      "Regression Guard: Catalog of Known Resolved Defects",
+      "デグレード防止: 解決済み既知バグの再発防止基準"
+    ],
+    "summary": [
+      "Quy định kiểm tra hồi quy bắt buộc để đảm bảo không tái phát các lỗi trùng lặp chi phí hoặc sai lệch công thức đã giải quyết.",
+      "Mandates regression verification to ensure resolved defects like duplicate costs and formula errors never resurface.",
+      "重複計上や数式不整合など、過去に解決した障害の再発を防止するための必須検証項目を定めています。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 24.1. Khám sức khỏe định kỳ bị lặp 2 lần": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Khắc phục lỗi lặp 2 lần chi phí khám sức khỏe định kỳ",
+      "Remediation of Duplicate Periodic Medical Examination Costs",
+      "定期健康診断費用の二重計上バグの是正仕様"
+    ],
+    "summary": [
+      "Đảm bảo chi phí khám sức khỏe định kỳ chỉ xuất hiện một lần duy nhất vào đúng tháng tổ chức khám trong năm.",
+      "Ensures periodic health examination costs appear only once during the designated medical check month.",
+      "定期健康診断費用が、年度内の実施月に1回のみ正しく計上されることを保証します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 24.2. Chi phí người mới bị gom hết vào tháng 12": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Khắc phục lỗi gom toàn bộ chi phí người mới vào tháng 12",
+      "Remediation of Aggregating All New Hire Costs into December",
+      "新入社員費用が12月に一括計上されていたバグの是正仕様"
+    ],
+    "summary": [
+      "Phân bổ chi phí sổ tay, thẻ nhân viên và khám sức khỏe đầu vào vào đúng tháng tiếp nhận nhân sự thực tế.",
+      "Distributes handbook, employee card, and onboarding medical expenses into the actual hiring months.",
+      "入社時手帳、社員証、採用時健診費用を、新入社員の実際の入社月へ正確に配賦計上します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 26. User claims — lỗi người dùng phát hiện khi sử dụng chương trình": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Danh sách các phản ánh nghiệp vụ từ người dùng",
+      "Catalog of Verified User Operational Feedback and Claims",
+      "実運用でユーザーから指摘された業務改善要求一覧"
+    ],
+    "summary": [
+      "Tập hợp toàn bộ các phản ánh thực tế từ người dùng khi chạy thử nghiệm phần mềm trên file mẫu kết quả.",
+      "Compiles all operational feedback and claims reported by users during test runs on sample output workbooks.",
+      "テスト実行時にユーザーから報告された実際の指摘事項および運用改善要求を網羅した一覧です。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 26.1. Claim 12: Cột E không được phép tồn tại mô tả": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Nghiệm thu Claim 12: Bỏ hoàn toàn mô tả tại cột E",
+      "Claim 12 Resolution: Complete Omission of Column E Descriptions",
+      "Claim 12検収: E列からの説明テキスト完全排除仕様"
+    ],
+    "summary": [
+      "Xác nhận lại cột E trên file kết quả không được chứa bất kỳ chữ mô tả nào; dải số liệu bắt đầu từ cột E trở đi.",
+      "Confirms Column E on output files must never contain text descriptions; numeric amounts begin at Column E.",
+      "出力ファイルのE列には説明文を一切含めず、E列以降には金額データのみを入力することを再確認しました。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 26.2. Claim 13: Chưa có tiền du lịch của tháng 5": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Nghiệm thu Claim 13: Bổ sung tiền du lịch vào tháng 5",
+      "Claim 13 Resolution: Allocating Company Trip Expenses to May",
+      "Claim 13検収: 5月列への社員旅行費用の確実な計上"
+    ],
+    "summary": [
+      "Bổ sung chi phí du lịch công ty vào cột tháng 5 theo đúng số lượng người tham gia thực tế của phòng ban.",
+      "Adds company trip expenses into the May column based on verified actual department participant numbers.",
+      "部門の実際の参加人数実績に基づいて、社員旅行費用を5月列へ確実に計上します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 26.3. Claim 14: Code 5005246282 chỉ chạy được từ tháng 4 đến tháng 6": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Nghiệm thu Claim 14: Mã 5005246282 áp dụng riêng cho quý 1",
+      "Claim 14 Resolution: Account 5005246282 Scoped to Q1 (Apr-Jun)",
+      "Claim 14検収: 勘定科目5005246282の第1四半期（4〜6月）限定適用"
+    ],
+    "summary": [
+      "Xác nhận mã tài khoản 5005246282 chỉ áp dụng cho quý 1 (tháng 4-6) theo tệp mô phỏng chi phí hệ thống quý 1.",
+      "Confirms account 5005246282 applies strictly to Q1 (April to June) sourced from the Q1 IT simulation workbook.",
+      "勘定科目5005246282は、第1四半期ITシミュレーションに基づき4月〜6月にのみ適用されることを確認しました。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 26.4. Claim 15: Tháng 12 đang mặc định nhân chi phí người mới với tổng số người": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Nghiệm thu Claim 15: Sửa lỗi nhân dồn người mới tháng 12",
+      "Claim 15 Resolution: Fixing December Multiplied New Hire Bug",
+      "Claim 15検収: 12月に新入社員費用が全社員数で乗算される不具合の是正"
+    ],
+    "summary": [
+      "Sửa triệt để lỗi phần mềm tự động nhân chi phí người mới với tổng số người vào tháng 12 thay vì số người tuyển mới.",
+      "Fixes bug where new hire expenses in December were multiplied by total headcount instead of actual new recruits.",
+      "12月に新入社員費用が全社員数で乗算されていたバグを根本修正し、実際の新規採用者数で計算します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 26.5. Claim 16: Chi phí `社員証用写真のみ` không cần cho người mới": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Nghiệm thu Claim 16: Miễn chi phí ảnh thẻ cho người mới",
+      "Claim 16 Resolution: Photo Fee Exemption for New Hires",
+      "Claim 16検収: 新入社員に対する社員証写真代の請求除外"
+    ],
+    "summary": [
+      "Chi phí chụp ảnh thẻ nhân viên không áp dụng cho người mới và không được đưa vào phân bổ chi phí định kỳ.",
+      "Employee ID card photo fees do not apply to new recruits and are excluded from periodic cost distributions.",
+      "新入社員に対して社員証用写真代は適用されず、定期配賦の対象から完全に除外されます。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 26.6. Claim 17: Dòng `ペン Bút` thiếu dữ liệu cột C, D": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Nghiệm thu Claim 17: Điền đủ mã tài khoản dòng bút viết",
+      "Claim 17 Resolution: Populating Columns C and D for Pen Rows",
+      "Claim 17検収: ボールペン行におけるC列・D列データの完全入力"
+    ],
+    "summary": [
+      "Điền đầy đủ mã tài khoản 5005246288 và mô tả phân loại vào cột C và D cho dòng chi phí bút viết trên biểu mẫu.",
+      "Populates account code 5005246288 and classification text into columns C and D for pen expense lines.",
+      "ボールペン行に対して勘定科目5005246288および分類テキストをC列・D列へ完全に入力します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 26.7. Claim 18: Dòng 64-69 trùng với dòng 30-35 nhưng code chi phí sai": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Nghiệm thu Claim 18: Điều chỉnh mã chi phí dòng 64-69",
+      "Claim 18 Resolution: Adjusting Cost Codes for Rows 64 to 69",
+      "Claim 18検収: 64〜69行目の費用コード適正化と重複解消"
+    ],
+    "summary": [
+      "Khắc phục sự trùng lặp mã chi phí giữa các dòng 64-69 và dòng 30-35, gán đúng mã tài khoản kế toán chuẩn.",
+      "Resolves expense code collision between lines 64-69 and lines 30-35, assigning accurate standard ledger accounts.",
+      "64〜69行目と30〜35行目のコード競合を解消し、正確な標準勘定科目を再割り当てしました。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 26.8. Claim 19: Không có chi phí ở dòng 73, 74, 75": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Nghiệm thu Claim 19: Xử lý các dòng chi phí trống 73-75",
+      "Claim 19 Resolution: Addressing Empty Cost Rows 73 to 75",
+      "Claim 19検収: 73〜75行目の空行に関する調査および適正化"
+    ],
+    "summary": [
+      "Kiểm tra và xác nhận các dòng 73-75 không phát sinh chi phí trong năm tài chính này, để trống theo đúng dữ liệu nguồn.",
+      "Verifies that rows 73-75 incur no expenses for this fiscal year, leaving them empty in accordance with source data.",
+      "73〜75行目について当該年度の費用発生がないことを確認し、元データ通り空白として維持します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 27. Yêu cầu bổ sung — item 20: Chi phí event theo tháng chưa chạy được": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Yêu cầu bổ sung phân bổ chi phí sự kiện theo tháng",
+      "Supplementary Requirement: Monthly Event Cost Allocation",
+      "追加要件: 月次イベント費用の配賦計算仕様"
+    ],
+    "summary": [
+      "Đặc tả phân bổ các sự kiện định kỳ vào đúng tháng phát sinh và xử lý ngoại lệ cho các khoản chi có số người riêng.",
+      "Specifies distributing periodic events into actual occurrence months with exceptions for custom headcount items.",
+      "定期イベントの発生月別配賦および「個別人数指定」項目の例外処理を定めた追加仕様です。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 27.1. Nội dung yêu cầu": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Nội dung yêu cầu phân bổ sự kiện du lịch và tiệc",
+      "Requirement Details: Company Trip and Party Allocations",
+      "社員旅行および決起コンパの配賦要件詳細"
+    ],
+    "summary": [
+      "Phân bổ chi phí du lịch công ty và tiệc khuấy động năm tài chính vào tháng 5 theo đúng số lượng nhân sự tham gia.",
+      "Allocates company trip and fiscal kickoff party expenses into May according to verified participant numbers.",
+      "社員旅行および決起コンパの費用を、確認済み参加人数に基づき5月へ配賦します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 27.2. Ngoại lệ: chi phí có \"số người riêng\"": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Ngoại lệ tạm thời bỏ qua chi phí có số người riêng",
+      "Exception Rule: Deferring Items with Custom Headcounts",
+      "例外規定: 「個別人数あり」項目の計算一時除外"
+    ],
+    "summary": [
+      "Tạm thời chưa tính các khoản chi phí có ghi chú 'có số người riêng' cho đến khi người dùng cung cấp số liệu chính xác.",
+      "Temporarily defers calculating expense lines marked 'custom headcount' until operators supply verified numbers.",
+      "「個別人数あり」と明記された費用項目は、ユーザーから確定数値が提供されるまで計算を一時除外します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 27.3. Ưu tiên giữa yêu cầu 7 và yêu cầu 20": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Quy tắc ưu tiên giữa yêu cầu 7 và yêu cầu bổ sung 20",
+      "Precedence Rule: Supplementary Item 20 Overrides Item 7",
+      "優先順位ルール: 追加要件20が要件7より優先"
+    ],
+    "summary": [
+      "Khi có xung đột về các khoản chi có số người riêng, hệ thống ưu tiên tuân theo yêu cầu số 20 để tạm bỏ qua khoản chi.",
+      "When conflicts arise regarding custom headcount items, the system strictly prioritizes Item 20 to defer calculation.",
+      "個別人数項目に関する要件の競合時は、要件20の除外ルールを最優先として適用します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 28. Cập nhật master `原価センタ` — 5 Cost Center mới": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Cập nhật danh mục master với 5 Cost Center mới",
+      "Master Directory Update: Five New Cost Centers",
+      "原価センタマスター更新: 新設5部門の追加仕様"
+    ],
+    "summary": [
+      "Bổ sung 5 mã Cost Center mới vào bảng master kèm phân loại 採算区分 và 原価区分 chuẩn để xuất đúng báo cáo.",
+      "Adds 5 new Cost Centers into the master list with standard profitability and cost divisions for report routing.",
+      "新設された5つの原価センタをマスターに追加し、標準の採算区分と原価区分を設定してレポートを出力します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::## 21. BUG: Chi phí phát thực tế (配布数) bị tính sai bằng headcount delta": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Sửa lỗi phân bổ 23 quy tắc theo số lượng phát thực tế",
+      "Fix for 23 Rules Calculated by Headcount Instead of Actual Distribution",
+      "配布数ルールが人員増減で誤計算されていた23件のバグ修正仕様"
+    ],
+    "summary": [
+      "Quy định chuyển 23 quy tắc có chữ 配布数 sang chế độ nhập số lượng phát thực tế thay vì tự động lấy theo biến động nhân sự.",
+      "Mandates switching the 23 rules containing 配布数 to manual actual distribution counts rather than headcount deltas.",
+      "配布数キーワードを含む23ルールについて、人員増減による自動計算を廃止し、実際の手動配布数入力へ是正します。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### Mô tả vấn đề": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Mô tả lỗi tính sai chi phí phát thực tế bằng biến động nhân sự",
+      "Problem Description: Miscalculating Distribution Costs via Headcount Deltas",
+      "人員増減による配布数誤計算の問題概要"
+    ],
+    "summary": [
+      "Chương trình tự động lấy biến động nhân sự mới để nhân chi phí cho 23 vật phẩm cấp phát dẫn đến tính sai số tiền.",
+      "The system mistakenly used new hire headcount deltas to multiply costs for 23 issued items, producing incorrect figures.",
+      "新入社員の純増人数を誤って用いて23品の支給品費用を乗算していたため、金額不一致が発生していました。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### 23 Rules bị ảnh hưởng": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Danh sách 23 quy tắc cấp phát vật tư bị ảnh hưởng",
+      "List of 23 Affected Issued Items Allocation Rules",
+      "影響を受ける支給品23ルールの対象一覧"
+    ],
+    "summary": [
+      "Liệt kê 23 hạng mục đồng phục, mũ nón, giày bảo hộ và lịch bỏ túi cần áp dụng số lượng cấp phát thực tế.",
+      "Catalogs 23 affected items including uniforms, caps, safety shoes, and pocket calendars requiring actual counts.",
+      "制服、帽子、安全靴、ポケットカレンダーなど、実配布数の入力が必要な23項目のリストです。"
+    ]
+  },
+  "docs/requirements/cai_tien_nhap_du_lieu_chung.md:::### Cách fix": {
+    "display": [
+      "Quy định cải tiến nhập dữ liệu chung",
+      "General Data Entry Improvement Specification",
+      "共通データ入力改善仕様書"
+    ],
+    "heading": [
+      "Giải pháp chuẩn hóa phân bổ 23 quy tắc cấp phát thực tế",
+      "Standardized Resolution for 23 Issued Items Allocation",
+      "実配布数23ルールの標準是正対応策"
+    ],
+    "summary": [
+      "Nhận diện từ khóa 配布数 và yêu cầu người dùng nhập số lượng phát thực tế qua bảng dữ liệu trước khi tính chi phí.",
+      "Detects keyword 配布数 and prompts users to supply actual distributed quantities via the input table.",
+      "配布数キーワードを識別し、費用計算前にユーザーが実際の配布実績数を入力する仕様に変更しました。"
+    ]
+  }
+}

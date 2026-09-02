@@ -100,6 +100,52 @@ def test_non_baseline_staffing_error_does_not_open_baseline_recovery():
     )
 
 
+def test_manual_editor_target_uses_single_current_cost_center_selection():
+    app = object.__new__(MPManagerApp)
+    app._parse_selected_cc_codes = lambda: ("1412000006",)
+
+    assert app._manual_editor_selected_cc() == "1412000006"
+
+
+def test_manual_editor_target_is_empty_for_multiple_or_invalid_selection():
+    app = object.__new__(MPManagerApp)
+    app._parse_selected_cc_codes = lambda: ("1412000006", "1412000040")
+    assert app._manual_editor_selected_cc() is None
+
+    app._parse_selected_cc_codes = lambda: (_ for _ in ()).throw(ValueError("no selection"))
+    assert app._manual_editor_selected_cc() is None
+
+
+def test_ready_source_status_mentions_selected_missing_march_baseline():
+    class Variable:
+        def __init__(self):
+            self.value = ""
+
+        def set(self, value):
+            self.value = value
+
+    class Report:
+        ok = True
+        can_run = True
+        skipped_issues = ()
+
+    app = object.__new__(MPManagerApp)
+    app.preflight_status = Variable()
+    app._pending_baseline_ccs = ("1412000006",)
+    app._preflight_status_state = {
+        "kind": "completed",
+        "summary": "ready",
+        "report": Report(),
+        "cache_hit": False,
+        "elapsed_seconds": 1.0,
+    }
+
+    app._refresh_preflight_status()
+
+    assert "1412000006" in app.preflight_status.value
+    assert "T3" in app.preflight_status.value
+
+
 def test_pipeline_failure_summary_excludes_import_log_but_keeps_error_block():
     summary = _pipeline_failure_summary(
         [

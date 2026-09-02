@@ -170,6 +170,31 @@ def _write_metadata(
         metadata.cell(target_row, column).value = value
 
 
+def has_saved_manual_special_cost_layout(
+    workbook_path: str | Path,
+    cc_code: object,
+) -> bool:
+    """Return whether a workbook proves it owns special-cost layout for one CC.
+
+    A file's presence alone is not proof: original forms and common-cost-only
+    first-run outputs are unmarked.  Malformed metadata is deliberately still
+    raised by ``_read_metadata`` instead of being downgraded to first-run.
+    """
+    normalized_cc = _normalise_cc_code(cc_code)
+    if not normalized_cc:
+        return False
+    path = Path(workbook_path)
+    if not path.is_file():
+        return False
+    if has_saved_cost_row_order(path, normalized_cc):
+        return True
+    workbook = openpyxl.load_workbook(path, data_only=False)
+    try:
+        return _read_metadata(workbook, cc_code=normalized_cc) is not None
+    finally:
+        workbook.close()
+
+
 def _snapshot_manual_section(
     source_workbook_path: Path,
     *,

@@ -61,7 +61,11 @@ def test_facility_preview_flag_creates_preview_workbook(monkeypatch, tmp_path):
 
         def export_to_template(self, template_path, output_path, cc_code=None):
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-            Path(output_path).write_text("placeholder", encoding="utf-8")
+            from openpyxl import Workbook
+
+            workbook = Workbook()
+            workbook.save(output_path)
+            workbook.close()
             calls.append(("export", template_path, output_path, cc_code))
             return True
 

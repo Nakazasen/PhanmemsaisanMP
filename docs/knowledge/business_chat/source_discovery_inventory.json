@@ -1,0 +1,3853 @@
+{
+  "schema_version": "2.0",
+  "items": [
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "# MP2027 Manager - Quy trình nghiệp vụ, vận hành và handover kỹ thuật",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu kỹ thuật tổng hợp kiêm handover"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## Vận hành nhiều năm tài chính",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_fiscal_year_calendar",
+      "reason": "Quy tắc chu kỳ 12 tháng từ tháng 4 đến tháng 3"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## Reconcile note - workbook canonical updated",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú đối soát lịch sử cập nhật file Excel gốc"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 1. Mục tiêu chương trình",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Mục đích tự động hóa tính toán phân bổ chi phí MP Saisan"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 2. Nguồn yêu cầu và bằng chứng",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "bck_source_validation",
+      "reason": "Quy tắc kiểm tra tính hợp lệ dữ liệu nguồn"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 3. Trạng thái module hiện tại",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "reference_with_caveat",
+      "curated_topic": "cur_module_implementation_status",
+      "reason": "Theo dõi trạng thái hoàn thiện các module phân bổ chi phí (tham khảo nội bộ)"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 4. Runtime directory model",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_manual_input_channels",
+      "reason": "Mô hình thư mục và các kênh nhập liệu thủ công"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 5. Active và legacy headcount",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "bck_headcount_input",
+      "reason": "Quy tắc nhập số lượng nhân sự active và loại bỏ legacy"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 6. Bus passenger drivers",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_bus_transportation_cost",
+      "reason": "Chi phí xe bus đưa đón người biệt phái và nhân viên Việt"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 7. Six-claim acceptance status",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_claim_medical_check_dedup",
+      "reason": "Nghiệm thu 6 phản hồi lỗi người dùng"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 8. Row mapping labels",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_provenance_labels_operators",
+      "reason": "Nhãn định danh dòng chi phí và đối chiếu nguồn gốc"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 9. Source workbook workflow",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_source_file_order_rule",
+      "reason": "Quy trình đọc và xử lý tệp nguồn theo thứ tự"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "### Audit tài sản cố định và lịch sử giải thích",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "reference_with_caveat",
+      "curated_topic": "cur_fixed_assets_audit_history",
+      "reason": "Lịch sử kiểm toán và đối soát khấu hao tài sản cố định (tham khảo nội bộ)"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 10. Manual input rules",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_manual_input_channels",
+      "reason": "Quy tắc các kênh nhập liệu thủ công"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "### Headcount",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "bck_headcount_input",
+      "reason": "Quy tắc nhập số lượng nhân sự thủ công"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "### Event drivers",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "reference_with_caveat",
+      "curated_topic": "cur_event_driver_standards",
+      "reason": "Định mức phân bổ các sự kiện hành chính theo tháng (tham khảo nội bộ)"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "### Special costs",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_manual_special_cost_inheritance",
+      "reason": "Quy tắc nhập và kế thừa chi phí riêng theo Cost Center"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 11. Database",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Lược đồ cơ sở dữ liệu SQLite"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 12. Công thức output",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_output_format_preservation",
+      "reason": "Quy tắc bảo toàn công thức trên file kết quả"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 13. Dashboard và audit",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_dashboard_audit_status",
+      "reason": "Bảng điều khiển và quy trình kiểm toán dữ liệu"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 14. Commit trail gần nhất",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Lịch sử commit kỹ thuật"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 15. Checks nên chạy",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Lệnh kiểm tra mã nguồn cho lập trình viên"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 16. Quy tắc an toàn khi tiếp tục",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Quy tắc an toàn mã nguồn"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 17. Việc ưu tiên tiếp theo",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "reference_with_caveat",
+      "curated_topic": "cur_roadmap_operational_priorities",
+      "reason": "Lộ trình và danh mục ưu tiên hoàn thiện nghiệp vụ vận hành (tham khảo nội bộ)"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 18. Tóm tắt cho agent tiếp theo",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Tóm tắt bàn giao kỹ thuật cho agent"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 19. Đồng phục và cốc xếp",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_uniform_and_folding_cups",
+      "reason": "Quy tắc định mức cấp phát đồng phục và cốc gấp"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 20. Kế thừa và bảo tồn chi phí riêng theo năm tài chính",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_manual_special_cost_inheritance",
+      "reason": "Bảo toàn chi phí riêng theo từng Cost Center qua các năm tài chính"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 21. Tùy biến sắp xếp thứ tự dòng chi phí kéo-thả",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_output_cost_row_reordering",
+      "reason": "Chức năng sắp xếp thứ tự hiển thị dòng chi phí"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 22. Tìm kiếm nhanh phòng ban trên màn hình chính",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_quick_search_departments",
+      "reason": "Tìm kiếm nhanh mã Cost Center và phòng ban"
+    },
+    {
+      "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+      "source_section": "## 23. So sánh biến động ngân sách cùng kỳ (YoY) và biểu đồ trực quan",
+      "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+      "classification": "covered",
+      "curated_topic": "cur_budget_variance_yoy_analysis",
+      "reason": "Báo cáo phân tích so sánh ngân sách qua các năm"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "# MP2027 Manager",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Tổng quan ứng dụng MP2027"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Ai dùng chương trình này",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Đối tượng người dùng MP2027"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Luồng sử dụng chính",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Luồng sử dụng chính MP2027"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Input chính",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Các tệp dữ liệu đầu vào chính"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Output chính",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Các tệp dữ liệu kết quả đầu ra chính"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Tính năng nâng cao nổi bật",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Tính năng nâng cao nổi bật"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Nguyên tắc nghiệp vụ an toàn",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Nguyên tắc nghiệp vụ an toàn"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Cài môi trường Windows sau khi clone",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn cài đặt môi trường kỹ thuật"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Cách chạy",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Lệnh chạy ứng dụng kỹ thuật"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "### GUI/launcher chính",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Lệnh chạy GUI"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "### Bản đóng gói Windows cho người dùng",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn chạy bản đóng gói"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "### Pipeline E2E cho developer",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Lệnh chạy pipeline E2E"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "### Kiểm chứng output sau refactor",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Lệnh kiểm chứng kết quả"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Cách test",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Lệnh kiểm thử kỹ thuật"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Cấu trúc thư mục quan trọng",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Cấu trúc thư mục mã nguồn"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Không được commit",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Quy định bảo vệ dữ liệu nội bộ"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Dọn artifact local an toàn",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Lệnh dọn dẹp thư mục tạm"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Tài liệu bàn giao cần đọc trước",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Danh mục tài liệu kỹ thuật bàn giao"
+    },
+    {
+      "source_path": "README.md",
+      "source_section": "## Troubleshooting",
+      "source_sha256": "ed0db11de7e6bbe9f9d3435285b9bfd66ebacd577986d625a863fa81ef0f6eeb",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Xử lý sự cố kỹ thuật môi trường"
+    },
+    {
+      "source_path": "AGENTS.md",
+      "source_section": "# MP2027 instructions for AI agents",
+      "source_sha256": "a150445e19e416be0bcd21e25db4eb492c2e34830924a7753b4ca0edbda959ce",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chỉ dẫn lập trình cho AI agent"
+    },
+    {
+      "source_path": "AGENTS.md",
+      "source_section": "## Release and update work",
+      "source_sha256": "a150445e19e416be0bcd21e25db4eb492c2e34830924a7753b4ca0edbda959ce",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chỉ dẫn phát hành và cập nhật cho AI agent"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "# Current Source Authority Notice",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phân cấp thẩm quyền tài liệu"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "# Cải tiến nhập dữ liệu chung vào file MPnew.xlsx — bản kế hoạch đã kiểm tra, sửa và bổ sung",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Mục tiêu tổng quát cải tiến nhập liệu"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 0.0. Historical reconcile of the 09.06 workbook",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú đối soát lịch sử cập nhật file Excel 09.06"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 0.0.1. Inventory workbook hiện tại",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Kiểm kê workbook hiện tại 09.06"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 0.0.2. Nội dung bổ sung/nhấn mạnh cần phản ánh khi code hoặc audit",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Nội dung bổ sung lịch sử 09.06"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 0. Kết luận rà soát bản Gemini cào dữ liệu",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Kết luận rà soát kỹ thuật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 0.1. Phần Gemini đã làm đúng và được giữ",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Phần cào dữ liệu đã giữ"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 0.2. Những điểm Gemini cào chưa đủ hoặc dễ gây sai khi code",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Cảnh báo kỹ thuật khi lập trình"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 0.3. HISTORICAL_04_06_CONTEXT — lineage từ MPnew 04.06.2026, chỉ giữ nơi không mâu thuẫn với canonical 10.07.2026",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Bối cảnh lịch sử phiên bản 04.06"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 1. Mục tiêu tổng thể của yêu cầu",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Mục tiêu tổng thể của yêu cầu"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 1.1. Mục tiêu không phải chỉ là copy/paste",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Mục đích tự động hóa và bảo toàn công thức"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 2. Danh sách sheet trong file yêu cầu gốc",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_source_file_order_rule",
+      "reason": "Danh sách sheet trong file yêu cầu gốc"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 3. Thuật ngữ bắt buộc dùng đúng khi viết code",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_account_lookup_chain",
+      "reason": "Thuật ngữ nghiệp vụ kế toán"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 3.1. Cost Center / 原価センタ / code phòng chịu chi phí",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_cost_center_hierarchy",
+      "reason": "Định nghĩa Cost Center và mã phòng"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 3.2. Account Code / 勘定科目",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_account_lookup_chain",
+      "reason": "Định nghĩa mã tài khoản"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 3.3. `採算区分` và `原価区分`",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_account_lookup_chain",
+      "reason": "Phân loại chi phí và phân bổ"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 4. Yêu cầu chung trên toàn bộ output FORM",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_output_format_preservation",
+      "reason": "Yêu cầu chung trên biểu mẫu FORM"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 4.1. Không cần điền 2 dữ liệu nhân sự cũ",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_legacy_staffing_exclusion",
+      "reason": "Bỏ qua 2 dòng nhân sự cũ"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 4.2. Đẩy dữ liệu về đúng cột theo FORM",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_form_column_alignment",
+      "reason": "Đẩy dữ liệu đúng cột tháng theo FORM"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 4.3. Giữ màu và định dạng FORM gốc",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_output_format_preservation",
+      "reason": "Giữ màu sắc và định dạng gốc"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 4.4. Để lại tất cả công thức tính",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_output_format_preservation",
+      "reason": "Bảo toàn tất cả công thức tính"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 4.5. Audit bắt buộc",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kiểm thử kỹ thuật bắt buộc"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 5. Sheet `Sheet1` — tổng quan yêu cầu",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Tổng quan yêu cầu nhập liệu"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 5.1. Nội dung Gemini cào đúng",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Nội dung lịch sử cào dữ liệu"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 5.2. Cách làm tổng quát",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Cách làm tổng quát phân bổ chi phí"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 6. Sheet `Hạng mục cần cải tiến` — danh sách cải tiến chung",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Danh sách cải tiến chung"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 6.1. Các mục cải tiến ban đầu",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Các hạng mục cải tiến ban đầu"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 6.2. Ghi chú màu trong file yêu cầu",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_output_format_preservation",
+      "reason": "Quy định màu sắc ô trên biểu mẫu"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 6.3. Ghi chú ngày 9/4 — ưu tiên mới",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú lịch sử ngày 9/4"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 6.4. Input số người mới thay thế logic hiện tại",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_new_employee_costs",
+      "reason": "Nhập số người mới thay thế"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 6.5. “Xóa nội dung dưới đây cho không cần thiết”",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú loại bỏ nội dung không cần thiết"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 6.6. HISTORICAL_04_06_CONTEXT — lineage 04.06 cho thứ tự file và dòng trống giữa các nhóm file",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Bối cảnh lịch sử thứ tự file 04.06"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 6.7. HISTORICAL_04_06_CONTEXT — “6 chi phí / gộp thành 1 dòng chi phí”",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Bối cảnh lịch sử gộp chi phí 04.06"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 7. Sheet `Chi phí hệ thống`",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_system_cost_combined",
+      "reason": "Quy tắc chi phí hệ thống KDC"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 7.1. Mục tiêu",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_system_cost_combined",
+      "reason": "Mục tiêu chi phí hệ thống"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 7.2. File nguồn hệ thống",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_system_cost_combined",
+      "reason": "Tệp nguồn hệ thống IT"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 7.3. Công thức chi tiết",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_system_cost_combined",
+      "reason": "Công thức chi tiết chi phí hệ thống"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 7.4. Công thức tổng hệ thống",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_system_cost_combined",
+      "reason": "Công thức tổng hợp chi phí hệ thống"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 7.5. Rule đối chiếu và điều chỉnh",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_system_cost_combined",
+      "reason": "Quy tắc đối chiếu chi phí hệ thống"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 7.6. Nhập vào FORM",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_system_cost_combined",
+      "reason": "Điền chi phí hệ thống vào biểu mẫu FORM"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 7.7. Account code đúng cho chi phí hệ thống",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_system_cost_account_mapping",
+      "reason": "Mã tài khoản chuẩn KDC System theo nguyên giá"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 7.8. Tháng áp dụng",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_system_cost_combined",
+      "reason": "Tháng áp dụng chi phí hệ thống"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 7.9. Test bắt buộc",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kiểm thử kỹ thuật chi phí hệ thống"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 8. Sheet `Chi phí khấu hao, lãi nhà đất`",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_facility_cost_rules",
+      "reason": "Chi phí cơ sở vật chất và tiện ích"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 8.1. Mục tiêu",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_facility_cost_rules",
+      "reason": "Mục tiêu chi phí khấu hao lãi nhà đất"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 8.2. Thứ tự chi phí",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_facility_cost_breakdown",
+      "reason": "Thứ tự 6 khoản chi phí cơ sở vật chất"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 8.3. Quy tắc filter",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_facility_cost_rules",
+      "reason": "Quy tắc lọc dữ liệu cơ sở vật chất"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 8.4. Tháng áp dụng",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_facility_cost_rules",
+      "reason": "Tháng áp dụng chi phí cơ sở vật chất"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 8.5. Công thức phải để lại",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_output_format_preservation",
+      "reason": "Công thức tính tổng cơ sở vật chất"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 8.6. HISTORICAL_04_06_CONTEXT — kết luận audit 04.06 cho Facility",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Kết luận audit 04.06 cơ sở vật chất"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 8.7. Test bắt buộc",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kiểm thử kỹ thuật cơ sở vật chất"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 9. Sheet `Chi phí tài sản cố định`",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_fixed_asset_depreciation",
+      "reason": "Chi phí tài sản cố định"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 9.1. Mục tiêu",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_fixed_asset_depreciation",
+      "reason": "Mục tiêu tính chi phí tài sản cố định"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 9.2. Cột nguồn quan trọng",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_fixed_asset_depreciation",
+      "reason": "Cột nguồn dữ liệu tài sản cố định"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 9.3. Vùng FORM đích",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_fixed_asset_depreciation",
+      "reason": "Vùng FORM ghi nhận tài sản cố định"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 9.4. Rule tổng quát",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_fixed_asset_depreciation",
+      "reason": "Quy tắc tổng quát tài sản cố định"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 9.5. Nếu tháng khấu hao cuối cùng KHÔNG nằm trong FY2027",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_fixed_asset_depreciation",
+      "reason": "Khấu hao ngoài năm tài chính"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 9.6. Nếu tháng khấu hao cuối cùng nằm trong FY2027",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_fixed_asset_depreciation",
+      "reason": "Khấu hao trong năm tài chính"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 9.7. Aggregation",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_fixed_asset_depreciation",
+      "reason": "Tổng hợp số liệu tài sản cố định"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 9.8. Ưu tiên triển khai",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Thứ tự triển khai kỹ thuật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 9.9. Test bắt buộc",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kiểm thử kỹ thuật tài sản cố định"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 10. Sheet `Chi phí làm giấy tờ cho NNN`",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_nnn_paperwork_cost",
+      "reason": "Chi phí làm giấy tờ người nước ngoài"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 10.1. Mục tiêu",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_nnn_paperwork_cost",
+      "reason": "Mục tiêu chi phí giấy tờ NNN"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 10.2. Vùng FORM đích",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_nnn_paperwork_cost",
+      "reason": "Vùng FORM ghi nhận chi phí NNN dòng 137"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 10.3. Cách filter đúng",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_nnn_paperwork_cost",
+      "reason": "Cách lọc đúng chi phí NNN"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 10.4. Cách cộng dữ liệu",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_nnn_paperwork_cost",
+      "reason": "Cách cộng dồn dữ liệu NNN"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 10.5. Công thức hay giá trị?",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_nnn_paperwork_cost",
+      "reason": "Quy ước ghi giá trị chi phí NNN"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 10.6. Test bắt buộc",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kiểm thử kỹ thuật chi phí NNN"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 11. Sheet `Chi phí sinh nhật`",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_birthday_cost",
+      "reason": "Chi phí sinh nhật nhân viên"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 11.1. Mục tiêu",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_birthday_cost",
+      "reason": "Mục tiêu tính chi phí sinh nhật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 11.2. Cách làm",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_birthday_cost",
+      "reason": "Cách tính chi phí sinh nhật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 11.3. Rule cộng người mới",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_birthday_cost",
+      "reason": "Quy tắc cộng thêm người mới vào chi phí sinh nhật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 11.4. Đơn giá",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_birthday_cost",
+      "reason": "Đơn giá tiền sinh nhật nhân viên"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 11.5. Xung đột dòng FORM: dòng 63 hay dòng 59",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "reference_with_caveat",
+      "curated_topic": "cur_birthday_form_row_conflict",
+      "reason": "Đối soát vị trí dòng sinh nhật 63 hay 59 trên các mẫu biểu (tham khảo nội bộ)"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 11.6. Test bắt buộc",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kiểm thử kỹ thuật sinh nhật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 12. Sheet `Chi phí phân bổ từ hành chính`",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_admin_consumables_12month",
+      "reason": "Chi phí phân bổ hành chính"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 12.1. Nhóm 1 — chi phí phân bổ cho cả 12 tháng",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_admin_consumables_12month",
+      "reason": "Vật tư hành chính tiêu hao 12 tháng"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 12.2. Nhóm 2 — chi phí đặc thù theo từng tháng",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_admin_monthly_events",
+      "reason": "Chi phí sự kiện đặc thù theo từng tháng"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 12.3. Lưu ý filter nội dung",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_admin_monthly_events",
+      "reason": "Lưu ý lọc nội dung sự kiện hành chính"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 12.4. Ví dụ `社員旅行 / Du lịch công ty`",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_admin_monthly_events",
+      "reason": "Quy tắc phân bổ du lịch công ty tháng 5"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 12.5. Danh sách event/hạng mục đặc thù theo tháng",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_admin_monthly_events",
+      "reason": "Danh mục sự kiện đặc thù theo tháng"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 12.5.1. HISTORICAL_04_06_CONTEXT — kết luận 04.06 cho event quà không đi du lịch",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Kết luận lịch sử 04.06 quà không đi du lịch"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 12.6. Khám sức khỏe định kỳ nam/nữ",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_admin_monthly_events",
+      "reason": "Khám sức khỏe định kỳ nam/nữ tháng 12"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 12.7. Nhóm chi phí cho người mới",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_new_employee_costs",
+      "reason": "Chi phí cho nhân sự mới"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 12.8. Bổ sung hạng mục `Sổ` phân tách nhân viên/công nhân",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_new_employee_costs",
+      "reason": "Sổ nhân viên và sổ công nhân cho người mới"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 12.9. Chú ý filter `入社月`",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_new_employee_costs",
+      "reason": "Lọc dữ liệu theo tháng nhập việc"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 12.10. Khám sức khỏe khi tuyển dụng",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_new_employee_costs",
+      "reason": "Khám sức khỏe tuyển dụng tháng sau khi vào"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 12.11. Test bắt buộc cho administrative allocation",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kiểm thử kỹ thuật phân bổ hành chính"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 13. Sheet `勘定科目` — account master",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_account_lookup_chain",
+      "reason": "Danh mục tài khoản kế toán"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 13.1. Vai trò",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_account_lookup_chain",
+      "reason": "Vai trò của bảng tra cứu tài khoản"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 13.2. Rule tra account",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_account_lookup_chain",
+      "reason": "Quy tắc tra cứu mã tài khoản kế toán"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 13.3. Không dùng sai cột",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_account_lookup_chain",
+      "reason": "Không dùng sai cột mã tài khoản"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 13.4. Nếu account trống",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_account_lookup_chain",
+      "reason": "Xử lý khi mã tài khoản để trống"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 14. Sheet `原価センタ` — Cost Center master",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_cost_center_hierarchy",
+      "reason": "Danh mục Cost Center và phòng ban"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 14.1. Vai trò",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_cost_center_hierarchy",
+      "reason": "Vai trò bảng Cost Center"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 14.2. Rule chính",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_cost_center_hierarchy",
+      "reason": "Quy tắc chính xác định Cost Center"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 14.3. Test bắt buộc",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kiểm thử kỹ thuật Cost Center"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 15. Thứ tự ưu tiên triển khai theo file yêu cầu",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch phân kỳ triển khai kỹ thuật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### Phase 1 — Chuẩn hóa nền tảng mapping",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Phase 1 kỹ thuật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### Phase 2 — NNN paperwork",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Phase 2 kỹ thuật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### Phase 3 — Administrative allocation",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Phase 3 kỹ thuật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### Phase 4 — System cost",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Phase 4 kỹ thuật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### Phase 5 — FORM style/formula preservation",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Phase 5 kỹ thuật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### Phase 6 — Birthday",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Phase 6 kỹ thuật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### Phase 7 — Facility",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Phase 7 kỹ thuật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### Phase 8 — Fixed assets",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Phase 8 kỹ thuật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 16. GAP cần agent kiểm tra trong repo hiện tại",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Danh sách GAP kiểm tra kỹ thuật của lập trình viên"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 17. Các test tối thiểu cần viết",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Danh sách test cases cho lập trình viên"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 17.1. Master resolver tests",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Test kỹ thuật master resolver"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 17.2. NNN tests",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Test kỹ thuật NNN"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 17.3. Administrative allocation tests",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Test kỹ thuật phân bổ"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 17.4. System cost tests",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Test kỹ thuật system"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 17.5. Birthday tests",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Test kỹ thuật sinh nhật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 17.6. Facility tests",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Test kỹ thuật facility"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 17.7. Fixed assets tests",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Test kỹ thuật fixed assets"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 17.8. FORM output tests",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Test kỹ thuật FORM output"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 18. Các điểm cần xác nhận trước khi code mạnh",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Các điểm mâu thuẫn kỹ thuật dành cho lập trình viên"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 19. Checklist agent trước khi sửa code",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Checklist thao tác của lập trình viên"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 20. Prompt đề xuất để giao cho agent code",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Mẫu prompt giao việc kỹ thuật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 21. Tóm tắt ngắn cho người không chuyên",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Tóm tắt ngắn quy trình cho người vận hành"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 22. Historical layout output evidence from the 09.06.2026 file",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Bằng chứng layout lịch sử từ file 09.06"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 22.1. Dữ liệu output bắt đầu từ dòng 38",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_output_layout_row38_preservation",
+      "reason": "Bố cục dữ liệu kết quả bắt đầu từ dòng 38"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 22.2. Cột A đến D từ dòng 38 trở đi phải màu trắng",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_output_format_preservation",
+      "reason": "Định dạng màu trắng cột A-D"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 22.3. Cột E từ dòng 38 trở xuống không được có giải thích",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_claim_col_e_no_description",
+      "reason": "Cột E không được chứa câu giải thích tự thêm"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 22.4. Giải thích/diễn giải phải lấy từ cột B của sheet `*配賦額一覧`",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_claim_col_e_no_description",
+      "reason": "Lấy tên hạng mục chuẩn từ cột B sheet phân bổ"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 22.5. Workbook Excel gốc thắng markdown khi mâu thuẫn",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Nguyên tắc workbook gốc có thẩm quyền cao nhất"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 22.6. Không quay lại cách xuất cố định theo từng dòng",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_source_file_order_rule",
+      "reason": "Xuất động theo thứ tự tệp nguồn"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 22.7. Không hardcode Cost Center `1412000040`",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chỉ dẫn lập trình không hardcode mã phòng"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 22.8. Không hardcode/map riêng file `16.KDTVN 電気製造技術課_MP FY2027_各予定(Ver01)`",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chỉ dẫn lập trình xử lý file tổng quát"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 22.9. Xóa nội dung cũ trước khi xuất output mới",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_output_format_preservation",
+      "reason": "Quy tắc xóa sạch dữ liệu cũ dòng 38 trước khi ghi mới"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 23. Trạng thái hoàn thiện theo Excel gốc 09.06.2026",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Trạng thái lịch sử đối soát 09.06"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 24. Regression guard — các bug đã biết từ Excel gốc",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_claim_medical_check_dedup",
+      "reason": "Chống lỗi lặp 2 lần chi phí y tế và dồn tháng 12"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 24.1. Khám sức khỏe định kỳ bị lặp 2 lần",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_claim_medical_check_dedup",
+      "reason": "Quy tắc chống lặp 2 lần chi phí khám sức khỏe"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 24.2. Chi phí người mới bị gom hết vào tháng 12",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_claim_new_hire_month_allocation",
+      "reason": "Quy tắc phân bổ người mới theo đúng tháng vào"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 25. Yêu cầu bổ sung mô tả",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Yêu cầu bổ sung mô tả kỹ thuật nội bộ"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 26. User claims — lỗi người dùng phát hiện khi sử dụng chương trình",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_claim_col_e_no_description",
+      "reason": "Tổng hợp và phân loại phản hồi lỗi từ người dùng"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 26.1. Claim 12: Cột E không được phép tồn tại mô tả",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_claim_col_e_no_description",
+      "reason": "Claim 12: Cột E không chứa mô tả"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 26.2. Claim 13: Chưa có tiền du lịch của tháng 5",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_admin_monthly_events",
+      "reason": "Claim 13: Tiền du lịch tháng 5"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 26.3. Claim 14: Code 5005246282 chỉ chạy được từ tháng 4 đến tháng 6",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "reference_with_caveat",
+      "curated_topic": "cur_claim_system_cost_q1_simulation",
+      "reason": "Claim 14: Mã hệ thống 5005246282 mô phỏng 3 tháng đầu quý 1 (tham khảo nội bộ)"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 26.4. Claim 15: Tháng 12 đang mặc định nhân chi phí người mới với tổng số người",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_claim_new_hire_month_allocation",
+      "reason": "Claim 15: Phân bổ người mới đúng tháng"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 26.5. Claim 16: Chi phí `社員証用写真のみ` không cần cho người mới",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_claim_photo_not_for_new_hire",
+      "reason": "Claim 16: Ảnh thẻ không tính cho người mới"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 26.6. Claim 17: Dòng `ペン Bút` thiếu dữ liệu cột C, D",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "reference_with_caveat",
+      "curated_topic": "cur_claim_pen_stationery_account_fill",
+      "reason": "Claim 17: Điền mã tài khoản văn phòng phẩm cho dòng Bút (tham khảo nội bộ)"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 26.7. Claim 18: Dòng 64-69 trùng với dòng 30-35 nhưng code chi phí sai",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "reference_with_caveat",
+      "curated_topic": "cur_claim_duplicate_cost_row_standardization",
+      "reason": "Claim 18: Chuẩn hóa trùng lặp dòng chi phí 64-69 và 30-35 (tham khảo nội bộ)"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 26.8. Claim 19: Không có chi phí ở dòng 73, 74, 75",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "reference_with_caveat",
+      "curated_topic": "cur_claim_blank_cost_rows_73_75",
+      "reason": "Claim 19: Dòng trống 73-75 là dòng dự phòng không có số tiền (tham khảo nội bộ)"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 26.9. Tổng hợp claims và phân loại",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bảng phân loại claim kỹ thuật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 27. Yêu cầu bổ sung — item 20: Chi phí event theo tháng chưa chạy được",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_admin_monthly_events",
+      "reason": "Phân bổ sự kiện theo tháng"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 27.1. Nội dung yêu cầu",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_admin_monthly_events",
+      "reason": "Chi tiết yêu cầu phân bổ sự kiện đúng tháng"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 27.2. Ngoại lệ: chi phí có \"số người riêng\"",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "reference_with_caveat",
+      "curated_topic": "cur_special_cost_custom_headcount",
+      "reason": "Quy tắc áp dụng số người tham gia riêng cho khoản chi đặc thù (tham khảo nội bộ)"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 27.3. Ưu tiên giữa yêu cầu 7 và yêu cầu 20",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_admin_monthly_events",
+      "reason": "Ưu tiên giữa các yêu cầu phân bổ sự kiện"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 28. Cập nhật master `原価センタ` — 5 Cost Center mới",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_cost_center_hierarchy",
+      "reason": "5 Cost Center mới được bổ sung vào hệ thống"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "## 21. BUG: Chi phí phát thực tế (配布数) bị tính sai bằng headcount delta",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_claim_actual_distribution_count_rule",
+      "reason": "23 rules cấp phát thực tế phải nhập số lượng phát thật"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### Mô tả vấn đề",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_claim_actual_distribution_count_rule",
+      "reason": "Mô tả lỗi tính sai bằng headcount delta"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### 23 Rules bị ảnh hưởng",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_claim_actual_distribution_count_rule",
+      "reason": "Danh sách 23 quy tắc chi phí có từ khóa 配布数"
+    },
+    {
+      "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+      "source_section": "### Cách fix",
+      "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+      "classification": "covered",
+      "curated_topic": "cur_claim_actual_distribution_count_rule",
+      "reason": "Cách nhập số lượng phát thực tế qua hộp thoại sự kiện"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "# Hướng dẫn Vận hành: Trợ lý Vận hành & Xử lý Lỗi (AI Operations Assistant)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu kỹ thuật trợ lý vận hành"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "## 1. Tổng quan & Mục đích (Overview)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "covered",
+      "curated_topic": "cur_ai_assistant_diagnostics",
+      "reason": "Mục tiêu và ranh giới an toàn của trợ lý AI"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "## 2. Quy trình thao tác của người dùng (User Workflow)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "covered",
+      "curated_topic": "cur_ai_assistant_diagnostics",
+      "reason": "Quy trình thao tác chẩn đoán sự cố"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "## 3. Chính sách đa ngôn ngữ (Language Policy)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "covered",
+      "curated_topic": "cur_ai_assistant_language_policy",
+      "reason": "Chính sách hỗ trợ 3 ngôn ngữ bắt buộc"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "## 4. Phân định Ngôn ngữ Nghiệp vụ & Chi tiết Kỹ thuật (Separation of Concerns)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "covered",
+      "curated_topic": "cur_ai_assistant_separation_of_concerns",
+      "reason": "Phân tách giải thích nghiệp vụ và chi tiết kỹ thuật"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "## 5. Ranh giới & Giới hạn Bằng chứng (Evidence Limits)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "covered",
+      "curated_topic": "cur_ai_assistant_evidence_limits",
+      "reason": "Giới hạn trích xuất bằng chứng an toàn"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "## 6. Mức độ chắc chắn (Confidence Levels)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "covered",
+      "curated_topic": "cur_ai_assistant_confidence_levels",
+      "reason": "Quy tắc hiển thị mức tin cậy"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "## 7. Ba lớp lỗi đã được phê duyệt (Supported Error Classes)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "covered",
+      "curated_topic": "cur_operations_error_taxonomy",
+      "reason": "Danh mục 3 lớp lỗi vận hành chuẩn hóa"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "### 1. `missing_staffing_baseline` (Thiếu dữ liệu nhân sự mốc ban đầu)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "covered",
+      "curated_topic": "cur_operations_error_taxonomy",
+      "reason": "Chi tiết lỗi thiếu nhân sự mốc ban đầu"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "### 2. `blocked_output_file_lock` (Tệp kết quả đầu ra đang bị khóa)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "covered",
+      "curated_topic": "cur_operations_error_taxonomy",
+      "reason": "Chi tiết lỗi tệp kết quả đang bị khóa"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "### 3. `preflight_source_validation_failure` (Kiểm tra dữ liệu nguồn thất bại)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "covered",
+      "curated_topic": "cur_operations_error_taxonomy",
+      "reason": "Chi tiết lỗi kiểm tra dữ liệu nguồn thất bại"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "## 8. Luồng xử lý khi Lỗi chưa xác nhận (`unknown`)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "covered",
+      "curated_topic": "cur_ai_assistant_unknown_error_handling",
+      "reason": "Luồng xử lý sự cố chưa xác nhận"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "## 9. Giới hạn & Các điều cấm tuyệt đối (Explicit Non-Capabilities)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "covered",
+      "curated_topic": "cur_ai_assistant_explicit_boundaries",
+      "reason": "Giới hạn và các điều cấm của trợ lý AI"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "## 10. Nghiệm thu thủ công (T027 — chưa thực hiện)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch nghiệm thu thủ công kỹ thuật"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "## 11. Tư vấn AI nội bộ C-AGENT (Phase 6)",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu kỹ thuật định hướng tích hợp AI C-AGENT"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant.md",
+      "source_section": "### Nguyên tắc vận hành",
+      "source_sha256": "5863da12423d5826c154f6435a0a339434e5f2aed255b168041f8672ac9de7a1",
+      "classification": "covered",
+      "curated_topic": "cur_ai_assistant_explicit_boundaries",
+      "reason": "Nguyên tắc vận hành an toàn của AI"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant_scope.md",
+      "source_section": "# Phạm vi tính năng: Trợ lý Vận hành & Xử lý Lỗi (AI Operations Assistant - MVP Read-only)",
+      "source_sha256": "fd73341eb0739a2447c081b308db35c5536303e49b3923b37651b1350ca211df",
+      "classification": "covered",
+      "curated_topic": "cur_ai_assistant_diagnostics",
+      "reason": "Phạm vi tính năng trợ lý vận hành AI"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant_scope.md",
+      "source_section": "## 1. Tôn chỉ cốt lõi & Ranh giới an toàn (Safety Boundary)",
+      "source_sha256": "fd73341eb0739a2447c081b308db35c5536303e49b3923b37651b1350ca211df",
+      "classification": "covered",
+      "curated_topic": "cur_ai_assistant_explicit_boundaries",
+      "reason": "Ranh giới an toàn cho trợ lý AI"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant_scope.md",
+      "source_section": "## 2. Các chức năng trong phạm vi (In-Scope for MVP)",
+      "source_sha256": "fd73341eb0739a2447c081b308db35c5536303e49b3923b37651b1350ca211df",
+      "classification": "covered",
+      "curated_topic": "cur_ai_assistant_diagnostics",
+      "reason": "Chức năng chẩn đoán trong phạm vi"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant_scope.md",
+      "source_section": "## 3. Các hạng mục ngoài phạm vi & Hoãn lại (Explicitly Out-of-Scope & Deferred)",
+      "source_sha256": "fd73341eb0739a2447c081b308db35c5536303e49b3923b37651b1350ca211df",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hạng mục kỹ thuật ngoài phạm vi"
+    },
+    {
+      "source_path": "docs/operations/ai_operations_assistant_scope.md",
+      "source_section": "## 4. Tiêu chí nghiệm thu & Kiểm chứng (Verification & Acceptance Criteria)",
+      "source_sha256": "fd73341eb0739a2447c081b308db35c5536303e49b3923b37651b1350ca211df",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Tiêu chí nghiệm thu kỹ thuật"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "# Current Source Authority Notice",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phân cấp thẩm quyền tài liệu"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## Historical reconcile note - 09.06 workbook",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú đối soát lịch sử cập nhật file Excel gốc"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "# MP Saisan Business Knowledge Base v2 - Full Business Specification",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Tổng quan cơ sở tri thức nghiệp vụ MP Saisan v2"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## 1. Purpose and current truth",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Mục đích và hiện trạng ứng dụng"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## 2. Source hierarchy and trust rules",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "bck_source_validation",
+      "reason": "Phân cấp nguồn và quy tắc tin cậy"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "### Account Lookup Rule",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_account_lookup_chain",
+      "reason": "Quy tắc tra cứu mã tài khoản"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## 3. File-order output rule",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_source_file_order_rule",
+      "reason": "Quy tắc xuất file theo đúng thứ tự"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## 4. Module detail matrix",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Ma trận chi tiết từng module"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "### 4.1 Facility / 施設課",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_facility_cost_rules",
+      "reason": "Quy tắc module cơ sở vật chất"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "### 4.2 Admin / GA consumables",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_admin_consumables_12month",
+      "reason": "Quy tắc module vật tư hành chính tiêu hao"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "### 4.3 System Cost",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_system_cost_combined",
+      "reason": "Quy tắc module chi phí hệ thống"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "### 4.4 Fixed Assets / 固定資産",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_fixed_asset_depreciation",
+      "reason": "Quy tắc module tài sản cố định"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "### 4.5 Birthday / Sinh nhật",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_birthday_cost",
+      "reason": "Quy tắc module sinh nhật"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "### 4.6 NNN paperwork",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_nnn_paperwork_cost",
+      "reason": "Quy tắc module giấy tờ người nước ngoài"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "### 4.7 Allocation / 配賦",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_allocation_travel_shared",
+      "reason": "Quy tắc module công tác phí và phân bổ chung"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "### 4.8 Manual CSV channels",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_manual_input_channels",
+      "reason": "Quy tắc các kênh nhập dữ liệu thủ công CSV"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## 5. Target rows / cell ranges known so far",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "reference_with_caveat",
+      "curated_topic": "cur_target_output_cell_ranges",
+      "reason": "Vùng ô và dòng kết quả FORM (tham khảo nội bộ)"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## 6. Account code and Cost Center rules",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_account_lookup_chain",
+      "reason": "Quy tắc mã tài khoản và Cost Center"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## 7. Primary and secondary reference pool",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Quy định nguồn tham chiếu chính và phụ"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## 8. Gap accounting and what not to say",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_ai_assistant_explicit_boundaries",
+      "reason": "Ranh giới những điều AI không được khẳng định bừa"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## 9. Provenance policy",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_provenance_labels_operators",
+      "reason": "Chính sách dẫn nguồn minh bạch"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## 10. Implementation status dashboard",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "reference_with_caveat",
+      "curated_topic": "cur_saisan_implementation_dashboard",
+      "reason": "Bảng trạng thái hoàn thiện tổng thể MP Saisan (tham khảo nội bộ)"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## 11. Current continuation route",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_roadmap_operational_priorities",
+      "reason": "Lộ trình phát triển tiếp theo"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## 12. Glossary",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_provenance_labels_operators",
+      "reason": "Danh mục thuật ngữ"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+      "source_section": "## 13. Source documents used",
+      "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+      "classification": "covered",
+      "curated_topic": "cur_provenance_labels_operators",
+      "reason": "Danh sách tài liệu nguồn đã dùng"
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "# Current Source Authority Notice",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "# MP Saisan Business Knowledge Base",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "## 1. Executive summary",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "## 2. Canonical requirement sources",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "## 3. Source order rule",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "## 4. File roles",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### Raw input",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### Manual CSV",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### Template",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### Primary reference",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### Secondary reference pool",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### Requirement files",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "## 5. Primary/secondary reference explanation",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "## 6. Implemented v1 behavior",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "## 7. Gap accounting",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "## 8. Known blockers",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "## 9. Provenance policy",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "## 10. Recommended path",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "## 11. Glossary",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### CC 1412000040",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### Account code",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### 内訳ﾘｽﾄ(4～3月)",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### Source-derived",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### Reference-assisted",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### File-order mode",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### Blank separator row",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### Primary reference",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "### Secondary reference",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/knowledge/mp_saisan_business_knowledge_base.md",
+      "source_section": "## Source documents used",
+      "source_sha256": "2fc1435ffcc808ceab4bfee72d4789633a90a30a377a58fe28d7930ec0ae398f",
+      "classification": "historical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu V1 lịch sử đã được thay thế bởi V2."
+    },
+    {
+      "source_path": "docs/MP2027/README_HEADCOUNT_LEGACY.md",
+      "source_section": "# Manual Headcount Legacy File",
+      "source_sha256": "82ef9b3c61f30c6fb61a99f5fb725e37469ad95348acec79d647dc1839a085b9",
+      "classification": "covered",
+      "curated_topic": "cur_legacy_staffing_exclusion",
+      "reason": "Hướng dẫn loại trừ tệp nhân sự cũ legacy"
+    },
+    {
+      "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+      "source_section": "## Summary",
+      "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Tổng quan cải tiến nhập liệu chi phí chung"
+    },
+    {
+      "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+      "source_section": "## Details",
+      "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_purpose_and_workflow",
+      "reason": "Chi tiết các nhóm chi phí chung"
+    },
+    {
+      "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+      "source_section": "### 1. Chi phí hệ thống (System Cost)",
+      "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+      "classification": "covered",
+      "curated_topic": "cur_system_cost_combined",
+      "reason": "Khái niệm chi phí hệ thống"
+    },
+    {
+      "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+      "source_section": "### 2. Chi phí khấu hao và lãi nhà đất (Depreciation & Land Interest)",
+      "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+      "classification": "covered",
+      "curated_topic": "cur_saisan_facility_cost_rules",
+      "reason": "Khái niệm chi phí khấu hao lãi nhà đất"
+    },
+    {
+      "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+      "source_section": "### 3. Chi phí tài sản cố định (Fixed Assets)",
+      "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+      "classification": "covered",
+      "curated_topic": "cur_fixed_asset_depreciation",
+      "reason": "Khái niệm chi phí tài sản cố định"
+    },
+    {
+      "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+      "source_section": "### 4. Chi phí làm giấy tờ cho người nước ngoài (Foreigners Paperwork Costs)",
+      "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+      "classification": "covered",
+      "curated_topic": "cur_nnn_paperwork_cost",
+      "reason": "Khái niệm chi phí làm giấy tờ NNN"
+    },
+    {
+      "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+      "source_section": "### 5. Chi phí sinh nhật (Birthday Costs)",
+      "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+      "classification": "covered",
+      "curated_topic": "cur_birthday_cost",
+      "reason": "Khái niệm chi phí sinh nhật"
+    },
+    {
+      "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+      "source_section": "### 6. Chi phí phân bổ từ hành chính (Administrative Allocation Costs)",
+      "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+      "classification": "covered",
+      "curated_topic": "cur_admin_consumables_12month",
+      "reason": "Khái niệm chi phí phân bổ hành chính"
+    },
+    {
+      "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+      "source_section": "## Evidence",
+      "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bằng chứng wiki nội bộ"
+    },
+    {
+      "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+      "source_section": "## Related",
+      "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Liên kết wiki"
+    },
+    {
+      "source_path": "wiki/concepts/cai-tien-nhap-lieu-chi-phi-chung.md",
+      "source_section": "## Change Log",
+      "source_sha256": "4559d626d00ca4fa4cbe9e65b4bf0389dbfbbe31718706af2e67700600fc384c",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Nhật ký thay đổi wiki"
+    },
+    {
+      "source_path": "wiki/timelines/nhap-lieu-nhan-su-master-plan.md",
+      "source_section": "## Summary",
+      "source_sha256": "dd88f9cb69b680fa389e40e0502fdb7f951c0852fddd7fca8ed18ef466abc223",
+      "classification": "covered",
+      "curated_topic": "cur_admin_consumables_12month",
+      "reason": "Tổng quan lộ trình nhập liệu nhân sự"
+    },
+    {
+      "source_path": "wiki/timelines/nhap-lieu-nhan-su-master-plan.md",
+      "source_section": "## Details",
+      "source_sha256": "dd88f9cb69b680fa389e40e0502fdb7f951c0852fddd7fca8ed18ef466abc223",
+      "classification": "covered",
+      "curated_topic": "cur_admin_consumables_12month",
+      "reason": "Chi tiết các nhóm dữ liệu nhân sự"
+    },
+    {
+      "source_path": "wiki/timelines/nhap-lieu-nhan-su-master-plan.md",
+      "source_section": "### 1. Dữ liệu nhân sự dùng chung cho cả 12 tháng",
+      "source_sha256": "dd88f9cb69b680fa389e40e0502fdb7f951c0852fddd7fca8ed18ef466abc223",
+      "classification": "covered",
+      "curated_topic": "cur_bus_transportation_cost",
+      "reason": "Nhân sự xe bus 12 tháng"
+    },
+    {
+      "source_path": "wiki/timelines/nhap-lieu-nhan-su-master-plan.md",
+      "source_section": "### 2. Dữ liệu nhân sự đặc thù theo từng tháng",
+      "source_sha256": "dd88f9cb69b680fa389e40e0502fdb7f951c0852fddd7fca8ed18ef466abc223",
+      "classification": "covered",
+      "curated_topic": "cur_admin_monthly_events",
+      "reason": "Nhân sự sự kiện đặc thù theo từng tháng"
+    },
+    {
+      "source_path": "wiki/timelines/nhap-lieu-nhan-su-master-plan.md",
+      "source_section": "### 3. Hạng mục cần xóa bỏ",
+      "source_sha256": "dd88f9cb69b680fa389e40e0502fdb7f951c0852fddd7fca8ed18ef466abc223",
+      "classification": "covered",
+      "curated_topic": "cur_legacy_staffing_exclusion",
+      "reason": "Hạng mục nhân sự cũ cần loại bỏ"
+    },
+    {
+      "source_path": "wiki/timelines/nhap-lieu-nhan-su-master-plan.md",
+      "source_section": "## Evidence",
+      "source_sha256": "dd88f9cb69b680fa389e40e0502fdb7f951c0852fddd7fca8ed18ef466abc223",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bằng chứng wiki"
+    },
+    {
+      "source_path": "wiki/timelines/nhap-lieu-nhan-su-master-plan.md",
+      "source_section": "## Related",
+      "source_sha256": "dd88f9cb69b680fa389e40e0502fdb7f951c0852fddd7fca8ed18ef466abc223",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Liên kết wiki"
+    },
+    {
+      "source_path": "wiki/timelines/nhap-lieu-nhan-su-master-plan.md",
+      "source_section": "## Change Log",
+      "source_sha256": "dd88f9cb69b680fa389e40e0502fdb7f951c0852fddd7fca8ed18ef466abc223",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Nhật ký wiki"
+    },
+    {
+      "source_path": "wiki/index.md",
+      "source_section": "# Hybrid Anti-Brain-Wiki -- Knowledge Index",
+      "source_sha256": "e6f037f455586492a4e94cb8001ae866d246a362563af34ec6dfe384001fd7d6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chỉ mục điều hướng hệ thống tri thức wiki nội bộ."
+    },
+    {
+      "source_path": "wiki/index.md",
+      "source_section": "## How This Wiki Works",
+      "source_sha256": "e6f037f455586492a4e94cb8001ae866d246a362563af34ec6dfe384001fd7d6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chỉ mục điều hướng hệ thống tri thức wiki nội bộ."
+    },
+    {
+      "source_path": "wiki/index.md",
+      "source_section": "## Entities",
+      "source_sha256": "e6f037f455586492a4e94cb8001ae866d246a362563af34ec6dfe384001fd7d6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chỉ mục điều hướng hệ thống tri thức wiki nội bộ."
+    },
+    {
+      "source_path": "wiki/index.md",
+      "source_section": "## Concepts",
+      "source_sha256": "e6f037f455586492a4e94cb8001ae866d246a362563af34ec6dfe384001fd7d6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chỉ mục điều hướng hệ thống tri thức wiki nội bộ."
+    },
+    {
+      "source_path": "wiki/index.md",
+      "source_section": "## Timelines",
+      "source_sha256": "e6f037f455586492a4e94cb8001ae866d246a362563af34ec6dfe384001fd7d6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chỉ mục điều hướng hệ thống tri thức wiki nội bộ."
+    },
+    {
+      "source_path": "wiki/index.md",
+      "source_section": "## Sources",
+      "source_sha256": "e6f037f455586492a4e94cb8001ae866d246a362563af34ec6dfe384001fd7d6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chỉ mục điều hướng hệ thống tri thức wiki nội bộ."
+    },
+    {
+      "source_path": "wiki/index.md",
+      "source_section": "## Knowledge Health",
+      "source_sha256": "e6f037f455586492a4e94cb8001ae866d246a362563af34ec6dfe384001fd7d6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chỉ mục điều hướng hệ thống tri thức wiki nội bộ."
+    },
+    {
+      "source_path": "wiki/index.md",
+      "source_section": "## Cross-Reference Map",
+      "source_sha256": "e6f037f455586492a4e94cb8001ae866d246a362563af34ec6dfe384001fd7d6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chỉ mục điều hướng hệ thống tri thức wiki nội bộ."
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md",
+      "source_section": "# G6 to G5 transition handling — specification",
+      "source_sha256": "e52c3552af3bb066fd25367062dd569ee2b8f1b94c9fa76b38754d299fd9a70c",
+      "classification": "covered",
+      "curated_topic": "cur_new_employee_costs",
+      "reason": "Đặc tả chuyển đổi G6 sang G5 cho người mới"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md",
+      "source_section": "## Source request",
+      "source_sha256": "e52c3552af3bb066fd25367062dd569ee2b8f1b94c9fa76b38754d299fd9a70c",
+      "classification": "covered",
+      "curated_topic": "cur_new_employee_costs",
+      "reason": "Yêu cầu nguồn người mới"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md",
+      "source_section": "## Root cause",
+      "source_sha256": "e52c3552af3bb066fd25367062dd569ee2b8f1b94c9fa76b38754d299fd9a70c",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Nguyên nhân kỹ thuật"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md",
+      "source_section": "## Functional requirements",
+      "source_sha256": "e52c3552af3bb066fd25367062dd569ee2b8f1b94c9fa76b38754d299fd9a70c",
+      "classification": "covered",
+      "curated_topic": "cur_new_employee_costs",
+      "reason": "Yêu cầu chức năng người mới"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md",
+      "source_section": "## Acceptance examples",
+      "source_sha256": "e52c3552af3bb066fd25367062dd569ee2b8f1b94c9fa76b38754d299fd9a70c",
+      "classification": "covered",
+      "curated_topic": "cur_new_employee_costs",
+      "reason": "Ví dụ nghiệm thu người mới"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-08-31-g6-to-g5-transition-new-hire.md",
+      "source_section": "## Safety boundaries",
+      "source_sha256": "e52c3552af3bb066fd25367062dd569ee2b8f1b94c9fa76b38754d299fd9a70c",
+      "classification": "covered",
+      "curated_topic": "cur_new_employee_costs",
+      "reason": "Ranh giới an toàn người mới"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-08-31-uniform-cup-improvement-807-814.md",
+      "source_section": "# Uniform and Cup Improvement 807-814 Specification",
+      "source_sha256": "143e8702719bca6dd343d9c473f5d31f3762b8b98680742b2ec70fbb9deb9537",
+      "classification": "covered",
+      "curated_topic": "cur_uniform_and_folding_cups",
+      "reason": "Đặc tả cấp phát đồng phục và cốc gấp"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-08-31-uniform-cup-improvement-807-814.md",
+      "source_section": "## Scope",
+      "source_sha256": "143e8702719bca6dd343d9c473f5d31f3762b8b98680742b2ec70fbb9deb9537",
+      "classification": "covered",
+      "curated_topic": "cur_uniform_and_folding_cups",
+      "reason": "Phạm vi cấp phát đồng phục"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-08-31-uniform-cup-improvement-807-814.md",
+      "source_section": "## Business rules",
+      "source_sha256": "143e8702719bca6dd343d9c473f5d31f3762b8b98680742b2ec70fbb9deb9537",
+      "classification": "covered",
+      "curated_topic": "cur_uniform_and_folding_cups",
+      "reason": "Quy tắc nghiệp vụ đồng phục và cốc"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-08-31-uniform-cup-improvement-807-814.md",
+      "source_section": "## Acceptance criteria",
+      "source_sha256": "143e8702719bca6dd343d9c473f5d31f3762b8b98680742b2ec70fbb9deb9537",
+      "classification": "covered",
+      "curated_topic": "cur_uniform_and_folding_cups",
+      "reason": "Tiêu chuẩn nghiệm thu đồng phục"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-08-31-uniform-cup-improvement-807-814.md",
+      "source_section": "## Out of scope",
+      "source_sha256": "143e8702719bca6dd343d9c473f5d31f3762b8b98680742b2ec70fbb9deb9537",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ngoài phạm vi kỹ thuật"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-09-01-manual-special-cost-inheritance.md",
+      "source_section": "# Kế thừa chi phí riêng theo CC",
+      "source_sha256": "5aa78c16c9247c5de6250d75defa8c48e0f4af100af60a9f39b17e926cd4c214",
+      "classification": "covered",
+      "curated_topic": "cur_manual_special_cost_inheritance",
+      "reason": "Đặc tả kế thừa chi phí riêng theo Cost Center"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-09-01-manual-special-cost-inheritance.md",
+      "source_section": "## Mục tiêu",
+      "source_sha256": "5aa78c16c9247c5de6250d75defa8c48e0f4af100af60a9f39b17e926cd4c214",
+      "classification": "covered",
+      "curated_topic": "cur_manual_special_cost_inheritance",
+      "reason": "Mục tiêu kế thừa chi phí riêng"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-09-01-manual-special-cost-inheritance.md",
+      "source_section": "## Quy tắc đã chốt",
+      "source_sha256": "5aa78c16c9247c5de6250d75defa8c48e0f4af100af60a9f39b17e926cd4c214",
+      "classification": "covered",
+      "curated_topic": "cur_manual_special_cost_inheritance",
+      "reason": "Quy tắc kế thừa chi phí riêng đã duyệt"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-09-01-manual-special-cost-inheritance.md",
+      "source_section": "## Thiết kế",
+      "source_sha256": "5aa78c16c9247c5de6250d75defa8c48e0f4af100af60a9f39b17e926cd4c214",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Thiết kế kỹ thuật kế thừa"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-09-01-manual-special-cost-inheritance.md",
+      "source_section": "## Không thuộc phạm vi",
+      "source_sha256": "5aa78c16c9247c5de6250d75defa8c48e0f4af100af60a9f39b17e926cd4c214",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ngoài phạm vi kế thừa"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+      "source_section": "# Sắp xếp dòng chi phí trên file MP — Thiết kế",
+      "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+      "classification": "covered",
+      "curated_topic": "cur_output_cost_row_reordering",
+      "reason": "Đặc tả sắp xếp thứ tự dòng chi phí MP"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+      "source_section": "## Mục tiêu",
+      "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+      "classification": "covered",
+      "curated_topic": "cur_output_cost_row_reordering",
+      "reason": "Mục tiêu sắp xếp thứ tự dòng"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+      "source_section": "## Quy tắc nghiệp vụ đã chốt",
+      "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+      "classification": "covered",
+      "curated_topic": "cur_output_cost_row_reordering",
+      "reason": "Quy tắc sắp xếp dòng chi phí đã duyệt"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+      "source_section": "## Phạm vi giao diện",
+      "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+      "classification": "covered",
+      "curated_topic": "cur_output_cost_row_reordering",
+      "reason": "Giao diện sắp xếp dòng chi phí"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+      "source_section": "## Nhận dạng và metadata ẩn",
+      "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Metadata ẩn kỹ thuật"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+      "source_section": "## Luồng lưu thứ tự",
+      "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+      "classification": "covered",
+      "curated_topic": "cur_output_cost_row_reordering",
+      "reason": "Luồng lưu thứ tự dòng"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+      "source_section": "## Luồng chạy lại và tạo FY mới",
+      "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+      "classification": "covered",
+      "curated_topic": "cur_output_cost_row_reordering",
+      "reason": "Quy tắc áp dụng khi chạy lại hoặc tạo FY mới"
+    },
+    {
+      "source_path": "docs/superpowers/specs/2026-09-01-output-cost-row-ordering-design.md",
+      "source_section": "## Kiểm thử và nghiệm thu",
+      "source_sha256": "41446ce5d6f859d51271388dfe261a41e185e329117c5ade966320a855e396a1",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kiểm thử kỹ thuật sắp xếp"
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-facility-summary-rows-cc-1412000086.md",
+      "source_section": "# Facility Summary-Row Exclusion Implementation Plan",
+      "source_sha256": "5d26751f25e2d3eab58a28cdf082b734cbfc60cc02d8fa71b8f9643a39eba146",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Facility summary rows."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-facility-summary-rows-cc-1412000086.md",
+      "source_section": "### Task 1: Lock down the parser regression",
+      "source_sha256": "5d26751f25e2d3eab58a28cdf082b734cbfc60cc02d8fa71b8f9643a39eba146",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Facility summary rows."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-facility-summary-rows-cc-1412000086.md",
+      "source_section": "### Task 2: Make the smallest parser-only correction",
+      "source_sha256": "5d26751f25e2d3eab58a28cdf082b734cbfc60cc02d8fa71b8f9643a39eba146",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Facility summary rows."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-facility-summary-rows-cc-1412000086.md",
+      "source_section": "### Task 3: Verify actual workbook behavior and non-regression boundaries",
+      "source_sha256": "5d26751f25e2d3eab58a28cdf082b734cbfc60cc02d8fa71b8f9643a39eba146",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Facility summary rows."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-g6-to-g5-transition-new-hire.md",
+      "source_section": "# G6 to G5 transition handling Implementation Plan",
+      "source_sha256": "927410f444a0e82bac375f16639a21629a018f5a6ac98d19a68370e8d7a33b82",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật G6-to-G5 transition."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-g6-to-g5-transition-new-hire.md",
+      "source_section": "### Task 1: Persist the explicit transition input",
+      "source_sha256": "927410f444a0e82bac375f16639a21629a018f5a6ac98d19a68370e8d7a33b82",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật G6-to-G5 transition."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-g6-to-g5-transition-new-hire.md",
+      "source_section": "### Task 2: Make the manual UI editable and durable",
+      "source_sha256": "927410f444a0e82bac375f16639a21629a018f5a6ac98d19a68370e8d7a33b82",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật G6-to-G5 transition."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-g6-to-g5-transition-new-hire.md",
+      "source_section": "### Task 3: Adjust only new-hire allocation",
+      "source_sha256": "927410f444a0e82bac375f16639a21629a018f5a6ac98d19a68370e8d7a33b82",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật G6-to-G5 transition."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-g6-to-g5-transition-new-hire.md",
+      "source_section": "### Task 4: Tests and audit",
+      "source_sha256": "927410f444a0e82bac375f16639a21629a018f5a6ac98d19a68370e8d7a33b82",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật G6-to-G5 transition."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-g6-to-g5-transition-new-hire.md",
+      "source_section": "### Task 5: Acceptance workbook and delivery",
+      "source_sha256": "927410f444a0e82bac375f16639a21629a018f5a6ac98d19a68370e8d7a33b82",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật G6-to-G5 transition."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-sales-account-resolution-release.md",
+      "source_section": "# Sales Account Resolution Release Implementation Plan",
+      "source_sha256": "8d1b544da8b6cf4b331353d4c72a8a2e3b67a994119e7f63f86e148a1d69f3c5",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Sales account resolution."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-sales-account-resolution-release.md",
+      "source_section": "### Task 1: Verify the root-cause regression in source",
+      "source_sha256": "8d1b544da8b6cf4b331353d4c72a8a2e3b67a994119e7f63f86e148a1d69f3c5",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Sales account resolution."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-sales-account-resolution-release.md",
+      "source_section": "### Task 2: Verify no financial behavior is widened",
+      "source_sha256": "8d1b544da8b6cf4b331353d4c72a8a2e3b67a994119e7f63f86e148a1d69f3c5",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Sales account resolution."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-sales-account-resolution-release.md",
+      "source_section": "### Task 3: Deliver the corrected runtime",
+      "source_sha256": "8d1b544da8b6cf4b331353d4c72a8a2e3b67a994119e7f63f86e148a1d69f3c5",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Sales account resolution."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-sales-account-resolution-release.md",
+      "source_section": "### Task 4: Audit",
+      "source_sha256": "8d1b544da8b6cf4b331353d4c72a8a2e3b67a994119e7f63f86e148a1d69f3c5",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Sales account resolution."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-uniform-cup-improvement-807-814.md",
+      "source_section": "# Uniform and Cup Improvement 807-814 Implementation Plan",
+      "source_sha256": "23895f83543e80c9472738096a021ad73bf4d3afac8ec171f5a77025e2236635",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Uniform and cup improvement."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-uniform-cup-improvement-807-814.md",
+      "source_section": "### Task 1: Define source compatibility and approved entitlement amendment",
+      "source_sha256": "23895f83543e80c9472738096a021ad73bf4d3afac8ec171f5a77025e2236635",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Uniform and cup improvement."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-uniform-cup-improvement-807-814.md",
+      "source_section": "### Task 2: Apply the amendment to allocation and verify cost behavior",
+      "source_sha256": "23895f83543e80c9472738096a021ad73bf4d3afac8ec171f5a77025e2236635",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Uniform and cup improvement."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-08-31-uniform-cup-improvement-807-814.md",
+      "source_section": "### Task 3: Audit, accept, and close the register entries",
+      "source_sha256": "23895f83543e80c9472738096a021ad73bf4d3afac8ec171f5a77025e2236635",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Uniform and cup improvement."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-09-01-manual-special-cost-inheritance.md",
+      "source_section": "# Manual Special Cost Inheritance Implementation Plan",
+      "source_sha256": "c6c25ba1449cfed88445638084106397bfa2c11122041b3c16136a4f915c1898",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Manual special cost inheritance."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-09-01-manual-special-cost-inheritance.md",
+      "source_section": "### Task 1: Workbook manual-section contract",
+      "source_sha256": "c6c25ba1449cfed88445638084106397bfa2c11122041b3c16136a4f915c1898",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Manual special cost inheritance."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-09-01-manual-special-cost-inheritance.md",
+      "source_section": "### Task 2: Pipeline integration",
+      "source_sha256": "c6c25ba1449cfed88445638084106397bfa2c11122041b3c16136a4f915c1898",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Manual special cost inheritance."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-09-01-manual-special-cost-inheritance.md",
+      "source_section": "### Task 3: User interaction and localization",
+      "source_sha256": "c6c25ba1449cfed88445638084106397bfa2c11122041b3c16136a4f915c1898",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Manual special cost inheritance."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-09-01-manual-special-cost-inheritance.md",
+      "source_section": "### Task 4: Acceptance",
+      "source_sha256": "c6c25ba1449cfed88445638084106397bfa2c11122041b3c16136a4f915c1898",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Manual special cost inheritance."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-09-01-output-cost-row-ordering.md",
+      "source_section": "# Output Cost Row Ordering Implementation Plan",
+      "source_sha256": "704ece865bdd22f8f28970e19b8eb71139561caca8629481b19b7947e22b68fc",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Output cost row ordering."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-09-01-output-cost-row-ordering.md",
+      "source_section": "## File structure",
+      "source_sha256": "704ece865bdd22f8f28970e19b8eb71139561caca8629481b19b7947e22b68fc",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Output cost row ordering."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-09-01-output-cost-row-ordering.md",
+      "source_section": "### Task 1: Define hidden row layout metadata",
+      "source_sha256": "704ece865bdd22f8f28970e19b8eb71139561caca8629481b19b7947e22b68fc",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Output cost row ordering."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-09-01-output-cost-row-ordering.md",
+      "source_section": "### Task 2: Restore a mixed layout safely for reruns and new FYs",
+      "source_sha256": "704ece865bdd22f8f28970e19b8eb71139561caca8629481b19b7947e22b68fc",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Output cost row ordering."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-09-01-output-cost-row-ordering.md",
+      "source_section": "### Task 3: Integrate pipeline and business messages",
+      "source_sha256": "704ece865bdd22f8f28970e19b8eb71139561caca8629481b19b7947e22b68fc",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Output cost row ordering."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-09-01-output-cost-row-ordering.md",
+      "source_section": "### Task 4: Add the optional row-ordering UI",
+      "source_sha256": "704ece865bdd22f8f28970e19b8eb71139561caca8629481b19b7947e22b68fc",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Output cost row ordering."
+    },
+    {
+      "source_path": "docs/superpowers/plans/2026-09-01-output-cost-row-ordering.md",
+      "source_section": "### Task 5: Audit and regression acceptance",
+      "source_sha256": "704ece865bdd22f8f28970e19b8eb71139561caca8629481b19b7947e22b68fc",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Kế hoạch thực thi kỹ thuật Output cost row ordering."
+    },
+    {
+      "source_path": "docs/architecture/feature_registry.md",
+      "source_section": "# Danh mục tính năng MP2027",
+      "source_sha256": "33dce33ab2e44f3e6638a28ce41366108fbbda73f6bdde957685e10e6ff000ea",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Danh mục tính năng kỹ thuật dành cho nhà phát triển."
+    },
+    {
+      "source_path": "docs/architecture/feature_registry.md",
+      "source_section": "## Quy tắc cho các thay đổi sau này",
+      "source_sha256": "33dce33ab2e44f3e6638a28ce41366108fbbda73f6bdde957685e10e6ff000ea",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Danh mục tính năng kỹ thuật dành cho nhà phát triển."
+    },
+    {
+      "source_path": "docs/architecture/feature_registry.md",
+      "source_section": "## Danh mục máy đọc được",
+      "source_sha256": "33dce33ab2e44f3e6638a28ce41366108fbbda73f6bdde957685e10e6ff000ea",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Danh mục tính năng kỹ thuật dành cho nhà phát triển."
+    },
+    {
+      "source_path": "docs/architecture/system_architecture.md",
+      "source_section": "# MP2027 Manager — Bản đồ kiến trúc kỹ thuật",
+      "source_sha256": "c39547f11af377f9783fca619404e61e3487ce204f99fda772d0017bd40ea70d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bản đồ kiến trúc hệ thống kỹ thuật."
+    },
+    {
+      "source_path": "docs/architecture/system_architecture.md",
+      "source_section": "## Phạm vi hệ thống",
+      "source_sha256": "c39547f11af377f9783fca619404e61e3487ce204f99fda772d0017bd40ea70d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bản đồ kiến trúc hệ thống kỹ thuật."
+    },
+    {
+      "source_path": "docs/architecture/system_architecture.md",
+      "source_section": "## Trách nhiệm của các thành phần",
+      "source_sha256": "c39547f11af377f9783fca619404e61e3487ce204f99fda772d0017bd40ea70d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bản đồ kiến trúc hệ thống kỹ thuật."
+    },
+    {
+      "source_path": "docs/architecture/system_architecture.md",
+      "source_section": "## Lượt chạy thông thường",
+      "source_sha256": "c39547f11af377f9783fca619404e61e3487ce204f99fda772d0017bd40ea70d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bản đồ kiến trúc hệ thống kỹ thuật."
+    },
+    {
+      "source_path": "docs/architecture/system_architecture.md",
+      "source_section": "## Luồng cập nhật (HASH_ONLY_LAN)",
+      "source_sha256": "c39547f11af377f9783fca619404e61e3487ce204f99fda772d0017bd40ea70d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bản đồ kiến trúc hệ thống kỹ thuật."
+    },
+    {
+      "source_path": "docs/architecture/system_architecture.md",
+      "source_section": "## Các mô-đun rủi ro cao",
+      "source_sha256": "c39547f11af377f9783fca619404e61e3487ce204f99fda772d0017bd40ea70d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bản đồ kiến trúc hệ thống kỹ thuật."
+    },
+    {
+      "source_path": "docs/architecture/system_architecture.md",
+      "source_section": "## Bất biến đóng gói",
+      "source_sha256": "c39547f11af377f9783fca619404e61e3487ce204f99fda772d0017bd40ea70d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bản đồ kiến trúc hệ thống kỹ thuật."
+    },
+    {
+      "source_path": "docs/architecture/system_architecture.md",
+      "source_section": "## Bố cục phát hành",
+      "source_sha256": "c39547f11af377f9783fca619404e61e3487ce204f99fda772d0017bd40ea70d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bản đồ kiến trúc hệ thống kỹ thuật."
+    },
+    {
+      "source_path": "docs/architecture/system_architecture.md",
+      "source_section": "## Chính sách VC++ runtime",
+      "source_sha256": "c39547f11af377f9783fca619404e61e3487ce204f99fda772d0017bd40ea70d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bản đồ kiến trúc hệ thống kỹ thuật."
+    },
+    {
+      "source_path": "docs/architecture/system_architecture.md",
+      "source_section": "## Ranh giới tin cậy phát hành",
+      "source_sha256": "c39547f11af377f9783fca619404e61e3487ce204f99fda772d0017bd40ea70d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bản đồ kiến trúc hệ thống kỹ thuật."
+    },
+    {
+      "source_path": "docs/architecture/system_architecture.md",
+      "source_section": "## Bằng chứng đóng gói hiện tại",
+      "source_sha256": "c39547f11af377f9783fca619404e61e3487ce204f99fda772d0017bd40ea70d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Bản đồ kiến trúc hệ thống kỹ thuật."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "# Từ điển dữ liệu SQLite MP2027",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## Quan hệ thực thể",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## Nhóm bảng",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `audit_fixed_asset_import_rows`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `audit_fixed_asset_mismatch_history`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `audit_fixed_asset_mismatch_runs`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `audit_headcount_source_decisions`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `audit_uniform_cup_calculation`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `dim_accounts`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `dim_cost_centers`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `fact_allocation_log`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `fact_bus_headcount_drivers`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `fact_ga_monthly_rates`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `fact_headcount_time_source`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `fact_input_data`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `fact_manual_headcount_baseline_override`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `fact_manual_headcount_time_override`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `fact_missing_inputs`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `fact_monthly_headcount`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `map_allocation_rules`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `map_cost_center_uniform_items`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `schema_migrations`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## `sys_params`",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## Sheet ẩn Excel Metadata (`_mp2027_manual_special_meta`)",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/database/data_dictionary.md",
+      "source_section": "## Tạo lại tài liệu",
+      "source_sha256": "bdf9923a63b04a8a1cd0f3bdd153375285e51c016f30ef6031a60b2bf79e7ff7",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Từ điển dữ liệu và lược đồ cơ sở dữ liệu nội bộ."
+    },
+    {
+      "source_path": "docs/development_setup.md",
+      "source_section": "# Development setup MP2027",
+      "source_sha256": "0dcacd3291f14cb39bcdd7792a8314cf2d382335942717ec1269b2f188901cf6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn thiết lập môi trường phát triển và kiểm thử."
+    },
+    {
+      "source_path": "docs/development_setup.md",
+      "source_section": "## Python khuyến nghị",
+      "source_sha256": "0dcacd3291f14cb39bcdd7792a8314cf2d382335942717ec1269b2f188901cf6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn thiết lập môi trường phát triển và kiểm thử."
+    },
+    {
+      "source_path": "docs/development_setup.md",
+      "source_section": "## Fresh clone và tạo môi trường",
+      "source_sha256": "0dcacd3291f14cb39bcdd7792a8314cf2d382335942717ec1269b2f188901cf6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn thiết lập môi trường phát triển và kiểm thử."
+    },
+    {
+      "source_path": "docs/development_setup.md",
+      "source_section": "## Kiểm tra nhanh",
+      "source_sha256": "0dcacd3291f14cb39bcdd7792a8314cf2d382335942717ec1269b2f188901cf6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn thiết lập môi trường phát triển và kiểm thử."
+    },
+    {
+      "source_path": "docs/development_setup.md",
+      "source_section": "## Chạy GUI",
+      "source_sha256": "0dcacd3291f14cb39bcdd7792a8314cf2d382335942717ec1269b2f188901cf6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn thiết lập môi trường phát triển và kiểm thử."
+    },
+    {
+      "source_path": "docs/development_setup.md",
+      "source_section": "## Chạy E2E smoke",
+      "source_sha256": "0dcacd3291f14cb39bcdd7792a8314cf2d382335942717ec1269b2f188901cf6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn thiết lập môi trường phát triển và kiểm thử."
+    },
+    {
+      "source_path": "docs/development_setup.md",
+      "source_section": "## Build portable",
+      "source_sha256": "0dcacd3291f14cb39bcdd7792a8314cf2d382335942717ec1269b2f188901cf6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn thiết lập môi trường phát triển và kiểm thử."
+    },
+    {
+      "source_path": "docs/development_setup.md",
+      "source_section": "## Cleanup local an toàn",
+      "source_sha256": "0dcacd3291f14cb39bcdd7792a8314cf2d382335942717ec1269b2f188901cf6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn thiết lập môi trường phát triển và kiểm thử."
+    },
+    {
+      "source_path": "docs/development_setup.md",
+      "source_section": "## Quy tắc dữ liệu",
+      "source_sha256": "0dcacd3291f14cb39bcdd7792a8314cf2d382335942717ec1269b2f188901cf6",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn thiết lập môi trường phát triển và kiểm thử."
+    },
+    {
+      "source_path": "docs/handover/HANDOVER_FOR_NEXT_AGENT.md",
+      "source_section": "# Bàn giao hiện hành — MP2027 Manager",
+      "source_sha256": "12a671b68f017962ef27bdcbcb6ba541c54804a5a77ebaf1097633bdcc4853cf",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu bàn giao kỹ thuật giữa các kỹ sư."
+    },
+    {
+      "source_path": "docs/handover/HANDOVER_FOR_NEXT_AGENT.md",
+      "source_section": "## Trạng thái hiện tại",
+      "source_sha256": "12a671b68f017962ef27bdcbcb6ba541c54804a5a77ebaf1097633bdcc4853cf",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu bàn giao kỹ thuật giữa các kỹ sư."
+    },
+    {
+      "source_path": "docs/handover/HANDOVER_FOR_NEXT_AGENT.md",
+      "source_section": "## Đường dẫn đã duyệt",
+      "source_sha256": "12a671b68f017962ef27bdcbcb6ba541c54804a5a77ebaf1097633bdcc4853cf",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu bàn giao kỹ thuật giữa các kỹ sư."
+    },
+    {
+      "source_path": "docs/handover/HANDOVER_FOR_NEXT_AGENT.md",
+      "source_section": "## Ý nghĩa yêu cầu phát hành",
+      "source_sha256": "12a671b68f017962ef27bdcbcb6ba541c54804a5a77ebaf1097633bdcc4853cf",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu bàn giao kỹ thuật giữa các kỹ sư."
+    },
+    {
+      "source_path": "docs/handover/HANDOVER_FOR_NEXT_AGENT.md",
+      "source_section": "## Quy tắc version",
+      "source_sha256": "12a671b68f017962ef27bdcbcb6ba541c54804a5a77ebaf1097633bdcc4853cf",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu bàn giao kỹ thuật giữa các kỹ sư."
+    },
+    {
+      "source_path": "docs/handover/HANDOVER_FOR_NEXT_AGENT.md",
+      "source_section": "## Bàn giao sau phát hành",
+      "source_sha256": "12a671b68f017962ef27bdcbcb6ba541c54804a5a77ebaf1097633bdcc4853cf",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Tài liệu bàn giao kỹ thuật giữa các kỹ sư."
+    },
+    {
+      "source_path": "docs/handover/code_walkthrough.md",
+      "source_section": "# MP2027 Manager — hướng dẫn đọc code",
+      "source_sha256": "77ebf570dba960a1c6f032e2d93750092f6fa9bc18d60f9d553cd6e889936a0e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn cấu trúc mã nguồn cho lập trình viên."
+    },
+    {
+      "source_path": "docs/handover/code_walkthrough.md",
+      "source_section": "## 1. Luồng chạy chính",
+      "source_sha256": "77ebf570dba960a1c6f032e2d93750092f6fa9bc18d60f9d553cd6e889936a0e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn cấu trúc mã nguồn cho lập trình viên."
+    },
+    {
+      "source_path": "docs/handover/code_walkthrough.md",
+      "source_section": "## 2. Quy tắc đọc code",
+      "source_sha256": "77ebf570dba960a1c6f032e2d93750092f6fa9bc18d60f9d553cd6e889936a0e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn cấu trúc mã nguồn cho lập trình viên."
+    },
+    {
+      "source_path": "docs/handover/code_walkthrough.md",
+      "source_section": "## 3. Module gốc và đóng gói",
+      "source_sha256": "77ebf570dba960a1c6f032e2d93750092f6fa9bc18d60f9d553cd6e889936a0e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn cấu trúc mã nguồn cho lập trình viên."
+    },
+    {
+      "source_path": "docs/handover/code_walkthrough.md",
+      "source_section": "## 4. Database và schema",
+      "source_sha256": "77ebf570dba960a1c6f032e2d93750092f6fa9bc18d60f9d553cd6e889936a0e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn cấu trúc mã nguồn cho lập trình viên."
+    },
+    {
+      "source_path": "docs/handover/code_walkthrough.md",
+      "source_section": "## 5. Parser — đọc nguồn đầu vào",
+      "source_sha256": "77ebf570dba960a1c6f032e2d93750092f6fa9bc18d60f9d553cd6e889936a0e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn cấu trúc mã nguồn cho lập trình viên."
+    },
+    {
+      "source_path": "docs/handover/code_walkthrough.md",
+      "source_section": "## 6. Engine — quy tắc tính và ghi output",
+      "source_sha256": "77ebf570dba960a1c6f032e2d93750092f6fa9bc18d60f9d553cd6e889936a0e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn cấu trúc mã nguồn cho lập trình viên."
+    },
+    {
+      "source_path": "docs/handover/code_walkthrough.md",
+      "source_section": "## 7. Services và UI — điều phối và runtime",
+      "source_sha256": "77ebf570dba960a1c6f032e2d93750092f6fa9bc18d60f9d553cd6e889936a0e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn cấu trúc mã nguồn cho lập trình viên."
+    },
+    {
+      "source_path": "docs/handover/code_walkthrough.md",
+      "source_section": "## 8. Utility và audit",
+      "source_sha256": "77ebf570dba960a1c6f032e2d93750092f6fa9bc18d60f9d553cd6e889936a0e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn cấu trúc mã nguồn cho lập trình viên."
+    },
+    {
+      "source_path": "docs/handover/code_walkthrough.md",
+      "source_section": "## 9. Scripts vận hành",
+      "source_sha256": "77ebf570dba960a1c6f032e2d93750092f6fa9bc18d60f9d553cd6e889936a0e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn cấu trúc mã nguồn cho lập trình viên."
+    },
+    {
+      "source_path": "docs/handover/code_walkthrough.md",
+      "source_section": "## 10. Khi cần sửa một lỗi",
+      "source_sha256": "77ebf570dba960a1c6f032e2d93750092f6fa9bc18d60f9d553cd6e889936a0e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Hướng dẫn cấu trúc mã nguồn cho lập trình viên."
+    },
+    {
+      "source_path": "docs/handover/release_update_playbook.md",
+      "source_section": "# Phát hành và cập nhật MP2027 Manager",
+      "source_sha256": "23c11941f65f462d18044462f9e96a9df25292a73c8c78a61dce5ac6d6ab3f45",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Sổ tay quy trình đóng gói và phát hành phần mềm."
+    },
+    {
+      "source_path": "docs/handover/release_update_playbook.md",
+      "source_section": "## Định nghĩa yêu cầu và phạm vi được phép",
+      "source_sha256": "23c11941f65f462d18044462f9e96a9df25292a73c8c78a61dce5ac6d6ab3f45",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Sổ tay quy trình đóng gói và phát hành phần mềm."
+    },
+    {
+      "source_path": "docs/handover/release_update_playbook.md",
+      "source_section": "## Nguồn phát hành và ranh giới tin cậy",
+      "source_sha256": "23c11941f65f462d18044462f9e96a9df25292a73c8c78a61dce5ac6d6ab3f45",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Sổ tay quy trình đóng gói và phát hành phần mềm."
+    },
+    {
+      "source_path": "docs/handover/release_update_playbook.md",
+      "source_section": "## Quy tắc chọn version hiện hành",
+      "source_sha256": "23c11941f65f462d18044462f9e96a9df25292a73c8c78a61dce5ac6d6ab3f45",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Sổ tay quy trình đóng gói và phát hành phần mềm."
+    },
+    {
+      "source_path": "docs/handover/release_update_playbook.md",
+      "source_section": "## Quy tắc chống ghi đè artifact",
+      "source_sha256": "23c11941f65f462d18044462f9e96a9df25292a73c8c78a61dce5ac6d6ab3f45",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Sổ tay quy trình đóng gói và phát hành phần mềm."
+    },
+    {
+      "source_path": "docs/handover/release_update_playbook.md",
+      "source_section": "## Chuẩn bị bắt buộc",
+      "source_sha256": "23c11941f65f462d18044462f9e96a9df25292a73c8c78a61dce5ac6d6ab3f45",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Sổ tay quy trình đóng gói và phát hành phần mềm."
+    },
+    {
+      "source_path": "docs/handover/release_update_playbook.md",
+      "source_section": "## Luồng Setup nền tảng",
+      "source_sha256": "23c11941f65f462d18044462f9e96a9df25292a73c8c78a61dce5ac6d6ab3f45",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Sổ tay quy trình đóng gói và phát hành phần mềm."
+    },
+    {
+      "source_path": "docs/handover/release_update_playbook.md",
+      "source_section": "## Luồng auto-update đầy đủ",
+      "source_sha256": "23c11941f65f462d18044462f9e96a9df25292a73c8c78a61dce5ac6d6ab3f45",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Sổ tay quy trình đóng gói và phát hành phần mềm."
+    },
+    {
+      "source_path": "docs/handover/release_update_playbook.md",
+      "source_section": "## Điều kiện phải dừng",
+      "source_sha256": "23c11941f65f462d18044462f9e96a9df25292a73c8c78a61dce5ac6d6ab3f45",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Sổ tay quy trình đóng gói và phát hành phần mềm."
+    },
+    {
+      "source_path": "docs/handover/release_update_playbook.md",
+      "source_section": "## Rollback",
+      "source_sha256": "23c11941f65f462d18044462f9e96a9df25292a73c8c78a61dce5ac6d6ab3f45",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Sổ tay quy trình đóng gói và phát hành phần mềm."
+    },
+    {
+      "source_path": "docs/handover/release_update_playbook.md",
+      "source_section": "## Checklist bàn giao cho Agent",
+      "source_sha256": "23c11941f65f462d18044462f9e96a9df25292a73c8c78a61dce5ac6d6ab3f45",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Sổ tay quy trình đóng gói và phát hành phần mềm."
+    },
+    {
+      "source_path": "docs/handover/test_strategy_and_profiles.md",
+      "source_section": "# Chiến lược test và các profile phát hành MP2027",
+      "source_sha256": "90e511315f5cd079b18dd549dbbef3a8d40189c1da6e5185c1dc93e5505e3e31",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chiến lược và hồ sơ kiểm thử tự động."
+    },
+    {
+      "source_path": "docs/handover/test_strategy_and_profiles.md",
+      "source_section": "## Danh mục hiện tại",
+      "source_sha256": "90e511315f5cd079b18dd549dbbef3a8d40189c1da6e5185c1dc93e5505e3e31",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chiến lược và hồ sơ kiểm thử tự động."
+    },
+    {
+      "source_path": "docs/handover/test_strategy_and_profiles.md",
+      "source_section": "## Các profile test",
+      "source_sha256": "90e511315f5cd079b18dd549dbbef3a8d40189c1da6e5185c1dc93e5505e3e31",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chiến lược và hồ sơ kiểm thử tự động."
+    },
+    {
+      "source_path": "docs/handover/test_strategy_and_profiles.md",
+      "source_section": "## Chính sách phân loại test",
+      "source_sha256": "90e511315f5cd079b18dd549dbbef3a8d40189c1da6e5185c1dc93e5505e3e31",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chiến lược và hồ sơ kiểm thử tự động."
+    },
+    {
+      "source_path": "docs/handover/test_strategy_and_profiles.md",
+      "source_section": "## Kỳ vọng hồi quy cố định",
+      "source_sha256": "90e511315f5cd079b18dd549dbbef3a8d40189c1da6e5185c1dc93e5505e3e31",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chiến lược và hồ sơ kiểm thử tự động."
+    },
+    {
+      "source_path": "docs/handover/test_strategy_and_profiles.md",
+      "source_section": "## Ma trận đặc trưng hóa quy tắc nghiệp vụ",
+      "source_sha256": "90e511315f5cd079b18dd549dbbef3a8d40189c1da6e5185c1dc93e5505e3e31",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chiến lược và hồ sơ kiểm thử tự động."
+    },
+    {
+      "source_path": "docs/handover/test_strategy_and_profiles.md",
+      "source_section": "## Kỷ luật hiệu năng",
+      "source_sha256": "90e511315f5cd079b18dd549dbbef3a8d40189c1da6e5185c1dc93e5505e3e31",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Chiến lược và hồ sơ kiểm thử tự động."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.1.md",
+      "source_section": "# MP2027 Manager 0.1.1 — nền tảng cập nhật không dùng khóa",
+      "source_sha256": "72fb59d5e03227b8dcb383f31d1dbaf67206420173de744bb8800f09c432a54d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.1."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.1.md",
+      "source_section": "## Thay đổi chính",
+      "source_sha256": "72fb59d5e03227b8dcb383f31d1dbaf67206420173de744bb8800f09c432a54d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.1."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.1.md",
+      "source_section": "## Artifact đã kiểm tra",
+      "source_sha256": "72fb59d5e03227b8dcb383f31d1dbaf67206420173de744bb8800f09c432a54d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.1."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.1.md",
+      "source_section": "## Kiểm tra mã nguồn",
+      "source_sha256": "72fb59d5e03227b8dcb383f31d1dbaf67206420173de744bb8800f09c432a54d",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.1."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.2.md",
+      "source_section": "# MP2027 Manager 0.1.2",
+      "source_sha256": "1622d550205fa10afa9b88e6261f27441d7d6db103104d2b0ae307999ad2508a",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.2."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.2.md",
+      "source_section": "## Thay đổi chính",
+      "source_sha256": "1622d550205fa10afa9b88e6261f27441d7d6db103104d2b0ae307999ad2508a",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.2."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.2.md",
+      "source_section": "## Phạm vi cập nhật",
+      "source_sha256": "1622d550205fa10afa9b88e6261f27441d7d6db103104d2b0ae307999ad2508a",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.2."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.2.md",
+      "source_section": "## Kiểm tra và artifact",
+      "source_sha256": "1622d550205fa10afa9b88e6261f27441d7d6db103104d2b0ae307999ad2508a",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.2."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.3.md",
+      "source_section": "# MP2027 Manager 0.1.3",
+      "source_sha256": "341ebec8a5881eec098e21c910f6f86f788cb929d033644ff0705cd239fc6d22",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.3."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.3.md",
+      "source_section": "## Thay đổi chính",
+      "source_sha256": "341ebec8a5881eec098e21c910f6f86f788cb929d033644ff0705cd239fc6d22",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.3."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.3.md",
+      "source_section": "## Phạm vi cập nhật",
+      "source_sha256": "341ebec8a5881eec098e21c910f6f86f788cb929d033644ff0705cd239fc6d22",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.3."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.3.md",
+      "source_section": "## Kiểm tra và artifact",
+      "source_sha256": "341ebec8a5881eec098e21c910f6f86f788cb929d033644ff0705cd239fc6d22",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.3."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.4.md",
+      "source_section": "# MP2027 Manager 0.1.4",
+      "source_sha256": "627fb55d6422aa4a9bd26d3d5bc517700452d0090998e721685c39825b0f34cd",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.4."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.4.md",
+      "source_section": "## Thay đổi chính",
+      "source_sha256": "627fb55d6422aa4a9bd26d3d5bc517700452d0090998e721685c39825b0f34cd",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.4."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.4.md",
+      "source_section": "## Phạm vi cập nhật",
+      "source_sha256": "627fb55d6422aa4a9bd26d3d5bc517700452d0090998e721685c39825b0f34cd",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.4."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.4.md",
+      "source_section": "## Kiểm tra và artifact",
+      "source_sha256": "627fb55d6422aa4a9bd26d3d5bc517700452d0090998e721685c39825b0f34cd",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.4."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.5.md",
+      "source_section": "# MP2027 Manager 0.1.5",
+      "source_sha256": "cdf97186578855409190eec316e8a8330ea6070c7690b35ccd24e96f4e64f859",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.5."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.5.md",
+      "source_section": "## Phạm vi",
+      "source_sha256": "cdf97186578855409190eec316e8a8330ea6070c7690b35ccd24e96f4e64f859",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.5."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.5.md",
+      "source_section": "## Kiểm tra",
+      "source_sha256": "cdf97186578855409190eec316e8a8330ea6070c7690b35ccd24e96f4e64f859",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.5."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.5.md",
+      "source_section": "## Artifact và đối chiếu LAN",
+      "source_sha256": "cdf97186578855409190eec316e8a8330ea6070c7690b35ccd24e96f4e64f859",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.5."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.6.md",
+      "source_section": "# MP2027 Manager 0.1.6",
+      "source_sha256": "17f7c4fff16eae913ad0a6f4f8c6b2124c296bc32f745d9e157286fa589077bd",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.6."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.6.md",
+      "source_section": "## Phạm vi",
+      "source_sha256": "17f7c4fff16eae913ad0a6f4f8c6b2124c296bc32f745d9e157286fa589077bd",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.6."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.6.md",
+      "source_section": "## Kiểm tra trước build",
+      "source_sha256": "17f7c4fff16eae913ad0a6f4f8c6b2124c296bc32f745d9e157286fa589077bd",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.6."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.6.md",
+      "source_section": "## Build và health-check",
+      "source_sha256": "17f7c4fff16eae913ad0a6f4f8c6b2124c296bc32f745d9e157286fa589077bd",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.6."
+    },
+    {
+      "source_path": "docs/handover/releases/0.1.6.md",
+      "source_section": "## Artifact và đối chiếu LAN",
+      "source_sha256": "17f7c4fff16eae913ad0a6f4f8c6b2124c296bc32f745d9e157286fa589077bd",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Ghi chú phát hành phiên bản 0.1.6."
+    },
+    {
+      "source_path": "installer/languages/README.md",
+      "source_section": "# Bản dịch tiếng Việt cho Inno Setup",
+      "source_sha256": "39c7b3f3cc41749e77234e8d6689b4b78376c0fa8b4bd5270837895481260fba",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Tệp bản dịch ngôn ngữ cho trình cài đặt Inno Setup."
+    },
+    {
+      "source_path": "installer/languages/README.md",
+      "source_section": "## Cập nhật an toàn",
+      "source_sha256": "39c7b3f3cc41749e77234e8d6689b4b78376c0fa8b4bd5270837895481260fba",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Tệp bản dịch ngôn ngữ cho trình cài đặt Inno Setup."
+    },
+    {
+      "source_path": "reference_outputs/README.md",
+      "source_section": "# MP2027 Reference Outputs",
+      "source_sha256": "9f65cfce049c51728d030b598fffdfbeb9fac76716a43721d746043b14d6016e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Quy định đối chiếu thư mục tệp mẫu kết quả tham chiếu."
+    },
+    {
+      "source_path": "reference_outputs/README.md",
+      "source_section": "## Primary trusted reference",
+      "source_sha256": "9f65cfce049c51728d030b598fffdfbeb9fac76716a43721d746043b14d6016e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Quy định đối chiếu thư mục tệp mẫu kết quả tham chiếu."
+    },
+    {
+      "source_path": "reference_outputs/README.md",
+      "source_section": "## Secondary reference archive",
+      "source_sha256": "9f65cfce049c51728d030b598fffdfbeb9fac76716a43721d746043b14d6016e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Quy định đối chiếu thư mục tệp mẫu kết quả tham chiếu."
+    },
+    {
+      "source_path": "reference_outputs/README.md",
+      "source_section": "## Requirement source workbooks",
+      "source_sha256": "9f65cfce049c51728d030b598fffdfbeb9fac76716a43721d746043b14d6016e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Quy định đối chiếu thư mục tệp mẫu kết quả tham chiếu."
+    },
+    {
+      "source_path": "reference_outputs/README.md",
+      "source_section": "## Comparison rule",
+      "source_sha256": "9f65cfce049c51728d030b598fffdfbeb9fac76716a43721d746043b14d6016e",
+      "classification": "technical_excluded",
+      "curated_topic": null,
+      "reason": "Quy định đối chiếu thư mục tệp mẫu kết quả tham chiếu."
+    },
+    {
+      "source_path": "src/services/operations_knowledge.py",
+      "source_section": "ENTRY_BLOCKED_OUTPUT_FILE_LOCK",
+      "source_sha256": "0d4dfcb2332fdb8b58f6829930804edd7fad3b8c5916e854c2ac36aa20ca6a18",
+      "classification": "covered",
+      "curated_topic": "bck_locked_file",
+      "reason": "Mô hình lỗi chuẩn hóa khi tệp đầu ra đang bị khóa."
+    },
+    {
+      "source_path": "src/services/operations_knowledge.py",
+      "source_section": "ENTRY_MISSING_STAFFING_BASELINE",
+      "source_sha256": "0d4dfcb2332fdb8b58f6829930804edd7fad3b8c5916e854c2ac36aa20ca6a18",
+      "classification": "covered",
+      "curated_topic": "bck_missing_baseline",
+      "reason": "Mô hình lỗi chuẩn hóa khi thiếu nhân sự mốc ban đầu."
+    },
+    {
+      "source_path": "src/services/operations_knowledge.py",
+      "source_section": "ENTRY_PREFLIGHT_SOURCE_VALIDATION_FAILURE",
+      "source_sha256": "0d4dfcb2332fdb8b58f6829930804edd7fad3b8c5916e854c2ac36aa20ca6a18",
+      "classification": "covered",
+      "curated_topic": "bck_source_validation",
+      "reason": "Mô hình lỗi chuẩn hóa khi xác thực nguồn đầu vào thất bại."
+    }
+  ]
+}

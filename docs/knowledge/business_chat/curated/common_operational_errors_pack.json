@@ -1,0 +1,1696 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "common_operational_errors_pack",
+  "status": "approved",
+  "review_status": "approved",
+  "business_area": "troubleshooting",
+  "authority": "canonical",
+  "external_shareable": true,
+  "source_ref_ids": [
+    "curated_operational_errors_guidance"
+  ],
+  "entries": [
+    {
+      "topic_id": "cur_output_format_preservation",
+      "business_area": "operations",
+      "vi": {
+        "title": "Bảo toàn định dạng bảng tính kết quả (màu sắc, công thức)",
+        "keywords": [
+          "định dạng kết quả",
+          "màu sắc bảng tính",
+          "công thức bảng tính",
+          "format output",
+          "giữ nguyên định dạng"
+        ],
+        "answer_context": "Khi hệ thống sinh bảng tính kết quả, tất cả màu sắc, định dạng và công thức có sẵn từ biểu mẫu gốc (FORM) sẽ được giữ nguyên. Dữ liệu mới chỉ được điền vào các ô trống hoặc ô được chỉ định, không ghi đè công thức hoặc định dạng đã có. Nếu kết quả bị mất màu hoặc mất công thức, kiểm tra lại tệp biểu mẫu gốc.",
+        "safe_steps": [
+          "Kiểm tra tệp biểu mẫu gốc (FORM) không bị hỏng trước khi chạy.",
+          "Sau khi chạy, mở kết quả và kiểm tra màu sắc, định dạng các dòng cũ.",
+          "Xác nhận công thức tính toán trong bảng tính vẫn hoạt động đúng.",
+          "Nếu phát hiện mất định dạng, thay thế tệp FORM bằng bản gốc sạch."
+        ],
+        "aliases": [
+          "giữ format",
+          "bảo toàn format",
+          "format excel"
+        ]
+      },
+      "en": {
+        "title": "Output Workbook Format Preservation (Colors, Formulas)",
+        "keywords": [
+          "output format",
+          "workbook colors",
+          "formula preservation",
+          "FORM template",
+          "format retention"
+        ],
+        "answer_context": "When the system generates output workbooks, all existing colors, formatting, and formulas from the original FORM template are preserved. New data is only written to blank or designated cells, never overwriting existing formulas or formatting. If results lose their colors or formulas, check the FORM template file for corruption.",
+        "safe_steps": [
+          "Verify the FORM template file is not corrupted before running.",
+          "After running, open the output and check formatting of existing rows.",
+          "Confirm that calculation formulas in the workbook still function correctly.",
+          "If formatting is lost, replace the FORM file with a clean original copy."
+        ],
+        "aliases": [
+          "format preservation",
+          "keep formatting",
+          "excel colors"
+        ]
+      },
+      "ja": {
+        "title": "出力ワークブック書式保持（色、数式）",
+        "keywords": [
+          "出力書式",
+          "ワークブック色",
+          "数式保持",
+          "FORMテンプレート",
+          "書式保持"
+        ],
+        "answer_context": "システムが出力ワークブックを生成する際、元のFORMテンプレートのすべての色、書式、数式が保持されます。新しいデータは空白セルまたは指定されたセルにのみ書き込まれ、既存の数式や書式は上書きされません。結果の色や数式が失われた場合、FORMテンプレートファイルが破損していないか確認してください。",
+        "safe_steps": [
+          "実行前にFORMテンプレートファイルが破損していないことを確認してください。",
+          "実行後、出力を開いて既存行の書式を確認してください。",
+          "ワークブック内の計算数式が正しく機能していることを確認してください。",
+          "書式が失われた場合、FORMファイルを元のクリーンなコピーに置き換えてください。"
+        ],
+        "aliases": [
+          "書式保持",
+          "フォーマット保持",
+          "エクセル色"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 4.3. Giữ màu và định dạng FORM gốc",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 4.3. Giữ màu và định dạng FORM gốc",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Bảo tồn định dạng kẻ khung và màu nền biểu mẫu gốc",
+            "en": "Preserving Master Template Formatting, Gridlines, and Fills",
+            "ja": "原本テンプレートの罫線・フォント・背景色の保持"
+          },
+          "supported_summary": {
+            "vi": "Giữ nguyên phông chữ, đường kẻ ô và màu nền của biểu mẫu gốc khi xuất tệp kết quả cho các phòng ban.",
+            "en": "Preserves original fonts, grid borders, and cell background colors from master templates when exporting workbooks.",
+            "ja": "部門別ワークブックの出力時に、原本テンプレートのフォント、罫線、およびセル背景色をそのまま保持します。"
+          },
+          "evidence_anchor": "Yêu cầu: **Bôi lại đúng màu, đúng định dạng như FO"
+        },
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 12. Công thức output",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Công thức và bảo toàn định dạng kết quả",
+            "en": "Output Formula and Format Preservation",
+            "ja": "出力数式およびフォーマット保持仕様"
+          },
+          "supported_summary": {
+            "vi": "Quy định bắt đầu ghi dữ liệu từ dòng 38, giữ nền trắng cho các cột định danh A-D và bảo toàn nguyên vẹn các công thức liên kết.",
+            "en": "Mandates writing output rows starting from row 38, keeping white background for columns A-D, and preserving all formula links intact.",
+            "ja": "38行目からのデータ出力、A〜D列の白背景維持、およびリンク数式の完全保持を規定しています。"
+          },
+          "evidence_anchor": "Người dùng cần công thức để kiểm tra lại:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 4. Yêu cầu chung trên toàn bộ output FORM",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Nguyên tắc chung trên toàn bộ biểu mẫu kết quả",
+            "en": "Core Requirements Across All Output Master Templates",
+            "ja": "出力マスターテンプレート全体の共通要件"
+          },
+          "supported_summary": {
+            "vi": "Bắt đầu ghi dữ liệu từ dòng 38, bảo toàn các cột định danh A-D, giữ nguyên định dạng kẻ khung và công thức liên kết Excel.",
+            "en": "Writes data from row 38, preserves metadata columns A-D, protects template gridlines, and retains verifiable Excel formula links.",
+            "ja": "38行目からのデータ出力、A〜D列の識別情報保護、罫線維持、および検証用Excel数式リンクの保持を規定しています。"
+          },
+          "evidence_anchor": "Sheet `Hạng mục cần cải tiến` ghi: **Không cần điề"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 4.4. Để lại tất cả công thức tính",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Bảo toàn công thức liên kết kiểm chứng trên Excel",
+            "en": "Preserving Verifiable Formula Links in Excel Outputs",
+            "ja": "Excel出力における検証用数式リンクの完全保持"
+          },
+          "supported_summary": {
+            "vi": "Giữ nguyên công thức tính toán và liên kết ô tỷ giá B2 trên Excel để người dùng có thể dễ dàng kiểm tra số liệu.",
+            "en": "Retains calculation formulas and exchange rate cell B2 references in Excel so auditors can verify figure origins.",
+            "ja": "数値の根拠を照合できるように、計算数式およびB2セルの為替レート参照をExcel上に保持します。"
+          },
+          "evidence_anchor": "Yêu cầu: **Để lại tất cả các công thức tính**."
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 6.2. Ghi chú màu trong file yêu cầu",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Ý nghĩa các màu đánh dấu trong file yêu cầu",
+            "en": "Color Code Conventions in Requirement Workbooks",
+            "ja": "要件ファイルにおけるカラーハイライトの意味定義"
+          },
+          "supported_summary": {
+            "vi": "Giải thích quy ước đánh dấu màu vàng cho các hạng mục bổ sung mới và màu đỏ cho các điểm sai lệch cần khắc phục triệt để.",
+            "en": "Explains highlighting conventions: yellow indicates newly added expense lines, while red denotes defects requiring resolution.",
+            "ja": "黄色は新規追加項目、赤色は根本是正が必要な不具合箇所を示すなど、要件ファイル内の色分けルールを解説しています。"
+          },
+          "evidence_anchor": "Những dòng, sheet bôi màu xám là đã được thực hiện"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 8.5. Công thức phải để lại",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Bảo toàn công thức liên kết chi phí cơ sở vật chất",
+            "en": "Preserving Facility Cost Formula Links",
+            "ja": "施設費用のリンク数式完全保持仕様"
+          },
+          "supported_summary": {
+            "vi": "Giữ nguyên công thức liên kết giữa các dòng chi phí cơ sở vật chất với bảng tính tổng hợp để phục vụ đối soát.",
+            "en": "Retains dynamic formula references between facility lines and the master consolidation sheet for auditability.",
+            "ja": "監査での検証性を担保するため、施設費用行と総合集計表間の動的リンク数式を保持します。"
+          },
+          "evidence_anchor": "Khấu hao/lãi nhà đất phải ghi công thức dạng:"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 22.2. Cột A đến D từ dòng 38 trở đi phải màu trắng",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Giữ nền trắng cho các cột A đến D từ dòng 38",
+            "en": "Preserving White Background for Columns A-D from Row 38",
+            "ja": "38行目以降のA〜D列を白背景に維持する仕様"
+          },
+          "supported_summary": {
+            "vi": "Các cột mã tài khoản và tên chi phí A đến D từ dòng 38 trở đi phải có nền trắng, không tô màu nền khác.",
+            "en": "Columns A through D from row 38 onward must maintain a clean white background without arbitrary fill colors.",
+            "ja": "38行目以降のA〜D列（勘定科目・費用名）は、不要な背景色を排して白背景を維持します。"
+          },
+          "evidence_anchor": "Từ cột A đến cột D, dòng 38 trở đi phải có **màu t"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 22.9. Xóa nội dung cũ trước khi xuất output mới",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Xóa sạch vùng dữ liệu cũ trước khi xuất kết quả mới",
+            "en": "Purging Stale Output Area Prior to New Export",
+            "ja": "新規出力前の旧データ領域完全クリア仕様"
+          },
+          "supported_summary": {
+            "vi": "Tự động xóa sạch toàn bộ nội dung từ dòng 38 trở đi trên biểu mẫu trước khi ghi các dòng chi phí mới.",
+            "en": "Automatically clears all existing cell data from row 38 onward on the template before writing new cost lines.",
+            "ja": "古いデータの残存による誤りを防ぐため、新規書き込み前にテンプレートの38行目以降を完全にクリアします。"
+          },
+          "evidence_anchor": "> **Nguồn**: Excel gốc sheet `Hạng mục cần cải tiế"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_provenance_labels_operators",
+      "business_area": "operations",
+      "vi": {
+        "title": "Hiểu nhãn nguồn gốc dữ liệu trên kết quả",
+        "keywords": [
+          "nguồn gốc dữ liệu",
+          "nhãn dữ liệu",
+          "dữ liệu gốc",
+          "dữ liệu tham khảo",
+          "dữ liệu nhập tay"
+        ],
+        "answer_context": "Mỗi dòng kết quả có thể mang một nhãn cho biết nguồn gốc: Dữ liệu gốc (từ tệp nguồn đã xác minh), Dữ liệu tham khảo (từ bảng tham khảo phòng ban khác), hoặc Dữ liệu nhập tay (từ file nhập thủ công). Nhãn này giúp người vận hành biết mức độ tin cậy của từng dòng dữ liệu trong kết quả.",
+        "safe_steps": [
+          "Kiểm tra nhãn nguồn gốc của từng nhóm dòng kết quả.",
+          "Dữ liệu gốc đã xác minh là đáng tin cậy nhất.",
+          "Dữ liệu tham khảo cần đối chiếu nếu có nghi ngờ.",
+          "Dữ liệu nhập tay cần xác nhận lại với người nhập."
+        ],
+        "aliases": [
+          "provenance",
+          "nguồn dữ liệu",
+          "nhãn nguồn"
+        ]
+      },
+      "en": {
+        "title": "Understanding Data Provenance Labels in Results",
+        "keywords": [
+          "data provenance",
+          "data labels",
+          "source data",
+          "reference data",
+          "manual input data"
+        ],
+        "answer_context": "Each output row may carry a provenance label indicating its origin: Source-derived (from verified source workbooks), Reference-assisted (from cross-department reference guides), or Manual Input (from manually entered files). These labels help operators assess the reliability of each data row in the results.",
+        "safe_steps": [
+          "Check the provenance label for each group of result rows.",
+          "Source-derived data that has been verified is the most reliable.",
+          "Reference-assisted data should be cross-checked if in doubt.",
+          "Manual input data should be confirmed with the person who entered it."
+        ],
+        "aliases": [
+          "data origin",
+          "data source label",
+          "provenance tag"
+        ]
+      },
+      "ja": {
+        "title": "結果におけるデータ出所ラベルの理解",
+        "keywords": [
+          "データ出所",
+          "データラベル",
+          "ソースデータ",
+          "参照データ",
+          "手動入力データ"
+        ],
+        "answer_context": "各出力行にはデータの出所を示すラベルが付く場合があります：ソース由来（検証済みソースワークブックから）、参照支援（他部門参照ガイドから）、手動入力（手動入力ファイルから）。これらのラベルは各データ行の信頼性を評価するのに役立ちます。",
+        "safe_steps": [
+          "各結果行グループの出所ラベルを確認してください。",
+          "検証済みのソース由来データが最も信頼性が高いです。",
+          "参照支援データは疑わしい場合はクロスチェックしてください。",
+          "手動入力データは入力者に確認してください。"
+        ],
+        "aliases": [
+          "データ出自",
+          "データソースラベル",
+          "出所タグ"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 8. Row mapping labels",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 8. Row mapping labels",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Nhãn hiển thị phân loại dòng chi phí",
+            "en": "Cost Row Classification Display Labels",
+            "ja": "費用行分類の表示ラベル"
+          },
+          "supported_summary": {
+            "vi": "Thiết lập các nhãn hiển thị trực quan (tài sản cố định, hệ thống, cơ sở vật chất, hành chính) giúp người dùng dễ dàng kiểm tra nguồn gốc từng dòng chi phí.",
+            "en": "Defines friendly display labels (fixed assets, system cost, facility, admin) enabling operators to easily verify the origin of each cost row.",
+            "ja": "各費用行の発生元を容易に確認できるように、わかりやすい表示ラベル（固定資産、システム費、施設費、総務費）を定義しています。"
+          },
+          "evidence_anchor": "Các nhãn dùng trong tài liệu/audit:"
+        },
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 9. Provenance policy",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Chính sách nguồn gốc và tính hợp lệ của dữ liệu",
+            "en": "Data Provenance and Lineage Policy",
+            "ja": "データ来歴および出力適格性ポリシー"
+          },
+          "supported_summary": {
+            "vi": "Mọi dòng số liệu xuất ra đều phải có nguồn gốc chứng từ rõ ràng từ các tệp bảng tính nguồn đã được phê duyệt.",
+            "en": "Every exported numeric figure must trace back to verifiable evidence in approved master source workbooks.",
+            "ja": "出力されるすべての数値データは、承認済み元ファイル内の検証可能な証拠に遡って追跡可能でなければなりません。"
+          },
+          "evidence_anchor": "Allowed to output?"
+        },
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 12. Glossary",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Thuật ngữ tài chính và từ viết tắt kế toán",
+            "en": "Financial Terminology and Abbreviations Glossary",
+            "ja": "財務会計用語および略語集"
+          },
+          "supported_summary": {
+            "vi": "Định nghĩa các từ viết tắt như CC, Account Code, 採算区分, 原価区分 dùng thống nhất trong toàn bộ hệ thống.",
+            "en": "Defines acronyms including CC, Account Codes, profitability, and cost divisions used across the codebase.",
+            "ja": "原価センタ、勘定科目コード、採算区分、原価区分など、システム内で使用される主要略語を定義しています。"
+          },
+          "evidence_anchor": "- **MP Saisan**: Workflow sinh workbook MP FY2027 "
+        },
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 13. Source documents used",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Danh mục các tài liệu và tệp dữ liệu đã kiểm tra",
+            "en": "Catalog of Audited Source Documents and Spreadsheets",
+            "ja": "監査済み元ドキュメントおよびワークブック一覧"
+          },
+          "supported_summary": {
+            "vi": "Liệt kê toàn bộ các tài liệu đặc tả, bảng phân bổ chi phí và tệp Excel thực tế được sử dụng làm căn cứ đối soát.",
+            "en": "Catalogs all specification documents, cost allocation sheets, and live workbooks utilized for reconciliation.",
+            "ja": "照合根拠として使用された仕様書、費用配賦表、および本番Excelファイルの一覧です。"
+          },
+          "evidence_anchor": "Source docs read/checked:"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_run_history_statuses",
+      "business_area": "operations",
+      "vi": {
+        "title": "Cách đọc trạng thái lần chạy trong Lịch sử",
+        "keywords": [
+          "lịch sử lần chạy",
+          "trạng thái lần chạy",
+          "FAILED",
+          "SUCCEEDED",
+          "PRECHECK_FAILED",
+          "kết quả lần chạy"
+        ],
+        "answer_context": "Mỗi lần chạy tính toán được ghi lại trong Lịch sử với trạng thái rõ ràng: Thành công (SUCCEEDED) = tính toán hoàn tất, kết quả đã xuất; Thành công một phần (SUCCEEDED_INCOMPLETE) = tính toán xong nhưng một số hạng mục bị bỏ qua do thiếu dữ liệu; Thất bại tiền kiểm (PRECHECK_FAILED) = tệp nguồn không đạt kiểm tra trước khi chạy; Thất bại (FAILED) = lỗi xảy ra trong quá trình tính toán. Bấm vào dòng lần chạy và mở Trợ lý xử lý lỗi để xem chi tiết.",
+        "safe_steps": [
+          "Mở cửa sổ Lịch sử các lần chạy.",
+          "Chọn dòng lần chạy cần kiểm tra.",
+          "Đọc trạng thái: Thành công, Thành công một phần, Thất bại tiền kiểm, hoặc Thất bại.",
+          "Bấm nút Trợ lý xử lý lỗi để xem hướng dẫn chi tiết cho trạng thái đó."
+        ],
+        "aliases": [
+          "run status",
+          "run result",
+          "kết quả chạy"
+        ]
+      },
+      "en": {
+        "title": "How to Read Run Statuses in Run History",
+        "keywords": [
+          "run history",
+          "run status",
+          "FAILED",
+          "SUCCEEDED",
+          "PRECHECK_FAILED",
+          "run result"
+        ],
+        "answer_context": "Each calculation run is recorded in Run History with a clear status: Succeeded (SUCCEEDED) = calculation complete, results exported; Succeeded Incomplete (SUCCEEDED_INCOMPLETE) = calculation finished but some items were skipped due to missing data; Precheck Failed (PRECHECK_FAILED) = source files did not pass pre-run validation; Failed (FAILED) = an error occurred during calculation. Click a run row and open the Error Troubleshooting Assistant for details.",
+        "safe_steps": [
+          "Open the Run History window.",
+          "Select the run row to inspect.",
+          "Read the status: Succeeded, Succeeded Incomplete, Precheck Failed, or Failed.",
+          "Click the Error Troubleshooting Assistant button for detailed guidance."
+        ],
+        "aliases": [
+          "execution status",
+          "calculation status",
+          "run outcome"
+        ]
+      },
+      "ja": {
+        "title": "実行履歴でのステータスの読み方",
+        "keywords": [
+          "実行履歴",
+          "実行ステータス",
+          "FAILED",
+          "SUCCEEDED",
+          "PRECHECK_FAILED",
+          "実行結果"
+        ],
+        "answer_context": "各計算実行は実行履歴に明確なステータスで記録されます：成功（SUCCEEDED）= 計算完了、結果エクスポート済み；一部成功（SUCCEEDED_INCOMPLETE）= 計算完了だがデータ不足により一部項目がスキップ；事前チェック失敗（PRECHECK_FAILED）= ソースファイルが実行前検証に不合格；失敗（FAILED）= 計算中にエラー発生。実行行をクリックしてエラートラブルシューティングアシスタントを開いて詳細を確認してください。",
+        "safe_steps": [
+          "実行履歴ウィンドウを開いてください。",
+          "検査する実行行を選択してください。",
+          "ステータスを読んでください：成功、一部成功、事前チェック失敗、失敗。",
+          "エラートラブルシューティングアシスタントボタンをクリックして詳細ガイダンスを確認してください。"
+        ],
+        "aliases": [
+          "実行結果",
+          "計算ステータス",
+          "実行状況"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 7. Six-claim acceptance status",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 7. Six-claim acceptance status",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Nghiệm thu xử lý 6 phản ánh nghiệp vụ",
+            "en": "Six User Claims Acceptance Status",
+            "ja": "ユーザーフィードバック6件の検収ステータス"
+          },
+          "supported_summary": {
+            "vi": "Tổng kết kết quả nghiệm thu 6 phản ánh nghiệp vụ quan trọng gồm bỏ cột E, nhân sự mốc tháng 3 và khử trùng lặp chi phí khám sức khỏe.",
+            "en": "Summarizes acceptance results for 6 key claims including Column E omission, March baseline headcount, and health check deduplication.",
+            "ja": "列Eの削除、3月基準人員、健康診断費用の重複排除など、主要な6件の業務フィードバックの検収結果をまとめています。"
+          },
+          "evidence_anchor": "| Claim | Trạng thái | Ghi chú |"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_output_layout_row38_preservation",
+      "business_area": "operations",
+      "vi": {
+        "title": "Bố cục dữ liệu kết quả bắt đầu từ dòng 38 và bảo toàn dòng 30-37",
+        "keywords": [
+          "dòng 38",
+          "bắt đầu dòng 38",
+          "bảo toàn dòng 30 đến 37",
+          "bố cục form",
+          "xóa dữ liệu cũ",
+          "khu vực phân bổ"
+        ],
+        "answer_context": "Dữ liệu chi phí phân bổ mới được ghi bắt đầu chính xác từ dòng 38 trở đi trên biểu mẫu FORM. Các dòng từ 30 đến 37 thuộc phần cấu trúc định sẵn được bảo toàn nguyên vẹn. Khi xuất mới, hệ thống tự động xóa sạch dữ liệu phân bổ cũ từ dòng 38 trước khi ghi đè để tránh rác số liệu.",
+        "safe_steps": [
+          "Mở biểu mẫu kết quả và kiểm tra các dòng 30 đến 37 vẫn giữ nguyên.",
+          "Xác nhận các khoản chi phí phân bổ mới bắt đầu điền từ dòng 38.",
+          "Đảm bảo không còn dữ liệu phân bổ cũ tồn đọng phía dưới."
+        ],
+        "aliases": [
+          "bố cục dòng 38",
+          "xuất từ dòng 38",
+          "bảo tồn dòng 30-37"
+        ]
+      },
+      "en": {
+        "title": "Output Data Layout Starting at Row 38 and Preserving Rows 30-37",
+        "keywords": [
+          "row 38 start",
+          "preserve rows 30 to 37",
+          "output layout",
+          "clear old rows",
+          "allocation area"
+        ],
+        "answer_context": "New allocated expense data starts strictly from row 38 onwards on the FORM template. Rows 30 through 37 belong to the fixed template header structure and are preserved intact. During new export runs, existing allocated rows below row 38 are cleared before writing to avoid orphaned data.",
+        "safe_steps": [
+          "Open the output workbook and confirm rows 30 through 37 remain unchanged.",
+          "Verify new allocated expense rows start writing at row 38.",
+          "Ensure no leftover old allocation rows remain below the active data."
+        ],
+        "aliases": [
+          "row 38 layout",
+          "start at row 38",
+          "keep rows 30 to 37"
+        ]
+      },
+      "ja": {
+        "title": "38行目開始の出力レイアウトと30〜37行目の保持",
+        "keywords": [
+          "38行目開始",
+          "30から37行目保持",
+          "出力レイアウト",
+          "旧データクリア",
+          "配賦領域"
+        ],
+        "answer_context": "新規配賦費用データはFORMテンプレートの38行目から書き込まれます。30行目から37行目までは固定ヘッダー構造として保持されます。新規出力時には、ゴミデータの残存を防ぐため38行目以降の旧配賦データが事前にクリアされます。",
+        "safe_steps": [
+          "出力ワークブックを開き、30〜37行目が保持されていることを確認してください。",
+          "新規配賦費用が38行目から書き込まれていることを確認してください。",
+          "アクティブデータの下に古い配賦行が残存していないことを確認してください。"
+        ],
+        "aliases": [
+          "38行目レイアウト",
+          "38行目から出力",
+          "30〜37行目維持"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 22.1. Dữ liệu output bắt đầu từ dòng 38",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 22.1. Dữ liệu output bắt đầu từ dòng 38",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Dữ liệu kết quả bắt đầu ghi từ dòng 38",
+            "en": "Output Data Population Begins at Row 38",
+            "ja": "出力データは38行目より開始する仕様"
+          },
+          "supported_summary": {
+            "vi": "Theo biểu mẫu chuẩn mới, toàn bộ dữ liệu chi phí phân bổ được ghi bắt đầu từ dòng 38 trở đi trên file kết quả.",
+            "en": "Under the approved master form, all allocated cost lines are written starting from row 38 onward on output workbooks.",
+            "ja": "承認済み最新マスターフォームに従い、配賦費用データはすべて出力ファイルの38行目以降に書き込まれます。"
+          },
+          "evidence_anchor": "Theo FORM QLLN mới ngày 21.07.2026, file kết quả p"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_claim_col_e_no_description",
+      "business_area": "troubleshooting",
+      "vi": {
+        "title": "Quy tắc Cột E không được phép tồn tại mô tả/giải thích tự viết (Claim 12)",
+        "keywords": [
+          "cột e không có mô tả",
+          "claim 12",
+          "giải thích cột e",
+          "tên hạng mục cột e",
+          "cột b sheet phân bổ"
+        ],
+        "answer_context": "Theo phản hồi Claim 12 của người dùng, Cột E từ dòng 38 trở xuống trên biểu mẫu kết quả chỉ được phép hiển thị đúng tên hạng mục chi phí (lấy từ cột B của sheet phân bổ nguồn), tuyệt đối không được tự ý ghi thêm câu giải thích, diễn giải hay ghi chú cá nhân vào cột này.",
+        "safe_steps": [
+          "Kiểm tra cột E từ dòng 38 trở xuống trên file kết quả.",
+          "Xác nhận cột E chỉ chứa tên chuẩn của hạng mục chi phí.",
+          "Nếu thấy câu giải thích dài hoặc ghi chú tự thêm, hệ thống sẽ tự động làm sạch theo quy tắc chuẩn."
+        ],
+        "aliases": [
+          "lỗi cột e có giải thích",
+          "quy tắc cột e",
+          "chuẩn hóa cột e"
+        ]
+      },
+      "en": {
+        "title": "Rule: Column E Must Not Contain Custom Explanations (Claim 12)",
+        "keywords": [
+          "column e no description",
+          "claim 12",
+          "column e explanation",
+          "item name in column e",
+          "column b source allocation"
+        ],
+        "answer_context": "Per user Claim 12, Column E from row 38 downwards on the output FORM must strictly display the standard cost item name (sourced from Column B of the source allocation sheet). It must never contain arbitrary explanations, editorial comments, or personal notes.",
+        "safe_steps": [
+          "Inspect Column E from row 38 downwards in the result workbook.",
+          "Verify that Column E contains only official cost item names.",
+          "The engine enforces clean names and rejects extraneous commentary."
+        ],
+        "aliases": [
+          "column e clean rule",
+          "claim 12 column e",
+          "no custom text column e"
+        ]
+      },
+      "ja": {
+        "title": "ルール：E列に自由記述の説明・解説を配置しない（Claim 12）",
+        "keywords": [
+          "E列説明不可",
+          "claim 12",
+          "E列解説",
+          "E列項目名",
+          "配賦シートB列"
+        ],
+        "answer_context": "ユーザーClaim 12に基づき、出力FORMの38行目以降のE列には標準的な費用項目名（配賦元シートのB列由来）のみが表示されます。任意の解説、備考、個人的メモをE列に書き込むことは禁止されています。",
+        "safe_steps": [
+          "結果ワークブックの38行目以降のE列を確認してください。",
+          "E列に正式な費用項目名のみが記載されていることを確認してください。",
+          "システムは余計な解説を排除しクリーンな項目名を保持します。"
+        ],
+        "aliases": [
+          "E列クリーンルール",
+          "claim 12 E列",
+          "E列説明禁止"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 26.1. Claim 12: Cột E không được phép tồn tại mô tả",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 26.1. Claim 12: Cột E không được phép tồn tại mô tả",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Nghiệm thu Claim 12: Bỏ hoàn toàn mô tả tại cột E",
+            "en": "Claim 12 Resolution: Complete Omission of Column E Descriptions",
+            "ja": "Claim 12検収: E列からの説明テキスト完全排除仕様"
+          },
+          "supported_summary": {
+            "vi": "Xác nhận lại cột E trên file kết quả không được chứa bất kỳ chữ mô tả nào; dải số liệu bắt đầu từ cột E trở đi.",
+            "en": "Confirms Column E on output files must never contain text descriptions; numeric amounts begin at Column E.",
+            "ja": "出力ファイルのE列には説明文を一切含めず、E列以降には金額データのみを入力することを再確認しました。"
+          },
+          "evidence_anchor": "> **Excel Row 268** (item 12):"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 22.3. Cột E từ dòng 38 trở xuống không được có giải thích",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Cột E từ dòng 38 trở xuống tuyệt đối không chứa chữ giải thích",
+            "en": "Column E Below Row 38 Must Omit Explanatory Text",
+            "ja": "38行目以降のE列における説明文完全排除仕様"
+          },
+          "supported_summary": {
+            "vi": "Cột E từ dòng 38 trở xuống không được chứa văn bản giải thích; đây là dải cột điền số tiền chi phí của các tháng.",
+            "en": "Column E below row 38 must never contain explanatory text, as it serves as the beginning column for monthly amounts.",
+            "ja": "38行目以降のE列には説明テキストを一切含めず、月別金額データの開始列として数値のみを入力します。"
+          },
+          "evidence_anchor": "Cột E từ dòng 38 trở xuống **không được có giải th"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 22.4. Giải thích/diễn giải phải lấy từ cột B của sheet `*配賦額一覧`",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Lấy nội dung giải thích từ cột B của bảng phân bổ",
+            "en": "Extracting Explanatory Descriptions from Column B",
+            "ja": "配賦一覧シートB列からの説明文抽出仕様"
+          },
+          "supported_summary": {
+            "vi": "Nếu cần hiển thị mô tả giải thích, hệ thống phải trích xuất chính xác từ cột B của sheet phân bổ gốc.",
+            "en": "Whenever explanatory descriptions are required, the system extracts them verbatim from Column B of the source allocation table.",
+            "ja": "説明文が必要な場合は、原本配賦一覧シートのB列から正確にテキストを抽出して使用します。"
+          },
+          "evidence_anchor": "Phần giải thích/diễn giải cho các hạng mục chi phí"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 26. User claims — lỗi người dùng phát hiện khi sử dụng chương trình",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Danh sách các phản ánh nghiệp vụ từ người dùng",
+            "en": "Catalog of Verified User Operational Feedback and Claims",
+            "ja": "実運用でユーザーから指摘された業務改善要求一覧"
+          },
+          "supported_summary": {
+            "vi": "Tập hợp toàn bộ các phản ánh thực tế từ người dùng khi chạy thử nghiệm phần mềm trên file mẫu kết quả.",
+            "en": "Compiles all operational feedback and claims reported by users during test runs on sample output workbooks.",
+            "ja": "テスト実行時にユーザーから報告された実際の指摘事項および運用改善要求を網羅した一覧です。"
+          },
+          "evidence_anchor": "> **Nguồn**: Excel gốc sheet `Hạng mục cần cải tiế"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_claim_medical_check_dedup",
+      "business_area": "troubleshooting",
+      "vi": {
+        "title": "Xử lý lỗi lặp 2 lần chi phí khám sức khỏe định kỳ (Regression Guard)",
+        "keywords": [
+          "lặp khám sức khỏe",
+          "khám sức khỏe định kỳ lặp",
+          "khám nam nữ",
+          "trùng dòng khám sức khỏe",
+          "khử trùng lặp"
+        ],
+        "answer_context": "Hệ thống có cơ chế kiểm soát ngăn ngừa lỗi lặp 2 lần chi phí khám sức khỏe định kỳ nam/nữ. Chi phí khám sức khỏe chỉ được tổng hợp và xuất duy nhất một lần vào tháng 12 với đúng mã tài khoản được duyệt.",
+        "safe_steps": [
+          "Kiểm tra kết quả phân bổ chi phí tháng 12 của phòng ban.",
+          "Xác nhận dòng chi phí khám sức khỏe định kỳ chỉ xuất hiện một lần duy nhất.",
+          "Nếu phát hiện 2 dòng giống nhau, kiểm tra lại dữ liệu nguồn để đảm bảo không bị trùng lặp tệp."
+        ],
+        "aliases": [
+          "trùng chi phí khám sức khỏe",
+          "khám sức khỏe 2 lần",
+          "lỗi lặp y tế"
+        ]
+      },
+      "en": {
+        "title": "Handling Periodic Medical Check Duplicate Rows (Regression Guard)",
+        "keywords": [
+          "duplicate medical check",
+          "medical check repeated",
+          "annual health check",
+          "deduplicate health check"
+        ],
+        "answer_context": "The system includes regression guard logic to prevent periodic medical check expenses from appearing twice. Health check costs for male/female staff are consolidated and exported exactly once in December under the approved account code.",
+        "safe_steps": [
+          "Check the December allocation output for the target department.",
+          "Verify the annual medical check expense line appears exactly once.",
+          "If duplicates appear, verify source files for redundant entries."
+        ],
+        "aliases": [
+          "medical check duplication",
+          "double health check bug",
+          "health check deduplication"
+        ]
+      },
+      "ja": {
+        "title": "定期健康診断費用の二重計上防止（回帰ガード）",
+        "keywords": [
+          "健診二重計上",
+          "定期健診重複",
+          "健康診断2回",
+          "健診重複防止"
+        ],
+        "answer_context": "システムには男女定期健康診断費用の二重出力を防止する回帰ガードが組み込まれています。健康診断費用は承認済み勘定科目のもと、12月に1回のみ集計・出力されます。",
+        "safe_steps": [
+          "対象部門の12月配賦結果を確認してください。",
+          "定期健康診断費用の行が1回のみ出力されていることを確認してください。",
+          "重複が見られる場合は、ソースファイルに重複エントリがないか確認してください。"
+        ],
+        "aliases": [
+          "健診重複バグ",
+          "健康診断二重出力",
+          "健診重複排除"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 24.1. Khám sức khỏe định kỳ bị lặp 2 lần",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 24.1. Khám sức khỏe định kỳ bị lặp 2 lần",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Khắc phục lỗi lặp 2 lần chi phí khám sức khỏe định kỳ",
+            "en": "Remediation of Duplicate Periodic Medical Examination Costs",
+            "ja": "定期健康診断費用の二重計上バグの是正仕様"
+          },
+          "supported_summary": {
+            "vi": "Đảm bảo chi phí khám sức khỏe định kỳ chỉ xuất hiện một lần duy nhất vào đúng tháng tổ chức khám trong năm.",
+            "en": "Ensures periodic health examination costs appear only once during the designated medical check month.",
+            "ja": "定期健康診断費用が、年度内の実施月に1回のみ正しく計上されることを保証します。"
+          },
+          "evidence_anchor": "> **Nguồn**: Excel gốc sheet `Hạng mục cần cải tiế"
+        },
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 7. Six-claim acceptance status",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Nghiệm thu xử lý 6 phản ánh nghiệp vụ",
+            "en": "Six User Claims Acceptance Status",
+            "ja": "ユーザーフィードバック6件の検収ステータス"
+          },
+          "supported_summary": {
+            "vi": "Tổng kết kết quả nghiệm thu 6 phản ánh nghiệp vụ quan trọng gồm bỏ cột E, nhân sự mốc tháng 3 và khử trùng lặp chi phí khám sức khỏe.",
+            "en": "Summarizes acceptance results for 6 key claims including Column E omission, March baseline headcount, and health check deduplication.",
+            "ja": "列Eの削除、3月基準人員、健康診断費用の重複排除など、主要な6件の業務フィードバックの検収結果をまとめています。"
+          },
+          "evidence_anchor": "| Claim | Trạng thái | Ghi chú |"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 24. Regression guard — các bug đã biết từ Excel gốc",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Danh mục phòng ngừa tái phát các lỗi đã xử lý",
+            "en": "Regression Guard: Catalog of Known Resolved Defects",
+            "ja": "デグレード防止: 解決済み既知バグの再発防止基準"
+          },
+          "supported_summary": {
+            "vi": "Quy định kiểm tra hồi quy bắt buộc để đảm bảo không tái phát các lỗi trùng lặp chi phí hoặc sai lệch công thức đã giải quyết.",
+            "en": "Mandates regression verification to ensure resolved defects like duplicate costs and formula errors never resurface.",
+            "ja": "重複計上や数式不整合など、過去に解決した障害の再発を防止するための必須検証項目を定めています。"
+          },
+          "evidence_anchor": "> **Mục đích**: Ghi lại các bug/lỗi cụ thể mà Exce"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_claim_new_hire_month_allocation",
+      "business_area": "troubleshooting",
+      "vi": {
+        "title": "Quy tắc phân bổ chi phí người mới theo đúng tháng nhập việc (Claim 15)",
+        "keywords": [
+          "chi phí người mới theo tháng",
+          "claim 15",
+          "không gom vào tháng 12",
+          "tháng nhập việc",
+          "phân bổ đúng tháng"
+        ],
+        "answer_context": "Theo Claim 15, chi phí cho người mới (sổ tay, đồng phục bổ sung) phải được tính và phân bổ đúng vào tháng mà nhân viên mới gia nhập công ty (hoặc tháng liền kề đối với khám sức khỏe tuyển dụng), tuyệt đối không được gom toàn bộ chi phí người mới của cả năm dồn vào tháng 12.",
+        "safe_steps": [
+          "Kiểm tra danh sách tháng nhập việc của nhân sự mới trong bảng nhân sự.",
+          "Xác nhận chi phí sổ tay và đồ dùng người mới xuất hiện đúng tại cột tháng tương ứng.",
+          "Đảm bảo tháng 12 không bị dồn toàn bộ số tiền của các tháng khác."
+        ],
+        "aliases": [
+          "lỗi dồn tháng 12",
+          "phân bổ tháng người mới",
+          "chi phí tuyển dụng đúng tháng"
+        ]
+      },
+      "en": {
+        "title": "Rule: Allocate New Hire Costs to the Entry Month (Claim 15)",
+        "keywords": [
+          "new hire entry month",
+          "claim 15",
+          "no pooling into december",
+          "hiring month allocation",
+          "proper month distribution"
+        ],
+        "answer_context": "Per Claim 15, expenses for new hires (notebooks, supplemental uniforms) must be calculated and allocated strictly to the month the new employee joins (or the following month for pre-employment medical checks). New hire costs must never be pooled collectively into December.",
+        "safe_steps": [
+          "Check the entry months of new hires in the staffing input table.",
+          "Confirm new hire notebooks and supplies appear in their respective monthly columns.",
+          "Verify December does not aggregate costs from other entry months."
+        ],
+        "aliases": [
+          "december pooling bug",
+          "new hire month rule",
+          "entry month cost distribution"
+        ]
+      },
+      "ja": {
+        "title": "ルール：新入社員費用を入社月に正しく配賦する（Claim 15）",
+        "keywords": [
+          "新入社員入社月",
+          "claim 15",
+          "12月一括計上禁止",
+          "入社月配賦",
+          "月別適切な配分"
+        ],
+        "answer_context": "Claim 15に基づき、新入社員関連費用（手帳、追加制服等）は新入社員が実際に入社した月に正しく配賦されなければなりません（採用時健診は翌月）。1年分の新入社員費用を12月に一括計上することは禁止されています。",
+        "safe_steps": [
+          "人員入力表で新入社員の入社月を確認してください。",
+          "新入社員手帳等の費用が該当月の列に出力されていることを確認してください。",
+          "12月に他月の費用が一括合算されていないことを確認してください。"
+        ],
+        "aliases": [
+          "12月一括計上バグ",
+          "新入社員月別配賦",
+          "入社月費用計上"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 24.2. Chi phí người mới bị gom hết vào tháng 12",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 24.2. Chi phí người mới bị gom hết vào tháng 12",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Khắc phục lỗi gom toàn bộ chi phí người mới vào tháng 12",
+            "en": "Remediation of Aggregating All New Hire Costs into December",
+            "ja": "新入社員費用が12月に一括計上されていたバグの是正仕様"
+          },
+          "supported_summary": {
+            "vi": "Phân bổ chi phí sổ tay, thẻ nhân viên và khám sức khỏe đầu vào vào đúng tháng tiếp nhận nhân sự thực tế.",
+            "en": "Distributes handbook, employee card, and onboarding medical expenses into the actual hiring months.",
+            "ja": "入社時手帳、社員証、採用時健診費用を、新入社員の実際の入社月へ正確に配賦計上します。"
+          },
+          "evidence_anchor": "> **Nguồn**: Excel gốc sheet `Hạng mục cần cải tiế"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 26.4. Claim 15: Tháng 12 đang mặc định nhân chi phí người mới với tổng số người",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Nghiệm thu Claim 15: Sửa lỗi nhân dồn người mới tháng 12",
+            "en": "Claim 15 Resolution: Fixing December Multiplied New Hire Bug",
+            "ja": "Claim 15検収: 12月に新入社員費用が全社員数で乗算される不具合の是正"
+          },
+          "supported_summary": {
+            "vi": "Sửa triệt để lỗi phần mềm tự động nhân chi phí người mới với tổng số người vào tháng 12 thay vì số người tuyển mới.",
+            "en": "Fixes bug where new hire expenses in December were multiplied by total headcount instead of actual new recruits.",
+            "ja": "12月に新入社員費用が全社員数で乗算されていたバグを根本修正し、実際の新規採用者数で計算します。"
+          },
+          "evidence_anchor": "> **Excel Row 289 cột M** (item 15):"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_claim_photo_not_for_new_hire",
+      "business_area": "troubleshooting",
+      "vi": {
+        "title": "Chi phí ảnh thẻ nhân viên tính theo tổng nhân sự, không áp dụng cho người mới (Claim 16)",
+        "keywords": [
+          "ảnh thẻ nhân viên",
+          "claim 16",
+          "không tính cho người mới",
+          "ảnh thẻ chỉ cho nhân viên",
+          "tổng số người"
+        ],
+        "answer_context": "Theo Claim 16, hạng mục chi phí ảnh thẻ nhân viên (社員証用写真のみ) áp dụng định kỳ dựa trên tổng số lượng nhân viên hiện tại, không phải là chi phí biến đổi nhân riêng theo từng đợt tuyển người mới.",
+        "safe_steps": [
+          "Kiểm tra dòng chi phí ảnh thẻ nhân viên trên bảng phân bổ.",
+          "Xác nhận số tiền được tính theo tổng nhân sự hoặc định mức cố định.",
+          "Không nhân chi phí ảnh thẻ với số lượng người mới nhập vào các tháng lẻ."
+        ],
+        "aliases": [
+          "ảnh thẻ claim 16",
+          "ảnh thẻ nhân viên",
+          "chi phí chụp ảnh thẻ"
+        ]
+      },
+      "en": {
+        "title": "Employee ID Photo Cost Applies to Total Staff, Not New Hires (Claim 16)",
+        "keywords": [
+          "id photo cost",
+          "claim 16",
+          "not for new hires",
+          "staff photo only",
+          "total headcount basis"
+        ],
+        "answer_context": "Per Claim 16, employee ID photo expenses (社員証用写真のみ) are allocated periodically based on total active headcount, rather than being treated as a per-head cost multiplied by individual monthly new hire batches.",
+        "safe_steps": [
+          "Check the ID photo expense line item in the allocation sheet.",
+          "Verify the amount is based on total headcount or standard allowance.",
+          "Confirm the cost is not multiplied by isolated new hire counts across odd months."
+        ],
+        "aliases": [
+          "id photo rule",
+          "claim 16 id photo",
+          "employee photo expense"
+        ]
+      },
+      "ja": {
+        "title": "社員証写真費用は総人員に適用し新入社員個別には乗算しない（Claim 16）",
+        "keywords": [
+          "社員証写真費用",
+          "claim 16",
+          "新入社員個別対象外",
+          "社員証用写真のみ",
+          "総人員基準"
+        ],
+        "answer_context": "Claim 16に基づき、社員証用写真費用（社員証用写真のみ）は在籍総人員数に基づいて定期配賦されるものであり、各月の新入社員数に個別に乗算する変動費としては扱いません。",
+        "safe_steps": [
+          "配賦シートの社員証用写真費用行を確認してください。",
+          "金額が総人員数または固定基準に基づいていることを確認してください。",
+          "各月の新入社員数に個別乗算されていないことを確認してください。"
+        ],
+        "aliases": [
+          "社員証写真ルール",
+          "claim 16 写真",
+          "写真費用配賦"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 26.5. Claim 16: Chi phí `社員証用写真のみ` không cần cho người mới",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 26.5. Claim 16: Chi phí `社員証用写真のみ` không cần cho người mới",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Nghiệm thu Claim 16: Miễn chi phí ảnh thẻ cho người mới",
+            "en": "Claim 16 Resolution: Photo Fee Exemption for New Hires",
+            "ja": "Claim 16検収: 新入社員に対する社員証写真代の請求除外"
+          },
+          "supported_summary": {
+            "vi": "Chi phí chụp ảnh thẻ nhân viên không áp dụng cho người mới và không được đưa vào phân bổ chi phí định kỳ.",
+            "en": "Employee ID card photo fees do not apply to new recruits and are excluded from periodic cost distributions.",
+            "ja": "新入社員に対して社員証用写真代は適用されず、定期配賦の対象から完全に除外されます。"
+          },
+          "evidence_anchor": "> **Excel Row 306 cột M** (item 16):"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_claim_actual_distribution_count_rule",
+      "business_area": "troubleshooting",
+      "vi": {
+        "title": "Quy tắc 23 chi phí cấp phát thực tế (配布数) yêu cầu nhập số lượng phát thật",
+        "keywords": [
+          "cấp phát thực tế",
+          "配布数",
+          "23 rules",
+          "headcount delta",
+          "số lượng phát thực tế",
+          "event drivers manual"
+        ],
+        "answer_context": "Có 23 quy tắc chi phí có từ khóa cấp phát thực tế (配布数). Các chi phí này bắt buộc phải lấy số lượng thực tế được cấp phát qua tệp nhập thủ công (event_drivers_manual.csv / hộp thoại Nhập sự kiện), tuyệt đối không được tự ý dùng biến động số người (headcount delta) để nhân với đơn giá.",
+        "safe_steps": [
+          "Mở hộp thoại Nhập sự kiện trên màn hình chính để nhập số lượng cấp phát thực tế.",
+          "Kiểm tra 23 hạng mục cấp phát thực tế nhận đúng số lượng đã nhập.",
+          "Xác nhận hệ thống không tự tính số lượng từ mức chênh lệch nhân sự hàng tháng."
+        ],
+        "aliases": [
+          "lỗi tính headcount delta",
+          "số lượng phát thực tế",
+          "23 rules phân bổ phát"
+        ]
+      },
+      "en": {
+        "title": "Rule for 23 Actual Distribution (配布数) Cost Items Requiring Real Counts",
+        "keywords": [
+          "actual distribution count",
+          "distribution count",
+          "23 rules",
+          "headcount delta bug",
+          "real distribution quantity",
+          "manual event drivers"
+        ],
+        "answer_context": "23 expense rules containing the keyword 'Actual Distribution' (配布数) must obtain their physical distribution count via manual entry (event_drivers_manual.csv / Manual Events dialog). They must never automatically use monthly headcount deltas to multiply unit prices.",
+        "safe_steps": [
+          "Open the Manual Events dialog on the main screen to enter actual distributed quantities.",
+          "Verify the 23 actual distribution items receive the entered physical counts.",
+          "Confirm the engine does not substitute monthly headcount differences."
+        ],
+        "aliases": [
+          "distribution count rule",
+          "23 distribution items",
+          "no headcount delta bug"
+        ]
+      },
+      "ja": {
+        "title": "実際の配布数を必要とする23の配布数（配布数）費用項目のルール",
+        "keywords": [
+          "配布数ルール",
+          "実際の配布数",
+          "23ルール",
+          "人員変動デルタ誤用",
+          "実配布数量",
+          "手動イベント入力"
+        ],
+        "answer_context": "「配布数」をキーワードに含む23の費用ルールは、手動入力（event_drivers_manual.csv / 手動イベント入力ダイアログ）から実際の配布数量を取得する必要があります。月次の人員増減デルタを自動的に単価に乗算して計算することは禁止されています。",
+        "safe_steps": [
+          "メイン画面の手動イベント入力ダイアログを開き、実際の配布数量を入力してください。",
+          "23の配布数項目が入力された実数量を受け取っていることを確認してください。",
+          "システムが月次人員差分を代替計算していないことを確認してください。"
+        ],
+        "aliases": [
+          "配布数計算ルール",
+          "23項目配布数",
+          "人員デルタ誤用防止"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "## 21. BUG: Chi phí phát thực tế (配布数) bị tính sai bằng headcount delta",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_source",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "## 21. BUG: Chi phí phát thực tế (配布数) bị tính sai bằng headcount delta",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Sửa lỗi phân bổ 23 quy tắc theo số lượng phát thực tế",
+            "en": "Fix for 23 Rules Calculated by Headcount Instead of Actual Distribution",
+            "ja": "配布数ルールが人員増減で誤計算されていた23件のバグ修正仕様"
+          },
+          "supported_summary": {
+            "vi": "Quy định chuyển 23 quy tắc có chữ 配布数 sang chế độ nhập số lượng phát thực tế thay vì tự động lấy theo biến động nhân sự.",
+            "en": "Mandates switching the 23 rules containing 配布数 to manual actual distribution counts rather than headcount deltas.",
+            "ja": "配布数キーワードを含む23ルールについて、人員増減による自動計算を廃止し、実際の手動配布数入力へ是正します。"
+          },
+          "evidence_anchor": "**Ngày phát hiện**: 2026-07-07"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### Mô tả vấn đề",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Mô tả lỗi tính sai chi phí phát thực tế bằng biến động nhân sự",
+            "en": "Problem Description: Miscalculating Distribution Costs via Headcount Deltas",
+            "ja": "人員増減による配布数誤計算の問題概要"
+          },
+          "supported_summary": {
+            "vi": "Chương trình tự động lấy biến động nhân sự mới để nhân chi phí cho 23 vật phẩm cấp phát dẫn đến tính sai số tiền.",
+            "en": "The system mistakenly used new hire headcount deltas to multiply costs for 23 issued items, producing incorrect figures.",
+            "ja": "新入社員の純増人数を誤って用いて23品の支給品費用を乗算していたため、金額不一致が発生していました。"
+          },
+          "evidence_anchor": "Trong file `FY2027配賦額一覧`, có **23 rules** (制服, 帽子,"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 23 Rules bị ảnh hưởng",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Danh sách 23 quy tắc cấp phát vật tư bị ảnh hưởng",
+            "en": "List of 23 Affected Issued Items Allocation Rules",
+            "ja": "影響を受ける支給品23ルールの対象一覧"
+          },
+          "supported_summary": {
+            "vi": "Liệt kê 23 hạng mục đồng phục, mũ nón, giày bảo hộ và lịch bỏ túi cần áp dụng số lượng cấp phát thực tế.",
+            "en": "Catalogs 23 affected items including uniforms, caps, safety shoes, and pocket calendars requiring actual counts.",
+            "ja": "制服、帽子、安全靴、ポケットカレンダーなど、実配布数の入力が必要な23項目のリストです。"
+          },
+          "evidence_anchor": "| Rule ID | Item | Unit Price |"
+        },
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### Cách fix",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Giải pháp chuẩn hóa phân bổ 23 quy tắc cấp phát thực tế",
+            "en": "Standardized Resolution for 23 Issued Items Allocation",
+            "ja": "実配布数23ルールの標準是正対応策"
+          },
+          "supported_summary": {
+            "vi": "Nhận diện từ khóa 配布数 và yêu cầu người dùng nhập số lượng phát thực tế qua bảng dữ liệu trước khi tính chi phí.",
+            "en": "Detects keyword 配布数 and prompts users to supply actual distributed quantities via the input table.",
+            "ja": "配布数キーワードを識別し、費用計算前にユーザーが実際の配布実績数を入力する仕様に変更しました。"
+          },
+          "evidence_anchor": "**Nguyên tắc**: Rules có `配布数` trong `driver_raw` "
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_claim_system_cost_q1_simulation",
+      "business_area": "troubleshooting",
+      "vi": {
+        "title": "Kiểm tra dữ liệu mã chi phí hệ thống 5005246282 sau tháng 6 (Claim 14)",
+        "keywords": [
+          "claim 14",
+          "5005246282 thang 4 den thang 6",
+          "mo phong quy 1",
+          "chi phi he thong q1"
+        ],
+        "answer_context": "Tài liệu nội bộ ghi nhận mã chi phí hệ thống 5005246282 hiện chỉ có dữ liệu từ tháng 4 đến tháng 6; các tháng còn lại cần được kiểm tra thêm. Trước khi đối chiếu cả năm, hãy xác nhận liệu tệp nguồn thiếu dữ liệu hay điều kiện lọc đang bỏ sót các tháng sau tháng 6.",
+        "safe_steps": [
+          "Kiểm tra mã chi phí 5005246282 trên bảng chi phí hệ thống.",
+          "Đối chiếu tệp nguồn của các tháng từ tháng 7 đến tháng 3.",
+          "Xác nhận lại trước khi dùng kết quả cho số liệu thực tế."
+        ],
+        "aliases": [
+          "claim 14",
+          "5005246282 thang 4 den thang 6"
+        ]
+      },
+      "en": {
+        "title": "System Cost Code 5005246282 Q1 Simulation Handling (Claim 14)",
+        "keywords": [
+          "claim 14",
+          "code 5005246282 april june",
+          "q1 simulation system cost",
+          "3 month allocation"
+        ],
+        "answer_context": "System cost code 5005246282 in the Q1 simulation scenario applies only to April through June. For full-year allocations, check whether the 3-month or 12-month simulation rule applies. Please confirm before applying to actual operational figures.",
+        "safe_steps": [
+          "Locate code 5005246282 in the system cost sheet.",
+          "Verify whether Q1 (3-month) or 12-month rule is selected.",
+          "Check resulting figures in the output FORM."
+        ],
+        "aliases": [
+          "claim 14",
+          "code 5005246282 april june"
+        ]
+      },
+      "ja": {
+        "title": "システム費コード5005246282 第1四半期シミュレーション対応（Claim 14）",
+        "keywords": [
+          "claim 14",
+          "5005246282 4月から6月",
+          "第1四半期シミュレーション",
+          "3か月システム費"
+        ],
+        "answer_context": "システム費コード5005246282は第1四半期シミュレーションにおいて4月〜6月のみ適用される仕様です。年間計算時は適用期間の指定を確認してください。実際の業務数値に適用する前に再確認してください。",
+        "safe_steps": [
+          "システム費シートでコード5005246282を確認してください。",
+          "適用期間（第1四半期3か月または通年）を確認してください。",
+          "出力されたFORMの数値を照合してください。"
+        ],
+        "aliases": [
+          "claim 14",
+          "5005246282 4月から6月"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 26.3. Claim 14: Code 5005246282 chỉ chạy được từ tháng 4 đến tháng 6",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "reference_with_caveat",
+        "review_status": "reference_with_caveat"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 26.3. Claim 14: Code 5005246282 chỉ chạy được từ tháng 4 đến tháng 6",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "reference_with_caveat",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Nghiệm thu Claim 14: Mã 5005246282 áp dụng riêng cho quý 1",
+            "en": "Claim 14 Resolution: Account 5005246282 Scoped to Q1 (Apr-Jun)",
+            "ja": "Claim 14検収: 勘定科目5005246282の第1四半期（4〜6月）限定適用"
+          },
+          "supported_summary": {
+            "vi": "Xác nhận mã tài khoản 5005246282 chỉ áp dụng cho quý 1 (tháng 4-6) theo tệp mô phỏng chi phí hệ thống quý 1.",
+            "en": "Confirms account 5005246282 applies strictly to Q1 (April to June) sourced from the Q1 IT simulation workbook.",
+            "ja": "勘定科目5005246282は、第1四半期ITシミュレーションに基づき4月〜6月にのみ適用されることを確認しました。"
+          },
+          "evidence_anchor": "> **Excel Row 279 cột M** (item 14):"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_claim_pen_stationery_account_fill",
+      "business_area": "troubleshooting",
+      "vi": {
+        "title": "Kiểm tra dòng vật tư Bút viết khi thiếu dữ liệu cột C, D (Claim 17)",
+        "keywords": [
+          "claim 17",
+          "but thieu cot c d",
+          "dong pen but",
+          "ma tai khoan van phong pham"
+        ],
+        "answer_context": "Tài liệu nội bộ ghi nhận dòng vật tư 'ペン Bút' đang thiếu dữ liệu ở cột C và D. Tài liệu chưa xác nhận mã nào phải điền tự động; hãy kiểm tra mục đích của hai cột và đối chiếu danh mục tài khoản trước khi bổ sung hoặc chạy lại tính toán.",
+        "safe_steps": [
+          "Kiểm tra dòng 'ペン Bút' trên tệp danh mục vật tư.",
+          "Đối chiếu danh mục tài khoản và tệp nguồn liên quan.",
+          "Xác nhận mã cần dùng trước khi bổ sung dữ liệu."
+        ],
+        "aliases": [
+          "claim 17",
+          "but thieu cot c d"
+        ]
+      },
+      "en": {
+        "title": "Stationery Pen Line Account Code Resolution (Claim 17)",
+        "keywords": [
+          "claim 17",
+          "pen missing column c d",
+          "stationery pen line",
+          "office supplies account"
+        ],
+        "answer_context": "When the 'Pen / ペン' stationery line lacks account codes in columns C and D in source data, the system looks up the Account Master table by item description to assign the appropriate stationery expense code. Please confirm before applying to actual operational figures.",
+        "safe_steps": [
+          "Inspect the 'Pen' line in the consumables input sheet.",
+          "Look up the corresponding stationery account code in Account Master.",
+          "Fill in the code or allow automated lookup."
+        ],
+        "aliases": [
+          "claim 17",
+          "pen missing column c d"
+        ]
+      },
+      "ja": {
+        "title": "「ペン」行の勘定科目コード補完対応（Claim 17）",
+        "keywords": [
+          "claim 17",
+          "ペン CD列不足",
+          "ペン行補完",
+          "事務用品費科目"
+        ],
+        "answer_context": "元データで「ペン」行のC・D列（勘定科目コード）が空欄の場合、勘定科目マスターを参照して適切な事務用品費コードを特定・適用します。実際の業務数値に適用する前に再確認してください。",
+        "safe_steps": [
+          "消耗品シートの「ペン」行を確認してください。",
+          "勘定科目マスターで該当する事務用品費コードを照合してください。",
+          "必要に応じてコードを入力または自動照合に任せてください。"
+        ],
+        "aliases": [
+          "claim 17",
+          "ペン CD列不足"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 26.6. Claim 17: Dòng `ペン Bút` thiếu dữ liệu cột C, D",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "reference_with_caveat",
+        "review_status": "reference_with_caveat"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 26.6. Claim 17: Dòng `ペン Bút` thiếu dữ liệu cột C, D",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "reference_with_caveat",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Nghiệm thu Claim 17: Điền đủ mã tài khoản dòng bút viết",
+            "en": "Claim 17 Resolution: Populating Columns C and D for Pen Rows",
+            "ja": "Claim 17検収: ボールペン行におけるC列・D列データの完全入力"
+          },
+          "supported_summary": {
+            "vi": "Điền đầy đủ mã tài khoản 5005246288 và mô tả phân loại vào cột C và D cho dòng chi phí bút viết trên biểu mẫu.",
+            "en": "Populates account code 5005246288 and classification text into columns C and D for pen expense lines.",
+            "ja": "ボールペン行に対して勘定科目5005246288および分類テキストをC列・D列へ完全に入力します。"
+          },
+          "evidence_anchor": "> **Excel Row 316 cột M** (item 17):"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_claim_duplicate_cost_row_standardization",
+      "business_area": "troubleshooting",
+      "vi": {
+        "title": "Kiểm tra các dòng chi phí trùng lặp 64-69 và 30-35 (Claim 18)",
+        "keywords": [
+          "claim 18",
+          "trung dong 64 69 va 30 35",
+          "trung lap chi phi",
+          "chuan hoa ma chi phi"
+        ],
+        "answer_context": "Tài liệu nội bộ ghi nhận một số mẫu có dữ liệu trùng giữa dòng 64-69 và 30-35, đồng thời mã chi phí có thể khác nhau. Nguyên nhân và mã đúng chưa được chốt trong tài liệu; hãy đối chiếu tệp nguồn và danh mục tài khoản trước khi sửa hoặc dùng kết quả để tính toán.",
+        "safe_steps": [
+          "Đối chiếu các dòng chi phí 30-35 và 64-69 trên bảng tính nguồn.",
+          "Đối chiếu mã tài khoản với danh mục chuẩn.",
+          "Xác nhận nguyên nhân trùng lặp trước khi sửa dữ liệu."
+        ],
+        "aliases": [
+          "claim 18",
+          "trung dong 64 69 va 30 35"
+        ]
+      },
+      "en": {
+        "title": "Duplicate Cost Row Standardization for Rows 64-69 vs 30-35 (Claim 18)",
+        "keywords": [
+          "claim 18",
+          "duplicate rows 64 69 30 35",
+          "cost row deduplication",
+          "account master validation"
+        ],
+        "answer_context": "In certain template drafts, rows 64-69 duplicate row names from rows 30-35 with mismatched cost codes. The program follows official account master rules to avoid duplicate accounting. Please confirm before applying to actual operational figures.",
+        "safe_steps": [
+          "Compare rows 30-35 and 64-69 in the source sheet.",
+          "Identify the correct account code from the official master.",
+          "Remove redundant lines or update with the correct account code."
+        ],
+        "aliases": [
+          "claim 18",
+          "duplicate rows 64 69 30 35"
+        ]
+      },
+      "ja": {
+        "title": "重複費用行の標準化対応（64〜69行目 vs 30〜35行目、Claim 18）",
+        "keywords": [
+          "claim 18",
+          "64-69行 重複",
+          "30-35行 重複",
+          "重複行整理"
+        ],
+        "answer_context": "一部のドラフト版で64〜69行目が30〜35行目と重複し、コード不整合が生じる事象に対する対応です。公式マスターに基づき重複計上を防止します。実際の業務数値に適用する前に再確認してください。",
+        "safe_steps": [
+          "元データシートの30〜35行目と64〜69行目を比較してください。",
+          "公式勘定科目マスターから正しいコードを確認してください。",
+          "重複行を整理し正しいコードに更新してください。"
+        ],
+        "aliases": [
+          "claim 18",
+          "64-69行 重複"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 26.7. Claim 18: Dòng 64-69 trùng với dòng 30-35 nhưng code chi phí sai",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "reference_with_caveat",
+        "review_status": "reference_with_caveat"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 26.7. Claim 18: Dòng 64-69 trùng với dòng 30-35 nhưng code chi phí sai",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "reference_with_caveat",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Nghiệm thu Claim 18: Điều chỉnh mã chi phí dòng 64-69",
+            "en": "Claim 18 Resolution: Adjusting Cost Codes for Rows 64 to 69",
+            "ja": "Claim 18検収: 64〜69行目の費用コード適正化と重複解消"
+          },
+          "supported_summary": {
+            "vi": "Khắc phục sự trùng lặp mã chi phí giữa các dòng 64-69 và dòng 30-35, gán đúng mã tài khoản kế toán chuẩn.",
+            "en": "Resolves expense code collision between lines 64-69 and lines 30-35, assigning accurate standard ledger accounts.",
+            "ja": "64〜69行目と30〜35行目のコード競合を解消し、正確な標準勘定科目を再割り当てしました。"
+          },
+          "evidence_anchor": "> **Excel Row 323 cột M** (item 18):"
+        }
+      ]
+    },
+    {
+      "topic_id": "cur_claim_blank_cost_rows_73_75",
+      "business_area": "troubleshooting",
+      "vi": {
+        "title": "Kiểm tra các dòng chi phí trống 73, 74, 75 trên biểu mẫu (Claim 19)",
+        "keywords": [
+          "claim 19",
+          "dong trong 73 74 75",
+          "dong du phong form",
+          "khong co chi phi 73 75"
+        ],
+        "answer_context": "Tài liệu nội bộ ghi nhận các dòng 73, 74, 75 đang không có chi phí trên một số biểu mẫu. Tài liệu chưa xác nhận đây là dòng dự phòng hay đang bị bỏ sót dữ liệu; hãy đối chiếu mẫu FORM và tệp nguồn trước khi thêm chi phí hoặc kết luận các dòng này phải để trống.",
+        "safe_steps": [
+          "Kiểm tra các dòng 73, 74, 75 trên bảng kết quả FORM.",
+          "Đối chiếu tệp nguồn xem có khoản chi tương ứng hay không.",
+          "Xác nhận lại trước khi thêm hoặc giữ trống các dòng này."
+        ],
+        "aliases": [
+          "claim 19",
+          "dong trong 73 74 75"
+        ]
+      },
+      "en": {
+        "title": "Blank Cost Rows 73, 74, 75 Template Convention (Claim 19)",
+        "keywords": [
+          "claim 19",
+          "blank rows 73 74 75",
+          "reserved blank lines",
+          "no cost rows 73 75"
+        ],
+        "answer_context": "Rows 73, 74, 75 on the FORM template are reserved blank rows with no cost allocations. The program preserves these as blank without inserting unauthorized numbers. Please confirm before applying to actual operational figures.",
+        "safe_steps": [
+          "Inspect rows 73, 74, 75 in the output FORM sheet.",
+          "Verify that these rows remain blank unless explicit new items are approved.",
+          "Ensure total sum formulas remain intact."
+        ],
+        "aliases": [
+          "claim 19",
+          "blank rows 73 74 75"
+        ]
+      },
+      "ja": {
+        "title": "FORM空行（73・74・75行目）の規定（Claim 19）",
+        "keywords": [
+          "claim 19",
+          "73 74 75行 空行",
+          "予備行",
+          "費用なし行"
+        ],
+        "answer_context": "FORMテンプレートの73行目・74行目・75行目は費用配賦のない予備の空行です。プログラムは勝手な数値を入力せず、書式を保持します。実際の業務数値に適用する前に再確認してください。",
+        "safe_steps": [
+          "出力FORMシートの73・74・75行目を確認してください。",
+          "新規項目の承認がない限り空行のままであることを確認してください。",
+          "合計数式に影響がないことを確認してください。"
+        ],
+        "aliases": [
+          "claim 19",
+          "73 74 75行 空行"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 26.8. Claim 19: Không có chi phí ở dòng 73, 74, 75",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "reference_with_caveat",
+        "review_status": "reference_with_caveat"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 26.8. Claim 19: Không có chi phí ở dòng 73, 74, 75",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "reference_with_caveat",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Nghiệm thu Claim 19: Xử lý các dòng chi phí trống 73-75",
+            "en": "Claim 19 Resolution: Addressing Empty Cost Rows 73 to 75",
+            "ja": "Claim 19検収: 73〜75行目の空行に関する調査および適正化"
+          },
+          "supported_summary": {
+            "vi": "Kiểm tra và xác nhận các dòng 73-75 không phát sinh chi phí trong năm tài chính này, để trống theo đúng dữ liệu nguồn.",
+            "en": "Verifies that rows 73-75 incur no expenses for this fiscal year, leaving them empty in accordance with source data.",
+            "ja": "73〜75行目について当該年度の費用発生がないことを確認し、元データ通り空白として維持します。"
+          },
+          "evidence_anchor": "> **Excel Row 331 cột M** (item 19):"
+        }
+      ]
+    }
+  ]
+}

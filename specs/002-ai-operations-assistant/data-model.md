@@ -1,72 +1,72 @@
-# Data Model: AI Operations Assistant
+# Data Model: C-AGENT Operations Guidance
 
-## OperationalCase
+The existing `OperationalCase`, `EvidenceReference`, `KnowledgeEntry`, and `GuidancePresentation` remain the local authoritative model. The following types are additive and must never mutate an `OperationalCase` or its evidence.
+
+## CagentProviderPolicy
 
 | Field | Meaning | Validation |
 |---|---|---|
-| case_id | Stable identifier derived from selected run and error occurrence | Non-empty; tied to one run |
-| run_id | Existing run identifier | Must exist in history catalog |
-| fiscal_year | FY of selected run | Must match catalog/workspace evidence |
-| cost_center_scope | One CC, multiple CCs, or all | Taken from run catalog; never inferred from another run |
-| status | Terminal run outcome | Existing run status only |
-| stage | Failing/last known pipeline stage | Evidence-backed or `unavailable` |
-| classification | Known error code/category or `unknown` | Match only approved rules |
-| confidence | `confirmed`, `possible`, or `unknown` | `confirmed` requires catalog rule + evidence |
-| summary | Plain-language explanation | Must not claim facts beyond evidence |
-| evidence | Ordered `EvidenceReference` list | Every entry belongs to selected run |
-| guidance | Ordered safe next steps | No write/run action in MVP |
-| presentation | Current-language `GuidancePresentation` for a confirmed or fallback result | Preserves every required primary section for the UI; `None` only during the temporary pre-T015 unknown fallback |
+| enabled | Whether company AI requests are allowed on this deployment | `False` by default |
+| endpoint_url | Deployment-supplied C-AGENT endpoint | HTTPS URL; no UI entry/persistence |
+| auth_mode | Approved authentication method | `none` or `bearer_env` only (v1 strict allow-list) |
+| timeout_seconds | Maximum client wait | Integer 1–60; default 60 |
+| data_policy_id | Company approval reference | Non-empty whenever `enabled=True` |
+| allowed_packet_version | Packet contract accepted by C-AGENT | Exact contract version |
 
-## EvidenceReference
+The policy contains no secret value. A token, if required, is read from the deployment environment or OS secret facility at call time and is never rendered, logged, serialised, or added to a test fixture.
 
-| Field | Meaning |
-|---|---|
-| type | Catalog row, run manifest, preflight report, stage evidence, failure trace, or approved documentation |
-| local_path | Local path shown to user |
-| locator | JSON key, report section, or line range when available |
-| summary | Short description of what this evidence establishes |
-| verification | `verified`, `missing`, or `mismatch` |
+## CagentGuidancePacket
 
-## KnowledgeEntry
+| Field | Meaning | Validation |
+|---|---|---|
+| packet_version | Contract version | `cagent-guidance/v1` |
+| packet_id | Ephemeral request correlation ID | Generated in memory; not a run ID |
+| case_context | FY, CC scope, terminal status, stage, classification, confidence | Values copied from the selected local case only |
+| local_guidance_summary | Existing approved plain-language summary | Bounded text |
+| evidence_items | `SafeEvidenceItem` and selected-run technical evidence records | Verified only; each gets an opaque ordinal such as `E1` |
+| question | Fixed operational question template in active language | No free-text in v1 |
+| language | `vi`, `en`, or `ja` | Must match the active UI language |
 
-| Field | Meaning |
-|---|---|
-| error_code | Stable error classification |
-| conditions | Evidence conditions required for a confirmed match |
-| translations | Approved, structured explanations in VI/EN/JA. Each language contains a title, what happened, why it happened, what to do, evidence label, technical-details label, and confidence label. |
-| evidence_requirements | Evidence types that must be present |
-| review_status | `approved` or `draft` |
-| owner | Business/technical owner |
+## SafeEvidenceItem
 
-## GuidancePresentation
+| Field | Meaning | Validation |
+|---|---|---|
+| evidence_id | Packet-local `E1`, `E2`, ... | Opaque; never derived from file name/path |
+| type | Coarse evidence type | Allow-listed type only |
+| summary | Short approved statement | Bounded; may be accompanied by a selected-run technical excerpt |
+| verification | `verified` only | Missing/mismatch evidence is omitted |
 
-| Field | Meaning |
-|---|---|
-| language | Current interface language: `vi`, `en`, or `ja` |
-| title | Short, non-technical statement of the issue |
-| what_happened | Plain explanation of the observed result |
-| why_it_happened | Evidence-backed reason, or a clear statement that the reason is not confirmed |
-| what_to_do | Ordered safe manual actions a user can perform |
-| confidence_label | Localized indication of `confirmed`, `possible`, or `unknown` |
-| evidence_label | Localized label for source paths, run IDs, report sections, and other proof |
-| technical_details_label | Localized label for optional raw log, exception, or report detail |
+## CagentGuidanceResult
 
-## ResolutionNote (future slice)
+| Field | Meaning | Validation |
+|---|---|---|
+| status | `ready`, `unavailable`, `rejected`, `failed`, or `timed_out` | UI state, not persisted |
+| provider_label | Localised `C-AGENT (company service)` | Fixed label; no user-supplied URL |
+| answer | Bounded plain-language advisory text | Removes control characters, secrets, paths, and prohibited action claims |
+| cited_evidence_ids | Evidence IDs returned/recognised in answer | Must be subset of packet IDs |
+| limitation | Localised disclosure when result is incomplete/unavailable | Always present |
+| request_started_at | In-memory timing metadata | Never written into run history |
 
-| Field | Meaning |
-|---|---|
-| note_id | Stable separate identifier |
-| case_id | Linked operational case |
-| author | Person who recorded the note |
-| created_at | Timestamp |
-| text | Manual outcome/observation |
-| review_status | `unreviewed`, `approved`, or `rejected` |
-| evidence_refs | Evidence used by the author |
+## CompanyInternalEvidence (implemented in T030)
+
+| Field | Meaning | Validation |
+|---|---|---|
+| evidence_id | Packet-local opaque ID | Unique within packet |
+| type | Run-manifest, stage report, preflight report, failure traceback, or catalog evidence | Allow-listed type only |
+| selected_run_path | Location of evidence in the selected run workspace | Must resolve inside that workspace |
+| locator | Relevant line range or report section | Bounded |
+| excerpt | Technical content needed for diagnosis | Bounded per item and total packet budget |
+| verification | `verified` only | Missing/mismatch evidence is omitted |
+
+## GeminiPublicExperimentRequest and Result
+
+`GeminiPublicExperimentRequest` contains exactly one `scenario_id` from the built-in allow-list and a fixed fictional prompt. It has no run, history, file, free-text, image, or clipboard field. Its result carries `status`, bounded `answer`, `provider_label`, and the fixed public-data warning.
 
 ## State Rules
 
-- Run evidence is immutable after a terminal run status.
-- A case is read-only and may be rebuilt from the same evidence.
-- A known entry becomes `confirmed` only when all its evidence conditions match.
-- A resolution note never changes case evidence or knowledge rules by itself.
-- The primary presentation must use `GuidancePresentation`; raw technical evidence is supplementary and never replaces a required primary field.
+- An `OperationalCase` is constructed locally before any provider state exists.
+- Only an explicit user action can create a C-AGENT packet; opening a dialog creates none.
+- C-AGENT failure does not change local confidence/classification or invoke another provider.
+- Provider answers are advisory display state only and vanish when the dialog closes.
+- Gemini experiment state cannot reference `OperationalCase` or be reachable from the C-AGENT failure path.
+- Neither provider model has a write, run, repair, save, configuration, history, or export operation.

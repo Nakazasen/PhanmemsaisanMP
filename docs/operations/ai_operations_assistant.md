@@ -149,3 +149,15 @@ Trước khi đánh dấu T027 hoàn tất, người chịu trách nhiệm cần
 2. Một lần chạy có lỗi chưa xác nhận: xác nhận màn hình nói rõ nguyên nhân chưa được xác nhận và không gợi ý hay cung cấp thao tác sửa/tự chạy lại.
 
 Biên bản cần ghi ngày thực hiện, người nghiệm thu, hai kết quả quan sát được và mọi hướng dẫn bị từ chối. Chỉ sau đó mới đổi trạng thái tài liệu và đánh dấu T027.
+
+---
+
+## 11. Tư vấn AI nội bộ C-AGENT (Phase 6)
+
+### Nguyên tắc vận hành
+- C-AGENT là dịch vụ nội bộ do IT doanh nghiệp quản lý.
+- Mặc định ở trạng thái bị vô hiệu hóa (`enabled=False`) cho đến khi có cấu hình triển khai hợp lệ.
+- Dữ liệu gửi đi chỉ thuộc duy nhất lần chạy đã chọn (`selected run`): tóm tắt sự cố, mã lỗi, trích đoạn báo cáo và đường dẫn trong workspace của lần chạy đó.
+- Không gửi thông tin xác thực, token, biến môi trường, dữ liệu ngoài workspace hay dữ liệu của các lần chạy khác.
+- Phản hồi từ C-AGENT chỉ mang tính chất tham khảo (advisory only). Hệ thống không tự ý sửa đổi file hay chạy lại pipeline.
+- Nghiệm thu thực tế trên mạng nội bộ doanh nghiệp đang chờ hoàn tất bàn giao IT ở Task T028 và nghiệm thu ở Task T042.

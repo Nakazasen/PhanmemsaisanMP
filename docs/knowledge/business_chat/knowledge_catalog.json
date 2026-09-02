@@ -1,0 +1,1471 @@
+{
+  "schema_version": "2.0",
+  "description": "Curated multilingual business knowledge for MP2027 operations chat. Non-technical language only. This is curated local retrieval; Gemini is the external answer-composition layer when available.",
+  "entries": [
+    {
+      "id": "bck_locked_file",
+      "status": "active",
+      "review_status": "approved",
+      "aliases": {
+        "vi": [
+          "tep bi khoa",
+          "excel bi khoa"
+        ],
+        "en": [
+          "file lock",
+          "locked workbook"
+        ],
+        "ja": [
+          "ロックファイル",
+          "ファイル使用中"
+        ]
+      },
+      "vi": {
+        "title": "Tệp kết quả đang bị khóa",
+        "keywords": [
+          "khóa",
+          "file khóa",
+          "excel khóa",
+          "không ghi được",
+          "đang mở",
+          "bị khóa",
+          "locked",
+          "không lưu được"
+        ],
+        "answer_context": "Khi tệp Excel kết quả đang được mở bởi người khác hoặc ứng dụng khác, chương trình không thể ghi đè để lưu kết quả mới.",
+        "safe_steps": [
+          "Đóng tất cả tệp Excel đang mở trong thư mục kết quả.",
+          "Đóng cửa sổ File Explorer nếu đang mở thư mục kết quả.",
+          "Chờ vài giây rồi bấm Chạy tính toán lại."
+        ]
+      },
+      "en": {
+        "title": "Output file is locked",
+        "keywords": [
+          "locked",
+          "file locked",
+          "excel locked",
+          "cannot save",
+          "open by another",
+          "permission denied",
+          "cannot write"
+        ],
+        "answer_context": "When the output Excel workbook is open in another application or by another user, the program cannot overwrite it to save new results.",
+        "safe_steps": [
+          "Close all Excel files open in the output folder.",
+          "Close any File Explorer windows browsing the output folder.",
+          "Wait a few seconds and click Run Calculation again."
+        ]
+      },
+      "ja": {
+        "title": "出力ファイルがロックされています",
+        "keywords": [
+          "ロック",
+          "ファイルロック",
+          "開いている",
+          "書き込めない",
+          "保存できない",
+          "ロックされている",
+          "他のアプリ"
+        ],
+        "answer_context": "出力先のExcelファイルが別のアプリケーションまたは別のユーザーによって開かれている場合、新しい結果を上書き保存できません。",
+        "safe_steps": [
+          "出力フォルダー内で開いているExcelファイルをすべて閉じてください。",
+          "出力フォルダーを開いているエクスプローラーを閉じてください。",
+          "数秒待ってから「計算を実行」をクリックしてください。"
+        ]
+      },
+      "source_ref_ids": [
+        "approved_business_guidance"
+      ],
+      "provenance": {
+        "source_path": "src/services/operations_knowledge.py",
+        "source_section": "ENTRY_BLOCKED_OUTPUT_FILE_LOCK",
+        "source_sha256": "0d4dfcb2332fdb8b58f6829930804edd7fad3b8c5916e854c2ac36aa20ca6a18",
+        "source_classification": "canonical_error_model",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "src/services/operations_knowledge.py",
+          "source_section": "ENTRY_BLOCKED_OUTPUT_FILE_LOCK",
+          "source_sha256": "0d4dfcb2332fdb8b58f6829930804edd7fad3b8c5916e854c2ac36aa20ca6a18",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Từ điển lỗi vận hành chuẩn hóa MP2027",
+            "en": "MP2027 Canonical Operational Error Knowledge",
+            "ja": "MP2027 標準運用障害ナレッジ"
+          },
+          "heading_title": {
+            "vi": "Mô hình tri thức lỗi tệp kết quả bị khóa",
+            "en": "Knowledge Model: Output File Lock Conflict",
+            "ja": "出力ファイルロック競合のナレッジモデル"
+          },
+          "supported_summary": {
+            "vi": "Mô tả nguyên nhân và giải pháp chuẩn khi tệp Excel kết quả đang bị phần mềm khác mở khóa làm gián đoạn quá trình ghi file.",
+            "en": "Explains causes and standard solutions when output Excel workbooks are locked by another process during export.",
+            "ja": "出力Excelファイルが他プロセスによってオープン・ロックされている原因と標準復旧手順を定義したナレッジです。"
+          },
+          "evidence_anchor": "Tệp Excel đầu ra đang bị khóa hoặc mở bởi ứng dụng"
+        }
+      ]
+    },
+    {
+      "id": "bck_missing_baseline",
+      "status": "active",
+      "review_status": "approved",
+      "aliases": {
+        "vi": [
+          "thieu nhan su",
+          "du lieu moc"
+        ],
+        "en": [
+          "baseline data",
+          "march staffing"
+        ],
+        "ja": [
+          "基準人員不足",
+          "期首人数"
+        ]
+      },
+      "vi": {
+        "title": "Thiếu dữ liệu nhân sự mốc tháng 3",
+        "keywords": [
+          "nhân sự",
+          "mốc",
+          "tháng 3",
+          "baseline",
+          "thiếu nhân sự",
+          "chưa có tổng số người",
+          "dữ liệu mốc"
+        ],
+        "answer_context": "Chương trình cần có số lượng nhân sự tháng 3 (tháng mốc đầu kỳ) để tính phân bổ chi phí cho cả năm tài chính. Nếu thiếu dữ liệu này, quá trình tính toán sẽ dừng lại.",
+        "safe_steps": [
+          "Bấm nút Nhập nhân sự thủ công trên giao diện chính.",
+          "Chọn phòng ban cần nhập và nhập tổng số người của tháng 3.",
+          "Bấm Lưu nhân sự & thời gian, sau đó bấm Chạy tính toán."
+        ]
+      },
+      "en": {
+        "title": "Missing March baseline headcount",
+        "keywords": [
+          "baseline",
+          "headcount",
+          "march",
+          "missing staffing",
+          "personnel",
+          "missing baseline",
+          "staffing data"
+        ],
+        "answer_context": "The program requires March headcount data (the opening-month baseline) to calculate cost allocations for the entire fiscal year. Without this data, the calculation cannot proceed.",
+        "safe_steps": [
+          "Click Manual Staffing Input on the main screen.",
+          "Select the department and enter the total headcount for March.",
+          "Click Save Staffing & Time, then click Run Calculation."
+        ]
+      },
+      "ja": {
+        "title": "3月の基準人員データが不足しています",
+        "keywords": [
+          "基準",
+          "人員",
+          "3月",
+          "ベースライン",
+          "人員データ不足",
+          "期首",
+          "人数"
+        ],
+        "answer_context": "費用配賦計算では、年度全体の月別配賦を計算するために期首月（3月）の人員数データが必須です。このデータがないと計算を開始できません。",
+        "safe_steps": [
+          "メイン画面の「手動人員入力」をクリックしてください。",
+          "対象部門を選択し、3月の総人数を入力してください。",
+          "「人員・時間を保存」をクリックしてから「計算を実行」をクリックしてください。"
+        ]
+      },
+      "source_ref_ids": [
+        "approved_business_guidance"
+      ],
+      "provenance": {
+        "source_path": "src/services/operations_knowledge.py",
+        "source_section": "ENTRY_MISSING_STAFFING_BASELINE",
+        "source_sha256": "0d4dfcb2332fdb8b58f6829930804edd7fad3b8c5916e854c2ac36aa20ca6a18",
+        "source_classification": "canonical_error_model",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "src/services/operations_knowledge.py",
+          "source_section": "ENTRY_MISSING_STAFFING_BASELINE",
+          "source_sha256": "0d4dfcb2332fdb8b58f6829930804edd7fad3b8c5916e854c2ac36aa20ca6a18",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Từ điển lỗi vận hành chuẩn hóa MP2027",
+            "en": "MP2027 Canonical Operational Error Knowledge",
+            "ja": "MP2027 標準運用障害ナレッジ"
+          },
+          "heading_title": {
+            "vi": "Mô hình tri thức lỗi thiếu nhân sự cơ sở",
+            "en": "Knowledge Model: Missing Staffing Baseline",
+            "ja": "基準人員データ欠落のナレッジモデル"
+          },
+          "supported_summary": {
+            "vi": "Mô tả nguyên nhân và giải pháp chuẩn khi không tìm thấy số liệu nhân sự mốc tháng 3 để tính biến động phân bổ chi phí.",
+            "en": "Explains causes and solutions when March reference headcount is absent for monthly cost distribution delta calculations.",
+            "ja": "月次費用配賦の増減計算に必要な3月基準人員データが見つからない場合の標準復旧手順を定義しています。"
+          },
+          "evidence_anchor": "Thiếu dữ liệu nhân sự mốc ban đầu (Baseline tháng "
+        }
+      ]
+    },
+    {
+      "id": "bck_source_validation",
+      "status": "active",
+      "review_status": "approved",
+      "aliases": {
+        "vi": [
+          "kiem tra nguon",
+          "loi du lieu dau vao"
+        ],
+        "en": [
+          "source check",
+          "preflight error"
+        ],
+        "ja": [
+          "ソース検証",
+          "入力チェック"
+        ]
+      },
+      "vi": {
+        "title": "Tệp nguồn đầu vào chưa đúng yêu cầu",
+        "keywords": [
+          "nguồn",
+          "tệp nguồn",
+          "kiểm tra nguồn",
+          "đầu vào",
+          "sai cấu trúc",
+          "thiếu trang tính",
+          "source",
+          "lỗi nguồn"
+        ],
+        "answer_context": "Trước khi tính toán, chương trình kiểm tra tất cả tệp nguồn đầu vào. Nếu tệp thiếu trang tính, sai năm tài chính hoặc cấu trúc cột không đúng, chương trình sẽ báo lỗi và không cho chạy.",
+        "safe_steps": [
+          "Đọc thông báo lỗi để biết tệp nào bị sai và lỗi gì.",
+          "Mở tệp bảng tính đó, sửa theo hướng dẫn rồi lưu lại.",
+          "Bấm Quét kỹ lại nội dung rồi bấm Chạy tính toán."
+        ]
+      },
+      "en": {
+        "title": "Input source file does not meet requirements",
+        "keywords": [
+          "source",
+          "source file",
+          "validation",
+          "input file",
+          "wrong structure",
+          "missing sheet",
+          "source error",
+          "preflight"
+        ],
+        "answer_context": "Before calculation, the program checks all input source files. If a file has missing sheets, wrong fiscal year, or incorrect column structure, an error is reported and calculation cannot start.",
+        "safe_steps": [
+          "Read the error message to identify which file has an issue and what the problem is.",
+          "Open the workbook, fix it as instructed, and save.",
+          "Click Rescan Sources and then Run Calculation."
+        ]
+      },
+      "ja": {
+        "title": "入力元データファイルが要件を満たしていません",
+        "keywords": [
+          "ソース",
+          "入力ファイル",
+          "検証",
+          "構造不正",
+          "シート不足",
+          "ソースエラー",
+          "事前検証"
+        ],
+        "answer_context": "計算前にすべての入力元ファイルが検査されます。シート不足、年度不一致、列構造の不備がある場合はエラーとなり、計算を開始できません。",
+        "safe_steps": [
+          "エラーメッセージを読み、対象ファイルと問題点を確認してください。",
+          "該当ファイルを開き、指示に従って修正して保存してください。",
+          "「元データ再スキャン」をクリックしてから「計算を実行」をクリックしてください。"
+        ]
+      },
+      "source_ref_ids": [
+        "approved_business_guidance"
+      ],
+      "provenance": {
+        "source_path": "src/services/operations_knowledge.py",
+        "source_section": "ENTRY_PREFLIGHT_SOURCE_VALIDATION_FAILURE",
+        "source_sha256": "0d4dfcb2332fdb8b58f6829930804edd7fad3b8c5916e854c2ac36aa20ca6a18",
+        "source_classification": "canonical_error_model",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "src/services/operations_knowledge.py",
+          "source_section": "ENTRY_PREFLIGHT_SOURCE_VALIDATION_FAILURE",
+          "source_sha256": "0d4dfcb2332fdb8b58f6829930804edd7fad3b8c5916e854c2ac36aa20ca6a18",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Từ điển lỗi vận hành chuẩn hóa MP2027",
+            "en": "MP2027 Canonical Operational Error Knowledge",
+            "ja": "MP2027 標準運用障害ナレッジ"
+          },
+          "heading_title": {
+            "vi": "Mô hình tri thức lỗi tệp nguồn không hợp lệ",
+            "en": "Knowledge Model: Source File Preflight Validation Failure",
+            "ja": "元ファイル事前検証エラーのナレッジモデル"
+          },
+          "supported_summary": {
+            "vi": "Mô tả nguyên nhân và giải pháp khi tệp bảng tính đầu vào thiếu sheet, sai tên cột hoặc không đúng định dạng năm tài chính.",
+            "en": "Explains causes and solutions when source workbooks miss required sheets, have incorrect headers, or mismatch fiscal years.",
+            "ja": "元データファイルで必要なシートの欠落、列ヘッダーの不正、年度不一致が発生した場合の標準対処ナレッジです。"
+          },
+          "evidence_anchor": "Tệp dữ liệu nguồn đã chọn chưa thể dùng để tính to"
+        },
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 2. Nguồn yêu cầu và bằng chứng",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Nguồn yêu cầu và thứ bậc tin cậy",
+            "en": "Requirement Sources and Trust Hierarchy",
+            "ja": "要件ソースおよび信頼性ルール"
+          },
+          "supported_summary": {
+            "vi": "File Excel yêu cầu gốc giữ quyền quyết định cao nhất khi có sai khác; tài liệu văn bản đóng vai trò giải thích hỗ trợ đối soát.",
+            "en": "The canonical Excel requirement workbook holds supreme authority when discrepancies arise, with markdown documentation serving as supporting explanation.",
+            "ja": "差異が発生した場合は原本Excel要件ファイルが最優先の決定権を持ち、Markdownドキュメントは照合時の補助的な解説として機能します。"
+          },
+          "evidence_anchor": "| Loại | Đường dẫn | Vai trò | Trạng thái |"
+        },
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "## 2. Source hierarchy and trust rules",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Thứ bậc tin cậy của các nguồn tài liệu",
+            "en": "Source Authority Hierarchy and Trust Rules",
+            "ja": "資料ソースの優先順位と信頼性ルール"
+          },
+          "supported_summary": {
+            "vi": "Quy định thứ tự ưu tiên: file Excel mẫu của người dùng đứng đầu, tiếp đến bảng phân bổ chính thức, và tài liệu văn bản đóng vai trò hỗ trợ.",
+            "en": "Prioritizes canonical user Excel workbooks first, official allocation tables second, and markdown documentation as supporting evidence.",
+            "ja": "ユーザー原本Excelを最優先とし、次いで公式配賦一覧表、Markdownドキュメントを補助証拠とする優先順位を定めています。"
+          },
+          "evidence_anchor": "| Source layer | Path | Role | Trust rule |"
+        }
+      ]
+    },
+    {
+      "id": "bck_fiscal_year_mismatch",
+      "status": "active",
+      "review_status": "approved",
+      "aliases": {
+        "vi": [
+          "sai nam",
+          "nam khong dung"
+        ],
+        "en": [
+          "wrong FY",
+          "year error"
+        ],
+        "ja": [
+          "年度間違い",
+          "FYエラー"
+        ]
+      },
+      "vi": {
+        "title": "Năm tài chính không khớp",
+        "keywords": [
+          "năm",
+          "năm tài chính",
+          "sai năm",
+          "không khớp năm",
+          "fiscal year",
+          "FY"
+        ],
+        "answer_context": "Tệp mẫu FORM và các tệp nguồn phải cùng một năm tài chính. Nếu năm tài chính trên giao diện không khớp với năm trong tệp nguồn, chương trình sẽ từ chối chạy.",
+        "safe_steps": [
+          "Kiểm tra năm tài chính trên giao diện chính có đúng năm cần tính không.",
+          "Kiểm tra tệp mẫu FORM và các thư mục nguồn có đúng năm tương ứng.",
+          "Nếu sai, chọn lại tệp FORM và thư mục nguồn đúng năm rồi bấm Quét kỹ lại nội dung."
+        ]
+      },
+      "en": {
+        "title": "Fiscal year mismatch",
+        "keywords": [
+          "fiscal year",
+          "year",
+          "wrong year",
+          "mismatch",
+          "FY",
+          "year mismatch"
+        ],
+        "answer_context": "The FORM template and all source files must be for the same fiscal year. If the fiscal year on the main screen does not match the source files, the program will refuse to run.",
+        "safe_steps": [
+          "Check that the fiscal year on the main screen matches the year you want to calculate.",
+          "Verify the FORM template and source folders are for the correct year.",
+          "If wrong, select the correct FORM and source folders, then click Rescan Sources."
+        ]
+      },
+      "ja": {
+        "title": "会計年度が一致しません",
+        "keywords": [
+          "年度",
+          "会計年度",
+          "年度不一致",
+          "FY",
+          "間違った年度"
+        ],
+        "answer_context": "FORMテンプレートとすべてのソースファイルは同じ会計年度である必要があります。メイン画面の年度がソースファイルと一致しない場合、計算は実行されません。",
+        "safe_steps": [
+          "メイン画面の会計年度が計算したい年度と一致しているか確認してください。",
+          "FORMテンプレートとソースフォルダーが正しい年度のものか確認してください。",
+          "誤りがあれば正しいFORMとソースフォルダーを選択し、「元データ再スキャン」をクリックしてください。"
+        ]
+      },
+      "source_ref_ids": [
+        "approved_business_guidance"
+      ],
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## Vận hành nhiều năm tài chính",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_guidance",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## Vận hành nhiều năm tài chính",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Vận hành nhiều năm tài chính độc lập",
+            "en": "Multi-Year Fiscal Operation",
+            "ja": "複数年度の独立運用"
+          },
+          "supported_summary": {
+            "vi": "Hệ thống hỗ trợ chạy độc lập nhiều năm tài chính như FY2027 và FY2028; mỗi năm có bộ dữ liệu nguồn và thư mục kết quả riêng biệt, tuyệt đối không ghi đè dữ liệu giữa các năm.",
+            "en": "The system supports independent execution across multiple fiscal years like FY2027 and FY2028, requiring isolated source workbooks and separate output folders without cross-year overwriting.",
+            "ja": "システムはFY2027やFY2028などの複数年度の独立実行に対応しており、年度間でデータを上書きすることなく、年度別の元データと出力先フォルダを使用します。"
+          },
+          "evidence_anchor": "Chương trình dùng chung cho FY2027, FY2028 và các "
+        }
+      ]
+    },
+    {
+      "id": "bck_cost_center_selection",
+      "status": "active",
+      "review_status": "approved",
+      "aliases": {
+        "vi": [
+          "chon phong ban",
+          "chon CC"
+        ],
+        "en": [
+          "select CC",
+          "pick department"
+        ],
+        "ja": [
+          "部門選択方法",
+          "CC選択"
+        ]
+      },
+      "vi": {
+        "title": "Cách chọn trung tâm chi phí (phòng ban)",
+        "keywords": [
+          "phòng ban",
+          "trung tâm chi phí",
+          "CC",
+          "chọn phòng",
+          "cost center",
+          "chọn CC"
+        ],
+        "answer_context": "Trước khi chạy tính toán, bạn cần chọn phòng ban (trung tâm chi phí) cần xuất kết quả. Có thể chọn một, nhiều hoặc tất cả phòng ban.",
+        "safe_steps": [
+          "Bấm nút Chọn phòng trên giao diện chính.",
+          "Đánh dấu phòng ban cần tính hoặc bấm Chọn tất cả.",
+          "Bấm Xác nhận để quay lại giao diện chính, rồi bấm Chạy tính toán."
+        ]
+      },
+      "en": {
+        "title": "How to select a cost center (department)",
+        "keywords": [
+          "cost center",
+          "department",
+          "CC",
+          "select department",
+          "choose room",
+          "select CC"
+        ],
+        "answer_context": "Before running the calculation, you need to select the cost centers (departments) for which you want to generate output. You can select one, several, or all departments.",
+        "safe_steps": [
+          "Click Select Department on the main screen.",
+          "Check the departments you need, or click Select All.",
+          "Click Confirm to return to the main screen, then click Run Calculation."
+        ]
+      },
+      "ja": {
+        "title": "コストセンター（部門）の選択方法",
+        "keywords": [
+          "コストセンター",
+          "部門",
+          "CC",
+          "部門選択",
+          "選択方法"
+        ],
+        "answer_context": "計算を実行する前に、結果を出力するコストセンター（部門）を選択する必要があります。1つ、複数、またはすべての部門を選択できます。",
+        "safe_steps": [
+          "メイン画面の「部門を選択」をクリックしてください。",
+          "必要な部門にチェックを入れるか、「すべて選択」をクリックしてください。",
+          "「確認」をクリックしてメイン画面に戻り、「計算を実行」をクリックしてください。"
+        ]
+      },
+      "source_ref_ids": [
+        "approved_business_guidance"
+      ],
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 1. Mục tiêu chương trình",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_guidance",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 1. Mục tiêu chương trình",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Mục tiêu chương trình tự động hóa phân bổ",
+            "en": "MP2027 Program Objectives",
+            "ja": "MP2027プログラムの目的"
+          },
+          "supported_summary": {
+            "vi": "Tự động hóa hoàn toàn quy trình phân bổ chi phí chung và kết xuất bảng tính ngân sách chi tiết cho từng phòng ban theo đúng năm tài chính mục tiêu.",
+            "en": "Fully automates overhead cost distribution and generates detailed department budget spreadsheets for the target fiscal year.",
+            "ja": "対象会計年度において共通費用の配賦計算を完全自動化し、部門別の詳細な予算スプレッドシートを出力します。"
+          },
+          "evidence_anchor": "MP2027 Manager là ứng dụng Windows desktop dùng Py"
+        }
+      ]
+    },
+    {
+      "id": "bck_data_entry_manual",
+      "status": "active",
+      "review_status": "approved",
+      "aliases": {
+        "vi": [
+          "nhap tay du lieu",
+          "su kien thieu"
+        ],
+        "en": [
+          "manual data",
+          "event input"
+        ],
+        "ja": [
+          "手動データ入力",
+          "イベント入力"
+        ]
+      },
+      "vi": {
+        "title": "Cách nhập dữ liệu bổ sung thủ công",
+        "keywords": [
+          "nhập tay",
+          "nhập thủ công",
+          "nhập liệu",
+          "sự kiện",
+          "bổ sung",
+          "manual input",
+          "event driver"
+        ],
+        "answer_context": "Một số khoản chi phí không có trong tệp nguồn tự động và cần người dùng nhập thủ công, ví dụ: chi phí du lịch công ty, cốc xếp, kỷ niệm, xe buýt.",
+        "safe_steps": [
+          "Bấm nút Nhập sự kiện thiếu dữ liệu trên giao diện chính.",
+          "Chọn loại sự kiện, nhập số lượng hoặc số tiền theo thực tế.",
+          "Bấm Lưu để ghi nhận, sau đó bấm Chạy tính toán."
+        ]
+      },
+      "en": {
+        "title": "How to enter manual supplementary data",
+        "keywords": [
+          "manual input",
+          "manual entry",
+          "event driver",
+          "supplementary",
+          "data entry",
+          "manual data"
+        ],
+        "answer_context": "Some cost items are not available from automatic source files and must be entered manually, such as company trips, folding cups, anniversaries, or bus costs.",
+        "safe_steps": [
+          "Click Event Driver Input on the main screen.",
+          "Select the event type and enter the actual quantity or amount.",
+          "Click Save, then click Run Calculation."
+        ]
+      },
+      "ja": {
+        "title": "手動で補足データを入力する方法",
+        "keywords": [
+          "手動入力",
+          "イベント",
+          "補足データ",
+          "手入力",
+          "イベントドライバー"
+        ],
+        "answer_context": "自動ソースファイルにはない費用項目（社員旅行、折りたたみカップ、記念行事、バス費用など）は手動で入力する必要があります。",
+        "safe_steps": [
+          "メイン画面の「イベントドライバー入力」をクリックしてください。",
+          "イベントの種類を選択し、実際の数量または金額を入力してください。",
+          "「保存」をクリックしてから「計算を実行」をクリックしてください。"
+        ]
+      },
+      "source_ref_ids": [
+        "approved_business_guidance"
+      ],
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 4. Runtime directory model",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_guidance",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 4. Runtime directory model",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Mô hình thư mục và đường dẫn nhập thủ công",
+            "en": "Runtime Directory Model and Manual Inputs",
+            "ja": "ランタイムディレクトリ構成と手動入力"
+          },
+          "supported_summary": {
+            "vi": "Cấu trúc thư mục làm việc của chương trình gồm các tệp bảng tính đầu vào bắt buộc và các kênh nhập bổ sung thủ công.",
+            "en": "Defines the runtime folder layout, mandatory input workbooks, and supplementary manual input channels.",
+            "ja": "プログラムの作業フォルダ構成、必須の入力ワークブック、および補助的な手動入力チャネルを規定しています。"
+          },
+          "evidence_anchor": "| Thành phần | Active path | Ghi chú |"
+        }
+      ]
+    },
+    {
+      "id": "bck_rerun_calculation",
+      "status": "active",
+      "review_status": "approved",
+      "aliases": {
+        "vi": [
+          "chay lai tinh toan",
+          "tinh toan lai"
+        ],
+        "en": [
+          "recalculate",
+          "run again"
+        ],
+        "ja": [
+          "再計算",
+          "計算やり直し"
+        ]
+      },
+      "vi": {
+        "title": "Cách chạy lại tính toán sau khi sửa dữ liệu",
+        "keywords": [
+          "chạy lại",
+          "tính toán lại",
+          "recalculate",
+          "chạy tính toán",
+          "rerun",
+          "chạy lại sau sửa"
+        ],
+        "answer_context": "Sau khi bạn sửa tệp nguồn, nhập dữ liệu bổ sung hoặc khắc phục lỗi, bạn cần quét lại nội dung rồi chạy tính toán lại để có kết quả mới nhất.",
+        "safe_steps": [
+          "Bấm Quét kỹ lại nội dung (hoặc Kiểm tra thay đổi nhanh) để chương trình đọc lại tệp.",
+          "Kiểm tra trạng thái màu xanh (đủ nguồn) trên giao diện.",
+          "Bấm Chạy tính toán để xuất kết quả mới."
+        ]
+      },
+      "en": {
+        "title": "How to rerun calculation after fixing data",
+        "keywords": [
+          "rerun",
+          "recalculate",
+          "run again",
+          "run calculation",
+          "after fix",
+          "retry"
+        ],
+        "answer_context": "After fixing source files, entering supplementary data, or resolving errors, you need to rescan sources and then run the calculation again to get updated results.",
+        "safe_steps": [
+          "Click Rescan Sources (or Quick Change Check) so the program reads the updated files.",
+          "Verify the status shows green (sources are ready) on the main screen.",
+          "Click Run Calculation to generate updated results."
+        ]
+      },
+      "ja": {
+        "title": "データ修正後に計算を再実行する方法",
+        "keywords": [
+          "再実行",
+          "再計算",
+          "やり直し",
+          "計算を実行",
+          "修正後"
+        ],
+        "answer_context": "ソースファイルの修正、補足データの入力、またはエラーの解決後、ソースを再スキャンしてから計算を再実行し、最新の結果を取得する必要があります。",
+        "safe_steps": [
+          "「元データ再スキャン」（または「変更クイックチェック」）をクリックして更新ファイルを読み込んでください。",
+          "メイン画面のステータスが緑色（ソース準備完了）であることを確認してください。",
+          "「計算を実行」をクリックして最新の結果を出力してください。"
+        ]
+      },
+      "source_ref_ids": [
+        "approved_business_guidance"
+      ],
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## Vận hành nhiều năm tài chính",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_guidance",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## Vận hành nhiều năm tài chính",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Vận hành nhiều năm tài chính độc lập",
+            "en": "Multi-Year Fiscal Operation",
+            "ja": "複数年度の独立運用"
+          },
+          "supported_summary": {
+            "vi": "Hệ thống hỗ trợ chạy độc lập nhiều năm tài chính như FY2027 và FY2028; mỗi năm có bộ dữ liệu nguồn và thư mục kết quả riêng biệt, tuyệt đối không ghi đè dữ liệu giữa các năm.",
+            "en": "The system supports independent execution across multiple fiscal years like FY2027 and FY2028, requiring isolated source workbooks and separate output folders without cross-year overwriting.",
+            "ja": "システムはFY2027やFY2028などの複数年度の独立実行に対応しており、年度間でデータを上書きすることなく、年度別の元データと出力先フォルダを使用します。"
+          },
+          "evidence_anchor": "Chương trình dùng chung cho FY2027, FY2028 và các "
+        }
+      ]
+    },
+    {
+      "id": "bck_excel_format_error",
+      "status": "active",
+      "review_status": "approved",
+      "aliases": {
+        "vi": [
+          "loi dinh dang excel",
+          "excel sai cau truc"
+        ],
+        "en": [
+          "excel error",
+          "spreadsheet format"
+        ],
+        "ja": [
+          "Excelエラー",
+          "フォーマット不正"
+        ]
+      },
+      "vi": {
+        "title": "Lỗi định dạng hoặc cấu trúc tệp Excel",
+        "keywords": [
+          "excel",
+          "định dạng",
+          "cấu trúc",
+          "cột",
+          "trang tính",
+          "sheet",
+          "format",
+          "lỗi excel"
+        ],
+        "answer_context": "Nếu tệp Excel nguồn bị sai định dạng, thiếu trang tính bắt buộc hoặc cột dữ liệu không đúng, chương trình sẽ không đọc được và báo lỗi khi kiểm tra.",
+        "safe_steps": [
+          "Xem lại thông báo lỗi để biết tên tệp và trang tính bị thiếu hoặc sai.",
+          "Mở tệp Excel đó, bổ sung trang tính hoặc cột theo đúng mẫu.",
+          "Lưu tệp rồi bấm Quét kỹ lại nội dung."
+        ]
+      },
+      "en": {
+        "title": "Excel format or structure error",
+        "keywords": [
+          "excel",
+          "format",
+          "structure",
+          "column",
+          "sheet",
+          "worksheet",
+          "format error"
+        ],
+        "answer_context": "If a source Excel workbook has wrong formatting, missing required worksheets, or incorrect columns, the program cannot read it and will report an error during the check.",
+        "safe_steps": [
+          "Review the error message to find the file name and missing or incorrect worksheet.",
+          "Open the Excel file and add the missing worksheet or fix the columns as required.",
+          "Save the file, then click Rescan Sources."
+        ]
+      },
+      "ja": {
+        "title": "Excelのフォーマットまたは構造エラー",
+        "keywords": [
+          "Excel",
+          "フォーマット",
+          "構造",
+          "列",
+          "シート",
+          "ワークシート",
+          "形式エラー"
+        ],
+        "answer_context": "ソースのExcelファイルのフォーマットが不正、必須シートが不足、または列構成が誤っている場合、プログラムはファイルを読み取れずエラーを報告します。",
+        "safe_steps": [
+          "エラーメッセージを確認し、対象ファイルと不足・不正なシートを特定してください。",
+          "該当Excelファイルを開き、必要なシートや列を追加・修正してください。",
+          "ファイルを保存してから「元データ再スキャン」をクリックしてください。"
+        ]
+      },
+      "source_ref_ids": [
+        "approved_business_guidance"
+      ],
+      "provenance": {
+        "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+        "source_section": "### 4.3. Giữ màu và định dạng FORM gốc",
+        "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+        "source_classification": "approved_business_guidance",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/requirements/cai_tien_nhap_du_lieu_chung.md",
+          "source_section": "### 4.3. Giữ màu và định dạng FORM gốc",
+          "source_sha256": "44126b748ed747abdd22b69409544d561476c715640078762a82b1135b7a8737",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy định cải tiến nhập dữ liệu chung",
+            "en": "General Data Entry Improvement Specification",
+            "ja": "共通データ入力改善仕様書"
+          },
+          "heading_title": {
+            "vi": "Bảo tồn định dạng kẻ khung và màu nền biểu mẫu gốc",
+            "en": "Preserving Master Template Formatting, Gridlines, and Fills",
+            "ja": "原本テンプレートの罫線・フォント・背景色の保持"
+          },
+          "supported_summary": {
+            "vi": "Giữ nguyên phông chữ, đường kẻ ô và màu nền của biểu mẫu gốc khi xuất tệp kết quả cho các phòng ban.",
+            "en": "Preserves original fonts, grid borders, and cell background colors from master templates when exporting workbooks.",
+            "ja": "部門別ワークブックの出力時に、原本テンプレートのフォント、罫線、およびセル背景色をそのまま保持します。"
+          },
+          "evidence_anchor": "Yêu cầu: **Bôi lại đúng màu, đúng định dạng như FO"
+        }
+      ]
+    },
+    {
+      "id": "bck_headcount_input",
+      "status": "active",
+      "review_status": "approved",
+      "aliases": {
+        "vi": [
+          "nhap nhan su",
+          "so nhan vien"
+        ],
+        "en": [
+          "enter headcount",
+          "staff numbers"
+        ],
+        "ja": [
+          "人員データ入力",
+          "従業員数入力"
+        ]
+      },
+      "vi": {
+        "title": "Cách nhập dữ liệu nhân sự 12 tháng",
+        "keywords": [
+          "nhân sự",
+          "12 tháng",
+          "headcount",
+          "số người",
+          "nhập nhân sự",
+          "nhân viên",
+          "công nhân"
+        ],
+        "answer_context": "Dữ liệu nhân sự 12 tháng gồm số nhân viên, công nhân và biệt phái của từng tháng trong năm tài chính. Chương trình dùng dữ liệu này để phân bổ chi phí nhân sự.",
+        "safe_steps": [
+          "Bấm nút Nhập nhân sự thủ công, chọn mã phòng ban (CC) cần nhập.",
+          "Nhập số nhân viên, công nhân cho từng tháng. Ô để trống sẽ được lưu là 0.",
+          "Bấm Lưu nhân sự & thời gian."
+        ]
+      },
+      "en": {
+        "title": "How to enter 12-month headcount data",
+        "keywords": [
+          "headcount",
+          "12 months",
+          "staffing",
+          "personnel",
+          "employee count",
+          "worker",
+          "staff input"
+        ],
+        "answer_context": "The 12-month headcount data includes employee, worker, and expatriate counts for each month of the fiscal year. The program uses this to allocate personnel costs.",
+        "safe_steps": [
+          "Click Manual Staffing Input and select the department (CC) to enter.",
+          "Enter employee and worker counts for each month. Blank cells will be saved as 0.",
+          "Click Save Staffing & Time."
+        ]
+      },
+      "ja": {
+        "title": "12か月の人員データを入力する方法",
+        "keywords": [
+          "人員",
+          "12か月",
+          "人数",
+          "従業員",
+          "工員",
+          "人員入力",
+          "スタッフ"
+        ],
+        "answer_context": "12か月の人員データには、会計年度の各月における従業員数、工員数、駐在員数が含まれます。プログラムはこのデータを使って人件費を配賦します。",
+        "safe_steps": [
+          "「手動人員入力」をクリックし、入力する部門（CC）を選択してください。",
+          "各月の従業員数と工員数を入力してください。空白セルは0として保存されます。",
+          "「人員・時間を保存」をクリックしてください。"
+        ]
+      },
+      "source_ref_ids": [
+        "approved_business_guidance"
+      ],
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 4. Runtime directory model",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_guidance",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 4. Runtime directory model",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Mô hình thư mục và đường dẫn nhập thủ công",
+            "en": "Runtime Directory Model and Manual Inputs",
+            "ja": "ランタイムディレクトリ構成と手動入力"
+          },
+          "supported_summary": {
+            "vi": "Cấu trúc thư mục làm việc của chương trình gồm các tệp bảng tính đầu vào bắt buộc và các kênh nhập bổ sung thủ công.",
+            "en": "Defines the runtime folder layout, mandatory input workbooks, and supplementary manual input channels.",
+            "ja": "プログラムの作業フォルダ構成、必須の入力ワークブック、および補助的な手動入力チャネルを規定しています。"
+          },
+          "evidence_anchor": "| Thành phần | Active path | Ghi chú |"
+        },
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 5. Active và legacy headcount",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Quản lý nhân sự hiện hữu và loại trừ dòng cũ",
+            "en": "Active Headcount and Legacy Row Exclusion",
+            "ja": "現行人員管理と旧行の除外"
+          },
+          "supported_summary": {
+            "vi": "Chỉ sử dụng dữ liệu nhân sự 12 tháng đang hoạt động và loại bỏ vĩnh viễn 2 dòng nhân sự cũ không còn áp dụng trên biểu mẫu mới.",
+            "en": "Uses only active 12-month staffing numbers and permanently excludes the 2 legacy headcount rows from the output workbook.",
+            "ja": "有効な12か月の人員データのみを使用し、出力フォームから2つの旧人員行を恒久的に除外します。"
+          },
+          "evidence_anchor": "Active headcount input:"
+        },
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "### Headcount",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Quy định nhập số lượng nhân sự thủ công",
+            "en": "Manual Headcount Entry Policy",
+            "ja": "手動人員入力ポリシー"
+          },
+          "supported_summary": {
+            "vi": "Số liệu nhân sự mốc tháng 3 dùng để tính biến động từ tháng 4; khi đổi phòng ban trên giao diện, ứng dụng tự động xóa dữ liệu cũ để tránh nhầm lẫn.",
+            "en": "The March baseline headcount serves solely to calculate monthly deltas from April; switching cost centers in the UI clears stale inputs.",
+            "ja": "3月基準人員は4月以降の増減計算のみに使用され、UI上で部門を切り替えると古い入力値が自動クリアされます。"
+          },
+          "evidence_anchor": "CC switching trong GUI phải clear giá trị stale. N"
+        }
+      ]
+    },
+    {
+      "id": "bck_workflow_overview",
+      "status": "active",
+      "review_status": "approved",
+      "aliases": {
+        "vi": [
+          "quy trinh 5 buoc",
+          "cach dung MP2027"
+        ],
+        "en": [
+          "5-step guide",
+          "how to start"
+        ],
+        "ja": [
+          "5ステップガイド",
+          "使い方ガイド"
+        ]
+      },
+      "vi": {
+        "title": "Quy trình 5 bước chạy tính toán MP2027",
+        "keywords": [
+          "quy trình",
+          "5 bước",
+          "workflow",
+          "hướng dẫn",
+          "bắt đầu",
+          "cách dùng",
+          "từ đầu"
+        ],
+        "answer_context": "Quy trình chạy MP2027 gồm 5 bước: (1) Chọn năm tài chính, (2) Chọn tệp FORM và thư mục nguồn, (3) Kiểm tra trạng thái nguồn, (4) Bổ sung dữ liệu nhập tay nếu cần, (5) Bấm Chạy tính toán.",
+        "safe_steps": [
+          "Chọn đúng năm tài chính, tệp mẫu FORM và thư mục nguồn chi phí, nhân sự.",
+          "Bấm Quét kỹ lại nội dung và kiểm tra trạng thái màu trên giao diện.",
+          "Nếu trạng thái xanh, bấm Chạy tính toán. Nên thử 1 phòng trước khi chạy tất cả."
+        ]
+      },
+      "en": {
+        "title": "5-step workflow to run MP2027 calculation",
+        "keywords": [
+          "workflow",
+          "5 steps",
+          "how to use",
+          "getting started",
+          "guide",
+          "process",
+          "start"
+        ],
+        "answer_context": "The MP2027 workflow has 5 steps: (1) Choose fiscal year, (2) Select the FORM template and source folders, (3) Check source status, (4) Add manual data if needed, (5) Click Run Calculation.",
+        "safe_steps": [
+          "Select the correct fiscal year, FORM template, and cost/staffing source folders.",
+          "Click Rescan Sources and review the status colors on the main screen.",
+          "If status is green, click Run Calculation. Try one department first before running all."
+        ]
+      },
+      "ja": {
+        "title": "MP2027計算の5ステップワークフロー",
+        "keywords": [
+          "ワークフロー",
+          "5ステップ",
+          "使い方",
+          "手順",
+          "ガイド",
+          "始め方"
+        ],
+        "answer_context": "MP2027のワークフローは5ステップです：(1) 会計年度を選択、(2) FORMテンプレートとソースフォルダーを選択、(3) ソースの状態を確認、(4) 必要に応じて手動データを追加、(5) 「計算を実行」をクリック。",
+        "safe_steps": [
+          "正しい会計年度、FORMテンプレート、費用・人事ソースフォルダーを選択してください。",
+          "「元データ再スキャン」をクリックし、メイン画面のステータス色を確認してください。",
+          "ステータスが緑色なら「計算を実行」をクリック。まず1部門で試してください。"
+        ]
+      },
+      "source_ref_ids": [
+        "approved_business_guidance"
+      ],
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 1. Mục tiêu chương trình",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_guidance",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 1. Mục tiêu chương trình",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Mục tiêu chương trình tự động hóa phân bổ",
+            "en": "MP2027 Program Objectives",
+            "ja": "MP2027プログラムの目的"
+          },
+          "supported_summary": {
+            "vi": "Tự động hóa hoàn toàn quy trình phân bổ chi phí chung và kết xuất bảng tính ngân sách chi tiết cho từng phòng ban theo đúng năm tài chính mục tiêu.",
+            "en": "Fully automates overhead cost distribution and generates detailed department budget spreadsheets for the target fiscal year.",
+            "ja": "対象会計年度において共通費用の配賦計算を完全自動化し、部門別の詳細な予算スプレッドシートを出力します。"
+          },
+          "evidence_anchor": "MP2027 Manager là ứng dụng Windows desktop dùng Py"
+        }
+      ]
+    },
+    {
+      "id": "bck_account_lookup_rules",
+      "status": "active",
+      "review_status": "approved",
+      "source_ref_ids": [
+        "approved_business_guidance"
+      ],
+      "aliases": {
+        "vi": [
+          "tra ma tai khoan",
+          "nguyen tac account"
+        ],
+        "en": [
+          "account lookup",
+          "account code hierarchy"
+        ],
+        "ja": [
+          "勘定科目特定",
+          "アカウントコード検索"
+        ]
+      },
+      "vi": {
+        "title": "Quy tắc tra cứu mã tài khoản kế toán",
+        "keywords": [
+          "tài khoản",
+          "mã tài khoản",
+          "account",
+          "nghiệp vụ",
+          "phòng ban",
+          "phân loại chi phí",
+          "nguyên tắc"
+        ],
+        "answer_context": "Mã tài khoản không được tra trực tiếp theo tên dòng mô tả mà phải đi theo chuỗi 5 bước nghiệp vụ: (1) Phòng ban, (2) Bảng 原価センタ, (3) Phân loại chi phí 原価区分, (4) Chọn cột Sản xuất/Chung/Bán hàng, (5) Lấy mã tài khoản chính xác.",
+        "safe_steps": [
+          "Xác định mã phòng ban (Cost Center) cần tính.",
+          "Tra bảng danh mục để biết phân loại chi phí của phòng ban đó.",
+          "Chọn đúng cột chi phí tương ứng rồi đối chiếu lấy mã tài khoản."
+        ]
+      },
+      "en": {
+        "title": "Account code lookup hierarchy rules",
+        "keywords": [
+          "account",
+          "account code",
+          "lookup",
+          "hierarchy",
+          "cost category",
+          "department account",
+          "ledger"
+        ],
+        "answer_context": "Account codes must not be matched directly by text description. They must follow the 5-step business chain: (1) Cost Center, (2) Cost Center Master, (3) Cost Category, (4) Select Manufacturing/General/Sales column, (5) Retrieve accurate account code.",
+        "safe_steps": [
+          "Identify the target Cost Center code.",
+          "Look up the Cost Category for that department in the master list.",
+          "Select the matching column (Manufacturing, General, or Sales) and pick the exact account code."
+        ]
+      },
+      "ja": {
+        "title": "勘定科目コードの特定・検索ルール",
+        "keywords": [
+          "勘定科目",
+          "アカウント",
+          "科目コード",
+          "原価センタ",
+          "原価区分",
+          "製造",
+          "一般",
+          "販売"
+        ],
+        "answer_context": "勘定科目コードは説明文だけで直接検索してはいけません。必ず次の5段階の業務順序に従います：(1) コストセンター、(2) 原価センタマスタ、(3) 原価区分、(4) 製造/一般/販売列の選択、(5) 正しい勘定科目コードの取得。",
+        "safe_steps": [
+          "対象のコストセンター（部門）コードを確認してください。",
+          "マスタを参照してその部門の「原価区分」を特定してください。",
+          "該当する列（製造・一般・販売）から正しい勘定科目コードを取得してください。"
+        ]
+      },
+      "provenance": {
+        "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+        "source_section": "### Account Lookup Rule",
+        "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+        "source_classification": "approved_business_guidance",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "docs/knowledge/mp_saisan_business_knowledge_base_v2.md",
+          "source_section": "### Account Lookup Rule",
+          "source_sha256": "2ee52552f186a02609c4e7534e68ef68442970ddb5b2b81dcb912d282e2d15f1",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Knowledge Base MP Saisan",
+            "en": "MP Saisan Business Knowledge Base",
+            "ja": "MP Saisan 業務ナレッジベース"
+          },
+          "heading_title": {
+            "vi": "Quy tắc tra cứu mã tài khoản kế toán",
+            "en": "General Ledger Account Code Lookup Rule",
+            "ja": "勘定科目コードの特定および参照ルール"
+          },
+          "supported_summary": {
+            "vi": "Tra cứu mã tài khoản 10 chữ số dựa trên tên chi phí và phân loại phòng ban (sản xuất hoặc gián tiếp) để điền đúng vào biểu mẫu.",
+            "en": "Identifies 10-digit account codes using expense name and department classification (manufacturing or indirect) for form mapping.",
+            "ja": "費用項目名と部門分類（製造または間接）に基づいて10桁の勘定科目コードを特定し、フォームへ正しく配置します。"
+          },
+          "evidence_anchor": "Khi cần xác định `account_code`, không lookup trực"
+        }
+      ]
+    },
+    {
+      "id": "bck_special_cost_manual",
+      "status": "active",
+      "review_status": "approved",
+      "source_ref_ids": [
+        "approved_business_guidance"
+      ],
+      "aliases": {
+        "vi": [
+          "chi phi dac biet",
+          "nhap chi phi dac thu"
+        ],
+        "en": [
+          "special cost",
+          "manual special expense"
+        ],
+        "ja": [
+          "特別費用",
+          "手動特別費用"
+        ]
+      },
+      "vi": {
+        "title": "Cách xử lý và nhập các khoản chi phí đặc thù",
+        "keywords": [
+          "chi phí đặc thù",
+          "chi phí đặc biệt",
+          "special cost",
+          "bổ sung chi phí",
+          "điều chỉnh",
+          "manual cost"
+        ],
+        "answer_context": "Các khoản chi phí phát sinh đặc thù không nằm trong luồng phân bổ tự động có thể được khai báo qua kênh nhập chi phí thủ công theo định dạng quy chuẩn.",
+        "safe_steps": [
+          "Mở màn hình nhập chi phí bổ sung hoặc kiểm tra bảng kê chi phí.",
+          "Nhập đầy đủ mã phòng ban, mã tài khoản và số tiền theo từng tháng.",
+          "Bấm Lưu dữ liệu và thực hiện Quét lại nội dung."
+        ]
+      },
+      "en": {
+        "title": "How to handle manual special cost adjustments",
+        "keywords": [
+          "special cost",
+          "special expense",
+          "manual adjustment",
+          "extra cost",
+          "supplementary cost",
+          "cost entry"
+        ],
+        "answer_context": "Special expenses that are not part of automated source flows can be declared via the manual special cost input channel according to standard templates.",
+        "safe_steps": [
+          "Open the manual cost entry screen or inspect the supplementary expense ledger.",
+          "Enter the department code, account code, and monthly amounts.",
+          "Save the entries and click Rescan Sources."
+        ]
+      },
+      "ja": {
+        "title": "特別費用の手動登録および調整方法",
+        "keywords": [
+          "特別費用",
+          "手動調整",
+          "臨時費用",
+          "費用登録",
+          "追加費用",
+          "コスト調整"
+        ],
+        "answer_context": "自動配賦フローに含まれない個別の特別費用は、標準フォーマットに従って手動特別費用チャネルから登録できます。",
+        "safe_steps": [
+          "手動費用入力画面を開くか、補足費用台帳を確認してください。",
+          "部門コード、勘定科目コード、および月別金額を入力してください。",
+          "「保存」をクリックし、「元データ再スキャン」を実行してください。"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 4. Runtime directory model",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_guidance",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 4. Runtime directory model",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Mô hình thư mục và đường dẫn nhập thủ công",
+            "en": "Runtime Directory Model and Manual Inputs",
+            "ja": "ランタイムディレクトリ構成と手動入力"
+          },
+          "supported_summary": {
+            "vi": "Cấu trúc thư mục làm việc của chương trình gồm các tệp bảng tính đầu vào bắt buộc và các kênh nhập bổ sung thủ công.",
+            "en": "Defines the runtime folder layout, mandatory input workbooks, and supplementary manual input channels.",
+            "ja": "プログラムの作業フォルダ構成、必須の入力ワークブック、および補助的な手動入力チャネルを規定しています。"
+          },
+          "evidence_anchor": "| Thành phần | Active path | Ghi chú |"
+        }
+      ]
+    },
+    {
+      "id": "bck_update_rollback_procedure",
+      "status": "active",
+      "review_status": "approved",
+      "source_ref_ids": [
+        "approved_business_guidance"
+      ],
+      "aliases": {
+        "vi": [
+          "cap nhat phan mem",
+          "khoi phuc ban cu"
+        ],
+        "en": [
+          "software update",
+          "rollback version"
+        ],
+        "ja": [
+          "アップデート",
+          "ロールバック"
+        ]
+      },
+      "vi": {
+        "title": "Quy trình cập nhật phần mềm và khôi phục phiên bản",
+        "keywords": [
+          "cập nhật",
+          "update",
+          "khôi phục",
+          "rollback",
+          "phiên bản",
+          "bản mới",
+          "mạng LAN"
+        ],
+        "answer_context": "Hệ thống hỗ trợ cập nhật an toàn qua thư mục mạng LAN nội bộ. Trước khi cập nhật, chương trình luôn kiểm tra tính toàn vẹn (mã SHA-256) và tự động tạo bản sao lưu để khôi phục khi cần.",
+        "safe_steps": [
+          "Đảm bảo máy tính có kết nối đến thư mục chia sẻ nội bộ của công ty.",
+          "Thực hiện cập nhật theo thông báo trên màn hình.",
+          "Nếu gặp sự cố sau khi cập nhật, liên hệ quản trị viên để hoàn tác về bản sao lưu gần nhất."
+        ]
+      },
+      "en": {
+        "title": "Software update and version rollback procedure",
+        "keywords": [
+          "update",
+          "software update",
+          "rollback",
+          "version",
+          "restore",
+          "LAN share",
+          "upgrade"
+        ],
+        "answer_context": "The system supports safe updates via company-controlled LAN shares. It performs SHA-256 integrity verification, safe extraction, and automatic backup before applying updates.",
+        "safe_steps": [
+          "Ensure your computer is connected to the company internal network share.",
+          "Follow the on-screen prompt to apply the verified update.",
+          "If any issue occurs after updating, contact IT to revert to the automated backup."
+        ]
+      },
+      "ja": {
+        "title": "ソフトウェアの更新およびロールバック手順",
+        "keywords": [
+          "更新",
+          "アップデート",
+          "ロールバック",
+          "バージョン",
+          "復元",
+          "LAN共有",
+          "アップグレード"
+        ],
+        "answer_context": "本システムは社内LAN共有フォルダー経由での安全な更新をサポートしています。SHA-256整合性検査と自動バックアップを実行した上で安全に更新が適用されます。",
+        "safe_steps": [
+          "社内LAN共有フォルダーに接続されていることを確認してください。",
+          "画面上の案内に従って検証済みアップデートを適用してください。",
+          "更新後に不具合が生じた場合は、管理者に連絡して自動バックアップへ復元してください。"
+        ]
+      },
+      "provenance": {
+        "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+        "source_section": "## 4. Runtime directory model",
+        "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+        "source_classification": "approved_business_guidance",
+        "review_status": "approved"
+      },
+      "evidence_refs": [
+        {
+          "source_path": "QUY_TRINH_NGHIEP_VU_MP2027.md",
+          "source_section": "## 4. Runtime directory model",
+          "source_sha256": "354fcf616c302ba6726f992526ca9e5fe0284e1d8f5e4ddcff3805392c013ebc",
+          "classification": "covered",
+          "display_title": {
+            "vi": "Quy trình nghiệp vụ MP2027",
+            "en": "MP2027 Business Operations Guide",
+            "ja": "MP2027 業務プロセス手順書"
+          },
+          "heading_title": {
+            "vi": "Mô hình thư mục và đường dẫn nhập thủ công",
+            "en": "Runtime Directory Model and Manual Inputs",
+            "ja": "ランタイムディレクトリ構成と手動入力"
+          },
+          "supported_summary": {
+            "vi": "Cấu trúc thư mục làm việc của chương trình gồm các tệp bảng tính đầu vào bắt buộc và các kênh nhập bổ sung thủ công.",
+            "en": "Defines the runtime folder layout, mandatory input workbooks, and supplementary manual input channels.",
+            "ja": "プログラムの作業フォルダ構成、必須の入力ワークブック、および補助的な手動入力チャネルを規定しています。"
+          },
+          "evidence_anchor": "| Thành phần | Active path | Ghi chú |"
+        }
+      ]
+    }
+  ]
+}

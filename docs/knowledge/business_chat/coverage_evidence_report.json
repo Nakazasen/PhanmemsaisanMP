@@ -1,0 +1,29 @@
+{
+  "schema_version": "2.0",
+  "status": "SEMANTIC_COVERAGE_COMPLETE",
+  "traceability_status": "TRACEABILITY_COMPLETE",
+  "citation_metadata_status": "CITATION_METADATA_COMPLETE",
+  "semantic_coverage_status": "SEMANTIC_COVERAGE_COMPLETE",
+  "metrics": {
+    "total_inventory_items": 481,
+    "covered_items": 194,
+    "reference_with_caveat_items": 12,
+    "technical_excluded_items": 226,
+    "historical_excluded_items": 49,
+    "needs_owner_review_items": 0,
+    "searchable_items": 206,
+    "searchable_items_with_exact_evidence_ref": 206,
+    "searchable_items_missing_evidence": 0,
+    "evidence_coverage_percentage": 100.0,
+    "total_evidence_refs_in_packs": 221,
+    "evidence_refs_with_multilingual_summary": 221,
+    "evidence_refs_missing_summary": 0,
+    "citation_metadata_percentage": 100.0,
+    "invalid_anchors_count": 0,
+    "template_summaries_count": 0,
+    "heading_translations_copied": 0,
+    "semantic_coverage_percentage": 100.0
+  },
+  "missing_evidence_items": [],
+  "missing_metadata_refs": []
+}
