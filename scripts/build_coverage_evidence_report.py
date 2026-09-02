@@ -297,7 +297,7 @@ def generate_coverage_evidence_report() -> Dict[str, Any]:
         md_lines.append("")
 
     out_md = REPO_ROOT / "docs" / "knowledge" / "business_chat" / "coverage_evidence_report.md"
-    out_md.write_text("\n".join(md_lines) + "\n", encoding="utf-8")
+    out_md.write_text("\n".join(md_lines).rstrip() + "\n", encoding="utf-8")
 
     return report_data
 
