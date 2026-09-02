@@ -114,5 +114,6 @@ launcher.json
 
 # Local runtime outputs and scratch files
 outputs/
+local_runs/
 vba_code*.txt
 

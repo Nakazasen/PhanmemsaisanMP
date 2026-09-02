@@ -1885,7 +1885,10 @@ class MPManagerApp:
                 self._mascot_drag["start_x"] = event.x_root
                 self._mascot_drag["start_y"] = event.y_root
                 self._mascot_drag["moved"] = False
-                self._mascot_canvas.lift()
+                try:
+                    tk.Misc.lift(self._mascot_canvas)
+                except Exception:
+                    pass
 
             def on_drag_motion(event):
                 dx = event.x_root - self._mascot_drag["start_x"]

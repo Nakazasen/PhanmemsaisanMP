@@ -2081,6 +2081,35 @@ class TestOperationsBusinessChatIntentRoutingUI(unittest.TestCase):
         finally:
             dialog_ja.close()
 
+    def test_send_async_defers_context_to_worker_thread(self) -> None:
+        """send(sync=False) khởi chạy worker thread ngay mà không chạy _business_document_context trên UI thread."""
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None)
+        try:
+            with patch("threading.Thread") as mock_thread_cls:
+                mock_thread_instance = MagicMock()
+                mock_thread_cls.return_value = mock_thread_instance
+
+                dialog.question_var.set("Cách sử dụng phần mềm này")
+                dialog.send(sync=False)
+
+                # Thread phải được tạo với target=_request và context=None (để worker tự tính context)
+                mock_thread_cls.assert_called_once()
+                call_kwargs = mock_thread_cls.call_args
+                target = call_kwargs[1].get("target") or call_kwargs[0][0]
+                args = call_kwargs[1].get("args") if "args" in call_kwargs[1] else call_kwargs[0][1]
+
+                self.assertEqual(target, dialog._request)
+                self.assertEqual(args[0], "Cách sử dụng phần mềm này")
+                self.assertIsNone(args[1], "context phải là None khi truyền vào thread để tránh block UI thread")
+                mock_thread_instance.start.assert_called_once()
+        finally:
+            dialog.close()
+
 
 if __name__ == "__main__":
     unittest.main()

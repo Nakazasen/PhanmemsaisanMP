@@ -8,8 +8,12 @@ from unittest.mock import patch
 from src.services.operations_case_service import EvidenceReference, OperationalCase
 from src.services.operations_gemini_web import (
     DEFAULT_GEMINI_WEB_PROXY_URL,
+    is_proxy_available,
+    mark_proxy_failed,
+    mark_proxy_success,
     request_gemini_web_business_guidance,
     request_gemini_web_guidance,
+    reset_proxy_cooldown,
 )
 from src.services.operations_knowledge import ERROR_CODE_BLOCKED_OUTPUT_FILE_LOCK, get_knowledge_entry
 
@@ -307,3 +311,104 @@ def test_gemini_web_clarify_prompt_rules_multilingual() -> None:
     prompt_ja = captured_ja["body"].decode("utf-8")
     assert "CLARIFICATION_NEEDED" in prompt_ja
     assert "Ask exactly ONE focused, concise question in Japanese" in prompt_ja
+
+
+def test_proxy_failure_activates_cooldown_and_falls_back_to_direct() -> None:
+    """Khi proxy cục bộ bị lỗi (VD kết nối từ chối), kích hoạt cooldown và đi thẳng Gemini Web Direct."""
+    import urllib.error
+
+    reset_proxy_cooldown()
+    assert is_proxy_available() is True
+
+    with patch("src.services.operations_gemini_web.check_local_proxy_running", return_value=False), \
+         patch("src.services.operations_gemini_web._request_direct_gemini_web", return_value="Direct answer from Web") as mock_direct:
+        result = request_gemini_web_business_guidance(
+            "Hướng dẫn kiểm tra nguồn",
+            "Nội dung kiểm tra nguồn...",
+            "vi",
+        )
+
+        assert result.status == "ready"
+        assert result.provider_label == "Gemini Web Direct"
+        assert result.answer == "Direct answer from Web"
+        mock_direct.assert_called_once()
+        # Cooldown phải được kích hoạt
+        assert is_proxy_available() is False
+
+
+def test_subsequent_query_within_cooldown_skips_proxy_immediately() -> None:
+    """Trong thời gian cooldown, proxy bị bỏ qua hoàn toàn và không tốn thời gian chờ."""
+    # Cooldown is already active or we activate it
+    mark_proxy_failed()
+    assert is_proxy_available() is False
+
+    with patch("urllib.request.urlopen") as mock_urlopen, \
+         patch("src.services.operations_gemini_web._request_direct_gemini_web", return_value="Fast direct answer") as mock_direct:
+        result = request_gemini_web_business_guidance(
+            "Câu hỏi kế tiếp",
+            "Nội dung ngữ cảnh...",
+            "vi",
+        )
+
+        assert result.status == "ready"
+        assert result.provider_label == "Gemini Web Direct"
+        assert result.answer == "Fast direct answer"
+        # urlopen tuyệt đối không được gọi -> 0s chờ proxy chết!
+        mock_urlopen.assert_not_called()
+        mock_direct.assert_called_once()
+
+
+def test_after_cooldown_expires_proxy_is_retried_and_succeeds() -> None:
+    """Sau khi hết cooldown, proxy được thử lại và nếu thành công sẽ không gọi Gemini Web Direct."""
+    mark_proxy_failed()
+    assert is_proxy_available() is False
+
+    fake_response_data = json.dumps(
+        {"choices": [{"message": {"content": "Phản hồi từ proxy cục bộ đã hồi phục."}}]}
+    ).encode("utf-8")
+
+    with patch("src.services.operations_gemini_web.time.monotonic", return_value=float("inf")), \
+         patch("src.services.operations_gemini_web.check_local_proxy_running", return_value=True), \
+         patch("urllib.request.urlopen") as mock_urlopen, \
+         patch("src.services.operations_gemini_web._request_direct_gemini_web") as mock_direct:
+        mock_urlopen.return_value.__enter__.return_value.getcode.return_value = 200
+        mock_urlopen.return_value.__enter__.return_value.read.return_value = fake_response_data
+
+        result = request_gemini_web_business_guidance(
+            "Câu hỏi sau hồi phục",
+            "Nội dung...",
+            "vi",
+        )
+
+        assert result.status == "ready"
+        assert result.provider_label == "Gemini Web (local proxy)"
+        assert result.answer == "Phản hồi từ proxy cục bộ đã hồi phục."
+        mock_urlopen.assert_called_once()
+        mock_direct.assert_not_called()
+
+    reset_proxy_cooldown()
+
+
+def test_direct_gemini_accumulates_stream_frames_until_final_answer() -> None:
+    """Direct mode must accumulate stream frames and return the final complete answer."""
+    from src.services.operations_gemini_web import _request_direct_gemini_web
+
+    frame1_inner = [None, None, None, None, [[None, ["MP2"]]]]
+    frame1 = (json.dumps([["wrb.fr", None, json.dumps(frame1_inner)]]) + "\n").encode("utf-8")
+    frame2_inner = [None, None, None, None, [[None, ["MP2027 la he thong ngan sach"]]]]
+    frame2 = (json.dumps([["wrb.fr", None, json.dumps(frame2_inner)]]) + "\n").encode("utf-8")
+
+    class _StreamingResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def __iter__(self):
+            yield frame1
+            yield frame2
+
+    with patch("src.services.operations_gemini_web._refresh_gemini_bl", return_value="test-build"), \
+         patch("urllib.request.urlopen", return_value=_StreamingResponse()):
+        assert _request_direct_gemini_web("hello") == "MP2027 la he thong ngan sach"

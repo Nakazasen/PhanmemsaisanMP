@@ -1232,15 +1232,17 @@ class OperationsBusinessChatDialog:
         else:
             self.question.delete(0, "end")
 
-        context = _business_document_context(question, self.language)
         if sync:
-            self._request(question, context, attached_img, sync=True)
+            self._request(question, None, attached_img, sync=True)
         else:
-            t = threading.Thread(target=self._request, args=(question, context, attached_img), daemon=True)
+            t = threading.Thread(target=self._request, args=(question, None, attached_img), daemon=True)
             self._current_thread = t
             t.start()
 
-    def _request(self, question: str, context: str, attached_image: Any = None, *, sync: bool = False) -> None:
+    def _request(self, question: str, context: str | None = None, attached_image: Any = None, *, sync: bool = False) -> None:
+        if context is None:
+            context = _business_document_context(question, self.language)
+
         from src.services.business_knowledge_retrieval import classify_question_intent
 
         intent = classify_question_intent(question, self.language)
