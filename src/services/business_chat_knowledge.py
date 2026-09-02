@@ -641,6 +641,8 @@ def local_fallback(
     question: str,
     language: str,
     registry: dict[str, Any] | None = None,
+    *,
+    intent: str | None = None,
 ) -> str:
     """Return a local fallback answer from the curated catalog when Gemini is offline.
 
@@ -651,6 +653,33 @@ def local_fallback(
     lang = str(language).strip().lower() if language else "vi"
     if lang not in SUPPORTED_LANGUAGES:
         lang = "vi"
+
+    if intent == "clarify":
+        clarify_msg = {
+            "vi": "Bạn đang cần hỏi về số lượng nhóm chi phí hay số dòng chi phí cụ thể, cho năm tài chính (FY) và trung tâm chi phí (cost center) nào?",
+            "en": "Are you asking about the number of cost categories or specific cost line items, and for which fiscal year (FY) and cost center?",
+            "ja": "費用の分類項目数ですか、それとも具体的な明細行数ですか？対象の会計年度（FY）とコストセンターをお知らせください。",
+        }
+        return clarify_msg.get(lang, clarify_msg["vi"])
+
+    if intent == "incident":
+        incident_no_match = {
+            "vi": (
+                "Chưa tìm thấy thông tin sự cố phù hợp với mô tả này.\n"
+                "Vui lòng kiểm tra lại thông báo lỗi cụ thể trên màn hình, xem chi tiết trong \"Lịch sử lần chạy\", "
+                "hoặc chọn lần chạy bị lỗi để được phân tích."
+            ),
+            "en": (
+                "No matching incident information was found for this description.\n"
+                "Please check the specific on-screen error message, inspect \"Run History\", "
+                "or select the failed run for diagnosis."
+            ),
+            "ja": (
+                "この内容に該当する障害情報が見つかりませんでした。\n"
+                "画面上に表示されたエラーメッセージを確認するか、「実行履歴」で対象のエラー実行を選択して診断してください。"
+            ),
+        }
+        return incident_no_match.get(lang, incident_no_match["vi"])
 
     results = retrieve(question, lang)
     if not results:

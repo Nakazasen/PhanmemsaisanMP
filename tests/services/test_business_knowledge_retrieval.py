@@ -1119,3 +1119,115 @@ class TestEndToEndPackAcceptanceScenarios:
         sel_c12 = select_relevant_citations(col_e_chunk.evidence_citations, question=q_claim12, language="vi")
         assert len(sel_c12) >= 1
         assert "Claim 12" in sel_c12[0]["heading_title"]
+
+
+class TestIntentClassificationAndFallback:
+    """Regression tests for question intent routing (incident / clarify / business) across VI, EN, JA."""
+
+    def test_intent_classification_vietnamese(self):
+        from src.services.business_knowledge_retrieval import classify_question_intent
+
+        # 1. Business queries
+        assert classify_question_intent("cách sử dụng phần mềm này", "vi") == "business"
+        assert classify_question_intent("Tại sao chi phí này được phân bổ như vậy?", "vi") == "business"
+        assert classify_question_intent("Thiếu dữ liệu nhân sự tháng 3 thì nhập ở đâu?", "vi") == "business"
+        assert classify_question_intent("Khóa sổ kế toán là gì?", "vi") == "business"
+        assert classify_question_intent("Quy trình kiểm tra tính hợp lệ của dữ liệu nguồn đầu vào?", "vi") == "business"
+        assert classify_question_intent("Phân bổ chi phí chung và riêng thế nào?", "vi") == "business"
+
+        # 2. Clarification queries
+        assert classify_question_intent("MP có bao nhiêu chi phí?", "vi") == "clarify"
+        assert classify_question_intent("Phần mềm có bao nhiêu chi phí?", "vi") == "clarify"
+        assert classify_question_intent("Có bao nhiêu nhóm chi phí?", "vi") == "clarify"
+        assert classify_question_intent("Tổng chi phí là bao nhiêu?", "vi") == "clarify"
+
+        # 3. Incident queries
+        assert classify_question_intent("Chạy tính toán bị dừng khi xuất Excel", "vi") == "incident"
+        assert classify_question_intent("Lỗi này là gì?", "vi") == "incident"
+        assert classify_question_intent("Lỗi file kết quả bị khóa xử lý thế nào?", "vi") == "incident"
+        assert classify_question_intent("Ứng dụng bị dừng khi đang tính toán", "vi") == "incident"
+        assert classify_question_intent("Tại sao xuất file thất bại?", "vi") == "incident"
+        assert classify_question_intent("Cách khắc phục file bị khóa", "vi") == "incident"
+
+    def test_intent_classification_english(self):
+        from src.services.business_knowledge_retrieval import classify_question_intent
+
+        # 1. Business queries
+        assert classify_question_intent("How to use this software?", "en") == "business"
+        assert classify_question_intent("Why is this cost allocated this way?", "en") == "business"
+        assert classify_question_intent("Where do I enter missing March staffing data?", "en") == "business"
+        assert classify_question_intent("What is accounting closing procedure?", "en") == "business"
+        assert classify_question_intent("How are common and specific costs allocated?", "en") == "business"
+
+        # 2. Clarification queries
+        assert classify_question_intent("How many expenses are in MP?", "en") == "clarify"
+        assert classify_question_intent("How many cost categories?", "en") == "clarify"
+        assert classify_question_intent("What is the total cost?", "en") == "clarify"
+
+        # 3. Incident queries
+        assert classify_question_intent("Calculation stopped when exporting to Excel", "en") == "incident"
+        assert classify_question_intent("What does this error mean?", "en") == "incident"
+        assert classify_question_intent("Why did the calculation fail?", "en") == "incident"
+        assert classify_question_intent("Troubleshoot missing staffing baseline", "en") == "incident"
+        assert classify_question_intent("How to resolve locked output Excel file issue?", "en") == "incident"
+
+    def test_intent_classification_japanese(self):
+        from src.services.business_knowledge_retrieval import classify_question_intent
+
+        # 1. Business queries
+        assert classify_question_intent("このソフトウェアの使い方は？", "ja") == "business"
+        assert classify_question_intent("なぜこの費用はこのように配賦されるのですか？", "ja") == "business"
+        assert classify_question_intent("3月の人員データが不足している場合、どこに入力しますか？", "ja") == "business"
+        assert classify_question_intent("共通費と個別費はどう配賦しますか？", "ja") == "business"
+
+        # 2. Clarification queries
+        assert classify_question_intent("MPには費用がいくつありますか？", "ja") == "clarify"
+        assert classify_question_intent("費用項目はいくつありますか？", "ja") == "clarify"
+        assert classify_question_intent("総費用はいくらですか？", "ja") == "clarify"
+
+        # 3. Incident queries
+        assert classify_question_intent("Excel出力時に計算が停止した", "ja") == "incident"
+        assert classify_question_intent("このエラーは何ですか？", "ja") == "incident"
+        assert classify_question_intent("処理が失敗した原因は？", "ja") == "incident"
+        assert classify_question_intent("出力先Excelファイルがロックされた場合の対処方法は？", "ja") == "incident"
+        assert classify_question_intent("どうすれば対処できますか", "ja") == "incident"
+
+    def test_grounded_local_fallback_by_intent(self):
+        from src.services.business_knowledge_retrieval import grounded_local_fallback
+
+        # VI Fallbacks
+        fb_clarify_vi = grounded_local_fallback("MP có bao nhiêu chi phí?", "vi", intent="clarify")
+        assert "Bạn đang cần hỏi về số lượng nhóm chi phí hay số dòng chi phí" in fb_clarify_vi
+        assert "năm tài chính" in fb_clarify_vi
+
+        fb_inc_vi = grounded_local_fallback("su co runtime khong ton tai zz99", "vi", index=[], intent="incident")
+        assert "Chưa tìm thấy thông tin sự cố phù hợp" in fb_inc_vi
+        assert "Lịch sử lần chạy" in fb_inc_vi
+        assert "hệ thống bình thường" not in fb_inc_vi
+
+        fb_biz_vi = grounded_local_fallback("cau hoi nghiep vu khong ton tai zz99", "vi", index=[], intent="business")
+        assert "Chưa tìm thấy hướng dẫn nội bộ phù hợp" in fb_biz_vi
+        assert "phân bổ chi phí chung và riêng" in fb_biz_vi
+        assert "không có lỗi" not in fb_biz_vi
+
+        # EN Fallbacks
+        fb_clarify_en = grounded_local_fallback("How many expenses in MP?", "en", intent="clarify")
+        assert "Are you asking about the number of cost categories" in fb_clarify_en
+
+        fb_inc_en = grounded_local_fallback("unknown crash issue zz99", "en", index=[], intent="incident")
+        assert "No matching incident information was found" in fb_inc_en
+        assert "Run History" in fb_inc_en
+
+        fb_biz_en = grounded_local_fallback("unknown business topic zz99", "en", index=[], intent="business")
+        assert "No matching internal guidance was found" in fb_biz_en
+
+        # JA Fallbacks
+        fb_clarify_ja = grounded_local_fallback("MPには費用がいくつありますか？", "ja", intent="clarify")
+        assert "費用の分類項目数ですか、それとも具体的な明細行数ですか？" in fb_clarify_ja
+
+        fb_inc_ja = grounded_local_fallback("mishiranu eror zz99", "ja", index=[], intent="incident")
+        assert "該当する障害情報が見つかりませんでした" in fb_inc_ja
+        assert "実行履歴" in fb_inc_ja
+
+        fb_biz_ja = grounded_local_fallback("mishiranu gyomu zz99", "ja", index=[], intent="business")
+        assert "該当する社内ガイダンスが見つかりませんでした" in fb_biz_ja

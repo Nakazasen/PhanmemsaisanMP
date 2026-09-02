@@ -1284,7 +1284,7 @@ class TestOperationsBusinessChatDialog(unittest.TestCase):
                     "出力Excelファイルがロックされました",
                 )
 
-            local_fallback.assert_called_once_with("出力Excelファイルがロックされました", "ja")
+            local_fallback.assert_called_once_with("出力Excelファイルがロックされました", "ja", intent="business")
         finally:
             dialog.close()
 
@@ -1356,7 +1356,7 @@ class TestOperationsBusinessChatDialog(unittest.TestCase):
         )
         try:
             with patch(
-                "src.ui.operations_assistant.find_latest_error_case",
+                "src.ui.operations_assistant.find_relevant_error_case",
                 return_value=case,
             ), patch(
                 "src.ui.operations_assistant.request_gemini_web_business_guidance",
@@ -1395,7 +1395,7 @@ class TestOperationsBusinessChatDialog(unittest.TestCase):
             fiscal_year=2027,
         )
         try:
-            with patch("src.ui.operations_assistant.find_latest_error_case", return_value=None), \
+            with patch("src.ui.operations_assistant.find_relevant_error_case", return_value=None), \
                  patch("src.ui.operations_assistant.request_gemini_web_business_guidance", return_value=MagicMock(status="unavailable", answer="", limitation="offline")):
                 dialog._use_suggestion("Lỗi này là gì?", sync=True)
 
@@ -1407,15 +1407,15 @@ class TestOperationsBusinessChatDialog(unittest.TestCase):
                                 val = str(text_w.cget("text"))
                             except Exception:
                                 val = ""
-                            if "chưa ghi nhận lỗi tính toán nào gần đây" in val:
+                            val_lower = val.lower()
+                            if "chưa tìm thấy sự cố" in val_lower or "chưa ghi nhận lỗi" in val_lower or "chưa ghi nhận sự cố" in val_lower:
                                 found_guidance = True
-                                self.assertIn("Quét lại nội dung", val)
-                                self.assertIn("CHẠY TÍNH TOÁN", val)
+                                self.assertIn("Lịch sử lần chạy", val)
                                 self.assertNotIn("F5", val)
                                 self.assertNotIn("trình duyệt", val)
                                 self.assertNotIn("đăng xuất", val)
                                 break
-                self.assertTrue(found_guidance, "Phải hiển thị hướng dẫn máy bàn chuẩn khi chưa phát sinh lỗi")
+                self.assertTrue(found_guidance, "Phải hiển thị thông báo chưa ghi nhận lỗi khi không có lỗi thực tế")
         finally:
             dialog.close()
 
@@ -1441,7 +1441,8 @@ class TestOperationsBusinessChatDialog(unittest.TestCase):
                 self.assertNotIn("F5", answer_text, "Guardrail phải lọc sạch lỗi F5 trình duyệt")
                 self.assertNotIn("trình duyệt", answer_text, "Guardrail phải lọc sạch tham chiếu trình duyệt")
                 self.assertNotIn("đăng xuất", answer_text, "Guardrail phải lọc sạch hướng dẫn đăng xuất web")
-                self.assertIn("chưa ghi nhận lỗi", answer_text, "Phải thay bằng hướng dẫn nghiệp vụ chuẩn desktop")
+                answer_lower = answer_text.lower()
+                self.assertTrue("chưa tìm thấy sự cố" in answer_lower or "chưa ghi nhận lỗi" in answer_lower or "chưa ghi nhận sự cố" in answer_lower, "Phải thay bằng thông báo chưa ghi nhận lỗi phù hợp")
         finally:
             dialog.close()
 
@@ -1883,6 +1884,202 @@ class FiscalYearKnowledgeUpdateDialogTests(unittest.TestCase):
             dlg_ja.close()
         finally:
             root.destroy()
+
+
+class TestOperationsBusinessChatIntentRoutingUI(unittest.TestCase):
+    """UI Regression tests proving that business, clarify, and incident intents are properly routed in chat dialog."""
+
+    def setUp(self) -> None:
+        import tkinter as tk
+        try:
+            self.root = tk.Tk()
+            self.root.withdraw()
+            self.tk_available = True
+        except Exception:
+            self.tk_available = False
+
+    def tearDown(self) -> None:
+        if getattr(self, "tk_available", False) and hasattr(self, "root"):
+            try:
+                self.root.destroy()
+            except Exception:
+                pass
+
+    def test_business_query_does_not_attach_incident_diagnosis(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = OperationsBusinessChatDialog(
+            self.root,
+            "vi",
+            open_history=lambda: None,
+            history_root="/fake/history",
+            fiscal_year=2027,
+        )
+        try:
+            with patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_gemini:
+                mock_gemini.return_value = MagicMock(
+                    status="ready",
+                    answer="MP2027 là ứng dụng hỗ trợ phân bổ chi phí.",
+                )
+                dialog.question_var.set("cách sử dụng phần mềm này")
+                dialog.send(sync=True)
+
+                mock_gemini.assert_called_once()
+                call_args = mock_gemini.call_args
+                question_arg = call_args[0][0]
+                context_arg = call_args[0][1]
+                intent_arg = call_args[1].get("intent") or (call_args[0][3] if len(call_args[0]) > 3 else "business")
+
+                self.assertEqual(question_arg, "cách sử dụng phần mềm này")
+                self.assertEqual(intent_arg, "business")
+                self.assertNotIn("KẾT QUẢ CHẨN ĐOÁN SỰ CỐ GẦN NHẤT", context_arg)
+                self.assertNotIn("chưa ghi nhận lỗi", context_arg)
+
+                answer_text = dialog.answer.cget("text")
+                self.assertNotIn("không có lỗi", answer_text.lower())
+                self.assertNotIn("hệ thống bình thường", answer_text.lower())
+        finally:
+            dialog.close()
+
+    def test_clarify_query_routes_clarify_intent_and_asks_scope(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = OperationsBusinessChatDialog(
+            self.root,
+            "vi",
+            open_history=lambda: None,
+            history_root="/fake/history",
+            fiscal_year=2027,
+        )
+        try:
+            with patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_gemini:
+                mock_gemini.return_value = MagicMock(
+                    status="ready",
+                    answer="Bạn đang cần hỏi về số lượng nhóm chi phí hay số dòng chi phí cho năm tài chính nào?",
+                )
+                dialog.question_var.set("MP có bao nhiêu chi phí?")
+                dialog.send(sync=True)
+
+                mock_gemini.assert_called_once()
+                call_args = mock_gemini.call_args
+                question_arg = call_args[0][0]
+                context_arg = call_args[0][1]
+                intent_arg = call_args[1].get("intent") or (call_args[0][3] if len(call_args[0]) > 3 else "business")
+
+                self.assertEqual(question_arg, "MP có bao nhiêu chi phí?")
+                self.assertEqual(intent_arg, "clarify")
+                self.assertNotIn("KẾT QUẢ CHẨN ĐOÁN SỰ CỐ GẦN NHẤT", context_arg)
+                self.assertNotIn("chưa ghi nhận lỗi", context_arg)
+
+                answer_text = dialog.answer.cget("text")
+                self.assertNotIn("không có lỗi", answer_text.lower())
+                self.assertNotIn("hệ thống bình thường", answer_text.lower())
+        finally:
+            dialog.close()
+
+    def test_incident_query_routes_incident_intent_with_matching_case(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        case_lock = _make_confirmed_case("vi", run_id="run-lock-test")
+
+        dialog = OperationsBusinessChatDialog(
+            self.root,
+            "vi",
+            open_history=lambda: None,
+            history_root="/fake/history",
+            fiscal_year=2028,
+        )
+        try:
+            with patch("src.ui.operations_assistant.find_relevant_error_case", return_value=case_lock) as mock_find, \
+                 patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_gemini:
+                mock_gemini.return_value = MagicMock(
+                    status="ready",
+                    answer="Chạy bị dừng do tệp Excel bị khóa.",
+                )
+                dialog.question_var.set("Chạy tính toán bị dừng khi xuất Excel")
+                dialog.send(sync=True)
+
+                mock_find.assert_called_once()
+                mock_gemini.assert_called_once()
+                call_args = mock_gemini.call_args
+                question_arg = call_args[0][0]
+                context_arg = call_args[0][1]
+                intent_arg = call_args[1].get("intent") or (call_args[0][3] if len(call_args[0]) > 3 else "business")
+
+                self.assertEqual(question_arg, "Chạy tính toán bị dừng khi xuất Excel")
+                self.assertEqual(intent_arg, "incident")
+                self.assertIn("KẾT QUẢ CHẨN ĐOÁN SỰ CỐ GẦN NHẤT", context_arg)
+        finally:
+            dialog.close()
+
+    def test_incident_query_when_no_case_matches_shows_clean_guidance(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = OperationsBusinessChatDialog(
+            self.root,
+            "vi",
+            open_history=lambda: None,
+            history_root="/fake/history",
+            fiscal_year=2028,
+        )
+        try:
+            with patch("src.ui.operations_assistant.find_relevant_error_case", return_value=None), \
+                 patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_gemini:
+                mock_gemini.return_value = MagicMock(status="unavailable", answer="", limitation="offline")
+                dialog.question_var.set("Chạy bị dừng do sự cố không xác định")
+                dialog.send(sync=True)
+
+                answer_text = dialog.answer.cget("text")
+                self.assertIn("Chưa tìm thấy sự cố hoặc lỗi phù hợp", answer_text)
+                self.assertIn("Lịch sử lần chạy", answer_text)
+                self.assertNotIn("hệ thống bình thường", answer_text.lower())
+                self.assertNotIn("quét lại nội dung", answer_text.lower())
+        finally:
+            dialog.close()
+
+    def test_business_and_clarify_multilingual_en_ja(self) -> None:
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        # EN Check
+        dialog_en = OperationsBusinessChatDialog(self.root, "en", open_history=lambda: None)
+        try:
+            with patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_gemini:
+                mock_gemini.return_value = MagicMock(status="ready", answer="Why cost is allocated.")
+                dialog_en.question_var.set("Why is this cost allocated this way?")
+                dialog_en.send(sync=True)
+
+                mock_gemini.assert_called_once()
+                self.assertEqual(mock_gemini.call_args[1].get("intent"), "business")
+        finally:
+            dialog_en.close()
+
+        # JA Check
+        dialog_ja = OperationsBusinessChatDialog(self.root, "ja", open_history=lambda: None)
+        try:
+            with patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_gemini:
+                mock_gemini.return_value = MagicMock(status="ready", answer="Clarification in Japanese.")
+                dialog_ja.question_var.set("MPには費用がいくつありますか？")
+                dialog_ja.send(sync=True)
+
+                mock_gemini.assert_called_once()
+                self.assertEqual(mock_gemini.call_args[1].get("intent"), "clarify")
+        finally:
+            dialog_ja.close()
 
 
 if __name__ == "__main__":

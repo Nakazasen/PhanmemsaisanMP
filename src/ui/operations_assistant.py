@@ -170,14 +170,9 @@ def _business_document_context(question: str, language: str = "vi") -> str:
 
 def is_error_related_query(query: str) -> bool:
     """Kiểm tra xem câu hỏi của người dùng có đang hỏi về lỗi/sự cố/cách xử lý hay không."""
-    q = (query or "").lower().strip()
-    keywords = [
-        "lỗi", "sự cố", "không chạy", "bị dừng", "thất bại", "hỏng", "không được",
-        "khóa", "thiếu", "khắc phục", "error", "fail", "issue",
-        "problem", "broken", "troubleshoot", "stuck", "exception",
-        "エラー", "失敗", "動かない", "問題", "対処", "トラブル", "止まった", "ロック", "不足",
-    ]
-    return any(k in q for k in keywords)
+    from src.services.business_knowledge_retrieval import classify_question_intent
+
+    return classify_question_intent(query) == "incident"
 
 
 def format_nontech_case_diagnosis(case: OperationalCase, language: str = "vi") -> str:
@@ -340,34 +335,34 @@ def find_latest_error_case(
         return None
 
 
+def find_relevant_error_case(
+    history_root: Path | str | None,
+    fiscal_year: int | None = None,
+    language: str = "vi",
+    question: str = "",
+) -> OperationalCase | None:
+    """Tìm kiếm trường hợp vận hành bị lỗi phù hợp nhất với câu hỏi trong năm tài chính được chọn."""
+    from src.services.operations_case_service import find_relevant_error_case as _find_relevant_error_case
+
+    return _find_relevant_error_case(history_root, fiscal_year, language, question)
+
+
 def format_no_error_guidance(language: str = "vi") -> str:
-    """Trả về thông điệp thân thiện xác nhận hệ thống chưa ghi nhận lỗi và hướng dẫn quy trình máy bàn chuẩn."""
+    """Trả về thông báo xác nhận chưa tìm thấy sự cố phù hợp với câu hỏi."""
     lang = str(language or "").strip().lower()
     if lang == "ja":
         return (
-            "✅ 現在、システムに記録された実行エラーはありません（正常状態です）。\n\n"
-            "計算実行またはデータ確認を行う場合は、以下の標準手順を実施してください：\n"
-            "  1. 入力元の確認: 費用・人員データのExcelファイルが正しく配置され、他で開かれていないか確認します。\n"
-            "  2. 再スキャン: メイン画面の「再スキャン」ボタンを押して最新のファイルを照合します。\n"
-            "  3. 計算実行: 「計算実行」ボタンを押して配賦計算を開始します。\n\n"
-            "処理中にエラーや警告が発生した場合は、再度このチャットを開いていただければ、原因と対処手順を即座にご案内します！"
+            "この内容と一致する障害情報が記録に見つかりませんでした。\n"
+            "画面上に表示された具体的なエラー内容をお知らせいただくか、「実行履歴」で対象の実行ログをご確認ください。"
         )
     if lang == "en":
         return (
-            "✅ No calculation errors are currently recorded in the system (System is normal).\n\n"
-            "To run calculations or verify data, please follow standard desktop workflow steps:\n"
-            "  1. Check Input Sources: Ensure required Excel workbooks (expenses, headcount) are placed in the source folders and not locked.\n"
-            "  2. Rescan Content: Click the 'Rescan' button on the main window to detect latest files.\n"
-            "  3. Run Calculation: Click 'RUN CALCULATION' to execute cost allocations.\n\n"
-            "If any warning or interruption occurs during processing, open this chat again for immediate step-by-step guidance!"
+            "No matching incident was found for this description in recent records.\n"
+            "Please provide the specific on-screen error message or check the Run History to select the relevant run."
         )
     return (
-        "✅ Hiện tại hệ thống chưa ghi nhận lỗi tính toán nào gần đây (Hệ thống đang hoạt động bình thường).\n\n"
-        "Nếu bạn chuẩn bị chạy tính toán hoặc kiểm tra dữ liệu, hãy thực hiện các bước chuẩn sau trên ứng dụng:\n"
-        "  1. Kiểm tra tệp nguồn: Đảm bảo các tệp Excel đầu vào (chi phí, nhân sự) đã được đặt đúng vị trí và không bị phần mềm khác khóa.\n"
-        "  2. Quét lại nội dung: Nhấn nút \"Quét lại nội dung\" trên màn hình chính để phần mềm đối chiếu tệp.\n"
-        "  3. Chạy tính toán: Nhấn nút \"CHẠY TÍNH TOÁN\" để tiến hành phân bổ chi phí.\n\n"
-        "Nếu trong quá trình xử lý có thông báo cảnh báo hoặc dừng tiến trình, bạn chỉ cần mở lại cửa sổ này để tôi giải thích nguyên nhân và hướng dẫn xử lý ngay nhé!"
+        "Chưa tìm thấy sự cố hoặc lỗi phù hợp với mô tả này trong các lần chạy gần đây.\n"
+        "Vui lòng cung cấp thông báo lỗi cụ thể trên màn hình hoặc kiểm tra trong mục \"Lịch sử lần chạy\" để chọn đúng lần chạy bị lỗi."
     )
 
 
@@ -1246,20 +1241,25 @@ class OperationsBusinessChatDialog:
             t.start()
 
     def _request(self, question: str, context: str, attached_image: Any = None, *, sync: bool = False) -> None:
+        from src.services.business_knowledge_retrieval import classify_question_intent
+
+        intent = classify_question_intent(question, self.language)
         case_diagnosis = ""
-        if is_error_related_query(question):
-            latest_case = None
+
+        if intent == "incident":
+            relevant_case = None
             if getattr(self, "history_root", None):
                 try:
-                    latest_case = find_latest_error_case(
+                    relevant_case = find_relevant_error_case(
                         self.history_root,
                         getattr(self, "fiscal_year", None),
                         self.language,
+                        question=question,
                     )
                 except Exception:
-                    latest_case = None
-            if latest_case is not None:
-                case_diagnosis = format_nontech_case_diagnosis(latest_case, self.language)
+                    relevant_case = None
+            if relevant_case is not None:
+                case_diagnosis = format_nontech_case_diagnosis(relevant_case, self.language)
             else:
                 case_diagnosis = format_no_error_guidance(self.language)
 
@@ -1268,17 +1268,23 @@ class OperationsBusinessChatDialog:
             img_notice = f"[{translate_for_language('operations_business_chat_image_attached', self.language)}: {getattr(attached_image, 'width', 0)}×{getattr(attached_image, 'height', 0)}]"
             full_context = f"{img_notice}\n{full_context}"
 
-        result = request_gemini_web_business_guidance(question, full_context, self.language)
+        result = request_gemini_web_business_guidance(question, full_context, self.language, intent=intent)
         if sync:
-            self._apply(result, question, case_diagnosis=case_diagnosis)
+            self._apply(result, question, case_diagnosis=case_diagnosis, intent=intent)
         else:
             try:
                 if self.is_alive():
-                    self.window.after(0, lambda: self._apply(result, question, case_diagnosis=case_diagnosis))
+                    self.window.after(0, lambda: self._apply(result, question, case_diagnosis=case_diagnosis, intent=intent))
             except Exception:
                 pass
 
-    def _apply(self, result: CagentGuidanceResult, question: str, case_diagnosis: str = "") -> None:
+    def _apply(
+        self,
+        result: CagentGuidanceResult,
+        question: str,
+        case_diagnosis: str = "",
+        intent: str = "business",
+    ) -> None:
         if not self.is_alive():
             return
         self._in_progress = False
@@ -1298,7 +1304,7 @@ class OperationsBusinessChatDialog:
 
         from src.services.business_chat_knowledge import local_fallback as _local_fallback
 
-        fallback_answer = _local_fallback(question, self.language)
+        fallback_answer = _local_fallback(question, self.language, intent=intent)
         fallback = (
             f"{translate_for_language('operations_assistant_fallback_header', self.language)}\n"
             f"{translate_for_language('operations_assistant_fallback_notice', self.language)}\n\n"

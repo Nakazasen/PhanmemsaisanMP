@@ -10,8 +10,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import json
 from pathlib import Path
+import re
 import sqlite3
 from typing import Any
+import unicodedata
 
 from src.services.operations_knowledge import (
     ERROR_CODE_BLOCKED_OUTPUT_FILE_LOCK,
@@ -942,3 +944,131 @@ def assemble_unclassified_operational_case(
         guidance=(),
         presentation=None,
     )
+
+
+_BLOCKED_FILE_LOCK_QUERY_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"(?:xuất|export|lưu|ghi).*(?:excel|file|tệp)", re.IGNORECASE),
+    re.compile(r"(?:file|tệp|excel).*(?:khóa|bị\s+khóa|lock|locked)", re.IGNORECASE),
+    re.compile(r"không\s+(?:lưu|xuất|ghi)\s+được", re.IGNORECASE),
+    re.compile(r"(?:khi\s+xuất|khi\s+export|khi\s+lưu|khi\s+ghi)", re.IGNORECASE),
+    re.compile(r"(?:export|save|write).*(?:excel|file)", re.IGNORECASE),
+    re.compile(r"(?:cannot|failed\s+to)\s+(?:save|export|write|open)", re.IGNORECASE),
+    re.compile(r"(?:output\s+file|locked\s+file|file\s+is\s+locked|locked\s+excel)", re.IGNORECASE),
+    re.compile(r"(?:excel|ファイル).*(?:ロック|出力|保存|書き出し)", re.IGNORECASE),
+    re.compile(r"(?:出力|保存|書き出).*(?:できない|失敗)", re.IGNORECASE),
+    re.compile(r"(?:ファイルロック|出力ファイル|ロック)", re.IGNORECASE),
+)
+
+_MISSING_STAFFING_QUERY_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"(?:thiếu|mất|vắng|chưa\s+có).*(?:nhân\s+sự|headcount|nhân\s+viên|lao\s+động)", re.IGNORECASE),
+    re.compile(r"(?:nhân\s+sự|headcount|nhân\s+viên).*(?:tháng\s+3|tháng|mốc|baseline)", re.IGNORECASE),
+    re.compile(r"(?:thiếu\s+nhân\s+sự|dữ\s+liệu\s+nhân\s+sự|mốc\s+nhân\s+sự|định\s+biên)", re.IGNORECASE),
+    re.compile(r"(?:missing|lacking|no).*(?:staffing|headcount|personnel|employee)", re.IGNORECASE),
+    re.compile(r"(?:staffing|headcount).*(?:march|baseline|month)", re.IGNORECASE),
+    re.compile(r"(?:missing\s+staffing|staffing\s+baseline)", re.IGNORECASE),
+    re.compile(r"(?:人員|ヘッドカウント|社員).*(?:不足|ない|3月|基準)", re.IGNORECASE),
+    re.compile(r"(?:不足).*(?:人員|データ)", re.IGNORECASE),
+    re.compile(r"(?:人員不足|人員データ|ヘッドカウント)", re.IGNORECASE),
+)
+
+_PREFLIGHT_VALIDATION_QUERY_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"(?:kiểm\s+tra|tiền\s+trạm|hợp\s+lệ|validation).*(?:nguồn|đầu\s+vào|form|sheet|dữ\s+liệu)", re.IGNORECASE),
+    re.compile(r"(?:form|sheet|mẫu).*(?:lỗi|hỏng|sai|không\s+đúng|validation)", re.IGNORECASE),
+    re.compile(r"(?:kiểm\s+tra\s+nguồn|dữ\s+liệu\s+đầu\s+vào|tiền\s+trạm|mẫu\s+biểu|cấu\s+trúc\s+sheet)", re.IGNORECASE),
+    re.compile(r"(?:preflight|validation|source\s+validation|validate).*(?:source|input|sheet|form)", re.IGNORECASE),
+    re.compile(r"(?:sheet|form).*(?:invalid|error|format|structure)", re.IGNORECASE),
+    re.compile(r"(?:source\s+validation|preflight|sheet\s+structure)", re.IGNORECASE),
+    re.compile(r"(?:事前検証|検証|入力元).*(?:エラー|失敗|シート|フォーマット)", re.IGNORECASE),
+    re.compile(r"(?:シート|フォーマット).*(?:エラー|不正)", re.IGNORECASE),
+    re.compile(r"(?:入力元|事前検証|検証エラー)", re.IGNORECASE),
+)
+
+
+def compute_case_relevance(case: OperationalCase, question: str, language: str = "vi") -> int:
+    """Tính điểm phù hợp giữa câu hỏi của người dùng và một trường hợp vận hành cụ thể."""
+    q = unicodedata.normalize("NFC", str(question or "").strip().lower())
+    if not q:
+        return 0
+
+    score = 0
+    classification = str(case.classification or "").lower()
+
+    # 1. Blocked Output File Lock
+    if classification == ERROR_CODE_BLOCKED_OUTPUT_FILE_LOCK or "file_lock" in classification:
+        if any(p.search(q) for p in _BLOCKED_FILE_LOCK_QUERY_PATTERNS):
+            score += 100
+
+    # 2. Missing Staffing Baseline
+    elif classification == ERROR_CODE_MISSING_STAFFING_BASELINE or "staffing" in classification:
+        if any(p.search(q) for p in _MISSING_STAFFING_QUERY_PATTERNS):
+            score += 100
+
+    # 3. Preflight Source Validation Failure
+    elif classification == ERROR_CODE_PREFLIGHT_SOURCE_VALIDATION_FAILURE or "preflight" in classification or "validation" in classification:
+        if any(p.search(q) for p in _PREFLIGHT_VALIDATION_QUERY_PATTERNS):
+            score += 100
+
+    # 4. Specific evidence file name matching
+    if case.evidence:
+        for ev in case.evidence:
+            if ev.local_path and len(ev.local_path) > 4:
+                file_name = Path(ev.local_path).name.lower()
+                if file_name and file_name in q:
+                    score += 50
+
+    return score
+
+
+def find_relevant_error_case(
+    history_root: Path | str | None,
+    fiscal_year: int | None = None,
+    language: str = "vi",
+    question: str = "",
+) -> OperationalCase | None:
+    """Tìm kiếm trường hợp vận hành bị lỗi phù hợp nhất với câu hỏi trong năm tài chính được chọn.
+
+    Quy tắc:
+    - Chỉ xét các lần chạy có lỗi/cảnh báo của FY đang chọn.
+    - So khớp câu hỏi với phân loại sự cố và tên tệp bằng chứng của từng ca lỗi.
+    - Nếu có nhiều ca cùng mức độ phù hợp cao nhất (score > 0), ưu tiên ca mới nhất.
+    - Nếu không có ca nào phù hợp (score == 0), trả về None (không lấy đại ca lỗi mới nhất).
+    """
+    if not history_root or not str(question or "").strip():
+        return None
+    try:
+        from src.services.run_history import list_runs
+
+        runs = list_runs(str(history_root), fiscal_year)
+        if not runs:
+            return None
+
+        error_runs = [
+            r for r in runs
+            if str(r.get("status") or "").strip().upper() in ("FAILED", "PRECHECK_FAILED", "SUCCEEDED_INCOMPLETE")
+            or bool(str(r.get("error_summary") or "").strip())
+        ]
+        if not error_runs:
+            return None
+
+        best_case: OperationalCase | None = None
+        max_score = 0
+
+        for r in error_runs:
+            run_id = str(r.get("run_id") or "").strip()
+            if not run_id:
+                continue
+            try:
+                case = assemble_operational_case(history_root, run_id, language)
+            except Exception:
+                continue
+
+            score = compute_case_relevance(case, question, language)
+            if score > max_score:
+                max_score = score
+                best_case = case
+
+        if max_score > 0:
+            return best_case
+        return None
+    except Exception:
+        return None

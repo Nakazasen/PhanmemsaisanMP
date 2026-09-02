@@ -65,6 +65,111 @@ _STOP_WORDS: dict[str, frozenset[str]] = {
     }),
 }
 
+# ---------------------------------------------------------------------------
+# Intent Classification Rules (Strict Multi-lingual Routing)
+# ---------------------------------------------------------------------------
+
+_BUSINESS_OVERRIDE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    # Questions asking why allocation is done a certain way (business reason)
+    re.compile(r"tại\s+sao.*(?:phân\s+bổ|chia\s+chi\s+phí|tính\s+chi\s+phí|50/50|tỷ\s+lệ|kết\s+quả)", re.IGNORECASE),
+    re.compile(r"why.*(?:allocat|distribut|split|cost\s+center|50/50|proportion)", re.IGNORECASE),
+    re.compile(r"なぜ.*(?:配賦|按分|割り当て|費用|50/50|割合)", re.IGNORECASE),
+    # Questions asking where to enter data or input missing data
+    re.compile(r"(?:nhập|điền|khai\s+báo|bổ\s+sung).*(?:ở\s+đâu|vào\s+đâu|mục\s+nào|trang\s+tính\s+nào|file\s+nào)", re.IGNORECASE),
+    re.compile(r"(?:ở\s+đâu|vào\s+đâu).*(?:nhập|điền|khai\s+báo|bổ\s+sung)", re.IGNORECASE),
+    re.compile(r"(?:where|how).*(?:enter|input|fill|import|record)", re.IGNORECASE),
+    re.compile(r"where\s+do\s+i\s+(?:enter|input|find|fill)", re.IGNORECASE),
+    re.compile(r"(?:どこに入力|どこで入力|どこに登録|どこで登録)", re.IGNORECASE),
+    # Questions asking about usage, how-to, general guides
+    re.compile(r"^(?:cách|hướng\s+dẫn)\s+sử\s+dụng", re.IGNORECASE),
+    re.compile(r"^(?:how\s+to\s+use|how\s+do\s+i\s+use|user\s+guide)", re.IGNORECASE),
+    re.compile(r"(?:の使い方|使用方法|利用方法)", re.IGNORECASE),
+    # Questions asking about definitions, e.g. closing
+    re.compile(r"(?:khóa\s+sổ|khoá\s+sổ).*(?:là\s+gì|như\s+thế\s+nào)", re.IGNORECASE),
+    re.compile(r"(?:quy\s+trình|thao\s+tác|các\s+bước).*(?:kiểm\s+tra|tính\s+toán|phân\s+bổ)", re.IGNORECASE),
+)
+
+_CLARIFY_PATTERNS: tuple[re.Pattern[str], ...] = (
+    # Count / quantity questions lacking specific context/scope
+    re.compile(r"(?:co\s+)?bao\s+nhieu\s+(?:chi\s+phi|khoan\s+chi|nhom\s+chi\s+phi|dong\s+chi\s+phi|cost\s+center|trung\s+tam\s+chi\s+phi|phong\s+ban|bo\s+phan|quy\s+tac|chi\s+tieu)", re.IGNORECASE),
+    re.compile(r"^(?:mp|mp2027|phan\s+mem)?\s*(?:co\s+)?bao\s+nhieu\s+chi\s+phi\??$", re.IGNORECASE),
+    re.compile(r"^(?:tong\s+)?chi\s+phi\s+la\s+bao\s+nhieu\??$", re.IGNORECASE),
+    re.compile(r"^(?:so\s+luong\s+)?(?:chi\s+phi|khoan\s+chi)\s+la\s+bao\s+nhieu\??$", re.IGNORECASE),
+    re.compile(r"how\s+many\s+(?:expenses|costs|cost\s+items|cost\s+categories|cost\s+centers|departments|allocation\s+rules|items)", re.IGNORECASE),
+    re.compile(r"^(?:what\s+is\s+the\s+total\s+cost|how\s+much\s+is\s+the\s+cost)\??$", re.IGNORECASE),
+    re.compile(r"(?:費用|コスト|勘定科目|部門|コストセンター|配賦ルール|項目)(?:は|が)?(?:いくつ|何個|何件|いくら)", re.IGNORECASE),
+    re.compile(r"^(?:mp|mp2027)?(?:には)?(?:費用|コスト)(?:は|が)?いくつ(?:ありますか)?\??$", re.IGNORECASE),
+)
+
+_INCIDENT_PATTERNS: tuple[re.Pattern[str], ...] = (
+    # Vietnamese incident signals
+    re.compile(r"(?:chạy|tính\s+toán|xuất\s+excel|tiến\s+trình|hệ\s+thống|quá\s+trình|ứng\s+dụng).*(?:bị\s+dừng|dừng\s+lại|dừng\s+đột\s+ngột|thất\s+bại|bị\s+crash|bị\s+treo|bị\s+đơ|bị\s+lỗi)", re.IGNORECASE),
+    re.compile(r"(?:bị\s+dừng|dừng\s+lại|dừng\s+khi|thất\s+bại|bị\s+lỗi|bị\s+crash|bị\s+treo).*(?:khi\s+chạy|khi\s+tính|khi\s+xuất|khi\s+export|khi\s+lưu|khi\s+đang)", re.IGNORECASE),
+    re.compile(r"(?:không\s+chạy\s+được|không\s+mở\s+được|không\s+xuất\s+được|không\s+lưu\s+được|không\s+ghi\s+được|không\s+đọc\s+được\s+file)", re.IGNORECASE),
+    re.compile(r"(?:báo\s+lỗi|gặp\s+lỗi|phát\s+sinh\s+lỗi|gặp\s+sự\s+cố|phát\s+sinh\s+sự\s+cố)", re.IGNORECASE),
+    re.compile(r"(?:lỗi\s+này\s+là\s+gì|lỗi\s+gì\s+đây|sự\s+cố\s+này\s+là\s+gì|nguyên\s+nhân\s+gây\s+lỗi|khắc\s+phục\s+sự\s+cố|xử\s+lý\s+sự\s+cố|hướng\s+dẫn\s+sửa\s+lỗi|cách\s+sửa\s+lỗi|cách\s+xử\s+lý\s+lỗi|cách\s+khắc\s+phục)", re.IGNORECASE),
+    re.compile(r"(?:lỗi\s+file\s+(?:bị\s+)?khóa|lỗi\s+thiếu\s+nhân\s+sự|lỗi\s+khóa\s+file|lỗi\s+tiền\s+trạm|lỗi\s+validation|lỗi\s+preflight|lỗi\s+permission|file\s+bị\s+khóa)", re.IGNORECASE),
+    re.compile(r"(?:khắc\s+phục|sửa\s+lỗi|xử\s+lý).*(?:file\s+bị\s+khóa|khóa\s+file|lỗi|sự\s+cố)", re.IGNORECASE),
+    re.compile(r"(?:sự\s+cố|lỗi).*(?:không\s+chạy\s+được|thất\s+bại|bị\s+khóa|bị\s+treo)", re.IGNORECASE),
+    re.compile(r"tại\s+sao.*(?:thất\s+bại|bị\s+lỗi|bị\s+dừng|bị\s+crash|không\s+chạy\s+được)", re.IGNORECASE),
+    re.compile(r"(?:lỗi\s+file\s+kết\s+quả|file\s+kết\s+quả\s+bị\s+khóa).*(?:xử\s+lý\s+thế\s+nào|làm\s+sao|cần\s+làm\s+gì)", re.IGNORECASE),
+    re.compile(r"^(?:lỗi\s+này\s+là\s+gì\??|sự\s+cố\s+gì\??)$", re.IGNORECASE),
+
+    # English incident signals
+    re.compile(r"(?:calculation|run|process|export|software|application).*(?:stopped|failed|crashed|interrupted|errored|hang|hung)", re.IGNORECASE),
+    re.compile(r"(?:stopped|failed|crashed|interrupted).*(?:when\s+exporting|when\s+running|during\s+calculation|during\s+export|while\s+exporting)", re.IGNORECASE),
+    re.compile(r"(?:cannot\s+open|failed\s+to\s+open|cannot\s+export|failed\s+to\s+export|cannot\s+save|failed\s+to\s+save|permission\s+denied)", re.IGNORECASE),
+    re.compile(r"(?:encountered\s+an\s+error|got\s+an\s+error|what\s+does\s+this\s+error\s+mean|what\s+is\s+this\s+error|how\s+to\s+fix\s+this\s+error|how\s+to\s+resolve\s+this\s+error|troubleshoot\s+error|troubleshoot\s+missing\s+staffing|resolve\s+locked\s+output|resolve\s+issue\s+with)", re.IGNORECASE),
+    re.compile(r"why\s+did\s+the\s+(?:calculation|run|export|process)\s+fail", re.IGNORECASE),
+    re.compile(r"how\s+to\s+(?:fix|resolve)\s+(?:locked\s+(?:output\s+)?excel|locked\s+file)", re.IGNORECASE),
+
+    # Japanese incident signals
+    re.compile(r"(?:計算|処理|実行|エクスポート|書き出し|アプリ).*(?:停止した|中断した|失敗した|エラーで止ま|クラッシュした|フリーズした)", re.IGNORECASE),
+    re.compile(r"(?:停止した|失敗した|クラッシュした).*(?:計算|処理|エクスポート時|実行時)", re.IGNORECASE),
+    re.compile(r"(?:ファイルが開けない|出力できない|保存できない|読み込めない|ロック解除|ファイルロックの解除)", re.IGNORECASE),
+    re.compile(r"(?:エラーが発生|エラーが出た|障害が発生|エラーの原因|エラーの対処|このエラーは何|エラーの意味|エラーの修正|どうすれば対処できますか|ロックされた場合の対処)", re.IGNORECASE),
+    re.compile(r"(?:処理が失敗した原因|なぜ計算が失敗した)", re.IGNORECASE),
+)
+
+
+def classify_question_intent(query: str, language: str = "vi") -> str:
+    """Phân loại ý định câu hỏi của người dùng thành: 'incident', 'clarify', hoặc 'business'.
+
+    - 'incident': Người dùng đang báo lỗi/sự cố thực tế hoặc hỏi cách khắc phục một sự cố cụ thể.
+    - 'clarify': Câu hỏi thiếu ngữ cảnh/phạm vi (ví dụ: hỏi số lượng chi phí mà không rõ năm tài chính/phòng ban).
+    - 'business': Câu hỏi về cách sử dụng phần mềm, quy trình, nghiệp vụ, chi phí, dữ liệu, phân bổ, kết quả.
+    """
+    raw = str(query or "").strip()
+    if not raw:
+        return "business"
+
+    norm = unicodedata.normalize("NFC", raw)
+    unaccented = _strip_vietnamese_diacritics(norm).lower()
+
+    # 1. Kiểm tra ưu tiên nghiệp vụ rõ ràng (hỏi tại sao phân bổ, hỏi nơi nhập liệu, hỏi cách sử dụng)
+    # Tránh nhầm các từ 'tại sao', 'thiếu', 'khóa' trong câu hỏi nghiệp vụ thành incident
+    for p in _BUSINESS_OVERRIDE_PATTERNS:
+        if p.search(norm):
+            return "business"
+
+    # 2. Kiểm tra câu hỏi cần làm rõ phạm vi (clarify)
+    for p in _CLARIFY_PATTERNS:
+        if p.search(norm) or p.search(unaccented):
+            # Nếu câu hỏi đã có đầy đủ FY và Cost Center cụ thể (vd: FY2028 phòng 1412000040), giữ là business
+            has_fy = bool(re.search(r"\bfy20\d\d\b", norm, re.IGNORECASE))
+            has_cc = bool(re.search(r"\b\d{4,}\b", norm))
+            if has_fy and has_cc:
+                return "business"
+            return "clarify"
+
+    # 3. Kiểm tra tín hiệu sự cố / lỗi thực tế (incident)
+    for p in _INCIDENT_PATTERNS:
+        if p.search(norm):
+            return "incident"
+
+    # 4. Mặc định an toàn: business
+    return "business"
+
 
 def _normalize_text(text: str) -> str:
     """Normalize text for matching: NFC, lowercase, strip."""
@@ -523,14 +628,44 @@ def grounded_local_fallback(
     language: str,
     index: list[DocumentChunk] | None = None,
     registry: dict[str, Any] | None = None,
+    intent: str | None = None,
 ) -> str:
     """Return an authoritative local fallback answer from index chunks when Gemini is offline."""
     lang = str(language or "").strip().lower()
     if lang not in SUPPORTED_LANGUAGES:
         lang = "vi"
 
+    resolved_intent = intent if intent in ("incident", "clarify", "business") else classify_question_intent(question, lang)
+
+    if resolved_intent == "clarify":
+        clarify_msg = {
+            "vi": "Bạn đang cần hỏi về số lượng nhóm chi phí hay số dòng chi phí cụ thể, cho năm tài chính (FY) và trung tâm chi phí (cost center) nào?",
+            "en": "Are you asking about the number of cost categories or specific cost line items, and for which fiscal year (FY) and cost center?",
+            "ja": "費用の分類項目数ですか、それとも具体的な明細行数ですか？対象の会計年度（FY）とコストセンターをお知らせください。",
+        }
+        return clarify_msg.get(lang, clarify_msg["vi"])
+
     chunks = retrieve_grounded_chunks(question, lang, top_k=1, index=index)
     if not chunks:
+        if resolved_intent == "incident":
+            incident_no_match = {
+                "vi": (
+                    "Chưa tìm thấy thông tin sự cố phù hợp với mô tả này.\n"
+                    "Vui lòng kiểm tra lại thông báo lỗi cụ thể trên màn hình, xem chi tiết trong \"Lịch sử lần chạy\", "
+                    "hoặc chọn lần chạy bị lỗi để được phân tích."
+                ),
+                "en": (
+                    "No matching incident information was found for this description.\n"
+                    "Please check the specific on-screen error message, inspect \"Run History\", "
+                    "or select the failed run for diagnosis."
+                ),
+                "ja": (
+                    "この内容に該当する障害情報が見つかりませんでした。\n"
+                    "画面上に表示されたエラーメッセージを確認するか、「実行履歴」で対象のエラー実行を選択して診断してください。"
+                ),
+            }
+            return incident_no_match.get(lang, incident_no_match["vi"])
+
         no_match = {
             "vi": (
                 "Chưa tìm thấy hướng dẫn nội bộ phù hợp với câu hỏi này.\n"

@@ -239,3 +239,71 @@ def test_gemini_offline_returns_local_fallback_in_english() -> None:
     )
     assert result.status == "unavailable"
     assert result.limitation is not None
+
+
+def test_gemini_web_incident_prompt_rules() -> None:
+    """Verify Gemini prompt correctly embeds INCIDENT_OR_TROUBLESHOOTING intent rules."""
+    captured: dict[str, object] = {}
+
+    def fake_transport(url: str, headers: dict[str, str], body: bytes, timeout: float) -> tuple[int, bytes]:
+        captured["body"] = body
+        return 200, json.dumps(
+            {"choices": [{"message": {"content": "Follow the action steps."}}]}
+        ).encode("utf-8")
+
+    result = request_gemini_web_business_guidance(
+        "Chạy tính toán bị dừng khi xuất Excel",
+        "Tệp Excel kết quả đang bị khóa.",
+        "vi",
+        intent="incident",
+        transport=fake_transport,
+    )
+
+    assert result.status == "ready"
+    prompt = captured["body"].decode("utf-8")
+    assert "INCIDENT_OR_TROUBLESHOOTING" in prompt
+    assert "Provide direct troubleshooting guidance" in prompt
+    assert "at most 3 clear, safe manual action steps" in prompt
+
+
+def test_gemini_web_clarify_prompt_rules_multilingual() -> None:
+    """Verify Gemini prompt correctly embeds CLARIFICATION_NEEDED intent rules in EN and JA."""
+    captured_en: dict[str, object] = {}
+
+    def fake_transport_en(url: str, headers: dict[str, str], body: bytes, timeout: float) -> tuple[int, bytes]:
+        captured_en["body"] = body
+        return 200, json.dumps(
+            {"choices": [{"message": {"content": "Which fiscal year?"}}]}
+        ).encode("utf-8")
+
+    res_en = request_gemini_web_business_guidance(
+        "How many expenses in MP?",
+        "No specific count available.",
+        "en",
+        intent="clarify",
+        transport=fake_transport_en,
+    )
+    assert res_en.status == "ready"
+    prompt_en = captured_en["body"].decode("utf-8")
+    assert "CLARIFICATION_NEEDED" in prompt_en
+    assert "Ask exactly ONE focused, concise question in English" in prompt_en
+
+    captured_ja: dict[str, object] = {}
+
+    def fake_transport_ja(url: str, headers: dict[str, str], body: bytes, timeout: float) -> tuple[int, bytes]:
+        captured_ja["body"] = body
+        return 200, json.dumps(
+            {"choices": [{"message": {"content": "対象の年度は？"}}]}
+        ).encode("utf-8")
+
+    res_ja = request_gemini_web_business_guidance(
+        "MPには費用がいくつありますか？",
+        "該当する件数は記載されていません。",
+        "ja",
+        intent="clarify",
+        transport=fake_transport_ja,
+    )
+    assert res_ja.status == "ready"
+    prompt_ja = captured_ja["body"].decode("utf-8")
+    assert "CLARIFICATION_NEEDED" in prompt_ja
+    assert "Ask exactly ONE focused, concise question in Japanese" in prompt_ja

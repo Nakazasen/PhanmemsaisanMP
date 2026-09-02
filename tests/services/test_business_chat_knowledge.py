@@ -212,6 +212,16 @@ def test_local_fallback_no_match_directs_user_to_rephrase() -> None:
         f"JA no-match should direct user to rephrase: {ja_msg}"
 
 
+def test_local_fallback_respects_explicit_intent() -> None:
+    clarify = local_fallback("MP có bao nhiêu chi phí?", "vi", intent="clarify")
+    assert "số lượng nhóm chi phí hay số dòng chi phí" in clarify
+    assert "lỗi" not in clarify.lower()
+
+    incident = local_fallback("Calculation stopped", "en", intent="incident")
+    assert "No matching incident information was found" in incident
+    assert "Run History" in incident
+
+
 def test_local_fallback_does_not_contain_invented_source_names() -> None:
     """Local fallback must never contain fake agent-invented manual titles."""
     for query, lang in [("file bị khóa", "vi"), ("locked file", "en"), ("ファイルロック", "ja")]:

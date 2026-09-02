@@ -20,6 +20,7 @@ from src.services.operations_case_service import (
     OperationalCase,
     assemble_operational_case,
     assemble_unclassified_operational_case,
+    find_relevant_error_case,
     load_failure_traceback_evidence,
     load_pipeline_stage_evidence,
     load_preflight_report_evidence,
@@ -1770,3 +1771,128 @@ def test_multilingual_presentation_contract_across_all_operational_case_types(tm
                 elif lang == "ja":
                     assert "確定できません" in pres.title or "確定できません" in pres.what_happened
 
+
+class TestFindRelevantErrorCase:
+    """Kiểm thử hàm find_relevant_error_case chọn đúng ca lỗi theo ngữ cảnh câu hỏi."""
+
+    @pytest.fixture
+    def multi_error_history(self, tmp_path: Path) -> Path:
+        """Tạo history_root với 2 ca lỗi trong cùng FY2028:
+        - Run 1 (cũ hơn): blocked_output_file_lock
+        - Run 2 (mới hơn): missing_staffing_baseline
+        """
+        history_root = tmp_path / "test_history"
+        init_synthetic_history_db(history_root)
+
+        # 1. Run 1 (Older): blocked_output_file_lock
+        run1_id = "run-20260901-080000-lock"
+        make_fixture_locked_output_error(history_root, run_id=run1_id)
+        conn = sqlite3.connect(history_root / "run_history.db")
+        conn.execute(
+            "UPDATE planning_runs SET started_at=?, created_at=? WHERE run_id=?",
+            ("2026-09-01T08:00:00Z", "2026-09-01T08:00:00Z", run1_id),
+        )
+        conn.commit()
+        conn.close()
+
+        # 2. Run 2 (Newer): missing_staffing_baseline
+        run2_id = "run-20260901-090000-staffing"
+        make_fixture_validate_staffing_baseline_error(history_root, run_id=run2_id)
+        conn = sqlite3.connect(history_root / "run_history.db")
+        conn.execute(
+            "UPDATE planning_runs SET started_at=?, created_at=? WHERE run_id=?",
+            ("2026-09-01T09:00:00Z", "2026-09-01T09:00:00Z", run2_id),
+        )
+        conn.commit()
+        conn.close()
+
+        return history_root
+
+    def test_selects_older_locked_excel_case_when_query_matches(self, multi_error_history: Path) -> None:
+        case = find_relevant_error_case(
+            multi_error_history,
+            fiscal_year=2028,
+            language="vi",
+            question="Chạy tính toán bị dừng khi xuất Excel",
+        )
+        assert case is not None
+        assert case.run_id == "run-20260901-080000-lock"
+        assert case.classification == "blocked_output_file_lock"
+
+    def test_selects_newer_staffing_case_when_query_matches(self, multi_error_history: Path) -> None:
+        case = find_relevant_error_case(
+            multi_error_history,
+            fiscal_year=2028,
+            language="vi",
+            question="Thiếu dữ liệu nhân sự tháng 3 thì xử lý thế nào?",
+        )
+        assert case is not None
+        assert case.run_id == "run-20260901-090000-staffing"
+        assert case.classification == "missing_staffing_baseline"
+
+    def test_uses_newest_case_when_multiple_cases_match_equally(self, multi_error_history: Path) -> None:
+        newest_run_id = "run-20260901-100000-lock"
+        make_fixture_locked_output_error(multi_error_history, run_id=newest_run_id)
+        conn = sqlite3.connect(multi_error_history / "run_history.db")
+        conn.execute(
+            "UPDATE planning_runs SET started_at=?, created_at=? WHERE run_id=?",
+            ("2026-09-01T10:00:00Z", "2026-09-01T10:00:00Z", newest_run_id),
+        )
+        conn.commit()
+        conn.close()
+
+        case = find_relevant_error_case(
+            multi_error_history,
+            fiscal_year=2028,
+            language="vi",
+            question="Chạy tính toán bị dừng khi xuất Excel",
+        )
+
+        assert case is not None
+        assert case.run_id == newest_run_id
+
+    def test_returns_none_when_query_unrelated(self, multi_error_history: Path) -> None:
+        case = find_relevant_error_case(
+            multi_error_history,
+            fiscal_year=2028,
+            language="vi",
+            question="Sự cố mất kết nối mạng máy in không xác định",
+        )
+        assert case is None
+
+    def test_multilingual_matching_english_and_japanese(self, multi_error_history: Path) -> None:
+        # EN Matching
+        case_en_lock = find_relevant_error_case(
+            multi_error_history,
+            fiscal_year=2028,
+            language="en",
+            question="Calculation stopped when exporting to Excel",
+        )
+        assert case_en_lock is not None
+        assert case_en_lock.run_id == "run-20260901-080000-lock"
+
+        case_en_none = find_relevant_error_case(
+            multi_error_history,
+            fiscal_year=2028,
+            language="en",
+            question="Unknown database connection dropped",
+        )
+        assert case_en_none is None
+
+        # JA Matching
+        case_ja_lock = find_relevant_error_case(
+            multi_error_history,
+            fiscal_year=2028,
+            language="ja",
+            question="Excel出力時に計算が停止した",
+        )
+        assert case_ja_lock is not None
+        assert case_ja_lock.run_id == "run-20260901-080000-lock"
+
+        case_ja_none = find_relevant_error_case(
+            multi_error_history,
+            fiscal_year=2028,
+            language="ja",
+            question="全く関係のないプリンター障害",
+        )
+        assert case_ja_none is None

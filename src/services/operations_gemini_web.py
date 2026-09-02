@@ -197,20 +197,47 @@ def request_gemini_web_business_guidance(
     question: str,
     local_context: str,
     language: str,
+    intent: str = "business",
     *,
     transport: GeminiTransport | None = None,
 ) -> CagentGuidanceResult:
     """Use Gemini Web as the primary answer source for an MP2027 business chat."""
     language_name = {"vi": "Vietnamese", "ja": "Japanese", "en": "English"}.get(language, "Vietnamese")
+
+    if intent == "incident":
+        intent_rules = (
+            "- Question Intent: INCIDENT_OR_TROUBLESHOOTING.\n"
+            "- The user is reporting an operational error/issue or requesting troubleshooting guidance.\n"
+            "- Explain and troubleshoot the incident STRICTLY based on the provided case diagnosis context.\n"
+            "- If the context states that no matching incident or error case was found, do NOT speculate, invent reasons, or name specific unconfirmed errors. State concisely that no matching incident was found and advise checking Run History or on-screen error messages.\n"
+            "- Provide direct troubleshooting guidance based strictly on the provided incident/case context.\n"
+            "- Provide at most 3 clear, safe manual action steps.\n"
+        )
+    elif intent == "clarify":
+        intent_rules = (
+            "- Question Intent: CLARIFICATION_NEEDED.\n"
+            "- The user's question lacks sufficient context, scope, or parameters (e.g. asking for counts or amounts without specifying fiscal year or cost center).\n"
+            "- Do NOT guess or invent numbers, rules, or data.\n"
+            "- Ask exactly ONE focused, concise question in " + language_name + " to clarify the missing scope (for example: whether they need the count of cost groups or individual line items, and for which fiscal year or cost center).\n"
+            "- Do NOT mention system health, normality, or errors.\n"
+        )
+    else:
+        intent_rules = (
+            "- Question Intent: BUSINESS_INQUIRY.\n"
+            "- Answer the user's actual question first. Do NOT add any preamble (such as greeting or pleasantries).\n"
+            "- Do NOT add any health or incident statement unless the user explicitly asks about an error/status or the curated context describes a specific incident.\n"
+            "- Absolutely do NOT discuss system normality, absence of failures, troubleshooting procedures, or run histories for business questions unless the user explicitly asked about an error.\n"
+            "- For a how-to question, give only the steps relevant to that task; do not turn it into a troubleshooting response. Only include action steps if the question specifically asks for how-to or procedure.\n"
+            "- For a count or amount question, use an exact number only when it is present in the curated context. Otherwise, explain briefly what the count depends on and ask for the one missing scope (for example fiscal year, cost center, or whether the user means cost groups or cost rows). Never invent a number.\n"
+        )
+
     prompt = (
         f"You are the MP2027 internal business assistant. Answer in {language_name}.\n"
         "Crucial Environment Rules:\n"
         "- MP2027 is a local Windows desktop application for budget planning and cost allocations from Excel files.\n"
         "- It is NOT a web application. NEVER tell users to press F5/refresh browser, clear browser cache, or log out/log in.\n"
         "- The main desktop UI buttons are: 'Quét lại nội dung' (Rescan / 再スキャン) and 'CHẠY TÍNH TOÁN' (Run Calculation / 計算実行).\n"
-        "- Answer the user's actual question first. Do NOT add any health or incident statement unless the user explicitly asks about an error/status or the curated context describes a specific incident.\n"
-        "- For a how-to question, give only the steps relevant to that task; do not turn it into a troubleshooting response.\n"
-        "- For a count or amount question, use an exact number only when it is present in the curated context. Otherwise, explain briefly what the count depends on and ask for the one missing scope (for example fiscal year, cost center, or whether the user means cost groups or cost rows). Never invent a number.\n"
+        f"{intent_rules}"
         "Guidelines for non-technical users (accountants / operations staff):\n"
         "- Use friendly, simple, and direct language that anyone can easily understand.\n"
         "- Strictly avoid technical developer jargon (e.g. traceback, exception, pipeline, JSON, SQL, function, variable, bug, internal code).\n"
