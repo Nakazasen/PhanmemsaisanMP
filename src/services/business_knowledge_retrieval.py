@@ -465,14 +465,118 @@ class HybridDocumentRetrievalEngine:
 _DEFAULT_RETRIEVAL_ENGINE = HybridDocumentRetrievalEngine()
 
 
+def merge_multi_query_chunks(
+    results_per_query: Sequence[Sequence[DocumentChunk]],
+    max_per_query: int = 2,
+    max_total: int | None = None,
+) -> list[DocumentChunk]:
+    """Merge retrieved chunks from multiple sub-queries with deduplication and fair representation.
+
+    Guarantees:
+    1. Every sub-query that found matching chunks has at least 1-2 representative chunks
+       in the final result, regardless of score disparity.
+    2. Strict chunk_id uniqueness (no duplicate chunks).
+    3. Respects overall capacity limit if specified.
+    """
+    if not results_per_query:
+        return []
+
+    limit = max_total if max_total is not None else max(len(results_per_query) * max_per_query, _MAX_RESULTS)
+    seen_ids: set[str] = set()
+    merged: list[DocumentChunk] = []
+
+    # Iterative rounds: each round gives each sub-query one slot (up to max_per_query)
+    for _ in range(max_per_query):
+        for q_chunks in results_per_query:
+            if len(merged) >= limit:
+                break
+            for chunk in q_chunks:
+                if chunk.chunk_id not in seen_ids:
+                    seen_ids.add(chunk.chunk_id)
+                    merged.append(chunk)
+                    break
+
+    # Fill remaining capacity up to limit from any remaining chunks
+    if len(merged) < limit:
+        for q_chunks in results_per_query:
+            for chunk in q_chunks:
+                if len(merged) >= limit:
+                    break
+                if chunk.chunk_id not in seen_ids:
+                    seen_ids.add(chunk.chunk_id)
+                    merged.append(chunk)
+
+    return merged
+
+
+def merge_multi_query_traces(
+    traces_per_query: Sequence[tuple[str, Sequence[tuple[DocumentChunk, dict[str, Any]]]]],
+    max_per_query: int = 2,
+    max_total: int | None = None,
+) -> list[tuple[DocumentChunk, dict[str, Any]]]:
+    """Merge traced chunks from multiple sub-queries with deduplication and fair representation."""
+    if not traces_per_query:
+        return []
+
+    limit = max_total if max_total is not None else max(len(traces_per_query) * max_per_query, _MAX_RESULTS)
+    seen_ids: set[str] = set()
+    merged: list[tuple[DocumentChunk, dict[str, Any]]] = []
+
+    for _ in range(max_per_query):
+        for sub_query, q_traces in traces_per_query:
+            if len(merged) >= limit:
+                break
+            for chunk, trace in q_traces:
+                if chunk.chunk_id not in seen_ids:
+                    seen_ids.add(chunk.chunk_id)
+                    tr = dict(trace)
+                    tr["sub_query"] = sub_query
+                    merged.append((chunk, tr))
+                    break
+
+    if len(merged) < limit:
+        for sub_query, q_traces in traces_per_query:
+            for chunk, trace in q_traces:
+                if len(merged) >= limit:
+                    break
+                if chunk.chunk_id not in seen_ids:
+                    seen_ids.add(chunk.chunk_id)
+                    tr = dict(trace)
+                    tr["sub_query"] = sub_query
+                    merged.append((chunk, tr))
+
+    return merged
+
+
 def retrieve_grounded_chunks(
     query: str,
     language: str,
     top_k: int = _MAX_RESULTS,
     index: list[DocumentChunk] | None = None,
+    decompose: bool = True,
 ) -> list[DocumentChunk]:
-    """Retrieve top-k grounded DocumentChunk objects for query in language."""
-    return _DEFAULT_RETRIEVAL_ENGINE.search(query, language, top_k, index)
+    """Retrieve top-k grounded DocumentChunk objects for query in language.
+
+    Supports automatic query decomposition for multi-intent questions,
+    retrieving grounded chunks for each sub-query and performing fair-representation,
+    deduplicated merging.
+    """
+    if not decompose:
+        return _DEFAULT_RETRIEVAL_ENGINE.search(query, language, top_k, index)
+
+    from src.services.query_decomposition import decompose_query
+
+    sub_queries = decompose_query(query, language)
+    if len(sub_queries) <= 1:
+        return _DEFAULT_RETRIEVAL_ENGINE.search(query, language, top_k, index)
+
+    results_per_query: list[list[DocumentChunk]] = []
+    for sq in sub_queries:
+        res = _DEFAULT_RETRIEVAL_ENGINE.search(sq, language, top_k=top_k, index=index)
+        results_per_query.append(res)
+
+    max_total = top_k if top_k < _MAX_RESULTS else max(top_k, len(sub_queries) * 2)
+    return merge_multi_query_chunks(results_per_query, max_per_query=2, max_total=max_total)
 
 
 def retrieve_grounded_chunks_with_trace(
@@ -480,9 +584,28 @@ def retrieve_grounded_chunks_with_trace(
     language: str,
     top_k: int = _MAX_RESULTS,
     index: list[DocumentChunk] | None = None,
+    decompose: bool = True,
 ) -> list[tuple[DocumentChunk, dict[str, Any]]]:
-    """Retrieve top-k chunks along with diagnostic trace information."""
-    return _DEFAULT_RETRIEVAL_ENGINE.search_with_trace(query, language, top_k, index)
+    """Retrieve top-k chunks along with diagnostic trace information.
+
+    Supports automatic query decomposition for multi-intent questions.
+    """
+    if not decompose:
+        return _DEFAULT_RETRIEVAL_ENGINE.search_with_trace(query, language, top_k, index)
+
+    from src.services.query_decomposition import decompose_query
+
+    sub_queries = decompose_query(query, language)
+    if len(sub_queries) <= 1:
+        return _DEFAULT_RETRIEVAL_ENGINE.search_with_trace(query, language, top_k, index)
+
+    traces_per_query: list[tuple[str, list[tuple[DocumentChunk, dict[str, Any]]]]] = []
+    for sq in sub_queries:
+        res = _DEFAULT_RETRIEVAL_ENGINE.search_with_trace(sq, language, top_k=top_k, index=index)
+        traces_per_query.append((sq, res))
+
+    max_total = top_k if top_k < _MAX_RESULTS else max(top_k, len(sub_queries) * 2)
+    return merge_multi_query_traces(traces_per_query, max_per_query=2, max_total=max_total)
 
 
 def select_relevant_citations(
@@ -620,7 +743,8 @@ def format_grounded_context(
         conf_line = f"{confidence_prefix}: {confidence_text}"
         parts.append(f"{text} {steps_text}\n{source_line}\n{conf_line}".strip())
 
-    return "\n\n".join(parts)[:1400]
+    max_len = max(1400, len(parts) * 700)
+    return "\n\n".join(parts)[:max_len]
 
 
 def grounded_local_fallback(

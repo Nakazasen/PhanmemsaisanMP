@@ -1140,7 +1140,7 @@ class TestOperationsBusinessChatDialog(unittest.TestCase):
             self.skipTest("Tkinter display not available in environment")
 
         from src.ui.operations_assistant import OperationsBusinessChatDialog
-        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None)
+        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None, ai_provider="gemini_web")
 
         with patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_req, \
              patch("threading.Thread", side_effect=lambda target, args=(), daemon=True: type("DummyThread", (), {"start": lambda s: target(*args)})()):
@@ -1353,6 +1353,7 @@ class TestOperationsBusinessChatDialog(unittest.TestCase):
             open_history=lambda: None,
             history_root="/fake/history/root",
             fiscal_year=2027,
+            ai_provider="gemini_web",
         )
         try:
             with patch(
@@ -1393,6 +1394,7 @@ class TestOperationsBusinessChatDialog(unittest.TestCase):
             open_history=lambda: None,
             history_root="/fake/empty/history",
             fiscal_year=2027,
+            ai_provider="gemini_web",
         )
         try:
             with patch("src.ui.operations_assistant.find_relevant_error_case", return_value=None), \
@@ -1425,7 +1427,7 @@ class TestOperationsBusinessChatDialog(unittest.TestCase):
 
         from src.ui.operations_assistant import OperationsBusinessChatDialog
 
-        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None)
+        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None, ai_provider="gemini_web")
         try:
             hallucinated_web_answer = (
                 "Chào bạn,\n"
@@ -1485,7 +1487,7 @@ class TestOperationsBusinessChatDialog(unittest.TestCase):
         from PIL import Image
         from src.ui.operations_assistant import OperationsBusinessChatDialog
 
-        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None)
+        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None, ai_provider="gemini_web")
         try:
             # Tạo ảnh giả lập
             fake_img = Image.new("RGB", (120, 80), color="blue")
@@ -1917,6 +1919,7 @@ class TestOperationsBusinessChatIntentRoutingUI(unittest.TestCase):
             open_history=lambda: None,
             history_root="/fake/history",
             fiscal_year=2027,
+            ai_provider="gemini_web",
         )
         try:
             with patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_gemini:
@@ -1956,6 +1959,7 @@ class TestOperationsBusinessChatIntentRoutingUI(unittest.TestCase):
             open_history=lambda: None,
             history_root="/fake/history",
             fiscal_year=2027,
+            ai_provider="gemini_web",
         )
         try:
             with patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_gemini:
@@ -1997,6 +2001,7 @@ class TestOperationsBusinessChatIntentRoutingUI(unittest.TestCase):
             open_history=lambda: None,
             history_root="/fake/history",
             fiscal_year=2028,
+            ai_provider="gemini_web",
         )
         try:
             with patch("src.ui.operations_assistant.find_relevant_error_case", return_value=case_lock) as mock_find, \
@@ -2033,6 +2038,7 @@ class TestOperationsBusinessChatIntentRoutingUI(unittest.TestCase):
             open_history=lambda: None,
             history_root="/fake/history",
             fiscal_year=2028,
+            ai_provider="gemini_web",
         )
         try:
             with patch("src.ui.operations_assistant.find_relevant_error_case", return_value=None), \
@@ -2056,7 +2062,7 @@ class TestOperationsBusinessChatIntentRoutingUI(unittest.TestCase):
         from src.ui.operations_assistant import OperationsBusinessChatDialog
 
         # EN Check
-        dialog_en = OperationsBusinessChatDialog(self.root, "en", open_history=lambda: None)
+        dialog_en = OperationsBusinessChatDialog(self.root, "en", open_history=lambda: None, ai_provider="gemini_web")
         try:
             with patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_gemini:
                 mock_gemini.return_value = MagicMock(status="ready", answer="Why cost is allocated.")
@@ -2069,7 +2075,7 @@ class TestOperationsBusinessChatIntentRoutingUI(unittest.TestCase):
             dialog_en.close()
 
         # JA Check
-        dialog_ja = OperationsBusinessChatDialog(self.root, "ja", open_history=lambda: None)
+        dialog_ja = OperationsBusinessChatDialog(self.root, "ja", open_history=lambda: None, ai_provider="gemini_web")
         try:
             with patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_gemini:
                 mock_gemini.return_value = MagicMock(status="ready", answer="Clarification in Japanese.")

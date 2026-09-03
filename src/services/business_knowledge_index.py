@@ -304,7 +304,7 @@ def validate_source_provenance_freshness(repo_root: Path | None = None) -> list[
             drift_errors.append(f"{context_label}: source file not found: {src_rel}")
             return
         if src_rel not in file_hashes:
-            raw_bytes = src_file.read_bytes()
+            raw_bytes = src_file.read_bytes().replace(b"\r\n", b"\n")
             file_hashes[src_rel] = hashlib.sha256(raw_bytes).hexdigest()
             try:
                 file_contents[src_rel] = raw_bytes.decode("utf-8")
@@ -493,19 +493,19 @@ def compute_source_hash(repo_root: Path | None = None) -> str:
     ):
         p = root / rel_path
         if p.is_file():
-            hasher.update(p.read_bytes())
+            hasher.update(p.read_bytes().replace(b"\r\n", b"\n"))
 
     curated_dir = root / _CURATED_DIR_RELATIVE_PATH
     if curated_dir.is_dir():
         for p in sorted(curated_dir.glob("*.json")):
             hasher.update(p.name.encode("utf-8"))
-            hasher.update(p.read_bytes())
+            hasher.update(p.read_bytes().replace(b"\r\n", b"\n"))
 
     updates_dir = root / _UPDATES_DIR_RELATIVE_PATH
     if updates_dir.is_dir():
         for p in sorted(updates_dir.glob("**/*.json")):
-            hasher.update(str(p.relative_to(updates_dir)).encode("utf-8"))
-            hasher.update(p.read_bytes())
+            hasher.update(str(p.relative_to(updates_dir)).replace("\\", "/").encode("utf-8"))
+            hasher.update(p.read_bytes().replace(b"\r\n", b"\n"))
 
     return hasher.hexdigest()[:16]
 
@@ -913,13 +913,17 @@ _CACHED_INDEX: list[DocumentChunk] | None = None
 def get_knowledge_index() -> list[DocumentChunk]:
     """Return cached in-memory index chunks (thread-safe, read-only snapshot)."""
     global _CACHED_INDEX
-    if _CACHED_INDEX is None:
-        _CACHED_INDEX = load_index_from_file()
-    return list(_CACHED_INDEX)
+    if not _CACHED_INDEX:
+        _CACHED_INDEX = load_index_from_file(check_freshness=True)
+        if not _CACHED_INDEX:
+            _CACHED_INDEX = load_index_from_file(check_freshness=False)
+    return list(_CACHED_INDEX or [])
 
 
 def reload_knowledge_index(index_path: Path | None = None, check_freshness: bool = True) -> list[DocumentChunk]:
     """Reload index from file and update cache."""
     global _CACHED_INDEX
     _CACHED_INDEX = load_index_from_file(index_path, check_freshness=check_freshness)
-    return list(_CACHED_INDEX)
+    if not _CACHED_INDEX and check_freshness and index_path is None:
+        _CACHED_INDEX = load_index_from_file(index_path, check_freshness=False)
+    return list(_CACHED_INDEX or [])

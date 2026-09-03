@@ -126,7 +126,11 @@ def _evidence_location(item: EvidenceReference) -> str:
     return path
 
 
-def _business_document_context(question: str, language: str = "vi") -> str:
+def _business_document_context(
+    question: str,
+    language: str = "vi",
+    history: list[dict[str, str]] | None = None,
+) -> str:
     """Return document-grounded, plain-text context from MP2027's RAG v3 knowledge index.
 
     Retrieves grounded chunks from pre-computed document index.
@@ -137,13 +141,15 @@ def _business_document_context(question: str, language: str = "vi") -> str:
         format_grounded_context,
         retrieve_grounded_chunks,
     )
+    from src.services.query_decomposition import decompose_query, resolve_multiturn_query
 
+    resolved_query = resolve_multiturn_query(question, history, language) if history else question
     index_chunks = get_knowledge_index()
     if index_chunks:
         # V3 is active and available
-        chunks = retrieve_grounded_chunks(question, language)
+        chunks = retrieve_grounded_chunks(resolved_query, language)
         if chunks:
-            return format_grounded_context(chunks, language, question=question)
+            return format_grounded_context(chunks, language, question=resolved_query)
         # V3 index is active but query found no match: do NOT fall back to V2 catalog
         no_match = {
             "vi": "Chưa tìm thấy hướng dẫn nội bộ phù hợp.",
@@ -156,7 +162,31 @@ def _business_document_context(question: str, language: str = "vi") -> str:
     # Fallback to curated catalog v2 ONLY when v3 index is completely unbuilt / unavailable
     from src.services.business_chat_knowledge import format_curated_context, retrieve
 
-    results = retrieve(question, language)
+    sub_queries = decompose_query(resolved_query, language)
+    if len(sub_queries) > 1:
+        merged_results = []
+        seen_topics = set()
+        sub_results = [retrieve(sq, language) for sq in sub_queries]
+        # Round 1: Top 1 from each sub-query
+        for res_list in sub_results:
+            for r in res_list:
+                t_id = getattr(r, "topic_id", None) or getattr(r, "title", None) or str(r)
+                if t_id not in seen_topics:
+                    seen_topics.add(t_id)
+                    merged_results.append(r)
+                    break
+        # Round 2: 2nd from each sub-query
+        for res_list in sub_results:
+            for r in res_list:
+                t_id = getattr(r, "topic_id", None) or getattr(r, "title", None) or str(r)
+                if t_id not in seen_topics:
+                    seen_topics.add(t_id)
+                    merged_results.append(r)
+                    break
+        results = merged_results
+    else:
+        results = retrieve(resolved_query, language)
+
     if not results:
         no_match = {
             "vi": "Chưa tìm thấy hướng dẫn nội bộ phù hợp.",
@@ -401,6 +431,7 @@ class OperationsBusinessChatDialog:
         history_root: Path | str | None = None,
         fiscal_year: int | None = None,
         cagent_transport: Any = None,
+        ai_provider: str | None = None,
     ) -> None:
         self.parent = parent
         self.language = language
@@ -412,7 +443,7 @@ class OperationsBusinessChatDialog:
         self._attached_image = None
         self._attached_photo_image = None
         self._placeholder_text = translate_for_language("operations_business_chat_placeholder", self.language)
-        self.ai_provider = read_ai_provider()
+        self.ai_provider = ai_provider if ai_provider in ("cagent", "gemini_web") else read_ai_provider()
         self._provider_cagent_label = translate_for_language("operations_business_chat_provider_cagent", self.language)
         self._provider_gemini_label = translate_for_language("operations_business_chat_provider_gemini", self.language)
         self.provider_combo = None
@@ -441,6 +472,7 @@ class OperationsBusinessChatDialog:
         history_root: Path | str | None = None,
         fiscal_year: int | None = None,
         cagent_transport: Any = None,
+        ai_provider: str | None = None,
     ) -> OperationsBusinessChatDialog:
         active = _BUSINESS_CHAT_DIALOGS.get(parent)
         if active is not None and active.is_alive():
@@ -452,6 +484,8 @@ class OperationsBusinessChatDialog:
                 active.fiscal_year = fiscal_year
             if cagent_transport is not None:
                 active.cagent_transport = cagent_transport
+            if ai_provider is not None:
+                active.ai_provider = ai_provider
             active.focus()
             active.scroll_to_bottom()
             return active
@@ -462,6 +496,7 @@ class OperationsBusinessChatDialog:
             history_root=history_root,
             fiscal_year=fiscal_year,
             cagent_transport=cagent_transport,
+            ai_provider=ai_provider,
         )
         _BUSINESS_CHAT_DIALOGS[parent] = dialog
         dialog.scroll_to_bottom()
@@ -1347,10 +1382,10 @@ class OperationsBusinessChatDialog:
         if context is None:
             retrieval_query = question
             if history:
-                prev_user_queries = [t["content"] for t in history if t.get("role") == "user"]
-                if prev_user_queries and len(question.strip().split()) <= 6:
-                    retrieval_query = f"{prev_user_queries[-1]} {question}"
-            context = _business_document_context(retrieval_query, self.language)
+                from src.services.query_decomposition import resolve_multiturn_query
+
+                retrieval_query = resolve_multiturn_query(question, history, self.language)
+            context = _business_document_context(retrieval_query, self.language, history=history)
 
         from src.services.business_knowledge_retrieval import classify_question_intent
 
