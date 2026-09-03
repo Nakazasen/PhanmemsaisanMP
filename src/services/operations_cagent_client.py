@@ -364,7 +364,18 @@ def _clean_cagent_text(raw: str) -> str:
     if not text:
         return ""
 
-    # 1. Khối JSON code assistant ở đầu văn bản (ví dụ: {"summary": "...", "changes": [], "tests": []}\n\nNội dung...)
+    def _extract_best_message(data: dict) -> str:
+        # Ưu tiên lấy trường giải thích / nội dung đầy đủ nhất thay vì summary ngắn
+        for key in ("explanation", "message", "answer", "response", "text", "content"):
+            val = data.get(key)
+            if val and isinstance(val, str) and val.strip():
+                return val.strip()
+        summary = data.get("summary")
+        if summary and isinstance(summary, str) and summary.strip():
+            return summary.strip()
+        return ""
+
+    # 1. Khối JSON code assistant ở đầu văn bản (ví dụ: {"summary": "...", "changes": [], "tests": [], "explanation": "..."}\n\nNội dung...)
     lead_json_match = re.match(r"^(\{[^{}]*?\})\s*\n*(.*)", text, re.DOTALL)
     if lead_json_match:
         json_str = lead_json_match.group(1).strip()
@@ -372,15 +383,12 @@ def _clean_cagent_text(raw: str) -> str:
         try:
             data = json.loads(json_str)
             if isinstance(data, dict):
-                if "changes" in data or "tests" in data or "summary" in data:
+                if "changes" in data or "tests" in data or "summary" in data or "explanation" in data:
                     if remainder:
                         return remainder
-                    msg = data.get("message") or data.get("answer") or data.get("response")
-                    if msg and isinstance(msg, str) and msg.strip():
-                        return msg.strip()
-                    summary = data.get("summary")
-                    if summary and isinstance(summary, str) and summary.strip():
-                        return summary.strip()
+                    extracted = _extract_best_message(data)
+                    if extracted:
+                        return extracted
         except Exception:
             pass
 
@@ -394,12 +402,9 @@ def _clean_cagent_text(raw: str) -> str:
             if isinstance(data, dict):
                 if remainder:
                     return remainder
-                msg = data.get("message") or data.get("answer") or data.get("response")
-                if msg and isinstance(msg, str) and msg.strip():
-                    return msg.strip()
-                summary = data.get("summary")
-                if summary and isinstance(summary, str) and summary.strip():
-                    return summary.strip()
+                extracted = _extract_best_message(data)
+                if extracted:
+                    return extracted
         except Exception:
             pass
 
@@ -408,12 +413,9 @@ def _clean_cagent_text(raw: str) -> str:
         try:
             data = json.loads(text)
             if isinstance(data, dict):
-                msg = data.get("message") or data.get("answer") or data.get("response")
-                if msg and isinstance(msg, str) and msg.strip():
-                    return msg.strip()
-                summary = data.get("summary")
-                if summary and isinstance(summary, str) and summary.strip():
-                    return summary.strip()
+                extracted = _extract_best_message(data)
+                if extracted:
+                    return extracted
         except Exception:
             pass
 
@@ -457,6 +459,14 @@ def request_cagent_chat_guidance(
             history_context = "Lịch sử cuộc trò chuyện trước đó:\n" + "\n".join(history_lines)
 
     prompt_parts = []
+    # Định nghĩa cốt lõi của hệ thống để AI không nhầm lẫn thuật ngữ
+    system_knowledge = (
+        "Định nghĩa hệ thống & thuật ngữ nghiệp vụ MP2027:\n"
+        "- MP2027 là phần mềm Windows phục vụ lập kế hoạch ngân sách và phân bổ chi phí kế hoạch tổng thể.\n"
+        "- 'MP' là viết tắt của 'Master Plan' (Kế hoạch tổng thể / Kế hoạch chi phí và ngân sách trung hạn), "
+        "tuyệt đối KHÔNG PHẢI 'Man Power', 'Member of Parliament' hay 'Military Police'."
+    )
+    prompt_parts.append(system_knowledge)
     if history_context:
         prompt_parts.append(history_context)
     if context_str:

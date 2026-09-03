@@ -315,6 +315,7 @@ def request_gemini_web_business_guidance(
         "- MP2027 is a local Windows desktop application for budget planning and cost allocations from Excel files.\n"
         "- It is NOT a web application. NEVER tell users to press F5/refresh browser, clear browser cache, or log out/log in.\n"
         "- The main desktop UI buttons are: 'Quét lại nội dung' (Rescan / 再スキャン) and 'CHẠY TÍNH TOÁN' (Run Calculation / 計算実行).\n"
+        "- CRITICAL BUSINESS DEFINITION: 'MP' in MP2027 stands for 'Master Plan' (Kế hoạch tổng thể / 中期経営計画・マスタープラン). It does NOT mean 'Man Power', 'Member of Parliament', or anything else. Always explain MP as Master Plan.\n"
         f"{intent_rules}"
         "Guidelines for non-technical users (accountants / operations staff):\n"
         "- Use friendly, simple, and direct language that anyone can easily understand.\n"

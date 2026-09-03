@@ -449,6 +449,18 @@ class TestCagentChatGuidance(unittest.TestCase):
         cleaned = _clean_cagent_text(raw)
         self.assertEqual(cleaned, "Dựa vào thông tin được cung cấp, MP2027 là một hệ thống kế toán.")
 
+    def test_clean_cagent_text_extracts_explanation_over_summary(self) -> None:
+        raw = (
+            '{\n'
+            '  "summary": "Cần thêm thông tin",\n'
+            '  "changes": [],\n'
+            '  "tests": [],\n'
+            '  "explanation": "Dựa trên thông tin được cung cấp, MP2027 là hệ thống phân bổ chi phí Master Plan."\n'
+            '}'
+        )
+        cleaned = _clean_cagent_text(raw)
+        self.assertEqual(cleaned, "Dựa trên thông tin được cung cấp, MP2027 là hệ thống phân bổ chi phí Master Plan.")
+
     def test_happy_path_chat_guidance(self) -> None:
         captured = {}
 
