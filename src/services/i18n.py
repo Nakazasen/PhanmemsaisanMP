@@ -779,6 +779,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "operations_business_chat_provider_label": "Nguồn AI:",
         "operations_business_chat_provider_cagent": "C-Agent (KDTVN AI)",
         "operations_business_chat_provider_gemini": "Gemini Web",
+        "operations_business_chat_scroll_bottom": "Cuộn xuống mới nhất",
         # Fiscal Year AI Knowledge Update
         "fy_knowledge_update_btn": "Cập nhật kiến thức AI...",
         "fy_knowledge_update_dialog_title": "Cập nhật kiến thức AI theo năm tài chính",
@@ -1558,6 +1559,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "operations_business_chat_provider_label": "AIソース:",
         "operations_business_chat_provider_cagent": "C-Agent (KDTVN AI)",
         "operations_business_chat_provider_gemini": "Gemini Web",
+        "operations_business_chat_scroll_bottom": "最新メッセージへスクロール",
         # Fiscal Year AI Knowledge Update
         "fy_knowledge_update_btn": "AIナレッジ更新...",
         "fy_knowledge_update_dialog_title": "年度別AIナレッジ更新",
@@ -2337,6 +2339,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "operations_business_chat_provider_label": "AI Source:",
         "operations_business_chat_provider_cagent": "C-Agent (KDTVN AI)",
         "operations_business_chat_provider_gemini": "Gemini Web",
+        "operations_business_chat_scroll_bottom": "Scroll to Latest",
         # Fiscal Year AI Knowledge Update
         "fy_knowledge_update_btn": "Update AI Knowledge...",
         "fy_knowledge_update_dialog_title": "Fiscal Year AI Knowledge Update",
@@ -2445,6 +2448,7 @@ OPERATIONS_ASSISTANT_I18N_KEYS: tuple[str, ...] = (
     "operations_business_chat_provider_label",
     "operations_business_chat_provider_cagent",
     "operations_business_chat_provider_gemini",
+    "operations_business_chat_scroll_bottom",
     "operations_assistant_gemini_case_disabled",
     "fy_knowledge_update_btn",
     "fy_knowledge_update_dialog_title",

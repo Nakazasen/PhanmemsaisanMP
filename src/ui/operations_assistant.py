@@ -15,6 +15,7 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 import unicodedata
+import uuid
 from typing import Any
 
 from src.services.i18n import SUPPORTED_LANGUAGES, translate_for_language
@@ -415,6 +416,9 @@ class OperationsBusinessChatDialog:
         self._provider_cagent_label = translate_for_language("operations_business_chat_provider_cagent", self.language)
         self._provider_gemini_label = translate_for_language("operations_business_chat_provider_gemini", self.language)
         self.provider_combo = None
+        self.session_id = f"chat-{uuid.uuid4().hex[:12]}"
+        self.conversation_history: list[dict[str, str]] = []
+        self.scroll_bottom_btn = None
         self._build()
 
     @property
@@ -449,6 +453,7 @@ class OperationsBusinessChatDialog:
             if cagent_transport is not None:
                 active.cagent_transport = cagent_transport
             active.focus()
+            active.scroll_to_bottom()
             return active
         dialog = cls(
             parent,
@@ -459,6 +464,7 @@ class OperationsBusinessChatDialog:
             cagent_transport=cagent_transport,
         )
         _BUSINESS_CHAT_DIALOGS[parent] = dialog
+        dialog.scroll_to_bottom()
         return dialog
 
     @classmethod
@@ -794,6 +800,16 @@ class OperationsBusinessChatDialog:
         if self.is_alive():
             self.window.destroy()
 
+    def scroll_to_bottom(self) -> None:
+        """Cuộn nhanh xuống tin nhắn mới nhất ở đáy khung chat."""
+        if not self.is_alive():
+            return
+        try:
+            self.window.update_idletasks()
+            self.message_canvas.yview_moveto(1.0)
+        except Exception:
+            pass
+
     def _build(self) -> None:
         import tkinter as tk
         from tkinter import ttk
@@ -972,6 +988,27 @@ class OperationsBusinessChatDialog:
         self.status = tk.Label(status_row, text="", bg="#f8fafc", fg="#2563eb", font=("Segoe UI", 9, "italic"))
         self.status.pack(side="left")
 
+        # Nút bấm cuộn nhanh xuống tin nhắn mới nhất
+        scroll_btn_text = f"⬇ {translate_for_language('operations_business_chat_scroll_bottom', self.language)}"
+        self.scroll_bottom_btn = tk.Button(
+            status_row,
+            text=scroll_btn_text,
+            command=self.scroll_to_bottom,
+            bg="#f1f5f9",
+            fg="#1e293b",
+            activebackground="#e2e8f0",
+            activeforeground="#0f172a",
+            bd=1,
+            relief="solid",
+            highlightthickness=0,
+            padx=8,
+            pady=1,
+            font=("Segoe UI", 8, "bold"),
+            cursor="hand2",
+        )
+        self.scroll_bottom_btn.configure(highlightbackground="#cbd5e1")
+        self.scroll_bottom_btn.pack(side="right", padx=(8, 0))
+
         self.prompt_label = tk.Label(
             status_row,
             text="💬 " + self._placeholder_text,
@@ -1082,6 +1119,7 @@ class OperationsBusinessChatDialog:
         ).pack(side="left")
 
         self.question.focus_set()
+        self.window.after(100, self.scroll_to_bottom)
 
     def _handle_paste(self, _event: Any = None) -> str | None:
         try:
@@ -1278,16 +1316,41 @@ class OperationsBusinessChatDialog:
         else:
             self.question.delete(0, "end")
 
+        # Ghi nhận lượt câu hỏi vào lịch sử đối thoại
+        self.conversation_history.append({"role": "user", "content": question})
+        if len(self.conversation_history) > 20:
+            self.conversation_history = self.conversation_history[-20:]
+
+        history_snapshot = [dict(t) for t in self.conversation_history[:-1]]
+
         if sync:
-            self._request(question, None, attached_img, sync=True)
+            self._request(question, None, attached_img, history=history_snapshot, sync=True)
         else:
-            t = threading.Thread(target=self._request, args=(question, None, attached_img), daemon=True)
+            t = threading.Thread(
+                target=self._request,
+                args=(question, None, attached_img),
+                kwargs={"history": history_snapshot},
+                daemon=True,
+            )
             self._current_thread = t
             t.start()
 
-    def _request(self, question: str, context: str | None = None, attached_image: Any = None, *, sync: bool = False) -> None:
+    def _request(
+        self,
+        question: str,
+        context: str | None = None,
+        attached_image: Any = None,
+        *,
+        history: list[dict[str, str]] | None = None,
+        sync: bool = False,
+    ) -> None:
         if context is None:
-            context = _business_document_context(question, self.language)
+            retrieval_query = question
+            if history:
+                prev_user_queries = [t["content"] for t in history if t.get("role") == "user"]
+                if prev_user_queries and len(question.strip().split()) <= 6:
+                    retrieval_query = f"{prev_user_queries[-1]} {question}"
+            context = _business_document_context(retrieval_query, self.language)
 
         from src.services.business_knowledge_retrieval import classify_question_intent
 
@@ -1321,10 +1384,18 @@ class OperationsBusinessChatDialog:
                 question,
                 full_context,
                 self.language,
+                chat_id=getattr(self, "session_id", None),
+                history=history,
                 transport=getattr(self, "cagent_transport", None),
             )
         else:
-            result = request_gemini_web_business_guidance(question, full_context, self.language, intent=intent)
+            result = request_gemini_web_business_guidance(
+                question,
+                full_context,
+                self.language,
+                intent=intent,
+                history=history,
+            )
 
         if sync:
             self._apply(result, question, case_diagnosis=case_diagnosis, intent=intent)
@@ -1354,13 +1425,19 @@ class OperationsBusinessChatDialog:
             if getattr(self, "ai_provider", "cagent") == "gemini_web":
                 if not _contains_web_hallucination(result.answer):
                     self.answer.configure(text=result.answer)
+                    self.conversation_history.append({"role": "assistant", "content": result.answer})
+                    self.scroll_to_bottom()
                     return
             else:
                 self.answer.configure(text=result.answer)
+                self.conversation_history.append({"role": "assistant", "content": result.answer})
+                self.scroll_to_bottom()
                 return
 
         if case_diagnosis:
             self.answer.configure(text=case_diagnosis)
+            self.conversation_history.append({"role": "assistant", "content": case_diagnosis})
+            self.scroll_to_bottom()
             return
 
         from src.services.business_chat_knowledge import local_fallback as _local_fallback
@@ -1372,6 +1449,8 @@ class OperationsBusinessChatDialog:
             f"{fallback_answer}"
         )
         self.answer.configure(text=fallback)
+        self.conversation_history.append({"role": "assistant", "content": fallback})
+        self.scroll_to_bottom()
 
     def _open_fy_knowledge_update(self) -> None:
         """Mở hộp thoại cập nhật kiến thức AI theo năm tài chính."""

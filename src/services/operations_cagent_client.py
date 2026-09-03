@@ -425,11 +425,13 @@ def request_cagent_chat_guidance(
     local_context: str = "",
     language: str = "vi",
     *,
+    chat_id: str | None = None,
+    history: list[dict[str, str]] | None = None,
     endpoint_url: str | None = None,
     timeout: float = 30.0,
     transport: Any | None = None,
 ) -> CagentGuidanceResult:
-    """Send a question with local business context to the KDTVN C-Agent Prediction API."""
+    """Send a question with local business context and chat history to the KDTVN C-Agent Prediction API."""
     cleaned_question = str(question or "").strip()
     if not cleaned_question:
         return CagentGuidanceResult(
@@ -441,13 +443,27 @@ def request_cagent_chat_guidance(
     language_name = {"vi": "Tiếng Việt", "ja": "日本語", "en": "English"}.get(language, "Tiếng Việt")
 
     context_str = str(local_context or "").strip()
+
+    # Xây dựng ngữ cảnh các lượt trò chuyện gần nhất
+    history_context = ""
+    if history:
+        history_lines = []
+        for turn in history[-6:]:
+            role_label = "Người dùng" if turn.get("role") == "user" else "Trợ lý AI"
+            content = str(turn.get("content") or "").strip()
+            if content:
+                history_lines.append(f"{role_label}: {content[:350]}")
+        if history_lines:
+            history_context = "Lịch sử cuộc trò chuyện trước đó:\n" + "\n".join(history_lines)
+
+    prompt_parts = []
+    if history_context:
+        prompt_parts.append(history_context)
     if context_str:
-        full_prompt = (
-            f"Dưới đây là thông tin và ngữ cảnh nghiệp vụ nội bộ của hệ thống MP2027:\n{context_str}\n\n"
-            f"Dựa vào ngữ cảnh trên, hãy trả lời câu hỏi sau bằng {language_name}:\n{cleaned_question}"
-        )
-    else:
-        full_prompt = cleaned_question
+        prompt_parts.append(f"Ngữ cảnh tài liệu nghiệp vụ nội bộ MP2027:\n{context_str}")
+    prompt_parts.append(f"Dựa vào các thông tin và ngữ cảnh trên, hãy trả lời câu hỏi sau của người dùng bằng {language_name}:\n{cleaned_question}")
+
+    full_prompt = "\n\n".join(prompt_parts)
 
     target_url = endpoint_url or os.environ.get("CAGENT_API_URL", "").strip() or DEFAULT_CAGENT_PREDICTION_URL
     headers = {
@@ -455,7 +471,9 @@ def request_cagent_chat_guidance(
         "Accept": "application/json",
         "User-Agent": "MP2027-OperationsAssistant/1.0",
     }
-    payload_dict = {"question": full_prompt}
+    payload_dict: dict[str, Any] = {"question": full_prompt}
+    if chat_id:
+        payload_dict["chatId"] = str(chat_id).strip()
     start_time = time.time()
     try:
         payload_bytes = json.dumps(payload_dict, ensure_ascii=False).encode("utf-8")

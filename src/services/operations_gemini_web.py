@@ -265,6 +265,7 @@ def request_gemini_web_business_guidance(
     language: str,
     intent: str = "business",
     *,
+    history: list[dict[str, str]] | None = None,
     transport: GeminiTransport | None = None,
 ) -> CagentGuidanceResult:
     """Use Gemini Web as the primary answer source for an MP2027 business chat."""
@@ -297,6 +298,17 @@ def request_gemini_web_business_guidance(
             "- For a count or amount question, use an exact number only when it is present in the curated context. Otherwise, explain briefly what the count depends on and ask for the one missing scope (for example fiscal year, cost center, or whether the user means cost groups or cost rows). Never invent a number.\n"
         )
 
+    history_context = ""
+    if history:
+        history_lines = []
+        for turn in history[-6:]:
+            role_label = "User" if turn.get("role") == "user" else "Assistant"
+            content = str(turn.get("content") or "").strip()
+            if content:
+                history_lines.append(f"{role_label}: {content[:350]}")
+        if history_lines:
+            history_context = "Recent conversation context:\n" + "\n".join(history_lines) + "\n\n"
+
     prompt = (
         f"You are the MP2027 internal business assistant. Answer in {language_name}.\n"
         "Crucial Environment Rules:\n"
@@ -309,6 +321,7 @@ def request_gemini_web_business_guidance(
         "- Strictly avoid technical developer jargon (e.g. traceback, exception, pipeline, JSON, SQL, function, variable, bug, internal code).\n"
         "- Give a direct answer in 1-2 sentences. Add at most 3 concrete steps only when they help answer the question.\n"
         "- Keep it concise, helpful, and polite.\n\n"
+        f"{history_context}"
         f"Question: {str(question or '').strip()[:500]}\n\n"
         f"Curated internal knowledge (pre-approved business guidance):\n{str(local_context or '').strip()[:1000]}"
     )

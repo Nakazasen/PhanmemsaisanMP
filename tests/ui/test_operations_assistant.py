@@ -2167,6 +2167,70 @@ class TestOperationsBusinessChatIntentRoutingUI(unittest.TestCase):
         finally:
             dialog.close()
 
+    def test_scroll_to_bottom_button_exists_and_functional(self) -> None:
+        """Kiểm tra sự hiện diện của nút cuộn xuống và gọi lệnh yview_moveto."""
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None)
+        try:
+            self.assertIsNotNone(dialog.scroll_bottom_btn)
+            with patch.object(dialog.message_canvas, "yview_moveto") as mock_scroll:
+                dialog.scroll_bottom_btn.invoke()
+                mock_scroll.assert_called_with(1.0)
+        finally:
+            dialog.close()
+
+    def test_conversation_history_multi_turn_flow(self) -> None:
+        """Kiểm tra lịch sử đối thoại được lưu và truyền cho câu hỏi tiếp theo."""
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.services.operations_ai_provider import CagentGuidanceResult
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None)
+        try:
+            with patch("src.ui.operations_assistant.request_cagent_chat_guidance") as mock_cagent:
+                mock_cagent.return_value = CagentGuidanceResult(
+                    status="ready",
+                    provider_label="C-Agent (KDTVN AI)",
+                    answer="Quy trình gồm 4 bước.",
+                    limitation="Tham khảo",
+                )
+                # Câu hỏi 1
+                dialog.question_var.set("Quy trình thế nào?")
+                dialog.send(sync=True)
+
+                self.assertEqual(len(dialog.conversation_history), 2)
+                self.assertEqual(dialog.conversation_history[0]["role"], "user")
+                self.assertEqual(dialog.conversation_history[0]["content"], "Quy trình thế nào?")
+                self.assertEqual(dialog.conversation_history[1]["role"], "assistant")
+                self.assertEqual(dialog.conversation_history[1]["content"], "Quy trình gồm 4 bước.")
+
+                # Câu hỏi 2 (nối tiếp)
+                mock_cagent.return_value = CagentGuidanceResult(
+                    status="ready",
+                    provider_label="C-Agent (KDTVN AI)",
+                    answer="Bước 1 là thu thập dữ liệu.",
+                    limitation="Tham khảo",
+                )
+                dialog.question_var.set("Nói rõ bước 1")
+                dialog.send(sync=True)
+
+                # Kiểm tra call_args của lượt 2 phải chứa chat_id và history gồm 2 lượt trước
+                self.assertEqual(mock_cagent.call_count, 2)
+                second_call_kwargs = mock_cagent.call_args_list[1][1]
+                passed_history = second_call_kwargs.get("history")
+                self.assertIsNotNone(passed_history)
+                self.assertEqual(len(passed_history), 2)
+                self.assertEqual(passed_history[0]["content"], "Quy trình thế nào?")
+                self.assertIsNotNone(second_call_kwargs.get("chat_id"))
+        finally:
+            dialog.close()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -471,6 +471,32 @@ class TestCagentChatGuidance(unittest.TestCase):
         self.assertIn("Tài liệu phân bổ MP2027", captured["body"]["question"])
         self.assertIn("Quy trình phân bổ thế nào?", captured["body"]["question"])
 
+    def test_chat_guidance_with_chat_id_and_history(self) -> None:
+        captured = {}
+
+        def fake_transport(url, headers, body, timeout):
+            captured["body"] = json.loads(body.decode("utf-8"))
+            return 200, {}, json.dumps({"text": "Bước 2 là tính tỷ lệ nhân sự."}).encode("utf-8")
+
+        history = [
+            {"role": "user", "content": "Quy trình phân bổ gồm những bước nào?"},
+            {"role": "assistant", "content": "Gồm 4 bước: 1. Thu thập, 2. Tính tỷ lệ, 3. Phân bổ, 4. Xuất báo cáo."},
+        ]
+
+        res = request_cagent_chat_guidance(
+            question="Giải thích rõ hơn bước 2",
+            local_context="Ngữ cảnh tài liệu.",
+            language="vi",
+            chat_id="session-xyz-123",
+            history=history,
+            transport=fake_transport,
+        )
+        self.assertEqual(res.status, "ready")
+        self.assertEqual(captured["body"]["chatId"], "session-xyz-123")
+        self.assertIn("Lịch sử cuộc trò chuyện trước đó", captured["body"]["question"])
+        self.assertIn("Quy trình phân bổ gồm những bước nào?", captured["body"]["question"])
+        self.assertIn("Giải thích rõ hơn bước 2", captured["body"]["question"])
+
     def test_empty_question_returns_unavailable(self) -> None:
         res = request_cagent_chat_guidance("", language="vi")
         self.assertEqual(res.status, "unavailable")
