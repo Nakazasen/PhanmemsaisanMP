@@ -29,7 +29,9 @@ from src.services.i18n import (
     unregister_language_listener,
 )
 from src.services.project_config import (
+    read_ai_provider,
     read_ui_language,
+    remember_ai_provider,
     remember_ui_language,
 )
 
@@ -162,6 +164,25 @@ class TestI18nLocalization(unittest.TestCase):
             with open(cfg_file, "w", encoding="utf-8") as f:
                 json.dump({"ui_language": "invalid_lang"}, f)
             self.assertEqual(read_ui_language(local_app_data=tmpdir), "vi")
+
+    def test_ai_provider_preference_persistence(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Initially no preference -> fallback to cagent
+            self.assertEqual(read_ai_provider(local_app_data=tmpdir), "cagent")
+
+            # Save gemini_web
+            remember_ai_provider("gemini_web", local_app_data=tmpdir)
+            self.assertEqual(read_ai_provider(local_app_data=tmpdir), "gemini_web")
+
+            # Save cagent
+            remember_ai_provider("cagent", local_app_data=tmpdir)
+            self.assertEqual(read_ai_provider(local_app_data=tmpdir), "cagent")
+
+            # Invalid provider in json -> fallback to cagent
+            cfg_file = os.path.join(tmpdir, "MPManager", "launcher.json")
+            with open(cfg_file, "w", encoding="utf-8") as f:
+                json.dump({"ai_provider": "unknown_ai"}, f)
+            self.assertEqual(read_ai_provider(local_app_data=tmpdir), "cagent")
 
     def test_unicode_utf8_encoding_integrity(self):
         # Verify Japanese and Vietnamese characters are not mojibake

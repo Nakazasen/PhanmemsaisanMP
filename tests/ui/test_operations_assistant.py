@@ -2110,6 +2110,63 @@ class TestOperationsBusinessChatIntentRoutingUI(unittest.TestCase):
         finally:
             dialog.close()
 
+    def test_provider_selector_rendered_and_defaults_to_cagent(self) -> None:
+        """Kiểm tra Combobox nguồn AI xuất hiện trên header và mặc định là C-Agent."""
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None)
+        try:
+            self.assertIsNotNone(dialog.provider_combo)
+            self.assertEqual(dialog.ai_provider, "cagent")
+            self.assertIn("C-Agent", dialog.provider_var.get())
+        finally:
+            dialog.close()
+
+    def test_provider_switching_dispatches_to_correct_service(self) -> None:
+        """Kiểm tra chuyển đổi provider gọi đúng C-Agent hoặc Gemini Web."""
+        if not getattr(self, "tk_available", False):
+            self.skipTest("Tkinter display not available in environment")
+
+        from src.services.operations_ai_provider import CagentGuidanceResult
+        from src.ui.operations_assistant import OperationsBusinessChatDialog
+
+        dialog = OperationsBusinessChatDialog(self.root, "vi", open_history=lambda: None)
+        try:
+            # 1. Khi đang ở cagent
+            with patch("src.ui.operations_assistant.request_cagent_chat_guidance") as mock_cagent:
+                mock_cagent.return_value = CagentGuidanceResult(
+                    status="ready",
+                    provider_label="C-Agent (KDTVN AI)",
+                    answer="C-Agent trả lời.",
+                    limitation="Lưu ý tham khảo",
+                )
+                dialog.question_var.set("Hỏi C-Agent câu 1")
+                dialog.send(sync=True)
+                mock_cagent.assert_called_once()
+                self.assertIn("C-Agent trả lời.", dialog.answer.cget("text"))
+
+            # 2. Chuyển sang Gemini Web
+            dialog.provider_var.set(dialog._provider_gemini_label)
+            dialog._on_provider_selected()
+            self.assertEqual(dialog.ai_provider, "gemini_web")
+
+            with patch("src.ui.operations_assistant.request_gemini_web_business_guidance") as mock_gemini:
+                mock_gemini.return_value = CagentGuidanceResult(
+                    status="ready",
+                    provider_label="Gemini Web",
+                    answer="Gemini Web trả lời.",
+                    limitation="Lưu ý tham khảo",
+                )
+                dialog.question_var.set("Hỏi Gemini câu 2")
+                dialog.send(sync=True)
+                mock_gemini.assert_called_once()
+                self.assertIn("Gemini Web trả lời.", dialog.answer.cget("text"))
+        finally:
+            dialog.close()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -30,8 +30,11 @@ from src.services.operations_ai_provider import (
     SafeEvidenceItem,
 )
 from src.services.operations_cagent_client import (
+    DEFAULT_CAGENT_PREDICTION_URL,
     CagentHttpClient,
+    _clean_cagent_text,
     request_cagent_business_guidance,
+    request_cagent_chat_guidance,
     request_cagent_guidance,
 )
 from src.services.operations_case_service import (
@@ -429,6 +432,63 @@ class TestRequestCagentGuidanceOrchestration(unittest.TestCase):
         )
         self.assertEqual(result.status, "unavailable")
         self.assertFalse(transport_called)
+
+
+class TestCagentChatGuidance(unittest.TestCase):
+    def test_clean_cagent_text_unwraps_json_markdown(self) -> None:
+        raw = '```json\n{\n  "summary": "Giới thiệu",\n  "message": "Xin chào! Tôi có thể giúp bạn."\n}\n```'
+        cleaned = _clean_cagent_text(raw)
+        self.assertEqual(cleaned, "Xin chào! Tôi có thể giúp bạn.")
+
+    def test_clean_cagent_text_plain_text(self) -> None:
+        raw = "Đây là câu trả lời trực tiếp."
+        self.assertEqual(_clean_cagent_text(raw), "Đây là câu trả lời trực tiếp.")
+
+    def test_clean_cagent_text_strips_leading_code_assistant_metadata(self) -> None:
+        raw = '{\n  "summary": "Cần thêm thông tin",\n  "changes": [],\n  "tests": []\n}\n\nDựa vào thông tin được cung cấp, MP2027 là một hệ thống kế toán.'
+        cleaned = _clean_cagent_text(raw)
+        self.assertEqual(cleaned, "Dựa vào thông tin được cung cấp, MP2027 là một hệ thống kế toán.")
+
+    def test_happy_path_chat_guidance(self) -> None:
+        captured = {}
+
+        def fake_transport(url, headers, body, timeout):
+            captured["url"] = url
+            captured["headers"] = headers
+            captured["body"] = json.loads(body.decode("utf-8"))
+            return 200, {}, json.dumps({"text": "Quy trình phân bổ chi phí gồm 4 bước."}).encode("utf-8")
+
+        res = request_cagent_chat_guidance(
+            question="Quy trình phân bổ thế nào?",
+            local_context="Tài liệu phân bổ MP2027.",
+            language="vi",
+            transport=fake_transport,
+        )
+        self.assertEqual(res.status, "ready")
+        self.assertEqual(res.provider_label, "C-Agent (KDTVN AI)")
+        self.assertEqual(res.answer, "Quy trình phân bổ chi phí gồm 4 bước.")
+        self.assertEqual(captured["url"], DEFAULT_CAGENT_PREDICTION_URL)
+        self.assertIn("Tài liệu phân bổ MP2027", captured["body"]["question"])
+        self.assertIn("Quy trình phân bổ thế nào?", captured["body"]["question"])
+
+    def test_empty_question_returns_unavailable(self) -> None:
+        res = request_cagent_chat_guidance("", language="vi")
+        self.assertEqual(res.status, "unavailable")
+
+    def test_timeout_handling(self) -> None:
+        def fake_transport(*args):
+            raise TimeoutError("timeout")
+
+        res = request_cagent_chat_guidance("test?", language="vi", transport=fake_transport)
+        self.assertEqual(res.status, "timed_out")
+
+    def test_http_error_handling(self) -> None:
+        import urllib.error
+        def fake_transport(*args):
+            raise urllib.error.HTTPError("url", 500, "Internal Server Error", {}, None)
+
+        res = request_cagent_chat_guidance("test?", language="vi", transport=fake_transport)
+        self.assertEqual(res.status, "failed")
 
 
 if __name__ == "__main__":

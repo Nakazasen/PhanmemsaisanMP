@@ -1,6 +1,6 @@
 ---
 name: "speckit-constitution"
-description: "Create or update the project constitution from interactive or provided principle inputs."
+description: "Tạo hoặc cập nhật tài liệu hiến pháp/nguyên tắc cốt lõi (constitution.md) của dự án."
 compatibility: "Requires spec-kit project structure with .specify/ directory"
 metadata:
   author: "github-spec-kit"

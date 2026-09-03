@@ -1,6 +1,6 @@
 ---
 name: "speckit-implement"
-description: "Execute the implementation plan by processing and executing all tasks defined in tasks.md"
+description: "Thực thi kế hoạch triển khai mã nguồn bằng cách xử lý và hoàn thành toàn bộ nhiệm vụ trong tasks.md."
 compatibility: "Requires spec-kit project structure with .specify/ directory"
 metadata:
   author: "github-spec-kit"

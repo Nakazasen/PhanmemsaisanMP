@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import re
 import socket
 import time
 from typing import Any, Callable
@@ -352,3 +353,206 @@ def request_cagent_business_guidance(
         ),
     )
     return CagentHttpClient(active_policy, transport=transport).send_guidance_request(packet, language)
+
+
+DEFAULT_CAGENT_PREDICTION_URL = "https://kdtvn-ai.cmcts.vn/api/v1/prediction/1881aa32-c996-4e6f-9257-78246177ba9f"
+
+
+def _clean_cagent_text(raw: str) -> str:
+    """Clean and unwrap structured json/markdown from C-Agent prediction endpoint."""
+    text = str(raw or "").strip()
+    if not text:
+        return ""
+
+    # 1. Khối JSON code assistant ở đầu văn bản (ví dụ: {"summary": "...", "changes": [], "tests": []}\n\nNội dung...)
+    lead_json_match = re.match(r"^(\{[^{}]*?\})\s*\n*(.*)", text, re.DOTALL)
+    if lead_json_match:
+        json_str = lead_json_match.group(1).strip()
+        remainder = lead_json_match.group(2).strip()
+        try:
+            data = json.loads(json_str)
+            if isinstance(data, dict):
+                if "changes" in data or "tests" in data or "summary" in data:
+                    if remainder:
+                        return remainder
+                    msg = data.get("message") or data.get("answer") or data.get("response")
+                    if msg and isinstance(msg, str) and msg.strip():
+                        return msg.strip()
+                    summary = data.get("summary")
+                    if summary and isinstance(summary, str) and summary.strip():
+                        return summary.strip()
+        except Exception:
+            pass
+
+    # 2. Khối ```json { ... } ``` kèm văn bản hoặc bọc trọn gói
+    json_block_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```\s*(.*)", text, re.DOTALL)
+    if json_block_match:
+        json_str = json_block_match.group(1).strip()
+        remainder = json_block_match.group(2).strip()
+        try:
+            data = json.loads(json_str)
+            if isinstance(data, dict):
+                if remainder:
+                    return remainder
+                msg = data.get("message") or data.get("answer") or data.get("response")
+                if msg and isinstance(msg, str) and msg.strip():
+                    return msg.strip()
+                summary = data.get("summary")
+                if summary and isinstance(summary, str) and summary.strip():
+                    return summary.strip()
+        except Exception:
+            pass
+
+    # 3. Toàn bộ text là một JSON object
+    if text.startswith("{") and text.endswith("}"):
+        try:
+            data = json.loads(text)
+            if isinstance(data, dict):
+                msg = data.get("message") or data.get("answer") or data.get("response")
+                if msg and isinstance(msg, str) and msg.strip():
+                    return msg.strip()
+                summary = data.get("summary")
+                if summary and isinstance(summary, str) and summary.strip():
+                    return summary.strip()
+        except Exception:
+            pass
+
+    return text
+
+
+def request_cagent_chat_guidance(
+    question: str,
+    local_context: str = "",
+    language: str = "vi",
+    *,
+    endpoint_url: str | None = None,
+    timeout: float = 30.0,
+    transport: Any | None = None,
+) -> CagentGuidanceResult:
+    """Send a question with local business context to the KDTVN C-Agent Prediction API."""
+    cleaned_question = str(question or "").strip()
+    if not cleaned_question:
+        return CagentGuidanceResult(
+            status="unavailable",
+            provider_label="C-Agent (KDTVN AI)",
+            limitation=translate_for_language("operations_assistant_ai_unavailable", language),
+        )
+
+    language_name = {"vi": "Tiếng Việt", "ja": "日本語", "en": "English"}.get(language, "Tiếng Việt")
+
+    context_str = str(local_context or "").strip()
+    if context_str:
+        full_prompt = (
+            f"Dưới đây là thông tin và ngữ cảnh nghiệp vụ nội bộ của hệ thống MP2027:\n{context_str}\n\n"
+            f"Dựa vào ngữ cảnh trên, hãy trả lời câu hỏi sau bằng {language_name}:\n{cleaned_question}"
+        )
+    else:
+        full_prompt = cleaned_question
+
+    target_url = endpoint_url or os.environ.get("CAGENT_API_URL", "").strip() or DEFAULT_CAGENT_PREDICTION_URL
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "MP2027-OperationsAssistant/1.0",
+    }
+    payload_dict = {"question": full_prompt}
+    start_time = time.time()
+    try:
+        payload_bytes = json.dumps(payload_dict, ensure_ascii=False).encode("utf-8")
+    except Exception:
+        return CagentGuidanceResult(
+            status="failed",
+            provider_label="C-Agent (KDTVN AI)",
+            limitation=translate_for_language("operations_assistant_ai_failed", language),
+            request_started_at=start_time,
+        )
+
+    status_code = 500
+    resp_bytes = b""
+
+    try:
+        if transport is not None:
+            t_res = transport(target_url, headers, payload_bytes, float(timeout))
+            if len(t_res) == 3:
+                status_code, _, resp_bytes = t_res
+            else:
+                status_code, resp_bytes = t_res
+        else:
+            req = urllib.request.Request(
+                target_url,
+                data=payload_bytes,
+                headers=headers,
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=float(timeout)) as resp:
+                status_code = resp.getcode()
+                resp_bytes = resp.read(MAX_RESPONSE_BYTES + 1)
+    except (socket.timeout, TimeoutError):
+        return CagentGuidanceResult(
+            status="timed_out",
+            provider_label="C-Agent (KDTVN AI)",
+            limitation=translate_for_language("operations_assistant_ai_timed_out", language),
+            request_started_at=start_time,
+        )
+    except urllib.error.HTTPError as err:
+        if err.code in (401, 403):
+            return CagentGuidanceResult(
+                status="unavailable",
+                provider_label="C-Agent (KDTVN AI)",
+                limitation=translate_for_language("operations_assistant_ai_unavailable", language),
+                request_started_at=start_time,
+            )
+        return CagentGuidanceResult(
+            status="failed",
+            provider_label="C-Agent (KDTVN AI)",
+            limitation=translate_for_language("operations_assistant_ai_failed", language),
+            request_started_at=start_time,
+        )
+    except Exception:
+        return CagentGuidanceResult(
+            status="failed",
+            provider_label="C-Agent (KDTVN AI)",
+            limitation=translate_for_language("operations_assistant_ai_failed", language),
+            request_started_at=start_time,
+        )
+
+    if status_code != 200 or not resp_bytes:
+        return CagentGuidanceResult(
+            status="failed",
+            provider_label="C-Agent (KDTVN AI)",
+            limitation=translate_for_language("operations_assistant_ai_failed", language),
+            request_started_at=start_time,
+        )
+
+    try:
+        resp_json = json.loads(resp_bytes.decode("utf-8", errors="replace"))
+    except Exception:
+        return CagentGuidanceResult(
+            status="failed",
+            provider_label="C-Agent (KDTVN AI)",
+            limitation=translate_for_language("operations_assistant_ai_failed", language),
+            request_started_at=start_time,
+        )
+
+    raw_answer = ""
+    if isinstance(resp_json, dict):
+        raw_answer = resp_json.get("text") or resp_json.get("answer") or resp_json.get("response") or ""
+    elif isinstance(resp_json, str):
+        raw_answer = resp_json
+
+    answer = _clean_cagent_text(str(raw_answer or "").strip())
+    if not answer:
+        return CagentGuidanceResult(
+            status="failed",
+            provider_label="C-Agent (KDTVN AI)",
+            limitation=translate_for_language("operations_assistant_ai_failed", language),
+            request_started_at=start_time,
+        )
+
+    return CagentGuidanceResult(
+        status="ready",
+        provider_label="C-Agent (KDTVN AI)",
+        answer=answer,
+        limitation=translate_for_language("operations_assistant_ai_advisory_notice", language),
+        request_started_at=start_time,
+    )

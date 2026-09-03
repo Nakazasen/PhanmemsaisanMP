@@ -1,6 +1,6 @@
 ---
 name: "speckit-checklist"
-description: "Generate a custom checklist for the current feature based on user requirements."
+description: "Tạo danh mục kiểm tra (checklist) chất lượng đặc tả cho tính năng hiện tại dựa trên yêu cầu người dùng."
 compatibility: "Requires spec-kit project structure with .specify/ directory"
 metadata:
   author: "github-spec-kit"

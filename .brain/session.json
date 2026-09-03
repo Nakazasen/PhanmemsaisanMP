@@ -1,114 +1,57 @@
 {
-  "updated_at": "2026-07-16T06:00:00+07:00",
+  "project_name": "MP2027 Manager",
+  "project_path": "D:\\Sandbox\\MP2027",
+  "updated_at": "2026-08-17T19:30:00+07:00",
   "working_on": {
-    "feature": "Handover lifecycle cleanup and fixed-assets evidence-driven successor",
-    "status": "DOCUMENTATION_RECONCILED_FIXED_ASSETS_AUDIT_READY",
-    "notes": "Live work is consolidated in docs/handover/CURRENT_OPEN_ITEMS.md. Fixed-assets must follow docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md; historical reports remain evidence indexed by docs/audits/AUDIT_STATUS_INDEX.md."
+    "feature": "System-wide Vietnamese Exception Localization & Structured Cause/Action Guidance",
+    "status": "COMPLETED_AND_VERIFIED",
+    "notes": "All error and exception messages across the system now have structured Vietnamese guidance ('Nguyên nhân:' and 'Cách xử lý:'). Japanese NFKC normalization restored for department matching. Sales account inheritance logic verified. Full test suite: 156 passed, 6 skipped."
   },
-  "pending_tasks": [
-    {
-      "task": "Run the evidence-first fixed-assets deep audit: canonical → MP2026/MP2027 source/calculation workbooks → FY2026/FY2027 reference outputs → code/tests; only escalate unresolved contradictions.",
-      "priority": "high"
-    },
-    {
-      "task": "Collect CC 1412000040 monthly headcount and health-check/event drivers listed in CURRENT_OPEN_ITEMS.md.",
-      "priority": "high"
-    },
-    {
-      "task": "Run one current Windows GUI acceptance session; capture a stack only if the UI remains frozen.",
-      "priority": "medium"
-    },
-    {
-      "task": "Run canonical-10.07 output audits after required real-input blockers are resolved; do not block fixed-assets evidence audit on premature Accounting questions.",
-      "priority": "medium"
-    },
-    {
-      "task": "Resolve repository data-governance policy before public/push operations.",
-      "priority": "medium"
-    }
-  ],
-  "recent_changes": [
-    {
-      "timestamp": "2026-04-12T22:57:55+07:00",
-      "type": "ux",
-      "description": "Vietnamese-localized visible GUI labels except Dashboard; improved Dashboard kiểm toán with XANH/VÀNG/ĐỎ legend, row coloring, missing-input table, and formula preview.",
-      "files": [
-        "src/universal_app.py"
-      ]
-    },
-    {
-      "timestamp": "2026-04-12T22:57:55+07:00",
-      "type": "ux",
-      "description": "Expanded Nhập sự kiện thiếu dữ liệu with why-this-is-needed text, 7-step instructions, event-specific hints, and Vietnamese labels.",
-      "files": [
-        "src/universal_app.py"
-      ]
-    },
-    {
-      "timestamp": "2026-04-12T22:57:55+07:00",
-      "type": "documentation",
-      "description": "Updated user-facing usage docs to match current workflow: FORM MP2027, manual data entry, Dashboard audit, and no fabricated numbers.",
-      "files": [
-        "README.md",
-        "docs/MANUAL_HEADCOUNT_INPUT.md"
-      ]
-    },
-    {
-      "timestamp": "2026-04-12T22:57:55+07:00",
-      "type": "verification",
-      "description": "Ran py_compile for src/universal_app.py and unit tests: tests.test_src_v2_logic, tests.test_posting_month_logic, tests.test_headcount_and_export; 23 tests OK.",
-      "files": [
-        "src/universal_app.py",
-        "tests/test_src_v2_logic.py",
-        "tests/test_posting_month_logic.py",
-        "tests/test_headcount_and_export.py"
-      ]
-    }
+  "completed_milestones": [
+    "Phase 14: Localized all account_resolver, fixed_assets, loader, and source_order_writer exceptions to Vietnamese.",
+    "Phase 15: Fixed sales account inheritance bug on multi-line allocation rules in loader.py; localized schema migration failures with structured cause/action without leaking raw English database driver errors.",
+    "Phase 16: Localized all ContentPackError, headcount_time_plan parse errors, and fiscal_periods SystemSourcePeriodError exceptions with structured 'Nguyên nhân:' and 'Cách xử lý:'.",
+    "Phase 17: Restored NFKC Unicode normalization in headcount_time_plan.py for full-width/half-width Japanese character/digit matching; added conditional skip for physical data fixture tests in test_headcount_time_source.py.",
+    "Phase 18: Completed structured cause/action guidance for all 4 safe_extract_zip exception branches in update_security.py and added branch-level tests."
   ],
   "decisions_made": [
     {
-      "decision": "Treat docs/MP2027 as the only authoritative runtime source bundle",
-      "reason": "The root-form/template set is older and contains stale sample formulas in rows that can pollute output."
+      "decision": "All user-facing exceptions must include structured cause and action guidance",
+      "reason": "Users must know exactly what went wrong and what step-by-step action to take. Raw English technical driver/OS errors must be logged into debug logs, not shown in user-facing dialogs."
     },
     {
-      "decision": "Use manual_special_costs.csv for NNN event costs rather than synthesizing them from headcount rules",
-      "reason": "The requirement sheet describes an event-totaling workflow, not a headcount-driven allocation."
+      "decision": "Apply NFKC Unicode normalization before matching department names and CC codes",
+      "reason": "Japanese Excel forms freely mix full-width (Zen-kaku) and half-width (Han-kaku) characters (e.g. ＡＢＣ製造課 vs ABC製造課, １４１２００００４０ vs 1412000040)."
     },
     {
-      "decision": "Mark the remaining gaps as data blockers instead of open coding defects",
-      "reason": "The engine can already accept the missing inputs once the user supplies them."
+      "decision": "Sales account inheritance on continuation rows must match manufacturing and general accounts",
+      "reason": "Blank sales_acc cells on continuation rows belong to the same expense item and must inherit the current item's sales account."
     },
     {
-      "decision": "Keep facility electric and water as numeric output until monthly quantity/unit-price detail is available",
-      "reason": "The current facility source provides only final monthly amounts, so any Excel-side formula would be invented rather than traceable to workbook inputs."
+      "decision": "Tests requiring external physical sample folders must use conditional skipUnless",
+      "reason": "Allows clean execution in CI/CD and sandbox environments while preserving real fixture coverage on developer machines."
     }
   ],
-  "read_first_next_time": [
-    "docs/handover/CURRENT_OPEN_ITEMS.md",
-    "docs/handover/FIXED_ASSETS_DEEP_AUDIT_HANDOVER_2026-07-16.md",
-    "docs/audits/AUDIT_STATUS_INDEX.md",
-    "docs/HANDOVER_FOR_NEXT_AGENT.md",
-    "raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx",
-    "docs/audits/fixed_assets_gap_and_implementation_plan_2026-07-15.md",
-    "QUY_TRINH_NGHIEP_VU_MP2027.md"
+  "files_changed": [
+    "src/parsers/headcount_time_plan.py",
+    "src/services/update_security.py",
+    "src/services/content_packs.py",
+    "src/utils/fiscal_periods.py",
+    "src/db/migrations.py",
+    "src/db/loader.py",
+    "src/engine/account_resolver.py",
+    "src/parsers/fixed_assets.py",
+    "src/engine/complete_v1_source_order_writer.py",
+    "src/universal_app.py",
+    "tests/test_all_vietnamese_exceptions.py",
+    "tests/test_headcount_time_source.py",
+    "tests/test_allocation_rules_sales_inheritance.py",
+    "specs/001-yoy-cost-variance/tasks.md"
   ],
-  "errors_encountered": [
-    {
-      "timestamp": "2026-04-12T22:57:55+07:00",
-      "error": "PowerShell/CP932 UnicodeEncodeError occurred when printing Vietnamese test/log output earlier.",
-      "resolution": "Removed unnecessary test prints and added safe console logging for run_e2e; keep file contents UTF-8."
-    },
-    {
-      "timestamp": "2026-04-12T22:57:55+07:00",
-      "error": "Initial apply_patch for USER_GUIDE_TEXT failed due to stale context/duplicate guide block.",
-      "resolution": "Removed duplicate old guide block and kept one current Vietnamese guide source."
-    }
-  ],
-  "context_checkpoints": [
-    ".brain is lower-authority project memory; canonical workbook, current code/tests, CURRENT_OPEN_ITEMS.md and AUDIT_STATUS_INDEX.md take precedence.",
-    "Old audit findings are preserved but must not be copied into pending work without checking their successor lifecycle.",
-    "Bus JP/VN generic event work is closed; fixed-assets evidence audit, missing inputs, GUI acceptance, canonical output audit and data governance remain open.",
-    "For fixed-assets, do not treat the 15 July `Chưa chốt` table as authority: read the successor handover and exhaust canonical/source/reference evidence before escalation.",
-    "Do not convert internal data/schema keys like staff, worker, row, form_row, cc_code; only visible UI text is Vietnamese-first."
-  ]
+  "test_verification": {
+    "command": "pytest tests/test_all_vietnamese_exceptions.py tests/test_headcount_time_source.py tests/test_update_security.py tests/test_allocation_rules_sales_inheritance.py tests/test_schema_migrations.py tests/test_account_resolver.py tests/test_fixed_assets_parser_coverage.py tests/test_manual_event_drivers.py tests/engine/test_variance_analyzer.py tests/test_content_packs.py tests/test_fiscal_run_context.py tests/test_system_cost_export_flag.py -v",
+    "result": "156 passed, 6 skipped in 23.06s (100% PASS, 0 FAIL)"
+  },
+  "remaining_errors_or_blockers": "None. All features and error messages are fully localized, tested, and passing.",
+  "next_steps": "Awaiting further feature requests from user, or proceed with release packaging when requested."
 }

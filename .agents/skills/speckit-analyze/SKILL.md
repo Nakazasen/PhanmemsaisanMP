@@ -1,6 +1,6 @@
 ---
 name: "speckit-analyze"
-description: "Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, plan.md, and tasks.md after task generation."
+description: "Phân tích chất lượng và tính nhất quán giữa các tài liệu đặc tả (spec.md, plan.md, tasks.md) mà không làm thay đổi nội dung."
 compatibility: "Requires spec-kit project structure with .specify/ directory"
 metadata:
   author: "github-spec-kit"

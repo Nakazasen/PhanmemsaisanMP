@@ -22,9 +22,10 @@ from src.services.operations_ai_provider import (
     CagentGuidanceResult,
     CagentProviderPolicy,
 )
-from src.services.operations_cagent_client import request_cagent_guidance
+from src.services.operations_cagent_client import request_cagent_chat_guidance, request_cagent_guidance
 from src.services.operations_gemini_web import request_gemini_web_business_guidance, request_gemini_web_guidance
 from src.services.operations_case_service import EvidenceReference, OperationalCase
+from src.services.project_config import read_ai_provider, remember_ai_provider
 from src.ui.fiscal_year_update_dialog import FiscalYearKnowledgeUpdateDialog
 
 
@@ -398,16 +399,22 @@ class OperationsBusinessChatDialog:
         open_history: Any = None,
         history_root: Path | str | None = None,
         fiscal_year: int | None = None,
+        cagent_transport: Any = None,
     ) -> None:
         self.parent = parent
         self.language = language
         self.open_history = open_history
         self.history_root = history_root
         self.fiscal_year = fiscal_year
+        self.cagent_transport = cagent_transport
         self._in_progress = False
         self._attached_image = None
         self._attached_photo_image = None
         self._placeholder_text = translate_for_language("operations_business_chat_placeholder", self.language)
+        self.ai_provider = read_ai_provider()
+        self._provider_cagent_label = translate_for_language("operations_business_chat_provider_cagent", self.language)
+        self._provider_gemini_label = translate_for_language("operations_business_chat_provider_gemini", self.language)
+        self.provider_combo = None
         self._build()
 
     @property
@@ -429,6 +436,7 @@ class OperationsBusinessChatDialog:
         open_history: Any = None,
         history_root: Path | str | None = None,
         fiscal_year: int | None = None,
+        cagent_transport: Any = None,
     ) -> OperationsBusinessChatDialog:
         active = _BUSINESS_CHAT_DIALOGS.get(parent)
         if active is not None and active.is_alive():
@@ -438,6 +446,8 @@ class OperationsBusinessChatDialog:
                 active.history_root = history_root
             if fiscal_year is not None:
                 active.fiscal_year = fiscal_year
+            if cagent_transport is not None:
+                active.cagent_transport = cagent_transport
             active.focus()
             return active
         dialog = cls(
@@ -446,6 +456,7 @@ class OperationsBusinessChatDialog:
             open_history=open_history,
             history_root=history_root,
             fiscal_year=fiscal_year,
+            cagent_transport=cagent_transport,
         )
         _BUSINESS_CHAT_DIALOGS[parent] = dialog
         return dialog
@@ -830,7 +841,32 @@ class OperationsBusinessChatDialog:
             text="✨ " + translate_for_language("fy_knowledge_update_btn", self.language),
             command=self._open_fy_knowledge_update,
         )
-        btn_fy_update.pack(side="right", padx=20, pady=20)
+        btn_fy_update.pack(side="right", padx=(8, 20), pady=20)
+
+        # Bộ chọn nguồn AI chuyển đổi song song (C-Agent / Gemini Web)
+        provider_frame = tk.Frame(header, bg="#ffffff")
+        provider_frame.pack(side="right", padx=(0, 10), pady=20)
+
+        tk.Label(
+            provider_frame,
+            text=translate_for_language("operations_business_chat_provider_label", self.language),
+            bg="#ffffff",
+            fg="#475569",
+            font=("Segoe UI", 9, "bold"),
+        ).pack(side="left", padx=(0, 6))
+
+        init_val = self._provider_cagent_label if self.ai_provider == "cagent" else self._provider_gemini_label
+        self.provider_var = tk.StringVar(value=init_val)
+        self.provider_combo = ttk.Combobox(
+            provider_frame,
+            textvariable=self.provider_var,
+            values=[self._provider_cagent_label, self._provider_gemini_label],
+            state="readonly",
+            width=18,
+            font=("Segoe UI", 9),
+        )
+        self.provider_combo.pack(side="left")
+        self.provider_combo.bind("<<ComboboxSelected>>", self._on_provider_selected)
 
         # Đường viền phân cách dưới header
         border_line = tk.Frame(self.window, bg="#e2e8f0", height=1)
@@ -1195,6 +1231,14 @@ class OperationsBusinessChatDialog:
             pass
         return text_widget
 
+    def _on_provider_selected(self, event: Any = None) -> None:
+        val = self.provider_var.get() if hasattr(self, "provider_var") else ""
+        if val == self._provider_gemini_label:
+            self.ai_provider = "gemini_web"
+        else:
+            self.ai_provider = "cagent"
+        remember_ai_provider(self.ai_provider)
+
     def _use_suggestion(self, prompt: str, *, sync: bool = False) -> None:
         self.question_var.set(prompt)
         self.send(sync=sync)
@@ -1222,7 +1266,9 @@ class OperationsBusinessChatDialog:
 
         self.status.configure(text="⏳ " + translate_for_language("operations_assistant_ai_in_progress", self.language))
         user_name = translate_for_language("operations_business_chat_user_name", self.language)
-        ai_name = translate_for_language("operations_assistant_ai_name", self.language)
+        active_provider = getattr(self, "ai_provider", "cagent")
+        provider_name = self._provider_cagent_label if active_provider == "cagent" else self._provider_gemini_label
+        ai_name = f"✦ {provider_name}"
         analyzing_msg = translate_for_language("operations_business_chat_analyzing", self.language)
         self._add_message(user_name, question, assistant=False, attached_image=attached_img)
         self.answer = self._add_message(ai_name, analyzing_msg, assistant=True)
@@ -1270,7 +1316,16 @@ class OperationsBusinessChatDialog:
             img_notice = f"[{translate_for_language('operations_business_chat_image_attached', self.language)}: {getattr(attached_image, 'width', 0)}×{getattr(attached_image, 'height', 0)}]"
             full_context = f"{img_notice}\n{full_context}"
 
-        result = request_gemini_web_business_guidance(question, full_context, self.language, intent=intent)
+        if getattr(self, "ai_provider", "cagent") == "cagent":
+            result = request_cagent_chat_guidance(
+                question,
+                full_context,
+                self.language,
+                transport=getattr(self, "cagent_transport", None),
+            )
+        else:
+            result = request_gemini_web_business_guidance(question, full_context, self.language, intent=intent)
+
         if sync:
             self._apply(result, question, case_diagnosis=case_diagnosis, intent=intent)
         else:
@@ -1296,7 +1351,11 @@ class OperationsBusinessChatDialog:
         self.status.configure(text="")
 
         if result.status == "ready" and result.answer:
-            if not _contains_web_hallucination(result.answer):
+            if getattr(self, "ai_provider", "cagent") == "gemini_web":
+                if not _contains_web_hallucination(result.answer):
+                    self.answer.configure(text=result.answer)
+                    return
+            else:
                 self.answer.configure(text=result.answer)
                 return
 

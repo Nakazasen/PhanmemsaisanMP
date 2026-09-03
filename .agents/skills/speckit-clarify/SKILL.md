@@ -1,6 +1,6 @@
 ---
 name: "speckit-clarify"
-description: "Identify underspecified areas in the current feature spec by asking up to 5 highly targeted clarification questions and encoding answers back into the spec."
+description: "Làm rõ các điểm chưa rõ ràng trong đặc tả bằng tối đa 5 câu hỏi trọng tâm và cập nhật câu trả lời vào spec.md."
 compatibility: "Requires spec-kit project structure with .specify/ directory"
 metadata:
   author: "github-spec-kit"

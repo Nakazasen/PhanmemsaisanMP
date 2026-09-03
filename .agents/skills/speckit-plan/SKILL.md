@@ -1,6 +1,6 @@
 ---
 name: "speckit-plan"
-description: "Execute the implementation planning workflow using the plan template to generate design artifacts."
+description: "Lập kế hoạch triển khai kiến trúc và thiết kế kỹ thuật chi tiết (plan.md) từ tài liệu đặc tả."
 compatibility: "Requires spec-kit project structure with .specify/ directory"
 metadata:
   author: "github-spec-kit"

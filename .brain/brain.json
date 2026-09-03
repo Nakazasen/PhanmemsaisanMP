@@ -2,13 +2,13 @@
   "meta": {
     "schema_version": "1.1.0",
     "awf_version": "4.0.2",
-    "last_updated": "2026-07-16T06:00:00+07:00",
-    "updated_at": "2026-07-16T06:00:00+07:00"
+    "last_updated": "2026-08-17T19:30:00+07:00",
+    "updated_at": "2026-08-17T19:30:00+07:00"
   },
   "project": {
     "name": "MP2027 Manager",
     "type": "Windows desktop app for MP2027 cost allocation and FORM export",
-    "status": "Historical memory refreshed. Current backlog is docs/handover/CURRENT_OPEN_ITEMS.md; canonical business source is the 10.07.2026 workbook."
+    "status": "System-wide Vietnamese exception localization, NFKC department matching, and complete test suite (156 passed, 6 skipped) completed and verified."
   },
   "authority": {
     "note": ".brain is lower-authority memory, not a business requirement or live backlog.",

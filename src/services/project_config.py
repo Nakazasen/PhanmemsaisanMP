@@ -401,6 +401,45 @@ def read_ui_language(*, local_app_data: str | None = None) -> str:
     return lang if lang in ("vi", "ja", "en") else "vi"
 
 
+def remember_ai_provider(provider: str, *, local_app_data: str | None = None) -> str:
+    target = launcher_config_path(local_app_data)
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    existing: dict[str, Any] = {}
+    try:
+        if os.path.isfile(target):
+            with open(target, "r", encoding="utf-8") as handle:
+                existing = json.load(handle) or {}
+    except Exception:
+        existing = {}
+    clean_provider = str(provider or "").strip().lower()
+    if clean_provider not in ("cagent", "gemini_web"):
+        clean_provider = "cagent"
+    existing["ai_provider"] = clean_provider
+    fd, temporary = tempfile.mkstemp(prefix=".launcher.", suffix=".json.tmp", dir=os.path.dirname(target), text=True)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(existing, handle, indent=2)
+            handle.write("\n")
+        os.replace(temporary, target)
+    except Exception:
+        try:
+            os.unlink(temporary)
+        except OSError:
+            pass
+        raise
+    return target
+
+
+def read_ai_provider(*, local_app_data: str | None = None) -> str:
+    try:
+        with open(launcher_config_path(local_app_data), "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, ValueError, TypeError):
+        return "cagent"
+    provider = str(payload.get("ai_provider", "") or "").strip().lower()
+    return provider if provider in ("cagent", "gemini_web") else "cagent"
+
+
 def discover_or_create_project(
     app_dir: str, fiscal_year: int = 2027, *, explicit_path: str | None = None,
     local_app_data: str | None = None,

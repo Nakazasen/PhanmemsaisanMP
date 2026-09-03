@@ -1,6 +1,6 @@
 ---
 name: "speckit-tasks"
-description: "Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts."
+description: "Tạo danh sách nhiệm vụ thực thi chi tiết có thứ tự phụ thuộc (tasks.md) dựa trên tài liệu thiết kế."
 compatibility: "Requires spec-kit project structure with .specify/ directory"
 metadata:
   author: "github-spec-kit"
