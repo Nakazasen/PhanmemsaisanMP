@@ -117,3 +117,9 @@ outputs/
 local_runs/
 vba_code*.txt
 
+# Antigravity agent harnesses and graphify artifacts
+.agents/
+antigravity_custom_harness.zip
+graphify-out/
+
+

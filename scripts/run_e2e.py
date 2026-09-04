@@ -1302,7 +1302,11 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     reference_map_path=reference_map_path,
                     fiscal_year=fiscal_year,
                 )
-            builder.export_to_template(template_path, out_path, cc_code=target_cc)
+            if not builder.export_to_template(template_path, out_path, cc_code=target_cc):
+                raise ValueError(
+                    f"Trung tâm chi phí {target_cc} không có dữ liệu chi phí để xuất sang mẫu FORM (fact_count <= 0). "
+                    "Vui lòng kiểm tra lại các tệp nguồn chi phí đã được bật trong Thứ tự tệp nguồn."
+                )
             complete_v1_dynamic_allocation_rows = (
                 _load_complete_v1_dynamic_allocation_rows(builder, target_cc)
                 if mp_saisan_complete_v1
@@ -1406,14 +1410,15 @@ def run_universal_pipeline(fiscal_year: int, template_path: str, source_dir: str
                     source_file_order=_annual_complete_v1_source_order(run_context),
                     output_source_file_order=_annual_complete_v1_output_source_order(run_context),
                 )
-            _restore_manual_special_cost_section(
-                out_path,
-                run_context=run_context,
-                cc_code=target_cc,
-                source_path=manual_special_source,
-                source_kind=manual_special_source_kind,
-                log_callback=log_callback,
-            )
+            if output_workbook_exists:
+                _restore_manual_special_cost_section(
+                    out_path,
+                    run_context=run_context,
+                    cc_code=target_cc,
+                    source_path=manual_special_source,
+                    source_kind=manual_special_source_kind,
+                    log_callback=log_callback,
+                )
             log_callback(f"Hoàn tất: {output_dir}")
         else:
             # Batch Export

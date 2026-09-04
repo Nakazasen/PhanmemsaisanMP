@@ -81,19 +81,28 @@ def _source_dir_path(source_dir: str | None) -> Path | None:
     return path if path.is_dir() else None
 
 
+def _clean_manifest_cell_str(value: object, default: str = "") -> str:
+    """Normalize raw cell / manifest values; prevent openpyxl None -> 'None' coercion."""
+    if value is None:
+        return default
+    text = str(value).strip()
+    if text.lower() in {"none", "null"}:
+        return default
+    return text
+
+
 def _normalize_row(row: dict[str, object], base_dir: Path) -> dict[str, str] | None:
-    enabled = str(row.get("enabled", "1")).strip().lower()
-    filename = str(row.get("filename", "")).strip()
-    category = str(row.get("category", "")).strip()
-    raw_status = str(row.get("status", "")).strip().lower()
+    enabled = _clean_manifest_cell_str(row.get("enabled"), "1").lower()
+    filename = _clean_manifest_cell_str(row.get("filename"))
+    category = _clean_manifest_cell_str(row.get("category"))
+    raw_status = _clean_manifest_cell_str(row.get("status")).lower()
     is_disabled = enabled in {"0", "false", "no", "n"}
     if not filename:
         return None
-    if not category and not is_disabled and raw_status != "ignored":
-        return None
 
-    normalized = {key: str(row.get(key, "")).strip() for key in MANIFEST_COLUMNS}
+    normalized = {key: _clean_manifest_cell_str(row.get(key)) for key in MANIFEST_COLUMNS}
     normalized["enabled"] = "0" if is_disabled else "1"
+    normalized["category"] = category
     if raw_status in VALID_STATUSES:
         normalized["status"] = raw_status
     elif is_disabled and not category:
@@ -577,12 +586,14 @@ def merge_manifest_with_detected(
             continue
 
         merged_row = dict(current)
-        saved_status = str(row.get("status", "")).strip().lower()
-        saved_category = str(row.get("category", "")).strip()
-        saved_method = str(row.get("detection_method", "")).strip().lower()
-        saved_signature = str(row.get("signature", "")).strip()
+        saved_status = _clean_manifest_cell_str(row.get("status")).lower()
+        saved_category = _clean_manifest_cell_str(row.get("category"))
+        saved_method = _clean_manifest_cell_str(row.get("detection_method")).lower()
+        saved_signature = _clean_manifest_cell_str(row.get("signature"))
         is_ignored = saved_status == "ignored" or (
-            str(row.get("enabled", "1")).strip() == "0" and not saved_category
+            str(row.get("enabled", "1")).strip() == "0"
+            and not saved_category
+            and saved_status != "needs_review"
         )
 
         if is_ignored:
@@ -636,10 +647,39 @@ def merge_manifest_with_detected(
                         "enabled": "0",
                         "status": "needs_review",
                         "detection_method": "structure",
-                        "reason": "Cấu trúc workbook đã thay đổi; loại đã lưu không còn tương thích với workbook hiện tại.",
+                        "reason": (
+                            "Cấu trúc workbook đã thay đổi; loại đã lưu không còn tương thích. "
+                            "Cần người dùng xác nhận lại loại nguồn."
+                        ),
                     }
                 )
-        merged_row["order"] = row.get("order", merged_row["order"])
+        else:
+            if current.get("status") == "recognized":
+                merged_row.update(
+                    {
+                        "category": current.get("category", ""),
+                        "enabled": "1",
+                        "status": "recognized",
+                        "detection_method": current.get("detection_method", "structure"),
+                        "description": DEFAULT_DESCRIPTIONS.get(current.get("category", ""), ""),
+                        "reason": (
+                            f"Tự động nhận diện loại {CATEGORY_DISPLAY_NAMES.get(current.get('category', ''), '')} "
+                            "do manifest chưa có phân loại hợp lệ."
+                        ),
+                    }
+                )
+            else:
+                merged_row.update(
+                    {
+                        "category": "",
+                        "enabled": "0",
+                        "status": current.get("status", "needs_review"),
+                        "detection_method": current.get("detection_method", "structure"),
+                        "reason": current.get("reason", "Cần xác nhận loại nguồn"),
+                    }
+                )
+
+        merged_row["order"] = _clean_manifest_cell_str(row.get("order")) or merged_row.get("order", "")
         merged_row["_path"] = str((base_dir / filename).resolve())
         merged.append(merged_row)
         seen.add(key)
@@ -665,7 +705,7 @@ def write_source_manifest_xlsx(source_dir: str | None, entries: list[dict[str, s
     worksheet.title = "source_file_order"
     worksheet.append(list(MANIFEST_COLUMNS))
     for entry in _sort_entries(entries):
-        worksheet.append([entry.get(column, "") for column in MANIFEST_COLUMNS])
+        worksheet.append([_clean_manifest_cell_str(entry.get(column, "")) for column in MANIFEST_COLUMNS])
     worksheet.freeze_panes = "A2"
     widths = {"A": 10, "B": 18, "C": 70, "D": 10, "E": 32, "F": 16, "G": 22, "H": 22, "I": 64}
     for column, width in widths.items():

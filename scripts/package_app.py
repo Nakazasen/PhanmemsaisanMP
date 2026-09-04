@@ -45,6 +45,7 @@ def _validate_dist(dist_root: str | os.PathLike[str]) -> None:
         root / "MP2027_Portable.exe",
         root / "_internal" / "assets" / "app_icon.ico",
         root / "_internal" / "docs" / "MP2027" / "FORM.xlsx",
+        root / "_internal" / "raw" / "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx",
         root / "_internal" / "release.json",
         root / "_internal" / "update_sources.default.json",
     ]

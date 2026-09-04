@@ -472,7 +472,17 @@ def resolve_uniform_policy_path(
     base_dir: str | os.PathLike[str] | None = None,
 ) -> str | None:
     if explicit_path:
-        return str(Path(explicit_path).resolve())
+        explicit = Path(explicit_path).resolve()
+        if explicit.is_file():
+            return str(explicit)
+        root = Path(base_dir) if base_dir else _base_dir()
+        candidate = root / "raw" / explicit.name
+        if candidate.is_file() and _is_uniform_policy(candidate):
+            return str(candidate.resolve())
+        candidate_fy = root / "raw" / f"FY{fiscal_year}" / explicit.name
+        if candidate_fy.is_file() and _is_uniform_policy(candidate_fy):
+            return str(candidate_fy.resolve())
+        return str(explicit)
 
     root = Path(base_dir) if base_dir else _base_dir()
     annual_dir = root / "raw" / f"FY{fiscal_year}"

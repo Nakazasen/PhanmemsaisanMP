@@ -94,6 +94,24 @@ chứa đúng thư mục `release_update` đã duyệt.
 hash trước khi thay đổi gì. Chọn version theo phần “Quy tắc chọn version hiện hành” và quy tắc chống
 ghi đè ở trên.
 
+## Compiler Inno Setup đã xác minh
+
+Ưu tiên dùng compiler tại đường dẫn chuẩn:
+
+```powershell
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer\MP2027_Manager.iss"
+```
+
+Nếu đường dẫn chuẩn không tồn tại trên máy phát hành này, compiler Inno Setup khả
+dụng đã được xác minh tại đường dẫn do Antigravity IDE cài kèm:
+
+```powershell
+& "C:\Users\tvn183660\AppData\Local\Programs\Antigravity IDE\resources\app\node_modules\innosetup\bin\ISCC.exe" "installer\MP2027_Manager.iss"
+```
+
+Chỉ dùng fallback này khi file `ISCC.exe` tồn tại; vẫn phải kiểm tra exit code,
+artifact, health-check và toàn bộ các bước phát hành còn lại như thường lệ.
+
 ## Luồng Setup nền tảng
 
 Chỉ dùng khi cài mới hoặc chuyển máy cũ sang nền tảng không khóa:

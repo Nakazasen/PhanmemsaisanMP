@@ -58,9 +58,12 @@ def resolve_uniform_requirements_path(
 ) -> str:
     if explicit_path:
         path = os.path.abspath(explicit_path)
-        if not os.path.isfile(path):
-            raise FileNotFoundError(f"Không tìm thấy file yêu cầu đồng phục/cốc xếp: {path}")
-        return path
+        if os.path.isfile(path):
+            return path
+        candidate = os.path.join(BASE_DIR, "raw", os.path.basename(path))
+        if os.path.isfile(candidate):
+            return candidate
+        raise FileNotFoundError(f"Không tìm thấy file yêu cầu đồng phục/cốc xếp: {path}")
 
     annual = resolve_uniform_policy_path(fiscal_year, base_dir=BASE_DIR)
     if annual and os.path.isfile(annual):

@@ -155,6 +155,39 @@ def test_legacy_manual_confirmation_left_disabled_is_restored_when_structure_mat
     assert "tự bật" in merged[0]["reason"].lower()
 
 
+def test_merge_manifest_with_detected_preserves_user_custom_order(tmp_path):
+    p1 = tmp_path / "facility_alpha.xlsx"
+    _write_facility_source(p1)
+    p2 = tmp_path / "facility_beta.xlsx"
+    _write_facility_source(p2)
+
+    saved = [
+        {
+            "filename": "facility_alpha.xlsx",
+            "category": "facility",
+            "order": "2",
+            "enabled": "1",
+            "status": "recognized",
+            "detection_method": "structure",
+        },
+        {
+            "filename": "facility_beta.xlsx",
+            "category": "facility",
+            "order": "1",
+            "enabled": "1",
+            "status": "recognized",
+            "detection_method": "structure",
+        },
+    ]
+
+    merged = merge_manifest_with_detected(str(tmp_path), saved)
+    by_name = {m["filename"]: m for m in merged}
+    assert by_name["facility_beta.xlsx"]["order"] == "1"
+    assert by_name["facility_alpha.xlsx"]["order"] == "2"
+    assert Path(by_name["facility_beta.xlsx"]["_path"]).is_file()
+    assert Path(by_name["facility_alpha.xlsx"]["_path"]).is_file()
+
+
 def test_manual_decision_survives_raw_multi_match_structure(monkeypatch, tmp_path):
     from src.utils import source_manifest
 
@@ -226,3 +259,159 @@ def test_nnn_fy2029_structure_is_recognized_without_finite_year_allowlist(tmp_pa
     assert result["category"] == "nnn_paperwork"
     assert result["status"] == "recognized"
     assert result["detection_method"] == "structure"
+
+
+def test_clean_manifest_cell_str_handles_none_coercions():
+    from src.utils.source_manifest import _clean_manifest_cell_str
+
+    assert _clean_manifest_cell_str(None) == ""
+    assert _clean_manifest_cell_str(None, default="default") == "default"
+    assert _clean_manifest_cell_str("None") == ""
+    assert _clean_manifest_cell_str("none") == ""
+    assert _clean_manifest_cell_str(" NULL ") == ""
+    assert _clean_manifest_cell_str("facility") == "facility"
+    assert _clean_manifest_cell_str(" 1 ") == "1"
+
+
+def test_merge_manifest_with_detected_self_heals_unclassified_or_none_category(tmp_path):
+    path = tmp_path / "facility.xlsx"
+    _write_facility_source(path)
+
+    # Manifest row had literal "None" as category (from openpyxl None coercion)
+    saved = [{
+        "order": "1",
+        "category": "None",
+        "filename": "facility.xlsx",
+        "enabled": "0",
+        "status": "needs_review",
+        "detection_method": "structure",
+        "signature": "None",
+        "description": "None",
+        "reason": "None",
+    }]
+
+    merged = merge_manifest_with_detected(str(tmp_path), saved)
+
+    assert len(merged) == 1
+    assert merged[0]["category"] == "facility"
+    assert merged[0]["enabled"] == "1"
+    assert merged[0]["status"] == "recognized"
+    assert "tự động nhận diện" in merged[0]["reason"].lower()
+
+
+def test_write_and_read_manifest_xlsx_cleans_none_values(tmp_path):
+    from src.utils.source_manifest import (
+        write_source_manifest_xlsx,
+        _read_saved_manifest,
+    )
+
+    path = tmp_path / "test_source.xlsx"
+    path.write_bytes(b"placeholder")
+
+    entries = [{
+        "order": "1",
+        "category": None,
+        "filename": path.name,
+        "enabled": "1",
+        "status": "needs_review",
+        "detection_method": "manual",
+        "signature": "None",
+        "description": "None",
+        "reason": "None",
+    }]
+
+    written_path = write_source_manifest_xlsx(str(tmp_path), entries)
+    assert Path(written_path).is_file()
+
+    saved = _read_saved_manifest(str(tmp_path))
+    assert len(saved) == 1
+    assert saved[0]["category"] == ""
+    assert saved[0]["signature"] == ""
+    assert saved[0]["description"] == ""
+    assert saved[0]["reason"] == ""
+
+
+def test_single_export_raises_value_error_when_export_to_template_returns_false(tmp_path):
+    import pytest
+    from unittest.mock import MagicMock
+
+    builder = MagicMock()
+    builder.export_to_template.return_value = False
+    target_cc = "1412000040"
+    template_path = str(tmp_path / "FORM.xlsx")
+    out_path = str(tmp_path / f"MP_CC_{target_cc}.xlsx")
+
+    with pytest.raises(ValueError) as excinfo:
+        if not builder.export_to_template(template_path, out_path, cc_code=target_cc):
+            raise ValueError(
+                f"Trung tâm chi phí {target_cc} không có dữ liệu chi phí để xuất sang mẫu FORM (fact_count <= 0). "
+                "Vui lòng kiểm tra lại các tệp nguồn chi phí đã được bật trong Thứ tự tệp nguồn."
+            )
+
+    assert "1412000040" in str(excinfo.value)
+    assert "fact_count <= 0" in str(excinfo.value)
+
+
+def test_annual_complete_v1_output_source_order_preserves_custom_order():
+    from unittest.mock import MagicMock
+    from scripts.run_e2e import _annual_complete_v1_output_source_order
+
+    context = MagicMock()
+    context.ordered_sources = [
+        {"path": "D:/data/facility.xlsx", "filename": "facility.xlsx"},
+        {"path": "D:/data/fixed_assets.xlsx", "filename": "fixed_assets.xlsx"},
+        {"path": "D:/data/nnn.xlsx", "filename": "nnn.xlsx"},
+    ]
+    context.resolved_sources = {
+        "facility": ["D:/data/facility.xlsx"],
+        "fixed_assets": ["D:/data/fixed_assets.xlsx"],
+        "nnn_paperwork": ["D:/data/nnn.xlsx"],
+    }
+    ordered = _annual_complete_v1_output_source_order(context)
+    assert ordered == ["facility.xlsx", "fixed_assets.xlsx", "nnn.xlsx"]
+
+
+def test_headcount_editor_geometry_clamps_within_laptop_screen_bounds():
+    def compute_geometry(screen_w, screen_h):
+        target_w = min(1180, max(640, screen_w - 60))
+        target_h = min(800, max(420, screen_h - 100))
+        target_w = min(target_w, max(300, screen_w - 20))
+        target_h = min(target_h, max(300, screen_h - 40))
+        min_w = min(700, target_w)
+        min_h = min(380, target_h)
+        return target_w, target_h, min_w, min_h
+
+    # 1. Standard 1080p
+    w, h, min_w, min_h = compute_geometry(1920, 1080)
+    assert w == 1180
+    assert h == 800
+    assert min_w <= w and min_h <= h
+
+    # 2. Laptop 1366x768 at 125% scaling (effective ~1092x614)
+    w, h, min_w, min_h = compute_geometry(1092, 614)
+    assert w <= 1092 and h <= 614
+    assert h <= 614 - 40  # fits comfortably above taskbar
+
+    # 3. Laptop 1366x768 at 150% scaling (effective ~910x512)
+    w, h, min_w, min_h = compute_geometry(910, 512)
+    assert w <= 910 and h <= 512
+    assert h == 420  # clamped to max(420, 512-100) = 420
+    assert min_h <= h
+
+
+def test_normalize_row_retains_valid_filename_when_category_empty(tmp_path):
+    from src.utils.source_manifest import _normalize_row
+
+    row = {
+        "order": "1",
+        "category": "",
+        "filename": "unclassified.xlsx",
+        "enabled": "1",
+        "status": "",
+    }
+    normalized = _normalize_row(row, tmp_path)
+    assert normalized is not None
+    assert normalized["filename"] == "unclassified.xlsx"
+    assert normalized["status"] == "needs_review"
+    assert normalized["category"] == ""
+

@@ -197,7 +197,7 @@ from src.utils.source_manifest import (
     CATEGORY_DISPLAY_NAMES,
     DEFAULT_DESCRIPTIONS,
     MANIFEST_COLUMNS,
-    read_source_manifest_inventory_fast,
+    read_source_manifest,
     write_source_manifest_xlsx,
 )
 
@@ -1351,19 +1351,25 @@ class MPManagerApp:
         button_bar.grid(row=len(fields) + 1, column=0, columnspan=3, sticky="e", padx=12, pady=12)
         ttk.Button(button_bar, text=t("btn_cancel"), command=dialog.destroy).pack(side="right")
 
+        def _clean_input_path(val: str) -> str:
+            text = str(val or "").strip()
+            while (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
+                text = text[1:-1].strip()
+            return text.strip('"').strip("'").strip()
+
         def save_configuration():
             try:
                 self.project.update_storage_paths(
                     fiscal_year,
-                    operational_database=variables["operational_database"].get().strip(),
-                    uniform_policy_path=variables["uniform_policy"].get().strip(),
-                    manual_input_store=variables["manual_input"].get().strip(),
-                    manual_special_inheritance_dir=variables["manual_special_inheritance"].get().strip(),
+                    operational_database=_clean_input_path(variables["operational_database"].get()),
+                    uniform_policy_path=_clean_input_path(variables["uniform_policy"].get()),
+                    manual_input_store=_clean_input_path(variables["manual_input"].get()),
+                    manual_special_inheritance_dir=_clean_input_path(variables["manual_special_inheritance"].get()),
                     manual_special_legacy_starts=_parse_manual_special_legacy_starts(
                         variables["manual_special_legacy_starts"].get()
                     ),
-                    output_dir=variables["output_dir"].get().strip(),
-                    history_root=variables["history_dir"].get().strip(),
+                    output_dir=_clean_input_path(variables["output_dir"].get()),
+                    history_root=_clean_input_path(variables["history_dir"].get()),
                 )
                 self.project.save()
                 refreshed = self._project_paths(fiscal_year)
@@ -1403,7 +1409,8 @@ class MPManagerApp:
         argument = aliases.get(key)
         if argument is None:
             raise KeyError(t("project_profile_unsupported_path", key=key))
-        self.project.update_fiscal_paths(self._current_fiscal_year(), **{argument: os.path.abspath(path)})
+        clean_path = self.project.resolve_path(path)
+        self.project.update_fiscal_paths(self._current_fiscal_year(), **{argument: clean_path})
         self.project.save()
 
     def _reload_exchange_rate_from_template(self) -> bool:
@@ -2704,7 +2711,9 @@ class MPManagerApp:
         detection_codes = {label: code for code, label in detection_labels.items()}
 
         def display_manifest_value(column: str, value: object) -> str:
-            text = str(value or "")
+            text = str(value or "").strip()
+            if text.lower() in {"none", "null"}:
+                text = ""
             if column == "category":
                 return category_labels.get(text, text)
             if column == "status":
@@ -2714,7 +2723,9 @@ class MPManagerApp:
             return text
 
         def internal_manifest_value(column: str, value: object) -> str:
-            text = str(value or "")
+            text = str(value or "").strip()
+            if text.lower() in {"none", "null"}:
+                text = ""
             if column == "category":
                 return category_codes.get(text, text)
             if column == "status":
@@ -2815,7 +2826,7 @@ class MPManagerApp:
         def load_rows() -> None:
             for item_id in tree.get_children():
                 tree.delete(item_id)
-            for row in read_source_manifest_inventory_fast(source_dir):
+            for row in read_source_manifest(source_dir, include_missing=True):
                 tree.insert(
                     "",
                     tk.END,
@@ -2836,10 +2847,16 @@ class MPManagerApp:
             if not item_id:
                 return
             values = tree.item(item_id, "values")
-            category_var.set(str(values[1]))
+            cat_text = str(values[1]).strip()
+            if cat_text.lower() in {"none", "null"}:
+                cat_text = ""
+            category_var.set(cat_text)
             filename_var.set(str(values[2]))
             enabled_var.set(1 if str(values[3]).strip() not in {"0", "False", "false"} else 0)
-            description_var.set(str(values[4]))
+            desc_text = str(values[4]).strip()
+            if desc_text.lower() in {"none", "null"}:
+                desc_text = ""
+            description_var.set(desc_text)
 
         def browse_manifest_file() -> None:
             path = filedialog.askopenfilename(
@@ -3849,8 +3866,14 @@ class MPManagerApp:
         fy_periods = set(get_fy_months(fiscal_year))
         editor = tk.Toplevel(self.root)
         editor.title(t("headcount_editor_title"))
-        editor.geometry("1180x800")
-        editor.transient(self.root)
+        screen_w = editor.winfo_screenwidth()
+        screen_h = editor.winfo_screenheight()
+        target_w = min(1180, max(640, screen_w - 60))
+        target_h = min(800, max(420, screen_h - 100))
+        target_w = min(target_w, max(300, screen_w - 20))
+        target_h = min(target_h, max(300, screen_h - 40))
+        editor.geometry(f"{target_w}x{target_h}")
+        editor.minsize(min(700, target_w), min(380, target_h))
         editor.lift()
         editor.focus_force()
         self._headcount_editor_v2 = editor
@@ -3866,7 +3889,55 @@ class MPManagerApp:
 
         editor.protocol("WM_DELETE_WINDOW", close_editor)
         editor.bind("<Destroy>", clear_editor_reference, add="+")
-        frame = ttk.Frame(editor, padding=10); frame.pack(fill=tk.BOTH, expand=True)
+
+        buttons = ttk.Frame(editor, padding=(10, 6))
+        buttons.pack(side=tk.BOTTOM, fill="x")
+        load_button = ttk.Button(buttons, text=t("hc_v2_load_cc"), command=lambda: load_cc())
+        load_button.pack(side="left")
+        ttk.Button(
+            buttons, text=t("hc_v2_save_btn"), style="Primary.TButton", command=lambda: save()
+        ).pack(side="left", padx=6)
+        ttk.Button(buttons, text=t("btn_close"), command=close_editor).pack(side="left")
+
+        main_shell = ttk.Frame(editor)
+        main_shell.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        main_shell.columnconfigure(0, weight=1)
+        main_shell.rowconfigure(0, weight=1)
+
+        canvas = tk.Canvas(main_shell, highlightthickness=0, borderwidth=0)
+        v_scrollbar = ttk.Scrollbar(main_shell, orient=tk.VERTICAL, command=canvas.yview)
+        canvas.configure(yscrollcommand=v_scrollbar.set)
+        canvas.grid(row=0, column=0, sticky="nsew")
+        v_scrollbar.grid(row=0, column=1, sticky="ns")
+
+        frame = ttk.Frame(canvas, padding=10)
+        window_id = canvas.create_window((0, 0), window=frame, anchor="nw")
+
+        def refresh_scroll_region(_event=None):
+            canvas.coords(window_id, 0, 0)
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def resize_content_width(event):
+            canvas.coords(window_id, 0, 0)
+            canvas.itemconfigure(
+                window_id,
+                width=max(event.width, frame.winfo_reqwidth()),
+            )
+
+        frame.bind("<Configure>", refresh_scroll_region)
+        canvas.bind("<Configure>", resize_content_width)
+        canvas.after_idle(lambda: canvas.yview_moveto(0.0))
+
+        def scroll_content(event):
+            try:
+                if canvas.winfo_exists():
+                    canvas.yview_scroll(int(-event.delta / 120), "units")
+            except Exception:
+                pass
+
+        editor.bind("<MouseWheel>", scroll_content)
+        canvas.bind("<MouseWheel>", scroll_content)
+        frame.bind("<MouseWheel>", scroll_content)
         ttk.Label(frame, text=t("hc_v2_instruction"), font=("Segoe UI",9,"italic")).pack(anchor="w")
         top = ttk.Frame(frame); top.pack(fill="x", pady=8)
         ttk.Label(top,text=t("hc_v2_cc_label")).pack(side="left")
@@ -4141,14 +4212,7 @@ class MPManagerApp:
             finally:
                 conn.close()
             messagebox.showinfo(t("save_success_title"), t("headcount_save_success_msg"))
-        buttons = ttk.Frame(frame)
-        buttons.pack(fill="x", pady=(8, 0))
-        load_button = ttk.Button(buttons, text=t("hc_v2_load_cc"), command=load_cc)
-        load_button.pack(side="left")
-        ttk.Button(
-            buttons, text=t("hc_v2_save_btn"), style="Primary.TButton", command=save
-        ).pack(side="left", padx=6)
-        ttk.Button(buttons, text=t("btn_close"), command=close_editor).pack(side="left")
+
         cc_combo.bind("<<ComboboxSelected>>",load_cc)
         if cc_combo["values"]:
             initial=selected_cc if selected_cc in cc_combo["values"] else cc_combo["values"][0]

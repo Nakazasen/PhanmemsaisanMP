@@ -196,7 +196,11 @@ class ProjectConfig:
             seen[normalized] = year
 
     def resolve_path(self, value: object) -> str:
-        text = os.path.expandvars(os.path.expanduser(str(value or "").strip()))
+        raw = str(value or "").strip()
+        while (raw.startswith('"') and raw.endswith('"')) or (raw.startswith("'") and raw.endswith("'")):
+            raw = raw[1:-1].strip()
+        raw = raw.strip('"').strip("'").strip()
+        text = os.path.expandvars(os.path.expanduser(raw))
         if not text:
             return ""
         if os.path.isabs(text):
@@ -212,6 +216,14 @@ class ProjectConfig:
         root = os.path.abspath(legacy_root or self.root_dir)
         docs_dir = os.path.join(root, "docs", f"MP{year}")
         raw_dir = os.path.join(root, "raw", f"FY{year}")
+        uniform_default = ""
+        if year == 2027:
+            candidate = os.path.join(root, "raw", "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx")
+            candidate_fy = os.path.join(raw_dir, "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx")
+            if os.path.isfile(candidate_fy):
+                uniform_default = _portable_path(candidate_fy, self.root_dir)
+            elif os.path.isfile(candidate):
+                uniform_default = _portable_path(candidate, self.root_dir)
         fiscal_years[key] = {
             "template": _portable_path(os.path.join(docs_dir, "FORM.xlsx"), self.root_dir),
             "cost_source_dir": _portable_path(docs_dir, self.root_dir),
@@ -219,7 +231,7 @@ class ProjectConfig:
             # An empty value means "auto-discover inside this fiscal project".
             # Do not persist a plausible-looking file that may not exist: any
             # non-empty value is an explicit, fail-closed user selection.
-            "uniform_policy": "",
+            "uniform_policy": uniform_default,
             "manual_input_store": _portable_path(os.path.join(raw_dir, "manual_inputs.db"), self.root_dir),
             "manual_special_inheritance_dir": "",
             "manual_special_legacy_starts": {},
@@ -247,6 +259,21 @@ class ProjectConfig:
             and not os.path.isfile(uniform)
         ):
             uniform = ""
+        elif uniform and not os.path.isfile(uniform):
+            basename = os.path.basename(uniform).strip('"').strip("'")
+            candidates = [
+                os.path.join(self.root_dir, "raw", basename),
+                os.path.join(self.root_dir, "raw", f"FY{year}", basename),
+            ]
+            for candidate in candidates:
+                if os.path.isfile(candidate):
+                    uniform = os.path.abspath(candidate)
+                    entry["uniform_policy"] = _portable_path(candidate, self.root_dir)
+                    try:
+                        self.save()
+                    except Exception:
+                        pass
+                    break
         raw_legacy_starts = entry.get("manual_special_legacy_starts", {})
         if not isinstance(raw_legacy_starts, dict):
             raise ValueError(f"Mốc chi phí riêng cũ FY{year} phải là object")
