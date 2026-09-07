@@ -142,3 +142,24 @@ def test_fiscal_paths_copies_from_bundled_when_missing_in_project_root(tmp_path,
         'raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx'
     )
 
+
+def test_copy_missing_tree_updates_uniform_policy_when_size_differs(tmp_path):
+    from src.services.runtime_health import copy_missing_tree
+
+    source_dir = tmp_path / "source"
+    target_dir = tmp_path / "target"
+    source_dir.mkdir()
+    target_dir.mkdir()
+
+    source_file = source_dir / "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx"
+    target_file = target_dir / "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx"
+
+    source_file.write_bytes(b"new larger content" * 100)
+    target_file.write_bytes(b"old content")
+
+    assert target_file.stat().st_size != source_file.stat().st_size
+    copy_missing_tree(source_dir, target_dir)
+    assert target_file.stat().st_size == source_file.stat().st_size
+    assert target_file.read_bytes() == source_file.read_bytes()
+
+

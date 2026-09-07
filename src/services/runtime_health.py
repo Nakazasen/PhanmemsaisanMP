@@ -35,6 +35,12 @@ def copy_missing_tree(source_dir: str | os.PathLike[str], target_dir: str | os.P
         destination.parent.mkdir(parents=True, exist_ok=True)
         if not destination.exists():
             shutil.copy2(path, destination)
+        elif path.name == "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx":
+            try:
+                if destination.stat().st_size != path.stat().st_size:
+                    shutil.copy2(path, destination)
+            except OSError:
+                pass
 
 
 def directory_is_writable(path: str | os.PathLike[str]) -> bool:
