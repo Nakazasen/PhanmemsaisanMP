@@ -85,3 +85,60 @@ def test_validate_dist_requires_uniform_policy_file(tmp_path):
     (internal / 'raw').mkdir()
     (internal / 'raw' / 'Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx').touch()
     _validate_dist(dist_root)
+
+
+def test_fiscal_paths_self_heals_empty_uniform_policy_from_existing_project(tmp_path):
+    raw_dir = tmp_path / 'raw'
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    local_policy = raw_dir / 'Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx'
+    _write_minimal_uniform_policy(local_policy)
+
+    # Simulate existing project.json from older version with empty uniform_policy
+    project = ProjectConfig.create_legacy_compatible(str(tmp_path), 2027)
+    project.data['fiscal_years']['2027']['uniform_policy'] = ''
+    project.save()
+
+    # Re-load from disk and ensure fiscal year does not clear it
+    reloaded = ProjectConfig.load(project.config_path)
+    assert reloaded.ensure_fiscal_year(2027) is False
+    assert reloaded.data['fiscal_years']['2027']['uniform_policy'] == (
+        'raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx'
+    )
+
+    # fiscal_paths must resolve and persist the healed path
+    paths = reloaded.fiscal_paths(2027)
+    assert paths.uniform_policy_path == str(local_policy.resolve())
+
+    # Verify persisted on disk
+    persisted = ProjectConfig.load(project.config_path)
+    assert persisted.data['fiscal_years']['2027']['uniform_policy'] == (
+        'raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx'
+    )
+
+
+def test_fiscal_paths_copies_from_bundled_when_missing_in_project_root(tmp_path, monkeypatch):
+    import sys
+    project_root = tmp_path / 'project'
+    project_root.mkdir(parents=True, exist_ok=True)
+
+    bundled_root = tmp_path / 'bundled'
+    bundled_raw = bundled_root / 'raw'
+    bundled_raw.mkdir(parents=True, exist_ok=True)
+    bundled_policy = bundled_raw / 'Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx'
+    _write_minimal_uniform_policy(bundled_policy)
+
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(bundled_root), raising=False)
+
+    project = ProjectConfig.create_legacy_compatible(str(project_root), 2027)
+    project.data['fiscal_years']['2027']['uniform_policy'] = ''
+    project.save()
+
+    paths = project.fiscal_paths(2027)
+    expected_local = project_root / 'raw' / 'Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx'
+    assert expected_local.is_file()
+    assert paths.uniform_policy_path == str(expected_local.resolve())
+    assert project.data['fiscal_years']['2027']['uniform_policy'] == (
+        'raw/Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx'
+    )
+

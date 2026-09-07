@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -211,11 +213,27 @@ class ProjectConfig:
         year = int(fiscal_year)
         key = str(year)
         fiscal_years = self.data.setdefault("fiscal_years", {})
-        if key in fiscal_years:
-            return False
         root = os.path.abspath(legacy_root or self.root_dir)
         docs_dir = os.path.join(root, "docs", f"MP{year}")
         raw_dir = os.path.join(root, "raw", f"FY{year}")
+        if key in fiscal_years:
+            entry = fiscal_years[key]
+            if isinstance(entry, dict) and not str(entry.get("uniform_policy") or "").strip() and year == 2027:
+                candidate = os.path.join(root, "raw", "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx")
+                candidate_fy = os.path.join(raw_dir, "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx")
+                healed = False
+                if os.path.isfile(candidate_fy):
+                    entry["uniform_policy"] = _portable_path(candidate_fy, self.root_dir)
+                    healed = True
+                elif os.path.isfile(candidate):
+                    entry["uniform_policy"] = _portable_path(candidate, self.root_dir)
+                    healed = True
+                if healed:
+                    try:
+                        self.save()
+                    except Exception:
+                        pass
+            return False
         uniform_default = ""
         if year == 2027:
             candidate = os.path.join(root, "raw", "Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx")
@@ -259,21 +277,68 @@ class ProjectConfig:
             and not os.path.isfile(uniform)
         ):
             uniform = ""
-        elif uniform and not os.path.isfile(uniform):
-            basename = os.path.basename(uniform).strip('"').strip("'")
-            candidates = [
-                os.path.join(self.root_dir, "raw", basename),
-                os.path.join(self.root_dir, "raw", f"FY{year}", basename),
-            ]
-            for candidate in candidates:
-                if os.path.isfile(candidate):
-                    uniform = os.path.abspath(candidate)
-                    entry["uniform_policy"] = _portable_path(candidate, self.root_dir)
-                    try:
-                        self.save()
-                    except Exception:
-                        pass
+
+        # Self-heal missing, empty, or dead uniform policy paths
+        if not uniform or not os.path.isfile(uniform):
+            candidate_names: list[str] = []
+            if not uniform:
+                if year == 2027:
+                    candidate_names.append("Cải tiến nhập dữ liệu chung vào file MPnew 10.07.2026.xlsx")
+            else:
+                candidate_names.append(os.path.basename(uniform).strip('"').strip("'"))
+
+            found_candidate: str | None = None
+            for name in candidate_names:
+                for search_path in (
+                    os.path.join(self.root_dir, "raw", f"FY{year}", name),
+                    os.path.join(self.root_dir, "raw", name),
+                ):
+                    if os.path.isfile(search_path):
+                        found_candidate = search_path
+                        break
+                if found_candidate:
                     break
+
+            if not found_candidate:
+                bundled_dirs: list[Path] = []
+                if getattr(sys, "frozen", False):
+                    meipass = getattr(sys, "_MEIPASS", None)
+                    if meipass:
+                        bundled_dirs.append(Path(meipass))
+                    exe_dir = Path(sys.executable).resolve().parent
+                    bundled_dirs.append(exe_dir / "_internal")
+                    bundled_dirs.append(exe_dir)
+                runtime_root = os.environ.get("MP_MANAGER_RUNTIME_ROOT")
+                if runtime_root:
+                    bundled_dirs.append(Path(runtime_root))
+
+                for name in candidate_names:
+                    for bdir in bundled_dirs:
+                        for bpath in (
+                            bdir / "raw" / f"FY{year}" / name,
+                            bdir / "raw" / name,
+                        ):
+                            if bpath.is_file():
+                                target = os.path.join(self.root_dir, "raw", name)
+                                try:
+                                    os.makedirs(os.path.dirname(target), exist_ok=True)
+                                    shutil.copy2(bpath, target)
+                                    found_candidate = target
+                                except Exception:
+                                    found_candidate = str(bpath)
+                                break
+                        if found_candidate:
+                            break
+                    if found_candidate:
+                        break
+
+            if found_candidate and os.path.isfile(found_candidate):
+                uniform = os.path.abspath(found_candidate)
+                entry["uniform_policy"] = _portable_path(found_candidate, self.root_dir)
+                try:
+                    self.save()
+                except Exception:
+                    pass
         raw_legacy_starts = entry.get("manual_special_legacy_starts", {})
         if not isinstance(raw_legacy_starts, dict):
             raise ValueError(f"Mốc chi phí riêng cũ FY{year} phải là object")

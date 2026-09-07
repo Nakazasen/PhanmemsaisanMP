@@ -14,6 +14,7 @@ from functools import lru_cache
 import os
 import re
 import subprocess
+import sys
 import uuid
 from typing import Callable, Iterable
 
@@ -415,12 +416,33 @@ def _has_headcount_workbook(directory: Path) -> bool:
 
 
 def _legacy_uniform_policy_path(root: Path) -> Path | None:
-    for path in sorted((root / "raw").glob("*.xlsx")):
+    search_dirs = [root / "raw"]
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            search_dirs.append(Path(meipass) / "raw")
+        exe_dir = Path(sys.executable).resolve().parent
+        search_dirs.append(exe_dir / "_internal" / "raw")
+        search_dirs.append(exe_dir / "raw")
+    runtime_root = os.environ.get("MP_MANAGER_RUNTIME_ROOT")
+    if runtime_root:
+        search_dirs.append(Path(runtime_root) / "raw")
+
+    seen_dirs: set[Path] = set()
+    for sdir in search_dirs:
         try:
-            if _is_uniform_policy(path):
-                return path
-        except Exception:
+            resolved_sdir = sdir.resolve()
+        except OSError:
             continue
+        if resolved_sdir in seen_dirs or not resolved_sdir.is_dir():
+            continue
+        seen_dirs.add(resolved_sdir)
+        for path in sorted(resolved_sdir.glob("*.xlsx")):
+            try:
+                if _is_uniform_policy(path):
+                    return path
+            except Exception:
+                continue
     return None
 
 
@@ -482,6 +504,17 @@ def resolve_uniform_policy_path(
         candidate_fy = root / "raw" / f"FY{fiscal_year}" / explicit.name
         if candidate_fy.is_file() and _is_uniform_policy(candidate_fy):
             return str(candidate_fy.resolve())
+        if getattr(sys, "frozen", False):
+            meipass = getattr(sys, "_MEIPASS", None)
+            exe_dir = Path(sys.executable).resolve().parent
+            for bdir in (Path(meipass) if meipass else None, exe_dir / "_internal", exe_dir):
+                if bdir and bdir.is_dir():
+                    bc = bdir / "raw" / explicit.name
+                    if bc.is_file() and _is_uniform_policy(bc):
+                        return str(bc.resolve())
+                    bcfy = bdir / "raw" / f"FY{fiscal_year}" / explicit.name
+                    if bcfy.is_file() and _is_uniform_policy(bcfy):
+                        return str(bcfy.resolve())
         return str(explicit)
 
     root = Path(base_dir) if base_dir else _base_dir()
